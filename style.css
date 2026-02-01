@@ -44,6 +44,7 @@
   --background-color: var(--color-white);
   --background2-color: #bdbdbd;
   --text-color: var(--color-black);
+  color: var(--color-black);
   --highlight-color: var(--color-blue);
   --locate-color: var(--color-blue);
   --overview-header-height: 32px;
