@@ -54,8 +54,8 @@ body.dark-mode {
   --icon-color: var(--color-white);
   --border-color: #bdbdbd;
   --divider-color: var(--border-color);
-  --background-color: #282828;
-  --background2-color: #575b5f;
+  --background-color: #22242a;
+  --background2-color: #5f6368;
   --text-color: var(--color-white);
   color: var(--color-white);
 }
