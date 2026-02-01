@@ -398,7 +398,7 @@ const WmsImport = (function () {
    * @param {string} wmsUrl - Base WMS URL
    * @param {L.Map} map - Leaflet map instance
    */
-  function addWmsOverlays(selectedLayers, wmsUrl, map) {
+  function addWmsOverlays(selectedLayers, wmsUrl, map, autoEnable = true) {
     selectedLayers.forEach((layer) => {
       const layerId = `wms-custom-${layerIdCounter++}`;
 
@@ -423,7 +423,7 @@ const WmsImport = (function () {
       };
 
       // Add to layers control
-      addToLayersControl(layerId, layer.title, wmsLayer, map);
+      addToLayersControl(layerId, layer.title, wmsLayer, map, autoEnable);
     });
 
     // Save to localStorage
@@ -611,10 +611,28 @@ const WmsImport = (function () {
     }
   }
 
+  /**
+   * Seeds default WMS layers on first-ever load (no localStorage key yet)
+   * @param {L.Map} map - Leaflet map instance
+   */
+  function seedDefaultLayers(map) {
+    // Only seed if localStorage key doesn't exist at all (truly fresh start)
+    if (localStorage.getItem(STORAGE_KEY) !== null) return false;
+
+    addWmsOverlays(
+      [{ name: "ch.swisstopo.swisstlm3d-wanderwege", title: "Swiss Hiking Trails" }],
+      "https://wms.geo.admin.ch/",
+      map,
+      false, // Don't auto-enable default layers
+    );
+    return true;
+  }
+
   // Public API
   return {
     showWmsImportDialog,
     loadLayersFromStorage,
+    seedDefaultLayers,
     getCustomWmsLayers: () => customWmsLayers, // Expose custom WMS layers for layer management
   };
 })();
