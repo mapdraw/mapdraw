@@ -24,6 +24,7 @@ OpenMapEditor is a simple, powerful web-based editor for creating, viewing, and 
 - **Custom WMS Layers:** Import map layers from any WMS-compatible service. Browse available layers, add them to your map as overlays, and reorder them with drag-and-drop. Your WMS layers are saved locally and persist between sessions.
 - **POI Finder:** Search for points of interest (parks, restaurants, viewpoints, etc.) in the current map view using OpenStreetMap data, and save them directly to your map.
 - **Performance Optimized:** Optional path and area simplification (on by default) for smoother performance. When enabled, simplified copies are made when duplicating tracks/activities/areas (originals preserved), and generated routes are simplified when saved. Configurable in settings.
+- **Autosave:** Your work is automatically saved locally in your browser every few seconds and restored when you return, so you never lose your progress.
 
 ---
 
