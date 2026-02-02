@@ -40,6 +40,23 @@
         },
       },
     ],
+    storage: [
+      {
+        id: "autosave",
+        cmd: 'indexedDB("keyval-store").get("mapAutosave")',
+        exec: () =>
+          new Promise((resolve, reject) => {
+            const req = indexedDB.open("keyval-store");
+            req.onsuccess = (e) => {
+              const db = e.target.result;
+              const tx = db.transaction("keyval", "readonly");
+              const store = tx.objectStore("keyval");
+              store.get("mapAutosave").onsuccess = (e) => resolve(e.target.result);
+            };
+            req.onerror = () => reject(new Error("Failed to open IndexedDB"));
+          }),
+      },
+    ],
   };
 
   function init() {
@@ -71,6 +88,10 @@
         <div class="dev-section">
           <h3>Map</h3>
           ${commands.map.map((c) => `<button data-action="${c.id}">${c.cmd}</button>`).join("")}
+        </div>
+        <div class="dev-section">
+          <h3>Storage</h3>
+          ${commands.storage.map((c) => `<button data-action="${c.id}">${c.cmd}</button>`).join("")}
         </div>
       </div>
     `;
@@ -247,7 +268,12 @@
     console.clear();
 
     // Find command in all groups
-    const allCommands = [...commands.features, ...commands.selected, ...commands.map];
+    const allCommands = [
+      ...commands.features,
+      ...commands.selected,
+      ...commands.map,
+      ...commands.storage,
+    ];
     const command = allCommands.find((c) => c.id === actionId);
 
     if (!command) return;
@@ -255,7 +281,11 @@
     try {
       console.log(`%c${command.cmd}`, "font-size: 16px; font-weight: bold;");
       const result = command.exec();
-      console.log(result);
+      if (result instanceof Promise) {
+        result.then((value) => console.log(value)).catch((e) => console.log("Error:", e.message));
+      } else {
+        console.log(result);
+      }
     } catch (e) {
       console.log("Error:", e.message);
     }
