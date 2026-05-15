@@ -103,8 +103,10 @@ function updateAllDynamicUnitDisplays() {
 
 /**
  * Fetches the credits content from an HTML file and displays it in a SweetAlert modal.
+ * @param {boolean} [isWelcome=false] - If true, shows as a first-visit welcome popup with
+ *   a "Let's Go!" button. If false, shows as the standard credits popup with a "Close" button.
  */
-async function showCreditsPopup() {
+async function showCreditsPopup(isWelcome = false) {
   try {
     const response = await fetch("/credits.html");
     if (!response.ok) {
@@ -115,12 +117,16 @@ async function showCreditsPopup() {
     const swalContent = document.createElement("div");
     swalContent.innerHTML = creditsHtmlContent;
 
-    swalContent.querySelector("#credits-app-name").textContent = APP_NAME;
-    swalContent.querySelector("#credits-app-description").textContent = APP_CREDITS_DESCRIPTION;
+    const appNameEl = swalContent.querySelector("#credits-app-name");
+    if (isWelcome) {
+      appNameEl.innerHTML = `Welcome to ${APP_NAME}`;
+    } else {
+      appNameEl.textContent = APP_NAME;
+    }
 
     Swal.fire({
       html: swalContent,
-      confirmButtonText: "Close",
+      confirmButtonText: isWelcome ? "Let's Go!" : "Close",
     });
   } catch (error) {
     console.error("Could not load credits.html:", error);
@@ -456,6 +462,11 @@ async function initializeMap() {
 
   // Start periodic autosave (every 5s, writes only on change)
   startAutosave();
+
+  // Show welcome popup when visiting the bare domain (no map hash or share data in URL)
+  if (!initialView) {
+    showCreditsPopup(true);
+  }
 
   const allOverlayMaps = {
     DrawnItems: drawnItems,

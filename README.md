@@ -125,7 +125,7 @@ For the deployment to succeed, you must provide your production API keys as GitH
 This project is designed to be easily forked and customized. All primary branding can be configured in one place.
 
 1.  **Edit the Configuration File**
-    Open `js/config.js` and change the values of the `APP_NAME`, `APP_TITLE`, `APP_DESCRIPTION`, `APP_CREDITS_DESCRIPTION` and `APP_DOMAIN` variables to match your project.
+    Open `js/config.js` and change the values of the `APP_NAME`, `APP_TITLE`, `APP_DESCRIPTION` and `APP_DOMAIN` variables to match your project.
 
     > The placeholders in `index.html` and `manifest.json` are replaced automatically by the GitHub deployment action. **You do not need to edit these files manually.**
 

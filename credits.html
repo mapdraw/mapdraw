@@ -29,6 +29,21 @@
   .credits-header a:hover {
     text-decoration: underline;
   }
+  .feature-highlights {
+    text-align: center;
+    margin: 5px 0 10px 0;
+  }
+  .feature-highlights ul {
+    padding-left: 0;
+    margin: 0;
+    list-style-type: none;
+    display: inline-block;
+  }
+  .feature-highlights li {
+    margin-bottom: 6px;
+    font-size: var(--font-size-14);
+    text-align: center;
+  }
   .support-section {
     margin: 15px 0;
     text-align: center;
@@ -91,6 +106,19 @@
   <div class="credits-header">
     <h3 id="credits-app-name"></h3>
     <p style="margin: 0 0 10px 0">Version __BUILD_TIMESTAMP__</p>
+    <div class="feature-highlights">
+      <ul>
+        <li>✏️ Draw, edit, and style paths, areas, and markers</li>
+        <li>📂 Import & export GeoJSON, GPX, KML, and KMZ files</li>
+        <li>🧭 Routing for driving, biking, and walking</li>
+        <li>📈 Elevation profiles for any path</li>
+        <li>🏃 View and download Strava activities</li>
+        <li>🔍 Find nearby points of interest</li>
+        <li>🗺️ Import custom WMS map layers</li>
+        <li>🔗 Share your map content via URL</li>
+        <li>🔒 Local-first with autosave — your files never leave your browser</li>
+      </ul>
+    </div>
     <div class="support-section">
       <a
         href="https://donate.stripe.com/bJe8wO3V68W2fg2bU57ss01"
@@ -119,7 +147,6 @@
         >
       </a>
     </div>
-    <p id="credits-app-description"></p>
     <p style="margin-top: 10px">
       <a href="mailto:openmapeditor@gmail.com">openmapeditor@gmail.com</a><br />
       <a href="https://github.com/openmapeditor/openmapeditor" target="_blank">GitHub</a><br />
