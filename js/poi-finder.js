@@ -382,8 +382,12 @@ async function queryOverpass(osmQuery, bounds, signal, limit = 1000) {
     out center ${limit};
   `;
 
-  // Using kumi.systems - works better than overpass-api.de (tested 2025-12-29)
-  const response = await fetch("https://overpass.kumi.systems/api/interpreter", {
+  // Primary endpoint: Official lz4 load-balanced instance (fastest and most reliable)
+  // Fallbacks for reference if the primary goes down:
+  // - https://overpass-api.de/api/interpreter
+  // - https://z.overpass-api.de/api/interpreter
+  // - https://overpass.kumi.systems/api/interpreter (Note: known to occasionally timeout)
+  const response = await fetch("https://lz4.overpass-api.de/api/interpreter", {
     method: "POST",
     body: query,
     signal: signal,
