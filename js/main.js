@@ -463,9 +463,10 @@ async function initializeMap() {
   // Start periodic autosave (every 5s, writes only on change)
   startAutosave();
 
-  // Show welcome popup when visiting the bare domain (no map hash or share data in URL)
-  if (!initialView) {
+  // Show welcome popup once for new visitors (bare domain, never shown before)
+  if (!initialView && !localStorage.getItem("hasSeenWelcome")) {
     showCreditsPopup(true);
+    localStorage.setItem("hasSeenWelcome", "true");
   }
 
   const allOverlayMaps = {
