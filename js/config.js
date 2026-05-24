@@ -1,11 +1,11 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
-const APP_NAME = "OpenMapEditor"; // Used throughout the app as name
+const APP_NAME = "MapDraw.net"; // Used throughout the app as name
 // prettier-ignore
-const APP_TITLE = "OpenMapEditor: GPS, GPX, KML, GeoJSON & Strava Editor"; // Used in the HTML <title> tag
+const APP_TITLE = "MapDraw: GPS, GPX, KML, GeoJSON & Strava Editor"; // Used in the HTML <title> tag
 // prettier-ignore
 const APP_DESCRIPTION = "Free online GPX, KML, KMZ & GeoJSON viewer & editor. Draw, view & edit GPS tracks with routing, elevation profiles & Strava integration."; // Used in <meta name="description">
-const APP_DOMAIN = "www.openmapeditor.com"; // Used for Strava setup instructions
+const APP_DOMAIN = "www.mapdraw.net"; // Used for Strava setup instructions
 
 // Core Application Colors
 const DEFAULT_COLOR = "#DC143C"; // Crimson

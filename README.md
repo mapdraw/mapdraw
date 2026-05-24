@@ -1,11 +1,11 @@
 <div align="center">
 <img src="img/icon-1024x1024.png" height="100"/>
 
-# OpenMapEditor
+# MapDraw
 
 </div>
 
-OpenMapEditor is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, and Strava activity integration.
+MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, and Strava activity integration.
 
 ---
 
@@ -30,7 +30,7 @@ OpenMapEditor is a simple, powerful web-based editor for creating, viewing, and 
 
 ## Privacy
 
-OpenMapEditor is built as a local-first application. All processing of your imported geographic data files (GeoJSON, GPX, KML, KMZ) happens **entirely in your web browser**. Your files are never uploaded to or stored on any server.
+MapDraw is built as a local-first application. All processing of your imported geographic data files (GeoJSON, GPX, KML, KMZ) happens **entirely in your web browser**. Your files are never uploaded to or stored on any server.
 
 The application only sends data to external services for specific, optional features that require an API. This communication is limited to the minimum data necessary for the feature to function:
 
@@ -50,7 +50,7 @@ This project is self-contained and does not require a package manager (`npm`).
 1.  **Clone the Repository**
 
     ```bash
-    git clone [https://github.com/openmapeditor/openmapeditor](https://github.com/openmapeditor/openmapeditor)
+    git clone [https://github.com/mapdraw/mapdraw](https://github.com/mapdraw/mapdraw)
     ```
 
 2.  **Provide API Keys**
