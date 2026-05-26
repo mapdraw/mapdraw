@@ -124,17 +124,28 @@ async function showCreditsPopup(isWelcome = false) {
       appNameEl.textContent = APP_NAME;
     }
 
-    Swal.fire({
+    return Swal.fire({
       html: swalContent,
       confirmButtonText: isWelcome ? "Let's Go!" : "Close",
     });
   } catch (error) {
     console.error("Could not load credits.html:", error);
-    Swal.fire({
+    return Swal.fire({
       title: "Error",
       text: "Could not load the credits information.",
     });
   }
+}
+
+function showAttributionToast() {
+  Swal.fire({
+    toast: true,
+    position: "top",
+    html: 'Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="color:inherit">OpenStreetMap</a>',
+    showConfirmButton: false,
+    timer: 5000,
+    timerProgressBar: true,
+  });
 }
 
 /**
@@ -475,8 +486,10 @@ async function initializeMap() {
 
   // Show welcome popup once for new visitors (bare domain, never shown before)
   if (!initialView && !localStorage.getItem("hasSeenWelcome")) {
-    showCreditsPopup(true);
     localStorage.setItem("hasSeenWelcome", "true");
+    showCreditsPopup(true).then(() => showAttributionToast());
+  } else {
+    showAttributionToast();
   }
 
   const allOverlayMaps = {
