@@ -2008,6 +2008,11 @@ body.using-touch {
     display: none !important;
   }
 
+  /* Hide the info panel while the routing pen mode is active */
+  body:not(.force-desktop-layout).pen-draw-mode #info-panel {
+    display: none !important;
+  }
+
   /* Ignore following styles if desktop layout is forced */
   body:not(.force-desktop-layout) {
     /* Move the scale up on mobile */

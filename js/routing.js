@@ -860,6 +860,7 @@ function initializeRouting() {
     penModeClickCount = 0;
     penModeBtn.classList.remove("active");
     document.body.classList.remove("pen-draw-mode");
+    document.dispatchEvent(new CustomEvent("penModeExited"));
   };
 
   penModeBtn.addEventListener("click", (e) => {

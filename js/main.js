@@ -1785,6 +1785,9 @@ async function initializeMap() {
     subtree: true,
     characterData: true,
   });
+
+  document.addEventListener("penModeExited", () => adjustInfoPanelNameHeight(infoPanelName));
+
   let deferredPrompt;
 
   window.addEventListener("beforeinstallprompt", (e) => {
