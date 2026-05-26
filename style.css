@@ -96,6 +96,10 @@ select:focus {
   background: var(--color-neutral-grey);
 }
 
+.grayscale-tiles {
+  filter: grayscale(100%);
+}
+
 /* Unified icon styling */
 
 /* 1. Center all icons in their button containers using flexbox */

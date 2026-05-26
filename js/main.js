@@ -283,6 +283,7 @@ async function initializeMap() {
 
   const layerDisplayNames = {
     OpenStreetMap: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap',
+    OsmGrayscale: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap Gray',
     EsriWorldImagery: '<span class="material-symbols layer-icon">globe</span> Esri World Imagery',
     CyclOSM: '<span class="material-symbols layer-icon">globe</span> CyclOSM',
     TracestrackTopo: '<span class="material-symbols layer-icon">globe</span> Tracestrack Topo',
@@ -300,8 +301,14 @@ async function initializeMap() {
     maxZoom: 19,
   });
 
+  const osmGrayscaleLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    className: "grayscale-tiles",
+  });
+
   const baseMaps = {
     OpenStreetMap: osmLayer,
+    OsmGrayscale: osmGrayscaleLayer,
     EsriWorldImagery: L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { maxZoom: 19 },
