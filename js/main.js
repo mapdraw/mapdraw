@@ -144,7 +144,6 @@ function showAttributionToast() {
     html: 'Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="color:inherit">OpenStreetMap</a>',
     showConfirmButton: false,
     timer: 5000,
-    timerProgressBar: true,
   });
 }
 
@@ -447,6 +446,8 @@ async function initializeMap() {
   // Initialize POI finder first so we can add it to layer control
   initPoiFinder();
 
+  let restoredData = false;
+
   // Import shared data from URL if present (now that layer groups are ready)
   if (window._pendingShareData) {
     const { data, zoom, lat, lon } = window._pendingShareData;
@@ -478,18 +479,20 @@ async function initializeMap() {
     delete window._pendingShareData;
   } else {
     // No share URL — restore previous session from IndexedDB
-    await restoreAutosave();
+    restoredData = await restoreAutosave();
   }
 
   // Start periodic autosave (every 5s, writes only on change)
   startAutosave();
 
   // Show welcome popup once for new visitors (bare domain, never shown before)
+  // Delay attribution toast if restore toast is already showing (matches restoreAutosave's 3000ms timer)
+  const attributionDelay = restoredData ? 3500 : 0;
   if (!initialView && !localStorage.getItem("hasSeenWelcome")) {
     localStorage.setItem("hasSeenWelcome", "true");
     showCreditsPopup(true).then(() => showAttributionToast());
   } else {
-    showAttributionToast();
+    setTimeout(showAttributionToast, attributionDelay);
   }
 
   const allOverlayMaps = {
