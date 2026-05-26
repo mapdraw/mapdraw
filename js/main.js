@@ -274,6 +274,9 @@ async function initializeMap() {
 <p style="text-align: left">
   <strong>Adding Extra Via Points: </strong>You can add extra stops by <strong>long-pressing or right-clicking</strong> anywhere on the route line.
 </p>
+<p style="text-align: left; margin: 18px 0 0 0">
+  <strong>Draw Mode:</strong> Use the <span class="material-symbols" style="font-size: 1em; vertical-align: middle">draw</span> button to trace a route step by step. First click sets the start, second sets the end, and each click after that extends the route. <strong>Right-click, press Escape, or click the button again to finish.</strong>
+</p>
 `,
           confirmButtonText: "Got it!",
         });
@@ -1133,6 +1136,10 @@ async function initializeMap() {
     if ((e.key === "Delete" || e.key === "Backspace") && globallySelectedItem) {
       e.preventDefault();
       deleteLayerImmediately(globallySelectedItem);
+    }
+    if (e.key === "Escape") {
+      if (window.app.exitRoutePointSelectionMode) window.app.exitRoutePointSelectionMode();
+      if (window.app.exitPenMode) window.app.exitPenMode();
     }
   });
 

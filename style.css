@@ -621,6 +621,23 @@ a#info-panel-strava-link:hover {
   box-sizing: border-box;
 }
 
+#routing-pen-btn {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  margin-left: 5px;
+  padding: 5px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#routing-pen-btn.active .material-symbols {
+  color: var(--background-color);
+}
+
 #clear-route-btn,
 #save-route-btn {
   flex: 1;
@@ -1654,6 +1671,12 @@ body.route-point-select-mode * {
 #custom-cursor-via .material-symbols {
   color: var(--routing-color-via);
 }
+/* Crosshair cursor during pen draw mode */
+body.pen-draw-mode .leaflet-container,
+body.pen-draw-mode .leaflet-container * {
+  cursor: crosshair !important;
+}
+
 /* Change cursor to 'all-scroll' when hovering over draggable markers */
 .leaflet-marker-draggable {
   cursor: all-scroll !important;
