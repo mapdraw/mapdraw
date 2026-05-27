@@ -47,6 +47,7 @@ const COLOR_PALETTE = [
 ];
 
 let enablePathSimplification = localStorage.getItem("enablePathSimplification") !== "false";
+let lineThickness = parseInt(localStorage.getItem("lineThickness")) || 10;
 
 /**
  * Centralized style configuration for paths and markers.
@@ -54,12 +55,12 @@ let enablePathSimplification = localStorage.getItem("enablePathSimplification") 
 const STYLE_CONFIG = {
   path: {
     default: {
-      weight: 10,
+      weight: lineThickness,
       opacity: 0.75,
       fill: false,
     },
     highlight: {
-      weight: 10,
+      weight: lineThickness,
       opacity: 1,
       fill: false,
       outline: {

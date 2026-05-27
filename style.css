@@ -1623,10 +1623,27 @@ a#info-panel-strava-link:hover {
   cursor: pointer;
   user-select: none; /* Prevent text selection on click */
 }
-#settings-panel .settings-control-item input {
+#settings-panel .settings-control-item input[type="checkbox"] {
   vertical-align: middle;
   margin-right: 8px;
   transform: scale(1.2);
+}
+
+.settings-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-slider {
+  width: 90px;
+  cursor: pointer;
+}
+
+.settings-slider-value {
+  min-width: 20px;
+  text-align: right;
+  font-size: var(--font-size-14);
 }
 
 /* Shared styles for all panel info icons */

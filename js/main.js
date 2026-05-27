@@ -1626,6 +1626,49 @@ async function initializeMap() {
       }
     });
 
+    const lineThicknessContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
+    const lineThicknessLabel = L.DomUtil.create("label", "", lineThicknessContainer);
+    lineThicknessLabel.htmlFor = "line-thickness-slider";
+    lineThicknessLabel.innerText = "Line Thickness";
+    const lineThicknessRight = L.DomUtil.create(
+      "div",
+      "settings-slider-group",
+      lineThicknessContainer,
+    );
+    const lineThicknessValue = L.DomUtil.create(
+      "span",
+      "settings-slider-value",
+      lineThicknessRight,
+    );
+    lineThicknessValue.innerText = lineThickness;
+    const lineThicknessSlider = L.DomUtil.create("input", "settings-slider", lineThicknessRight);
+    lineThicknessSlider.type = "range";
+    lineThicknessSlider.id = "line-thickness-slider";
+    lineThicknessSlider.min = 2;
+    lineThicknessSlider.max = 20;
+    lineThicknessSlider.step = 2;
+    lineThicknessSlider.value = lineThickness;
+    L.DomEvent.on(lineThicknessSlider, "input", (e) => {
+      lineThickness = parseInt(e.target.value);
+      lineThicknessValue.innerText = lineThickness;
+      STYLE_CONFIG.path.default.weight = lineThickness;
+      STYLE_CONFIG.path.highlight.weight = lineThickness;
+      localStorage.setItem("lineThickness", lineThickness);
+      [drawnItems, importedItems, stravaActivitiesLayer].forEach((group) => {
+        group.eachLayer((layer) => {
+          if (layer instanceof L.Polyline || layer instanceof L.GeoJSON) {
+            layer.setStyle({ weight: lineThickness });
+          }
+        });
+      });
+      if (selectedPathOutline) {
+        selectedPathOutline.setStyle({
+          weight: lineThickness + STYLE_CONFIG.path.highlight.outline.weightOffset,
+        });
+      }
+    });
+    L.DomEvent.on(lineThicknessContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
+
     const routingProviderContainer = L.DomUtil.create(
       "div",
       "settings-control-item",
