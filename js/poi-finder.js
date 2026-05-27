@@ -27,16 +27,22 @@ const POI_CATEGORIES = [
     overpassQuery: ["leisure=park", "leisure=nature_reserve"],
   },
   {
+    id: "camping",
+    name: "Camping",
+    icon: "camping",
+    overpassQuery: "tourism=camp_site",
+  },
+  {
     id: "viewpoint",
     name: "Viewpoint",
     icon: "landscape",
     overpassQuery: "tourism=viewpoint",
   },
   {
-    id: "fireplace",
-    name: "Fireplace / BBQ",
-    icon: "local_fire_department",
-    overpassQuery: ["amenity=bbq", "leisure=firepit"],
+    id: "shelter",
+    name: "Shelter / Hut",
+    icon: "cabin",
+    overpassQuery: ["tourism=alpine_hut", "tourism=wilderness_hut", "amenity=shelter"],
   },
   {
     id: "drinking_water",
@@ -45,16 +51,22 @@ const POI_CATEGORIES = [
     overpassQuery: "amenity=drinking_water",
   },
   {
-    id: "bench",
-    name: "Bench",
-    icon: "chair",
-    overpassQuery: "amenity=bench",
-  },
-  {
     id: "toilet",
     name: "Toilet",
     icon: "wc",
     overpassQuery: "amenity=toilets",
+  },
+  {
+    id: "fireplace",
+    name: "Fireplace / BBQ",
+    icon: "outdoor_grill",
+    overpassQuery: ["amenity=bbq", "leisure=firepit"],
+  },
+  {
+    id: "bench",
+    name: "Bench",
+    icon: "chair",
+    overpassQuery: "amenity=bench",
   },
   // Transport & Supplies
   {
@@ -98,30 +110,6 @@ const POI_CATEGORIES = [
     name: "Cafe",
     icon: "local_cafe",
     overpassQuery: "amenity=cafe",
-  },
-  {
-    id: "fast_food",
-    name: "Fast Food",
-    icon: "fastfood",
-    overpassQuery: "amenity=fast_food",
-  },
-  {
-    id: "pub",
-    name: "Pub",
-    icon: "sports_bar",
-    overpassQuery: "amenity=pub",
-  },
-  {
-    id: "bar",
-    name: "Bar",
-    icon: "local_bar",
-    overpassQuery: "amenity=bar",
-  },
-  {
-    id: "atm",
-    name: "ATM",
-    icon: "local_atm",
-    overpassQuery: "amenity=atm",
   },
 ];
 
