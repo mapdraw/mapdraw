@@ -957,6 +957,12 @@ a#info-panel-strava-link:hover {
   border-right: none;
 }
 
+#tab-btn-data {
+  flex: 0 0 40px;
+  padding: 8px;
+  border-radius: 0;
+}
+
 /* Settings icon button has fixed size */
 #tab-btn-settings {
   flex: 0 0 40px; /* Don't grow, fixed width */
@@ -997,6 +1003,98 @@ a#info-panel-strava-link:hover {
   border-radius: 0 0 var(--border-radius) var(--border-radius);
   background-color: var(--background-color);
   gap: 10px;
+}
+
+/* Data Editor Panel */
+
+/* Stretch the right sidebar to the viewport bottom when editor tab is open */
+#main-right-container:has(#data-editor-panel.active) {
+  height: calc(100vh - 60px);
+}
+
+#main-right-container:has(#data-editor-panel.active) #tab-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#main-right-container:has(#data-editor-panel.active) #tab-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#data-editor-panel {
+  padding: 10px;
+  gap: 8px;
+  background-color: var(--background-color);
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  min-height: 0;
+  flex: 1;
+}
+
+#data-editor-notice {
+  font-size: var(--font-size-12);
+  color: var(--text-color);
+  opacity: 0.6;
+}
+
+#data-editor-textarea {
+  flex: 1;
+  font-family: monospace;
+  font-size: 11px;
+  resize: none;
+  border: 1px solid var(--border-color);
+  background-color: var(--background2-color);
+  color: var(--text-color);
+  padding: 8px;
+  border-radius: var(--border-radius);
+  min-height: 0;
+  line-height: 1.4;
+}
+
+#data-editor-error {
+  font-size: var(--font-size-12);
+  color: var(--color-red);
+  display: none;
+  overflow-wrap: break-word;
+}
+
+#data-editor-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+#data-editor-restore,
+#data-editor-apply,
+#data-editor-copy {
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  padding: 6px;
+  background-color: var(--text-color);
+  color: var(--background-color);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+#data-editor-restore,
+#data-editor-apply {
+  flex: 1;
+}
+
+#data-editor-copy {
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#data-editor-copy .material-symbols {
+  color: inherit;
 }
 
 /* Themed Sweetalert2 Styles */
@@ -2207,6 +2305,10 @@ body.using-touch {
 
     #tab-btn-settings {
       border-right: none;
+    }
+
+    #tab-btn-data {
+      display: none !important;
     }
 
     #tab-content,

@@ -104,6 +104,14 @@
               Strava
             </button>
             <button
+              id="tab-btn-data"
+              class="tab-button"
+              data-target="data-editor-panel"
+              title="GeoJSON Editor"
+            >
+              <span class="material-symbols">data_object</span>
+            </button>
+            <button
               id="tab-btn-settings"
               class="tab-button"
               data-target="settings-panel"
@@ -240,6 +248,24 @@
               </div>
             </div>
             <div id="settings-panel" class="tab-panel"></div>
+            <div id="data-editor-panel" class="tab-panel">
+              <div id="data-editor-notice">Excludes Strava activities and unsaved routes.</div>
+              <textarea
+                id="data-editor-textarea"
+                spellcheck="false"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+              ></textarea>
+              <div id="data-editor-error"></div>
+              <div id="data-editor-actions">
+                <button id="data-editor-restore">Reset to Map</button>
+                <button id="data-editor-apply">Apply to Map</button>
+                <button id="data-editor-copy" title="Copy GeoJSON to clipboard">
+                  <span class="material-symbols">content_copy</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -290,6 +316,7 @@
     <script src="/js/search.js"></script>
     <script src="/js/poi-finder.js"></script>
     <script src="/js/dev-panel.js"></script>
+    <script src="/js/data-editor.js"></script>
     <script src="/js/main.js"></script>
     <!-- END-BUNDLE -->
   </body>

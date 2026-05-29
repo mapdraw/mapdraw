@@ -1,0 +1,195 @@
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
+
+/**
+ * GEOJSON EDITOR
+ *
+ * Desktop-only tab that shows all current map features as editable GeoJSON.
+ * Auto-refreshes when the map changes. Supports applying edited JSON back to the map.
+ *
+ * - pathType is serialized into each feature so drawn vs. imported items survive a round-trip.
+ * - Apply validates JSON, GeoJSON structure, and geometry before clearing the map.
+ * - isDirty blocks auto-refresh while the user has unsaved edits in the textarea.
+ */
+
+let isDirty = false;
+
+function buildDataEditorGeoJSON() {
+  const allLayers = [...editableLayers.getLayers(), ...importedItems.getLayers()];
+  const features = [];
+
+  allLayers.forEach((layer) => {
+    try {
+      const geojson = layer.toGeoJSON();
+      if (!geojson || !geojson.geometry || !geojson.geometry.type) return;
+
+      applyFullPrecisionCoordinates(layer, geojson);
+
+      const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+
+      const filteredProperties = Object.keys(geojson.properties || {}).reduce((acc, key) => {
+        if (!GEOJSON_EXPORT_EXCLUDED_PROPERTIES.includes(key)) {
+          acc[key] = geojson.properties[key];
+        }
+        return acc;
+      }, {});
+
+      geojson.properties = { ...filteredProperties, pathType: layer.pathType || "drawn" };
+
+      if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
+        geojson.properties.stroke = color;
+      } else if (layer instanceof L.Marker) {
+        geojson.properties["marker-color"] = color;
+      }
+
+      geojson.type = "Feature";
+      features.push(geojson);
+    } catch (e) {
+      console.error("GeoJSON editor: error serializing layer", e);
+    }
+  });
+
+  return { type: "FeatureCollection", features };
+}
+
+function refreshDataEditor() {
+  if (isDirty) return;
+  const textarea = document.getElementById("data-editor-textarea");
+  const error = document.getElementById("data-editor-error");
+  textarea.value = JSON.stringify(buildDataEditorGeoJSON(), null, 2);
+  error.textContent = "";
+  error.style.display = "none";
+}
+
+function applyDataEditor() {
+  const textarea = document.getElementById("data-editor-textarea");
+  const error = document.getElementById("data-editor-error");
+
+  let parsed;
+  try {
+    parsed = JSON.parse(textarea.value);
+  } catch (e) {
+    error.textContent = "Invalid JSON: " + e.message;
+    error.style.display = "block";
+    return;
+  }
+
+  if (parsed.type === "Feature") {
+    parsed = { type: "FeatureCollection", features: [parsed] };
+  } else if (parsed.type !== "FeatureCollection") {
+    error.textContent = "Must be a GeoJSON FeatureCollection or Feature.";
+    error.style.display = "block";
+    return;
+  }
+
+  if (parsed.features.length > 0) {
+    try {
+      if (L.geoJSON(parsed).getLayers().length === 0) {
+        error.textContent = "No valid features found — check geometry types and coordinates.";
+        error.style.display = "block";
+        return;
+      }
+    } catch (e) {
+      error.textContent = "Invalid geometry: " + e.message;
+      error.style.display = "block";
+      return;
+    }
+  }
+
+  error.textContent = "";
+  error.style.display = "none";
+
+  deselectCurrentItem();
+  drawnItems.clearLayers();
+  editableLayers.clearLayers();
+  importedItems.clearLayers();
+
+  const drawnFeatures = [];
+  const importedFeatures = [];
+
+  parsed.features.forEach((f) => {
+    const pt = f.properties?.pathType;
+    if (pt === "drawn" || pt === "route") {
+      drawnFeatures.push(f);
+    } else {
+      importedFeatures.push(f);
+    }
+  });
+
+  if (importedFeatures.length > 0) {
+    importGeoJsonToMap({ type: "FeatureCollection", features: importedFeatures }, "geojson");
+  }
+
+  if (drawnFeatures.length > 0) {
+    const layerGroup = importGeoJsonToMap(
+      { type: "FeatureCollection", features: drawnFeatures },
+      "geojson",
+    );
+    layerGroup.eachLayer((layer) => {
+      importedItems.removeLayer(layer);
+      drawnItems.addLayer(layer);
+      editableLayers.addLayer(layer);
+      layer.pathType = layer.feature?.properties?.pathType || "drawn";
+    });
+    updateOverviewList();
+  }
+
+  isDirty = false;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const tabBtn = document.getElementById("tab-btn-data");
+  if (getComputedStyle(tabBtn).display === "none") return;
+
+  const textarea = document.getElementById("data-editor-textarea");
+  const panel = document.getElementById("data-editor-panel");
+
+  textarea.addEventListener("input", () => {
+    isDirty = true;
+  });
+
+  textarea.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      applyDataEditor();
+    }
+  });
+
+  document.getElementById("data-editor-restore").addEventListener("click", () => {
+    isDirty = false;
+    refreshDataEditor();
+  });
+
+  document.getElementById("data-editor-copy").addEventListener("click", () => {
+    navigator.clipboard.writeText(textarea.value).then(() => {
+      Swal.fire({
+        toast: true,
+        icon: "success",
+        title: "GeoJSON Copied!",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    });
+  });
+
+  document.getElementById("data-editor-apply").addEventListener("click", applyDataEditor);
+
+  tabBtn.addEventListener("click", refreshDataEditor);
+
+  // Tab is desktop-only — fall back to Contents if viewport shrinks to mobile while active
+  window.matchMedia("(max-width: 768px)").addEventListener("change", (e) => {
+    if (e.matches && panel.classList.contains("active")) {
+      document.getElementById("tab-btn-overview").click();
+    }
+  });
+
+  let refreshTimer = null;
+  const observer = new MutationObserver(() => {
+    if (!panel.classList.contains("active")) return;
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshDataEditor, 150);
+  });
+  observer.observe(document.getElementById("overview-panel-list"), {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+});
