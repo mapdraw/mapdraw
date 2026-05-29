@@ -182,14 +182,23 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   let refreshTimer = null;
-  const observer = new MutationObserver(() => {
+  const scheduleRefresh = () => {
     if (!panel.classList.contains("active")) return;
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(refreshDataEditor, 150);
-  });
+  };
+
+  const observer = new MutationObserver(scheduleRefresh);
   observer.observe(document.getElementById("overview-panel-list"), {
     childList: true,
     subtree: true,
     characterData: true,
+  });
+
+  // Color changes don't update the overview list DOM, so observe the color swatch directly
+  const colorObserver = new MutationObserver(scheduleRefresh);
+  colorObserver.observe(document.getElementById("info-panel-color-swatch"), {
+    attributes: true,
+    attributeFilter: ["style"],
   });
 });
