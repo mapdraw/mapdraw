@@ -311,7 +311,7 @@ a#info-panel-strava-link:hover {
   margin: 0;
   overflow-y: auto;
   flex-grow: 1;
-  max-height: calc(100dvh - 400px);
+  max-height: calc(var(--panel-available-height, calc(100dvh - 210px)) - 10px);
 }
 .overview-list-item {
   display: flex;
@@ -884,7 +884,7 @@ a#info-panel-strava-link:hover {
   padding: 0;
   margin: 0;
   overflow-y: auto;
-  max-height: 125px;
+  max-height: calc(var(--panel-available-height, 325px) - 235px);
   background-color: var(--background-color);
 }
 
@@ -1003,6 +1003,8 @@ a#info-panel-strava-link:hover {
   border-radius: 0 0 var(--border-radius) var(--border-radius);
   background-color: var(--background-color);
   gap: 10px;
+  max-height: var(--panel-available-height, calc(100dvh - 200px));
+  overflow-y: auto;
 }
 
 /* Data Editor Panel */
@@ -2287,6 +2289,10 @@ body.using-touch {
     }
 
     #directions-list {
+      max-height: none;
+    }
+
+    #settings-panel {
       max-height: none;
     }
 
