@@ -1954,6 +1954,24 @@ async function initializeMap() {
 
 document.addEventListener("DOMContentLoaded", initializeMap);
 
+// Keep scrollable panel max-heights in sync with the info panel's actual height.
+// A static CSS value can't account for the info panel growing when an item is selected.
+document.addEventListener("DOMContentLoaded", () => {
+  const tabContent = document.getElementById("tab-content");
+  const container = document.getElementById("main-right-container");
+  const infoPanel = document.getElementById("info-panel");
+  if (!tabContent || !container || !infoPanel) return;
+
+  function updatePanelMaxHeights() {
+    const available = Math.floor(window.innerHeight - tabContent.getBoundingClientRect().top - 10);
+    container.style.setProperty("--panel-available-height", available + "px");
+  }
+
+  new ResizeObserver(updatePanelMaxHeights).observe(infoPanel);
+  window.addEventListener("resize", updatePanelMaxHeights);
+  updatePanelMaxHeights();
+});
+
 // Offline indicator
 (function () {
   const searchBtn = document.getElementById("search-btn");
