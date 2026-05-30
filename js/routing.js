@@ -265,7 +265,7 @@ function initializeRouting() {
           const directionsPanel = document.getElementById("directions-panel");
           const directionsList = document.getElementById("directions-list");
           directionsList.innerHTML = "";
-          directionsPanel.style.display = "block";
+          directionsPanel.style.display = "flex";
 
           if (route.instructions && route.instructions.length > 0) {
             route.instructions.forEach((instr) => {

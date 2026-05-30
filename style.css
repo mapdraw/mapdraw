@@ -142,6 +142,7 @@ select:focus {
   align-items: center;
   padding: 10px;
   box-sizing: border-box;
+  flex-shrink: 0; /* Never compress info panel; tab container absorbs remaining space */
 }
 
 #info-panel-name {
@@ -310,8 +311,8 @@ a#info-panel-strava-link:hover {
   padding: 0;
   margin: 0;
   overflow-y: auto;
-  flex-grow: 1;
-  max-height: calc(var(--panel-available-height, calc(100dvh - 210px)) - 10px);
+  flex: 1;
+  min-height: 0;
 }
 .overview-list-item {
   display: flex;
@@ -493,11 +494,22 @@ a#info-panel-strava-link:hover {
   border: none;
   border-radius: 0 0 var(--border-radius) var(--border-radius);
   padding: 0;
+  overflow-y: hidden; /* directions list scrolls independently; panel itself must not scroll */
 }
 
 #routing-panel-content {
   padding: 10px;
   padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#routing-panel-content > .panel-input-group,
+#routing-summary-container {
+  flex-shrink: 0;
 }
 
 .panel-input-group {
@@ -844,6 +856,12 @@ a#info-panel-strava-link:hover {
   border-radius: var(--border-radius);
   overflow: hidden; /* To contain the rounded corners */
   display: none; /* Hidden by default, shown when a route is found */
+  flex-direction: column; /* Applied when JS sets display: flex */
+}
+
+#directions-panel:not(.collapsed) {
+  flex: 1;
+  min-height: 0;
 }
 
 #directions-panel-header {
@@ -858,6 +876,7 @@ a#info-panel-strava-link:hover {
   font-size: var(--font-size-12);
   border-bottom: 1px solid var(--border-color);
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 #directions-panel.collapsed #directions-panel-header {
@@ -883,9 +902,10 @@ a#info-panel-strava-link:hover {
   list-style: none;
   padding: 0;
   margin: 0;
-  overflow-y: auto;
-  max-height: calc(var(--panel-available-height, 325px) - 235px);
   background-color: var(--background-color);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 #directions-panel.collapsed #directions-list {
@@ -910,6 +930,11 @@ a#info-panel-strava-link:hover {
 #tab-container {
   width: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* allow flex to shrink below content size */
+  overflow: hidden;
 }
 
 #tab-buttons {
@@ -985,6 +1010,11 @@ a#info-panel-strava-link:hover {
   border: 1px solid var(--border-color);
   border-top: none;
   border-radius: 0 0 var(--border-radius) var(--border-radius);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tab-panel {
@@ -992,8 +1022,16 @@ a#info-panel-strava-link:hover {
 }
 
 .tab-panel.active {
-  display: flex; /* Use flex for both panels */
+  display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Overview panel: list is the scroll container, not the panel itself */
+#overview-panel {
+  overflow-y: hidden;
 }
 
 /* Settings Panel Style */
@@ -1003,8 +1041,6 @@ a#info-panel-strava-link:hover {
   border-radius: 0 0 var(--border-radius) var(--border-radius);
   background-color: var(--background-color);
   gap: 10px;
-  max-height: var(--panel-available-height, calc(100dvh - 200px));
-  overflow-y: auto;
 }
 
 /* Data Editor Panel */
@@ -1813,8 +1849,10 @@ body.pen-draw-mode .leaflet-container * {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 10px; /* Space between panels */
+  gap: 10px;
   max-width: calc(100vw - 61px);
+  max-height: calc(100dvh - 60px);
+  overflow: hidden;
   cursor: auto;
 }
 
@@ -2259,40 +2297,42 @@ body.using-touch {
       min-height: 0;
     }
 
-    /* Scrolling fix */
     #tab-content {
-      flex-grow: 1;
-      display: flex;
-      overflow: hidden;
       border-left: none;
       border-right: none;
       border-bottom: none;
     }
 
     .tab-panel.active {
-      flex-grow: 1;
       border-radius: 0 !important;
     }
 
-    /* For the Contents tab, add padding directly to the list */
-    #overview-panel-list {
-      max-height: none;
+    .tab-panel.active:not(#overview-panel) {
       padding-bottom: 20px;
       box-sizing: border-box;
     }
 
-    /* For all OTHER tabs, make the whole panel scrollable and add ONLY bottom padding */
-    .tab-panel.active:not(#overview-panel) {
-      overflow-y: auto;
-      padding-bottom: 20px; /* Only add the buffer at the bottom */
-      box-sizing: border-box;
+    #overview-panel-list {
+      padding-bottom: 20px;
+    }
+
+    #routing-panel {
+      overflow-y: auto; /* whole panel scrolls on mobile */
+    }
+
+    #routing-panel-content {
+      display: block;
+      flex: none;
+      overflow: visible;
+    }
+
+    #directions-panel {
+      flex: none;
     }
 
     #directions-list {
-      max-height: none;
-    }
-
-    #settings-panel {
+      flex: none;
+      overflow-y: visible;
       max-height: none;
     }
 
