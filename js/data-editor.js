@@ -8,10 +8,14 @@
  *
  * - pathType is serialized into each feature so drawn vs. imported items survive a round-trip.
  * - Apply validates JSON, GeoJSON structure, and geometry before clearing the map.
- * - isDirty blocks auto-refresh while the user has unsaved edits in the textarea.
+ * - isDirty blocks auto-refresh while the user has unsaved edits in the editor.
  */
 
+const CM_THEME_LIGHT = "eclipse";
+const CM_THEME_DARK = "dracula";
+
 let isDirty = false;
+let cmEditor = null;
 
 function buildDataEditorGeoJSON() {
   const allLayers = [...editableLayers.getLayers(), ...importedItems.getLayers()];
@@ -52,21 +56,22 @@ function buildDataEditorGeoJSON() {
 }
 
 function refreshDataEditor() {
-  if (isDirty) return;
-  const textarea = document.getElementById("data-editor-textarea");
+  if (isDirty || !cmEditor) return;
+  const newJson = JSON.stringify(buildDataEditorGeoJSON(), null, 2);
+  if (newJson === cmEditor.getValue()) return;
   const error = document.getElementById("data-editor-error");
-  textarea.value = JSON.stringify(buildDataEditorGeoJSON(), null, 2);
+  cmEditor.setValue(newJson);
   error.textContent = "";
   error.style.display = "none";
 }
 
 function applyDataEditor() {
-  const textarea = document.getElementById("data-editor-textarea");
+  if (!cmEditor) return;
   const error = document.getElementById("data-editor-error");
 
   let parsed;
   try {
-    parsed = JSON.parse(textarea.value);
+    parsed = JSON.parse(cmEditor.getValue());
   } catch (e) {
     error.textContent = "Invalid JSON: " + e.message;
     error.style.display = "block";
@@ -143,13 +148,59 @@ document.addEventListener("DOMContentLoaded", () => {
   const textarea = document.getElementById("data-editor-textarea");
   const panel = document.getElementById("data-editor-panel");
 
-  textarea.addEventListener("input", () => {
-    isDirty = true;
+  const getCmTheme = () =>
+    document.body.classList.contains("dark-mode") ? CM_THEME_DARK : CM_THEME_LIGHT;
+
+  cmEditor = CodeMirror.fromTextArea(textarea, {
+    mode: { name: "javascript", json: true },
+    theme: getCmTheme(),
+    lineNumbers: true,
+    matchBrackets: true,
+    foldGutter: true,
+    gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter", "CodeMirror-lint-markers"],
+    styleActiveLine: true,
+    lineWrapping: false,
+    lint: {
+      getAnnotations: (text) => {
+        if (!text.trim()) return [];
+        try {
+          JSON.parse(text);
+        } catch (e) {
+          let from = CodeMirror.Pos(0, 0);
+          const posMatch = e.message.match(/at position (\d+)/);
+          const lineColMatch = e.message.match(/at line (\d+) column (\d+)/);
+          if (posMatch) {
+            from = cmEditor.getDoc().posFromIndex(parseInt(posMatch[1]));
+          } else if (lineColMatch) {
+            from = CodeMirror.Pos(parseInt(lineColMatch[1]) - 1, parseInt(lineColMatch[2]) - 1);
+          }
+          return [
+            {
+              from,
+              to: CodeMirror.Pos(from.line, from.ch + 1),
+              message: e.message,
+              severity: "error",
+            },
+          ];
+        }
+        return [];
+      },
+    },
+    extraKeys: {
+      "Cmd-Enter": applyDataEditor,
+      "Ctrl-Enter": applyDataEditor,
+      "Ctrl-Q": (cm) => cm.foldCode(cm.getCursor()),
+    },
   });
 
-  textarea.addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      applyDataEditor();
+  new MutationObserver(() => {
+    cmEditor.setOption("theme", getCmTheme());
+  }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+  // Only mark dirty on user edits, not on programmatic setValue calls
+  cmEditor.on("change", (cm, change) => {
+    if (change.origin !== "setValue") {
+      isDirty = true;
     }
   });
 
@@ -159,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("data-editor-copy").addEventListener("click", () => {
-    navigator.clipboard.writeText(textarea.value).then(() => {
+    navigator.clipboard.writeText(cmEditor.getValue()).then(() => {
       Swal.fire({
         toast: true,
         icon: "success",
@@ -172,7 +223,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("data-editor-apply").addEventListener("click", applyDataEditor);
 
-  tabBtn.addEventListener("click", refreshDataEditor);
+  tabBtn.addEventListener("click", () => {
+    refreshDataEditor();
+    // CodeMirror needs a refresh after becoming visible
+    setTimeout(() => cmEditor.refresh(), 0);
+  });
 
   // Tab is desktop-only — fall back to Contents if viewport shrinks to mobile while active
   window.matchMedia("(max-width: 768px)").addEventListener("change", (e) => {

@@ -1065,7 +1065,7 @@ a#info-panel-strava-link:hover {
 }
 
 #data-editor-panel {
-  padding: 10px;
+  padding: 8px 0;
   gap: 8px;
   background-color: var(--background-color);
   border-radius: 0 0 var(--border-radius) var(--border-radius);
@@ -1077,20 +1077,55 @@ a#info-panel-strava-link:hover {
   font-size: var(--font-size-12);
   color: var(--text-color);
   opacity: 0.6;
+  padding: 0 10px;
 }
 
-#data-editor-textarea {
+#data-editor-panel .CodeMirror {
   flex: 1;
-  font-family: monospace !important;
-  font-size: 11px;
-  resize: none;
-  border: 1px solid var(--border-color);
-  background-color: var(--background2-color);
-  color: var(--text-color);
-  padding: 8px;
-  border-radius: var(--border-radius);
+  height: 0; /* flex controls height */
   min-height: 0;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.5;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+#data-editor-panel .CodeMirror,
+#data-editor-panel .CodeMirror * {
+  font-family: monospace !important;
+}
+
+#data-editor-panel .CodeMirror-gutters {
+  border-right-color: var(--border-color);
+}
+
+.CodeMirror-lint-tooltip {
+  z-index: 5000;
+  font-family: monospace !important;
+}
+
+#data-editor-panel .CodeMirror-linenumber {
+  color: #999;
+  font-size: 75%;
+  padding: 0 1px 0 5px;
+}
+
+#data-editor-panel .CodeMirror-cursor {
+  border-left-color: var(--text-color);
+}
+
+#data-editor-panel .CodeMirror-activeline-background {
+  background: rgba(128, 128, 128, 0.08);
+}
+
+#data-editor-panel .CodeMirror-selected {
+  background: rgba(128, 128, 128, 0.2);
+}
+
+#data-editor-panel .CodeMirror-foldmarker {
+  color: var(--text-color);
+  opacity: 0.5;
 }
 
 #data-editor-error {
@@ -1098,12 +1133,14 @@ a#info-panel-strava-link:hover {
   color: var(--color-red);
   display: none;
   overflow-wrap: break-word;
+  padding: 0 10px;
 }
 
 #data-editor-actions {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+  padding: 0 10px;
 }
 
 #data-editor-restore,
