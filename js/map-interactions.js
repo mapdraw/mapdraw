@@ -167,7 +167,9 @@ function selectItem(layer) {
   if (newListItem) {
     newListItem.classList.add("selected");
     if (document.getElementById("overview-panel").classList.contains("active")) {
-      newListItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      requestAnimationFrame(() => {
+        newListItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
     }
   }
 
