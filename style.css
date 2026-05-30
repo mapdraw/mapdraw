@@ -150,7 +150,7 @@ select:focus {
   font-size: var(--font-size-14);
   font-weight: bold;
   text-align: center;
-  width: 250px;
+  width: 300px;
   max-width: 100%;
   margin-bottom: 5px;
   background-color: var(--background-color);
@@ -1882,7 +1882,7 @@ body.pen-draw-mode .leaflet-container * {
   position: absolute;
   top: 50px;
   right: 10px;
-  width: 320px;
+  width: 360px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
