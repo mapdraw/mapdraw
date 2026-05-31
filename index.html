@@ -12,6 +12,20 @@
 
     <link rel="manifest" href="/manifest.json" />
 
+    <link rel="stylesheet" href="/codemirror-6.65.7/lib/codemirror.css" />
+    <link rel="stylesheet" href="/codemirror-6.65.7/addon/fold/foldgutter.css" />
+    <link rel="stylesheet" href="/codemirror-6.65.7/theme/eclipse.css" />
+    <link rel="stylesheet" href="/codemirror-6.65.7/theme/dracula.css" />
+    <script src="/codemirror-6.65.7/lib/codemirror.js"></script>
+    <script src="/codemirror-6.65.7/mode/javascript/javascript.js"></script>
+    <script src="/codemirror-6.65.7/addon/edit/matchbrackets.js"></script>
+    <script src="/codemirror-6.65.7/addon/fold/foldcode.js"></script>
+    <script src="/codemirror-6.65.7/addon/fold/foldgutter.js"></script>
+    <script src="/codemirror-6.65.7/addon/fold/brace-fold.js"></script>
+    <script src="/codemirror-6.65.7/addon/selection/active-line.js"></script>
+    <link rel="stylesheet" href="/codemirror-6.65.7/addon/lint/lint.css" />
+    <script src="/codemirror-6.65.7/addon/lint/lint.js"></script>
+
     <script src="/d3-7.9.0/d3.v7.min.js"></script>
 
     <link rel="stylesheet" href="/flag-icons-7.5.0/css/flag-icons.min.css" />
@@ -102,6 +116,14 @@
             </button>
             <button id="tab-btn-strava" class="tab-button" data-target="strava-panel">
               Strava
+            </button>
+            <button
+              id="tab-btn-data"
+              class="tab-button"
+              data-target="data-editor-panel"
+              title="GeoJSON Editor"
+            >
+              <span class="material-symbols">data_object</span>
             </button>
             <button
               id="tab-btn-settings"
@@ -240,6 +262,27 @@
               </div>
             </div>
             <div id="settings-panel" class="tab-panel"></div>
+            <div id="data-editor-panel" class="tab-panel">
+              <div id="data-editor-notice">Excludes Strava activities and unsaved routes.</div>
+              <textarea
+                id="data-editor-textarea"
+                spellcheck="false"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+              ></textarea>
+              <div id="data-editor-error" role="alert"></div>
+              <div id="data-editor-actions">
+                <button id="data-editor-restore">Reset</button>
+                <button id="data-editor-apply">Apply</button>
+                <button id="data-editor-find" title="Jump to selected feature">
+                  Go to Selected
+                </button>
+                <button id="data-editor-copy" title="Copy GeoJSON to clipboard">
+                  <span class="material-symbols">content_copy</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -290,6 +333,7 @@
     <script src="/js/search.js"></script>
     <script src="/js/poi-finder.js"></script>
     <script src="/js/dev-panel.js"></script>
+    <script src="/js/data-editor.js"></script>
     <script src="/js/main.js"></script>
     <!-- END-BUNDLE -->
   </body>
