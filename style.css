@@ -1219,6 +1219,10 @@ a#info-panel-strava-link:hover {
   flex: 1 1 auto !important;
 }
 
+.attribution-toast {
+  padding-top: 0;
+}
+
 /* Center text in toast notifications */
 .swal2-toast .swal2-title {
   text-align: center !important;

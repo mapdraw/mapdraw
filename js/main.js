@@ -144,6 +144,7 @@ function showAttributionToast() {
     html: 'Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="color:inherit">OpenStreetMap</a>',
     showConfirmButton: false,
     timer: 5000,
+    customClass: { popup: "attribution-toast" },
   });
 }
 
