@@ -213,27 +213,41 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("data-editor-restore").addEventListener("click", () => {
+    const hadEdits = isDirty;
     isDirty = false;
     refreshDataEditor();
-    Swal.fire({
-      toast: true,
-      icon: "info",
-      title: "Reset to Map!",
-      showConfirmButton: false,
-      timer: 1500,
-    });
-  });
-
-  document.getElementById("data-editor-copy").addEventListener("click", () => {
-    navigator.clipboard.writeText(cmEditor.getValue()).then(() => {
+    if (hadEdits) {
       Swal.fire({
         toast: true,
-        icon: "success",
-        title: "GeoJSON Copied!",
+        icon: "info",
+        title: "Reset to Map!",
         showConfirmButton: false,
         timer: 1500,
       });
-    });
+    }
+  });
+
+  document.getElementById("data-editor-copy").addEventListener("click", () => {
+    navigator.clipboard
+      .writeText(cmEditor.getValue())
+      .then(() => {
+        Swal.fire({
+          toast: true,
+          icon: "success",
+          title: "GeoJSON Copied!",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      })
+      .catch(() => {
+        Swal.fire({
+          toast: true,
+          icon: "error",
+          title: "Copy failed",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      });
   });
 
   document.getElementById("data-editor-apply").addEventListener("click", applyDataEditor);
@@ -246,6 +260,16 @@ document.addEventListener("DOMContentLoaded", () => {
         title: "No feature selected",
         showConfirmButton: false,
         timer: 1500,
+      });
+      return;
+    }
+    if (isDirty) {
+      Swal.fire({
+        toast: true,
+        icon: "warning",
+        title: "Apply or reset your edits first",
+        showConfirmButton: false,
+        timer: 2000,
       });
       return;
     }
