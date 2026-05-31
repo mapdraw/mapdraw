@@ -275,7 +275,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const allLayers = [...editableLayers.getLayers(), ...importedItems.getLayers()];
     const index = allLayers.indexOf(globallySelectedItem);
-    if (index === -1) return;
+    if (index === -1) {
+      Swal.fire({
+        toast: true,
+        icon: "info",
+        title: "Selected feature is not shown in the editor",
+        showConfirmButton: false,
+        timer: 2000,
+      });
+      return;
+    }
     const content = cmEditor.getValue();
     let count = 0;
     let pos = 0;
