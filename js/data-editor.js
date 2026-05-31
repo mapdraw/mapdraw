@@ -111,7 +111,7 @@ function applyDataEditor() {
   const drawnFeatures = [];
   const importedFeatures = [];
 
-  parsed.features.forEach((f) => {
+  (parsed.features ?? []).forEach((f) => {
     const pt = f.properties?.pathType;
     if (pt === "drawn" || pt === "route") {
       drawnFeatures.push(f);
