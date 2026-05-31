@@ -1756,17 +1756,6 @@ async function initializeMap() {
       L.DomEvent.stopPropagation,
     );
 
-    const privacyPolicyContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
-    const privacyPolicyLabel = L.DomUtil.create("label", "", privacyPolicyContainer);
-    privacyPolicyLabel.innerText = "Legal";
-    privacyPolicyLabel.style.color = "var(--text-color)";
-    const privacyPolicyLink = L.DomUtil.create("a", "", privacyPolicyContainer);
-    privacyPolicyLink.href = "/privacy.html";
-    privacyPolicyLink.target = "_blank";
-    privacyPolicyLink.innerText = "View Privacy Policy";
-    privacyPolicyLink.style.fontSize = "var(--font-size-14)";
-    privacyPolicyLink.style.color = "var(--highlight-color)";
-
     const aboutContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const aboutLabel = L.DomUtil.create("label", "", aboutContainer);
     aboutLabel.innerText = "About";
@@ -1780,6 +1769,17 @@ async function initializeMap() {
       L.DomEvent.stop(e);
       showCreditsPopup();
     });
+
+    const privacyPolicyContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
+    const privacyPolicyLabel = L.DomUtil.create("label", "", privacyPolicyContainer);
+    privacyPolicyLabel.innerText = "Legal";
+    privacyPolicyLabel.style.color = "var(--text-color)";
+    const privacyPolicyLink = L.DomUtil.create("a", "", privacyPolicyContainer);
+    privacyPolicyLink.href = "/privacy.html";
+    privacyPolicyLink.target = "_blank";
+    privacyPolicyLink.innerText = "View Privacy Policy";
+    privacyPolicyLink.style.fontSize = "var(--font-size-14)";
+    privacyPolicyLink.style.color = "var(--highlight-color)";
 
     const devPanelContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const devPanelLabel = L.DomUtil.create("label", "", devPanelContainer);
