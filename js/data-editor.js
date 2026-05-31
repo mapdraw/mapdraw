@@ -45,8 +45,11 @@ function buildDataEditorGeoJSON() {
         geojson.properties["marker-color"] = color;
       }
 
-      geojson.type = "Feature";
-      features.push(geojson);
+      features.push({
+        type: "Feature",
+        properties: geojson.properties,
+        geometry: geojson.geometry,
+      });
     } catch (e) {
       console.error("GeoJSON editor: error serializing layer", e);
     }
