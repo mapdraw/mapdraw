@@ -139,6 +139,14 @@ function applyDataEditor() {
   }
 
   isDirty = false;
+
+  Swal.fire({
+    toast: true,
+    icon: "success",
+    title: "Applied to Map!",
+    showConfirmButton: false,
+    timer: 1500,
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -198,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
   // Only mark dirty on user edits, not on programmatic setValue calls
-  cmEditor.on("change", (cm, change) => {
+  cmEditor.on("change", (_cm, change) => {
     if (change.origin !== "setValue") {
       isDirty = true;
     }
@@ -207,6 +215,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("data-editor-restore").addEventListener("click", () => {
     isDirty = false;
     refreshDataEditor();
+    Swal.fire({
+      toast: true,
+      icon: "info",
+      title: "Reset to Map!",
+      showConfirmButton: false,
+      timer: 1500,
+    });
   });
 
   document.getElementById("data-editor-copy").addEventListener("click", () => {
@@ -240,7 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const scheduleRefresh = () => {
     if (!panel.classList.contains("active")) return;
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(refreshDataEditor, 150);
+    refreshTimer = setTimeout(refreshDataEditor, 300);
   };
 
   const observer = new MutationObserver(scheduleRefresh);
