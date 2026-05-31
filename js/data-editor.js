@@ -86,7 +86,7 @@ function applyDataEditor() {
     return;
   }
 
-  if (parsed.features.length > 0) {
+  if (parsed.features?.length > 0) {
     try {
       if (L.geoJSON(parsed).getLayers().length === 0) {
         error.textContent = "No valid features found — check geometry types and coordinates.";
