@@ -1145,7 +1145,8 @@ a#info-panel-strava-link:hover {
 
 #data-editor-restore,
 #data-editor-apply,
-#data-editor-copy {
+#data-editor-copy,
+#data-editor-find {
   font-size: var(--font-size-14);
   font-weight: bold;
   padding: 6px;
@@ -1168,8 +1169,26 @@ a#info-panel-strava-link:hover {
   justify-content: center;
 }
 
+#data-editor-find {
+  flex: 1;
+  white-space: nowrap;
+}
+
 #data-editor-copy .material-symbols {
   color: inherit;
+}
+
+@keyframes cm-find-fade {
+  0% {
+    background-color: rgba(255, 200, 0, 0.4);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+#data-editor-panel .cm-find-highlight {
+  animation: cm-find-fade 3s ease-out forwards;
 }
 
 /* Themed Sweetalert2 Styles */

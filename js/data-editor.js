@@ -238,6 +238,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("data-editor-apply").addEventListener("click", applyDataEditor);
 
+  document.getElementById("data-editor-find").addEventListener("click", () => {
+    if (!globallySelectedItem) {
+      Swal.fire({
+        toast: true,
+        icon: "info",
+        title: "No feature selected",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      return;
+    }
+    const allLayers = [...editableLayers.getLayers(), ...importedItems.getLayers()];
+    const index = allLayers.indexOf(globallySelectedItem);
+    if (index === -1) return;
+    const content = cmEditor.getValue();
+    let count = 0;
+    let pos = 0;
+    while (pos < content.length) {
+      const found = content.indexOf('"type": "Feature"', pos);
+      if (found === -1) return;
+      if (count === index) {
+        const lineInfo = cmEditor.getDoc().posFromIndex(found);
+        const coords = cmEditor.charCoords(
+          { line: Math.max(0, lineInfo.line - 1), ch: 0 },
+          "local",
+        );
+        cmEditor.scrollTo(null, coords.top);
+        cmEditor.setCursor({ line: lineInfo.line, ch: 0 });
+        const handle = cmEditor.addLineClass(lineInfo.line, "background", "cm-find-highlight");
+        setTimeout(() => cmEditor.removeLineClass(handle, "background", "cm-find-highlight"), 3000);
+        return;
+      }
+      count++;
+      pos = found + 1;
+    }
+  });
+
   tabBtn.addEventListener("click", () => {
     refreshDataEditor();
     // CodeMirror needs a refresh after becoming visible
