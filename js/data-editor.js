@@ -151,66 +151,70 @@ function applyDataEditor() {
 
 document.addEventListener("DOMContentLoaded", () => {
   const tabBtn = document.getElementById("tab-btn-data");
-  if (getComputedStyle(tabBtn).display === "none") return;
-
   const textarea = document.getElementById("data-editor-textarea");
   const panel = document.getElementById("data-editor-panel");
 
   const getCmTheme = () =>
     document.body.classList.contains("dark-mode") ? CM_THEME_DARK : CM_THEME_LIGHT;
 
-  cmEditor = CodeMirror.fromTextArea(textarea, {
-    mode: { name: "javascript", json: true },
-    theme: getCmTheme(),
-    lineNumbers: true,
-    matchBrackets: true,
-    foldGutter: true,
-    gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter", "CodeMirror-lint-markers"],
-    styleActiveLine: true,
-    lineWrapping: false,
-    lint: {
-      getAnnotations: (text) => {
-        if (!text.trim()) return [];
-        try {
-          JSON.parse(text);
-        } catch (e) {
-          let from = CodeMirror.Pos(0, 0);
-          const posMatch = e.message.match(/at position (\d+)/);
-          const lineColMatch = e.message.match(/at line (\d+) column (\d+)/);
-          if (posMatch) {
-            from = cmEditor.getDoc().posFromIndex(parseInt(posMatch[1]));
-          } else if (lineColMatch) {
-            from = CodeMirror.Pos(parseInt(lineColMatch[1]) - 1, parseInt(lineColMatch[2]) - 1);
+  // Lazily initialize CodeMirror on first tab click so it measures correct dimensions
+  // regardless of whether the tab was hidden at page load (e.g. mobile with force-desktop-layout).
+  function initCodeMirror() {
+    if (cmEditor) return;
+
+    cmEditor = CodeMirror.fromTextArea(textarea, {
+      mode: { name: "javascript", json: true },
+      theme: getCmTheme(),
+      lineNumbers: true,
+      matchBrackets: true,
+      foldGutter: true,
+      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter", "CodeMirror-lint-markers"],
+      styleActiveLine: true,
+      lineWrapping: false,
+      lint: {
+        getAnnotations: (text) => {
+          if (!text.trim()) return [];
+          try {
+            JSON.parse(text);
+          } catch (e) {
+            let from = CodeMirror.Pos(0, 0);
+            const posMatch = e.message.match(/at position (\d+)/);
+            const lineColMatch = e.message.match(/at line (\d+) column (\d+)/);
+            if (posMatch) {
+              from = cmEditor.getDoc().posFromIndex(parseInt(posMatch[1]));
+            } else if (lineColMatch) {
+              from = CodeMirror.Pos(parseInt(lineColMatch[1]) - 1, parseInt(lineColMatch[2]) - 1);
+            }
+            return [
+              {
+                from,
+                to: CodeMirror.Pos(from.line, from.ch + 1),
+                message: e.message,
+                severity: "error",
+              },
+            ];
           }
-          return [
-            {
-              from,
-              to: CodeMirror.Pos(from.line, from.ch + 1),
-              message: e.message,
-              severity: "error",
-            },
-          ];
-        }
-        return [];
+          return [];
+        },
       },
-    },
-    extraKeys: {
-      "Cmd-Enter": applyDataEditor,
-      "Ctrl-Enter": applyDataEditor,
-      "Ctrl-Q": (cm) => cm.foldCode(cm.getCursor()),
-    },
-  });
+      extraKeys: {
+        "Cmd-Enter": applyDataEditor,
+        "Ctrl-Enter": applyDataEditor,
+        "Ctrl-Q": (cm) => cm.foldCode(cm.getCursor()),
+      },
+    });
 
-  new MutationObserver(() => {
-    cmEditor.setOption("theme", getCmTheme());
-  }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(() => {
+      cmEditor.setOption("theme", getCmTheme());
+    }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
-  // Only mark dirty on user edits, not on programmatic setValue calls
-  cmEditor.on("change", (_cm, change) => {
-    if (change.origin !== "setValue") {
-      isDirty = true;
-    }
-  });
+    // Only mark dirty on user edits, not on programmatic setValue calls
+    cmEditor.on("change", (_cm, change) => {
+      if (change.origin !== "setValue") {
+        isDirty = true;
+      }
+    });
+  }
 
   document.getElementById("data-editor-restore").addEventListener("click", () => {
     const hadEdits = isDirty;
@@ -309,6 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   tabBtn.addEventListener("click", () => {
+    initCodeMirror();
     refreshDataEditor();
     // CodeMirror needs a refresh after becoming visible
     setTimeout(() => cmEditor.refresh(), 0);
