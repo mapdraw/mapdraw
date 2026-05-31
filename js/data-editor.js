@@ -72,13 +72,18 @@ function applyDataEditor() {
   if (!cmEditor) return;
   const error = document.getElementById("data-editor-error");
 
+  const raw = cmEditor.getValue().trim();
   let parsed;
-  try {
-    parsed = JSON.parse(cmEditor.getValue());
-  } catch (e) {
-    error.textContent = "Invalid JSON: " + e.message;
-    error.style.display = "block";
-    return;
+  if (!raw) {
+    parsed = { type: "FeatureCollection", features: [] };
+  } else {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      error.textContent = "Invalid JSON: " + e.message;
+      error.style.display = "block";
+      return;
+    }
   }
 
   if (parsed.type === "Feature") {
@@ -138,9 +143,9 @@ function applyDataEditor() {
       editableLayers.addLayer(layer);
       layer.pathType = layer.feature?.properties?.pathType || "drawn";
     });
-    updateOverviewList();
   }
 
+  updateOverviewList();
   isDirty = false;
 
   Swal.fire({
