@@ -2286,6 +2286,7 @@ body.using-touch {
       bottom: 0;
       transition: top 0.3s ease-in-out;
       /* border-top: 1px solid var(--border-color); */
+      overflow: visible; /* #info-panel is absolutely positioned above this container (bottom: 100%), so hidden would clip it */
     }
 
     #main-right-container.hidden {
