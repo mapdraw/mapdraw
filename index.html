@@ -273,13 +273,18 @@
               ></textarea>
               <div id="data-editor-error" role="alert"></div>
               <div id="data-editor-actions">
-                <button id="data-editor-restore">Reset</button>
-                <button id="data-editor-apply">Apply</button>
+                <button id="data-editor-restore" title="Discard edits and reset to map">
+                  Reset
+                </button>
+                <button id="data-editor-apply" title="Apply to map">Apply</button>
                 <button id="data-editor-find" title="Jump to selected feature">
                   Go to Selected
                 </button>
                 <button id="data-editor-copy" title="Copy GeoJSON to clipboard">
                   <span class="material-symbols">content_copy</span>
+                </button>
+                <button id="data-editor-copy-clean" title="Copy GeoJSON without properties">
+                  Copy Clean
                 </button>
               </div>
             </div>

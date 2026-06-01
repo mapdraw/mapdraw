@@ -239,28 +239,67 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  document.getElementById("data-editor-copy").addEventListener("click", () => {
-    navigator.clipboard
-      .writeText(cmEditor.getValue())
-      .then(() => {
+  function copyGeoJSON(stripProperties) {
+    if (!cmEditor) return;
+    let text = cmEditor.getValue();
+    if (stripProperties) {
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
         Swal.fire({
           toast: true,
-          icon: "success",
-          title: "GeoJSON Copied!",
+          icon: "error",
+          title: "Invalid JSON",
           showConfirmButton: false,
           timer: 1500,
         });
-      })
-      .catch(() => {
+        return;
+      }
+      if (parsed.type !== "Feature" && parsed.type !== "FeatureCollection") {
+        Swal.fire({
+          toast: true,
+          icon: "error",
+          title: "Invalid GeoJSON",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        return;
+      }
+      const fc =
+        parsed.type === "Feature" ? { type: "FeatureCollection", features: [parsed] } : parsed;
+      const clean = {
+        ...fc,
+        features: (fc.features ?? []).map((f) => ({ ...f, properties: {} })),
+      };
+      text = JSON.stringify(clean, null, 2);
+    }
+    navigator.clipboard
+      .writeText(text)
+      .then(() =>
+        Swal.fire({
+          toast: true,
+          icon: "success",
+          title: stripProperties ? "Clean GeoJSON Copied!" : "GeoJSON Copied!",
+          showConfirmButton: false,
+          timer: 1500,
+        }),
+      )
+      .catch(() =>
         Swal.fire({
           toast: true,
           icon: "error",
           title: "Copy failed",
           showConfirmButton: false,
           timer: 1500,
-        });
-      });
-  });
+        }),
+      );
+  }
+
+  document.getElementById("data-editor-copy").addEventListener("click", () => copyGeoJSON(false));
+  document
+    .getElementById("data-editor-copy-clean")
+    .addEventListener("click", () => copyGeoJSON(true));
 
   document.getElementById("data-editor-apply").addEventListener("click", applyDataEditor);
 

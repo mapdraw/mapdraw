@@ -1146,6 +1146,7 @@ a#info-panel-strava-link:hover {
 #data-editor-restore,
 #data-editor-apply,
 #data-editor-copy,
+#data-editor-copy-clean,
 #data-editor-find {
   font-size: var(--font-size-14);
   font-weight: bold;
@@ -1158,7 +1159,8 @@ a#info-panel-strava-link:hover {
 }
 
 #data-editor-restore,
-#data-editor-apply {
+#data-editor-apply,
+#data-editor-copy-clean {
   flex: 1;
 }
 
@@ -1171,7 +1173,6 @@ a#info-panel-strava-link:hover {
 
 #data-editor-find {
   flex: 1;
-  white-space: nowrap;
 }
 
 #data-editor-copy .material-symbols {
