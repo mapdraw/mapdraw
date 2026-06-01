@@ -4,7 +4,7 @@ const APP_NAME = "MapDraw.net"; // Used throughout the app as name
 // prettier-ignore
 const APP_TITLE = "MapDraw: Draw on Map, GPS, GPX, KML & GeoJSON Editor"; // Used in the HTML <title> tag
 // prettier-ignore
-const APP_DESCRIPTION = "Free online GPX, KML, KMZ & GeoJSON map viewer & editor. Draw, view & edit GPS tracks with routing, elevation profiles & Strava integration."; // Used in <meta name="description">
+const APP_DESCRIPTION = "Free online GPX, KML, KMZ & GeoJSON viewer & editor. Draw, view & edit GPS tracks with routing, elevation profiles & Strava integration."; // Used in <meta name="description">
 const APP_DOMAIN = "www.mapdraw.net"; // Used for Strava setup instructions
 
 // Core Application Colors
