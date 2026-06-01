@@ -1222,6 +1222,13 @@ a#info-panel-strava-link:hover {
 
 .attribution-toast {
   padding-top: 0;
+  width: fit-content !important;
+  background-color: var(--highlight-color) !important;
+  color: var(--color-white) !important;
+}
+
+.attribution-toast .swal2-html-container {
+  color: var(--color-white) !important;
 }
 
 /* Center text in toast notifications */
