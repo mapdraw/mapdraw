@@ -309,6 +309,10 @@ async function initializeMap() {
     StravaActivities:
       '<span class="material-symbols layer-icon">directions_run</span> Strava Activities',
     FoundPlaces: '<span class="material-symbols layer-icon">location_on</span> Found Places',
+    WaymarkedTrailsHiking:
+      '<span class="material-symbols layer-icon">directions_walk</span> Waymarked Trails Hiking',
+    WaymarkedTrailsCycling:
+      '<span class="material-symbols layer-icon">directions_bike</span> Waymarked Trails Cycling',
   };
 
   const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -501,6 +505,15 @@ async function initializeMap() {
     ImportedFiles: importedItems,
     StravaActivities: stravaActivitiesLayer,
     FoundPlaces: poiSearchResults,
+    WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+    }),
+    WaymarkedTrailsCycling: L.tileLayer(
+      "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+      },
+    ),
   };
 
   const swissBounds = L.latLngBounds([
@@ -561,7 +574,14 @@ async function initializeMap() {
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
 
-  const userContentNames = ["DrawnItems", "ImportedFiles", "StravaActivities", "FoundPlaces"]; // Always on top
+  const userContentNames = [
+    "DrawnItems",
+    "ImportedFiles",
+    "StravaActivities",
+    "FoundPlaces",
+    "WaymarkedTrailsHiking",
+    "WaymarkedTrailsCycling",
+  ];
 
   // User content layers (not sortable, always on top)
   formContent += '<div class="leaflet-control-layers-user-content">';
