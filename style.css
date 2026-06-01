@@ -1412,6 +1412,10 @@ a#info-panel-strava-link:hover {
   border-radius: var(--border-radius) !important;
 }
 
+.context-menu-popup .leaflet-popup-content {
+  margin: 5px 10px !important;
+}
+
 .leaflet-touch .leaflet-control-layers-toggle {
   background-position: center center;
   background-size: 22px 22px;

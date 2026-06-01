@@ -109,7 +109,10 @@ function initializeContextMenu(map) {
       }),
     );
 
-    L.popup({ closeButton: false }).setLatLng(latlng).setContent(popupContent).openOn(map);
+    L.popup({ closeButton: false, className: "context-menu-popup" })
+      .setLatLng(latlng)
+      .setContent(popupContent)
+      .openOn(map);
   };
 
   // This single event listener handles both desktop right-click and mobile long-press
