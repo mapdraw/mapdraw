@@ -440,7 +440,7 @@ a#info-panel-strava-link:hover {
 
 /* Style the form content that we will move into the panel */
 #custom-layers-panel .leaflet-control-layers-form {
-  padding: 8px;
+  padding: 6px;
   background-color: transparent;
   border-radius: var(--border-radius);
 }
@@ -448,12 +448,12 @@ a#info-panel-strava-link:hover {
   height: 1px;
   background-color: var(--border-color);
   border-top: none;
-  margin: 5px 0;
+  margin: 3px 0;
 }
 #custom-layers-panel label div {
   display: flex;
   align-items: center;
-  height: 25px;
+  height: 20px;
 }
 #custom-layers-panel span {
   padding-left: 5px;

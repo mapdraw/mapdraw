@@ -604,7 +604,7 @@ async function initializeMap() {
 
   // Add Import Maps button for custom WMS layers
   formContent += `
-    <div style="padding: 8px 10px;">
+    <div style="padding: 4px 6px;">
       <button
         id="wms-import-btn"
         class="wms-import-button"
