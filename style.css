@@ -2063,7 +2063,7 @@ button.strava-button-secondary:not(:disabled) {
   To regenerate the font file:
   1. Add any new icon names to the list above.
   2. Open this URL with the list above replacing ICONS:
-  https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=ICONS&display=block
+  https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL,wght,GRAD,opsz@0..1,200..400,0,24&icon_names=ICONS&display=block
   The page returns CSS — copy the woff2 URL from the src: url(...) line and download it.
   3. Verify: python3 -c "from fontTools.ttLib import TTFont; f=TTFont('font.woff2'); print(len(f.getBestCmap()), 'glyphs')"
   Should print ~100 glyphs (icons + ligature characters). If it errors the file is invalid.
