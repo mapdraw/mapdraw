@@ -2199,6 +2199,7 @@ body.using-touch {
 @media (max-width: 768px) {
   :root {
     --sheet-handle-height: 40px; /* sheet-handle haight plus its vertical margin */
+    --swal2-html-container-padding: 16px 13px 5px;
     --mobile-main-right-container-visible-height: 260px;
     --mobile-main-right-container-top: calc(
       100vh - var(--mobile-main-right-container-visible-height)
