@@ -8,6 +8,7 @@
 const redirectURI = `${window.location.origin}/strava-callback.html`;
 const scope = "read,activity:read_all";
 const tokenURL = "https://www.strava.com/oauth/token";
+// TODO June 1 2027: change base URL to https://www.api-v3.strava.com (ERR_NAME_NOT_RESOLVED as of June 2026)
 const activitiesURL = "https://www.strava.com/api/v3/athlete/activities";
 const streamsURL = "https://www.strava.com/api/v3/activities";
 
@@ -138,11 +139,11 @@ async function fetchAllActivities() {
 
   while (keepFetching) {
     try {
-      let url = `${activitiesURL}?access_token=${accessToken}&per_page=${perPage}&page=${page}`;
+      let url = `${activitiesURL}?per_page=${perPage}&page=${page}`;
       if (afterTimestamp) {
         url += `&after=${afterTimestamp}`;
       }
-      const response = await fetch(url);
+      const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
