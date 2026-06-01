@@ -2051,10 +2051,29 @@ button.strava-button-secondary:not(:disabled) {
 /* Material Symbols Styles Start */
 /* Instructions for self hosting: https://developers.google.com/fonts/docs/material_symbols#self-hosting_the_font */
 /* Downloaded font here: https://github.com/google/material-design-icons/tree/master/variablefont */
+/*
+  Current icon subset — update this list when adding new icons, then regenerate the font.
+  Paste it as-is into the URL below (replacing ICONS):
+  add,add_circle,cabin,camping,cancel,chair,commute,content_copy,data_object,delete,diagonal_line,directions_bike,directions_car,directions_run,directions_walk,download,drag_indicator,draw,edit,elevation,favorite,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,remove,restaurant,save,search,sentiment_dissatisfied,settings,shopping_cart,visibility,visibility_off,water_drop,wc
+
+  To verify the list is complete, run in DevTools console (copies to clipboard):
+  copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))
+  Note: trigger all UI states first; some icons (e.g. POI categories) only appear after interaction.
+
+  To regenerate the font file:
+  1. Add any new icon names to the list above.
+  2. Open this URL with the list above replacing ICONS:
+  https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL,wght,GRAD,opsz@0..1,200..400,0,24&icon_names=ICONS&display=block
+  The page returns CSS — copy the woff2 URL from the src: url(...) line and download it.
+  3. Verify: python3 -c "from fontTools.ttLib import TTFont; f=TTFont('font.woff2'); print(len(f.getBestCmap()), 'glyphs')"
+  Should print ~100 glyphs (icons + ligature characters). If it errors the file is invalid.
+  4. Rename the downloaded file to MaterialSymbolsOutlined-subset.woff2 and add it to /fonts/.
+*/
 @font-face {
   font-family: "Material Symbols Outlined";
   font-style: normal;
-  src: url(/fonts/MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].woff2) format("woff2");
+  /* Original full font: src: url(/fonts/MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].woff2) format("woff2"); */
+  src: url(/fonts/MaterialSymbolsOutlined-subset.woff2) format("woff2");
 }
 
 .material-symbols {
@@ -2135,7 +2154,6 @@ body.leaflet-is-drawing .leaflet-marker-icon {
   justify-content: center;
   align-items: center;
 }
-
 /* Material Symbols Styles End */
 
 #sheet-handle {
