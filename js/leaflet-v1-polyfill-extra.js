@@ -1,6 +1,16 @@
 // Extra patches for Leaflet 2 not covered by leaflet-v1-polyfill.js.
 // Loaded after leaflet-global.js, leaflet-v1-polyfill.js, and applyAllPolyfills(), but before plugins.
 
+// --- Tile seam fix ---
+// Leaflet 2 sets `mix-blend-mode: plus-lighter` on tiles to fix a Chromium black-seam
+// bug. The side-effect is that each tile gets its own compositing layer, causing white
+// hairline seams between tiles after panning. Reverting to `normal` removes the seams.
+(function () {
+  var s = document.createElement("style");
+  s.textContent = ".leaflet-container img.leaflet-tile { mix-blend-mode: normal; }";
+  document.head.appendChild(s);
+})();
+
 // --- L.Mixin.Events ---
 // The official polyfill binds each method to Evented.prototype, so when plugins
 // copy them via `includes: L.Mixin.Events` and Object.assign, `this` inside the
