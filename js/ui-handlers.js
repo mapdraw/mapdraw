@@ -653,10 +653,11 @@ function showInfoPanel(layer) {
       // Check if this is a Strava activity that was imported
       if (layer.feature?.properties?.stravaId) {
         layerTypeName = "Imported Item (Strava Activity)";
+        editHint.innerHTML = "To edit geometry, duplicate activity in <b>Contents</b> tab.";
       } else {
         layerTypeName = "Imported Item";
+        editHint.innerHTML = "To edit geometry, duplicate item in <b>Contents</b> tab.";
       }
-      editHint.innerHTML = "To edit geometry, duplicate item in <b>Contents</b> tab.";
       editHint.style.display = "block";
       break;
     case "route":
