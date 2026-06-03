@@ -2061,7 +2061,6 @@ button.strava-button-secondary:not(:disabled) {
 
 .osm-username {
   font-size: var(--font-size-14);
-  color: var(--text-color);
 }
 
 .osm-separator {

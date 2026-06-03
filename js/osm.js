@@ -189,6 +189,7 @@ async function osmUpdateSettingsUI() {
     if (user) {
       signInBtn.style.display = "none";
       usernameEl.textContent = user.display_name;
+      usernameEl.href = `${OSM_BASE}/user/${encodeURIComponent(user.display_name)}`;
       usernameEl.style.display = "";
       signOutBtn.style.display = "";
       return;
@@ -345,8 +346,11 @@ function initializeOSM(settingsPanel) {
   signOutBtn.innerText = "Sign out";
   signOutBtn.style.display = "none";
 
-  const usernameEl = L.DomUtil.create("span", "osm-username", osmContainer);
+  const usernameEl = L.DomUtil.create("a", "osm-username", osmContainer);
   usernameEl.id = "osm-username";
+  usernameEl.target = "_blank";
+  usernameEl.rel = "noopener noreferrer";
+  usernameEl.style.color = "var(--highlight-color)";
   usernameEl.style.display = "none";
 
   L.DomUtil.create("hr", "osm-separator", osmContainer);
