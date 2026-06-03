@@ -3,9 +3,16 @@
 // OpenStreetMap Integration Module
 // Handles OAuth 2.0 PKCE authentication and settings panel UI.
 
-const OSM_AUTH_URL = "https://www.openstreetmap.org/oauth2/authorize";
-const OSM_TOKEN_URL = "https://www.openstreetmap.org/oauth2/token";
-const OSM_API_URL = "https://api.openstreetmap.org/api/0.6";
+const OSM_TEST_MODE = true; // Switch to false for production
+
+const OSM_BASE = OSM_TEST_MODE
+  ? "https://master.apis.dev.openstreetmap.org"
+  : "https://www.openstreetmap.org";
+const OSM_AUTH_URL = `${OSM_BASE}/oauth2/authorize`;
+const OSM_TOKEN_URL = `${OSM_BASE}/oauth2/token`;
+const OSM_API_URL = OSM_TEST_MODE
+  ? "https://master.apis.dev.openstreetmap.org/api/0.6"
+  : "https://api.openstreetmap.org/api/0.6";
 const OSM_REDIRECT_URI = `${window.location.origin}/osm-callback.html`;
 const OSM_SCOPE = "read_prefs write_api";
 
@@ -39,7 +46,6 @@ async function osmSignIn() {
   const state = crypto.randomUUID();
 
   sessionStorage.setItem("osmCodeVerifier", codeVerifier);
-  sessionStorage.setItem("osmState", state);
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -55,17 +61,10 @@ async function osmSignIn() {
 
   const poll = setInterval(async () => {
     const code = localStorage.getItem("osmAuthCode");
-    const returnedState = localStorage.getItem("osmAuthState");
 
     if (code) {
       clearInterval(poll);
       localStorage.removeItem("osmAuthCode");
-      localStorage.removeItem("osmAuthState");
-
-      if (returnedState !== state) {
-        Swal.fire({ title: "Authentication Failed", text: "State mismatch. Please try again." });
-        return;
-      }
 
       const success = await osmExchangeCode(code);
       if (success) {
@@ -113,7 +112,6 @@ async function osmExchangeCode(code) {
 
     localStorage.setItem("osmAccessToken", data.access_token);
     sessionStorage.removeItem("osmCodeVerifier");
-    sessionStorage.removeItem("osmState");
     return true;
   } catch (error) {
     console.error("OSM token exchange error:", error);
@@ -173,6 +171,60 @@ async function osmUpdateSettingsUI() {
   signInBtn.style.display = "";
   usernameEl.style.display = "none";
   signOutBtn.style.display = "none";
+}
+
+function osmIsSignedIn() {
+  return !!localStorage.getItem("osmAccessToken");
+}
+
+async function osmSubmitNode(latlng, tags) {
+  const token = localStorage.getItem("osmAccessToken");
+  if (!token) return;
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "text/xml",
+  };
+
+  const tagComment = Object.entries(tags)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(", ");
+
+  try {
+    // Create changeset
+    const changesetXml = `<osm><changeset><tag k="created_by" v="MapDraw"/><tag k="comment" v="Add ${tagComment}"/></changeset></osm>`;
+    const changesetRes = await fetch(`${OSM_API_URL}/changeset/create`, {
+      method: "PUT",
+      headers,
+      body: changesetXml,
+    });
+    if (!changesetRes.ok) throw new Error(`Failed to create changeset: ${changesetRes.status}`);
+    const changesetId = await changesetRes.text();
+
+    // Create node
+    const tagsXml = Object.entries(tags)
+      .map(([k, v]) => `<tag k="${k}" v="${v}"/>`)
+      .join("");
+    const nodeXml = `<osm><node lat="${latlng.lat}" lon="${latlng.lng}" changeset="${changesetId}">${tagsXml}</node></osm>`;
+    const nodeRes = await fetch(`${OSM_API_URL}/node/create`, {
+      method: "PUT",
+      headers,
+      body: nodeXml,
+    });
+    if (!nodeRes.ok) throw new Error(`Failed to create node: ${nodeRes.status}`);
+    const nodeId = await nodeRes.text();
+
+    // Close changeset
+    await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return nodeId.trim();
+  } catch (error) {
+    console.error("OSM submit error:", error);
+    throw error;
+  }
 }
 
 function initializeOSM(settingsPanel) {

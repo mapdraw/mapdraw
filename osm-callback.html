@@ -8,12 +8,10 @@
       window.onload = function () {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("code");
-        const state = params.get("state");
         const error = params.get("error");
 
         if (code) {
           localStorage.setItem("osmAuthCode", code);
-          localStorage.setItem("osmAuthState", state || "");
           document.getElementById("message").textContent = "Success! You can now close this tab.";
         } else if (error) {
           localStorage.setItem("osmAuthError", error);

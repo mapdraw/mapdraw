@@ -109,6 +109,27 @@ function initializeContextMenu(map) {
       }),
     );
 
+    if (typeof osmIsSignedIn === "function" && osmIsSignedIn()) {
+      popupContent.appendChild(
+        createMenuItem("Add to OpenStreetMap", async () => {
+          map.closePopup();
+          try {
+            const nodeId = await osmSubmitNode(latlng, { amenity: "bench" });
+            Swal.fire({
+              toast: true,
+              icon: "success",
+              title: "Submitted to OSM",
+              html: `Node <a href="https://master.apis.dev.openstreetmap.org/node/${nodeId}" target="_blank">#${nodeId}</a> created`,
+              showConfirmButton: false,
+              timer: 4000,
+            });
+          } catch (error) {
+            Swal.fire({ title: "Submission Failed", html: error.message });
+          }
+        }),
+      );
+    }
+
     L.popup({ closeButton: false, className: "context-menu-popup" })
       .setLatLng(latlng)
       .setContent(popupContent)
