@@ -92,6 +92,8 @@ To enable features that rely on external services, you must provide your own API
     - `tracestrackApiKey`
     - `stravaClientId` (Optional)
     - `stravaClientSecret` (Optional)
+    - `osmClientId`
+    - `osmClientSecret`
 
 > The `secrets.js` file is listed in `.gitignore` and will not be committed to the repository, keeping your keys safe.
 
@@ -106,6 +108,8 @@ For the deployment to succeed, you must provide your production API keys as GitH
     - `TRACESTRACK_API_KEY`
     - `STRAVA_CLIENT_ID` (Optional)
     - `STRAVA_CLIENT_SECRET` (Optional)
+    - `OSM_CLIENT_ID`
+    - `OSM_CLIENT_SECRET`
 
 ### Important API Notes
 

@@ -25,6 +25,8 @@ jobs:
           echo "const tracestrackApiKey = \"${{ secrets.TRACESTRACK_API_KEY }}\";" >> js/secrets.js
           echo "const stravaClientId = \"${{ secrets.STRAVA_CLIENT_ID }}\";" >> js/secrets.js
           echo "const stravaClientSecret = \"${{ secrets.STRAVA_CLIENT_SECRET }}\";" >> js/secrets.js
+          echo "const osmClientId = \"${{ secrets.OSM_CLIENT_ID }}\";" >> js/secrets.js
+          echo "const osmClientSecret = \"${{ secrets.OSM_CLIENT_SECRET }}\";" >> js/secrets.js
 
       - name: Replace placeholders
         run: |
