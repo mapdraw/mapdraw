@@ -54,7 +54,7 @@ function initializeRouting() {
     },
   };
 
-  const clearRouteLine = () => {
+  const clearRouteLine = (preserveViaMarkers = false) => {
     if (currentRoutePath) {
       if (globallySelectedItem === currentRoutePath) {
         deselectCurrentItem();
@@ -66,8 +66,10 @@ function initializeRouting() {
       updateOverviewList();
     }
 
-    intermediateViaMarkers.forEach((marker) => map.removeLayer(marker));
-    intermediateViaMarkers = [];
+    if (!preserveViaMarkers) {
+      intermediateViaMarkers.forEach((marker) => map.removeLayer(marker));
+      intermediateViaMarkers = [];
+    }
 
     routingControl.setWaypoints([]);
     document.getElementById("routing-summary-container").style.display = "none";
@@ -714,6 +716,13 @@ function initializeRouting() {
         startMarker = null;
         currentStartLatLng = null;
         startInput.value = "";
+        if (penModeActive) {
+          if (endMarker) map.removeLayer(endMarker);
+          endMarker = null;
+          currentEndLatLng = null;
+          endInput.value = "";
+          exitPenMode();
+        }
         clearRouteLine();
         break;
       case "end":
@@ -721,7 +730,8 @@ function initializeRouting() {
         endMarker = null;
         currentEndLatLng = null;
         endInput.value = "";
-        clearRouteLine();
+        clearRouteLine(penModeActive);
+        if (penModeActive) penModeClickCount = 1;
         break;
       case "via":
         if (viaMarker) map.removeLayer(viaMarker);
@@ -905,9 +915,15 @@ function initializeRouting() {
             draggable: true,
           }).addTo(map);
           addDragHandlersToRoutingMarker(endMarker, "end");
+          endMarker.on("click", (e) => {
+            if (penModeActive && penModeClickCount >= 2) {
+              L.DomEvent.stop(e);
+              exitPenMode();
+            }
+          });
         }
         penModeClickCount = 2;
-        calculateNewRoute();
+        updateRouteWithIntermediateVias();
         shouldFitBounds = false;
       } else {
         createIntermediateViaMarker(currentEndLatLng);
