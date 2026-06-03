@@ -430,7 +430,13 @@ function initializeRouting() {
       button.classList.add("active");
 
       if (startMarker && endMarker) {
-        calculateNewRoute();
+        const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
+        const config = PROVIDER_CONFIG[currentProvider];
+        if (config) {
+          const apiProfile = config.profiles[button.dataset.profile] || config.profiles["driving"];
+          routingControl.getRouter().options.profile = config.profileFormatter(apiProfile);
+        }
+        updateRouteWithIntermediateVias();
       }
     });
   });
