@@ -2084,6 +2084,11 @@ button.strava-button-secondary:not(:disabled) {
   text-decoration: underline;
 }
 
+.osm-contribute-search::placeholder {
+  color: var(--text-color);
+  opacity: 1;
+}
+
 /* Style for credits link in settings panel */
 .credits-link {
   font-size: var(--font-size-14);
@@ -2129,7 +2134,9 @@ button.strava-button-secondary:not(:disabled) {
   font-family: "Material Symbols Outlined";
   font-style: normal;
   /* Original full font: src: url(/fonts/MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].woff2) format("woff2"); */
-  src: url(/fonts/MaterialSymbolsOutlined-subset.woff2) format("woff2");
+  /* src: url(/fonts/MaterialSymbolsOutlined-subset.woff2) format("woff2"); */
+  /* TODO: regenerate subset once OSM contribution category icons are finalized */
+  src: url(/fonts/MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].woff2) format("woff2");
 }
 
 .material-symbols {

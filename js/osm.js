@@ -16,6 +16,33 @@ const OSM_API_URL = OSM_TEST_MODE
 const OSM_REDIRECT_URI = `${window.location.origin}/osm-callback.html`;
 const OSM_SCOPE = "read_prefs write_api";
 
+const OSM_CONTRIBUTE_CATEGORIES = [
+  { id: "bench", name: "Bench", icon: "chair", tags: { amenity: "bench" } },
+  { id: "waste_basket", name: "Waste Basket", icon: "delete", tags: { amenity: "waste_basket" } },
+  {
+    id: "drinking_water",
+    name: "Drinking Water",
+    icon: "water_drop",
+    tags: { amenity: "drinking_water" },
+  },
+  {
+    id: "picnic_table",
+    name: "Picnic Table",
+    icon: "deck",
+    tags: { leisure: "picnic_table" },
+  },
+  { id: "toilets", name: "Toilets", icon: "wc", tags: { amenity: "toilets" } },
+  { id: "bbq", name: "Barbecue", icon: "outdoor_grill", tags: { amenity: "bbq" } },
+  { id: "shelter", name: "Shelter", icon: "cabin", tags: { amenity: "shelter" } },
+  {
+    id: "bicycle_parking",
+    name: "Bicycle Parking",
+    icon: "directions_bike",
+    tags: { amenity: "bicycle_parking" },
+  },
+  { id: "viewpoint", name: "Viewpoint", icon: "landscape", tags: { tourism: "viewpoint" } },
+];
+
 async function osmGeneratePKCE() {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -171,6 +198,76 @@ async function osmUpdateSettingsUI() {
   signInBtn.style.display = "";
   usernameEl.style.display = "none";
   signOutBtn.style.display = "none";
+}
+
+function osmRenderCategories(filter = "") {
+  return OSM_CONTRIBUTE_CATEGORIES.filter(
+    (cat) => !filter || cat.name.toLowerCase().includes(filter.toLowerCase()),
+  )
+    .map(
+      (cat) => `
+    <button class="poi-category-btn osm-contribute-btn" data-id="${cat.id}">
+      <span class="material-symbols" style="font-size: 20px;">${cat.icon}</span>
+      <span>${cat.name}</span>
+    </button>`,
+    )
+    .join("");
+}
+
+function osmAttachCategoryHandlers(grid, latlng) {
+  grid.querySelectorAll(".osm-contribute-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const cat = OSM_CONTRIBUTE_CATEGORIES.find((c) => c.id === btn.dataset.id);
+      if (!cat) return;
+      Swal.close();
+      try {
+        const nodeId = await osmSubmitNode(latlng, cat.tags);
+        Swal.fire({
+          toast: true,
+          icon: "success",
+          title: "Submitted to OpenStreetMap",
+          html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank">${cat.name} #${nodeId}</a>`,
+          showConfirmButton: false,
+          timer: 4000,
+        });
+      } catch (error) {
+        Swal.fire({ title: "Submission Failed", html: error.message });
+      }
+    });
+  });
+}
+
+async function osmShowContributePicker(latlng) {
+  await Swal.fire({
+    html: `
+      <div style="text-align: left;">
+        <p style="font-size: var(--font-size-12); color: var(--text-color); margin: 0 0 12px 0; text-align: center;">
+          Add to OpenStreetMap
+        </p>
+        <input
+          id="osm-contribute-search"
+          type="text"
+          placeholder="Search"
+          class="osm-contribute-search"
+          style="width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--background-color); color: var(--text-color); font-size: var(--font-size-14);"
+        />
+        <div class="poi-category-grid" id="osm-contribute-grid">
+          ${osmRenderCategories()}
+        </div>
+      </div>
+    `,
+    confirmButtonText: "Cancel",
+    customClass: { popup: "poi-finder-modal" },
+    didOpen: () => {
+      const grid = document.getElementById("osm-contribute-grid");
+      const search = document.getElementById("osm-contribute-search");
+      osmAttachCategoryHandlers(grid, latlng);
+      search.addEventListener("input", () => {
+        grid.innerHTML = osmRenderCategories(search.value);
+        osmAttachCategoryHandlers(grid, latlng);
+      });
+    },
+  });
 }
 
 function osmIsSignedIn() {
