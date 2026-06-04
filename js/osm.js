@@ -408,10 +408,10 @@ function initializeOSM(settingsPanel) {
   osmInfoIcon.title = "What's this?";
   L.DomEvent.on(osmInfoIcon, "click", () => {
     Swal.fire({
-      title: "Add to OpenStreetMap",
+      title: "Contribute to OpenStreetMap",
       html: `
 <p style="text-align: left; margin: 0 0 18px 0">
-  After signing in, the <strong>Add to OpenStreetMap</strong> option in the context menu lets you add <strong>missing places</strong> directly. To open the context menu:
+  After signing in, the context menu lets you <strong>add missing places</strong> and <strong>leave notes</strong> directly on OpenStreetMap. To open the context menu:
 </p>
 <p style="text-align: left; margin: 0">
   <strong>Desktop:</strong> Right-click on the map.<br>
