@@ -35,7 +35,7 @@ function initializeContextMenu(map) {
     const dragIcon = document.createElement("span");
     dragIcon.className = "material-symbols";
     dragIcon.textContent = "drag_indicator";
-    dragIcon.style.fontSize = "16px";
+    dragIcon.style.setProperty("font-size", "var(--icon-size-16)", "important");
     dragIcon.style.color = "var(--text-color)";
 
     latSpan.style.textAlign = "center";
