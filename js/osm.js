@@ -330,8 +330,29 @@ function initializeOSM(settingsPanel) {
 
   const osmRow = L.DomUtil.create("div", "osm-profile-row", osmContainer);
 
-  const osmLabel = L.DomUtil.create("label", "", osmRow);
+  const osmLabelGroup = L.DomUtil.create("div", "", osmRow);
+  osmLabelGroup.style.display = "flex";
+  osmLabelGroup.style.alignItems = "center";
+  const osmLabel = L.DomUtil.create("label", "", osmLabelGroup);
   osmLabel.innerText = "OpenStreetMap Profile";
+
+  const osmInfoIcon = L.DomUtil.create("span", "settings-info-icon", osmLabelGroup);
+  osmInfoIcon.innerHTML = '<span class="material-symbols">info</span>';
+  osmInfoIcon.title = "What's this?";
+  L.DomEvent.on(osmInfoIcon, "click", () => {
+    Swal.fire({
+      title: "Add to OpenStreetMap",
+      html: `
+<p style="text-align: left; margin: 0 0 18px 0">
+  The <strong>Add to OpenStreetMap</strong> option in the context menu lets you add <strong>missing places</strong> to OpenStreetMap. To open the context menu:
+</p>
+<p style="text-align: left; margin: 0">
+  <strong>Desktop:</strong> Right-click anywhere on the map.<br>
+  <strong>Mobile:</strong> Long press anywhere on the map.
+</p>`,
+      confirmButtonText: "Got it!",
+    });
+  });
 
   const signInBtn = L.DomUtil.create("button", "osm-auth-btn", osmRow);
   signInBtn.id = "osm-sign-in-btn";
