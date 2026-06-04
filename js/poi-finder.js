@@ -24,7 +24,7 @@ const POI_CATEGORIES = [
     id: "park",
     name: "Park",
     icon: "park",
-    overpassQuery: ["leisure=park", "leisure=nature_reserve"],
+    overpassQuery: "leisure=park",
   },
   {
     id: "camping",
@@ -52,13 +52,13 @@ const POI_CATEGORIES = [
   },
   {
     id: "toilet",
-    name: "Toilet",
+    name: "Toilets",
     icon: "wc",
     overpassQuery: "amenity=toilets",
   },
   {
     id: "fireplace",
-    name: "Fireplace / BBQ",
+    name: "Barbecue / Fire Pit",
     icon: "outdoor_grill",
     overpassQuery: ["amenity=bbq", "leisure=firepit"],
   },
@@ -88,13 +88,13 @@ const POI_CATEGORIES = [
   },
   {
     id: "gas_station",
-    name: "Gas Station",
+    name: "Fuel Station",
     icon: "local_gas_station",
     overpassQuery: "amenity=fuel",
   },
   {
     id: "supermarket",
-    name: "Supermarket/Shop",
+    name: "Grocery",
     icon: "shopping_cart",
     overpassQuery: ["shop=supermarket", "shop=convenience"],
   },
