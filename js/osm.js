@@ -344,11 +344,11 @@ function initializeOSM(settingsPanel) {
       title: "Add to OpenStreetMap",
       html: `
 <p style="text-align: left; margin: 0 0 18px 0">
-  The <strong>Add to OpenStreetMap</strong> option in the context menu lets you add <strong>missing places</strong> to OpenStreetMap. To open the context menu:
+  After signing in, the <strong>Add to OpenStreetMap</strong> option in the context menu lets you add <strong>missing places</strong> directly. To open the context menu:
 </p>
 <p style="text-align: left; margin: 0">
-  <strong>Desktop:</strong> Right-click anywhere on the map.<br>
-  <strong>Mobile:</strong> Long press anywhere on the map.
+  <strong>Desktop:</strong> Right-click on the map.<br>
+  <strong>Mobile:</strong> Long press on the map.
 </p>`,
       confirmButtonText: "Got it!",
     });
