@@ -1413,7 +1413,7 @@ a#info-panel-strava-link:hover {
 }
 
 .context-menu-popup .leaflet-popup-content {
-  margin: 5px 10px !important;
+  margin: 5px 3px !important;
 }
 
 .leaflet-touch .leaflet-control-layers-toggle {
@@ -1666,9 +1666,12 @@ a#info-panel-strava-link:hover {
   color: var(--text-color);
   border: 1px solid var(--border-color) !important;
 }
-/* The tip is a square rotated 45deg; its top/left edges appear at the seam
-   with the popup body. Making them transparent hides the thin artifact line. */
+/* Overlap the tip into the popup body and match its colors to hide the subpixel seam. */
+.leaflet-popup-tip-container {
+  margin-top: -1px;
+}
 .leaflet-popup-tip {
+  background: var(--background-color) !important;
   border-color: var(--background-color) var(--border-color) var(--border-color)
     var(--background-color) !important;
 }

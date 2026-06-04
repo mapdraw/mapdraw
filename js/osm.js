@@ -299,7 +299,7 @@ function osmIsSignedIn() {
 
 async function osmSubmitNode(latlng, tags) {
   const token = localStorage.getItem("osmAccessToken");
-  if (!token) return;
+  if (!token) throw new Error("Not signed in");
 
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -310,8 +310,8 @@ async function osmSubmitNode(latlng, tags) {
     .map(([k, v]) => `${k}=${v}`)
     .join(", ");
 
+  let changesetId = null;
   try {
-    // Create changeset
     const changesetXml = `<osm><changeset><tag k="created_by" v="MapDraw"/><tag k="comment" v="Add ${tagComment}"/></changeset></osm>`;
     const changesetRes = await fetch(`${OSM_API_URL}/changeset/create`, {
       method: "PUT",
@@ -319,9 +319,8 @@ async function osmSubmitNode(latlng, tags) {
       body: changesetXml,
     });
     if (!changesetRes.ok) throw new Error(`Failed to create changeset: ${changesetRes.status}`);
-    const changesetId = await changesetRes.text();
+    changesetId = await changesetRes.text();
 
-    // Create node
     const tagsXml = Object.entries(tags)
       .map(([k, v]) => `<tag k="${k}" v="${v}"/>`)
       .join("");
@@ -334,16 +333,17 @@ async function osmSubmitNode(latlng, tags) {
     if (!nodeRes.ok) throw new Error(`Failed to create node: ${nodeRes.status}`);
     const nodeId = await nodeRes.text();
 
-    // Close changeset
-    await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
     return nodeId.trim();
   } catch (error) {
     console.error("OSM submit error:", error);
     throw error;
+  } finally {
+    if (changesetId) {
+      await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
   }
 }
 

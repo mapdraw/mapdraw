@@ -32,76 +32,108 @@ function initializeContextMenu(map) {
     coordsDiv.innerHTML = `<span>${displayedCoordString}</span>`;
     popupContent.appendChild(coordsDiv);
 
-    const divider = document.createElement("hr");
-    divider.style.margin = "4px 0";
-    divider.style.border = "none";
-    divider.style.borderTop = "1px solid var(--divider-color)";
-    popupContent.appendChild(divider);
+    const createBtn = (text, onClick) => {
+      const btn = document.createElement("div");
+      btn.textContent = text;
+      btn.style.cursor = "pointer";
+      btn.style.textAlign = "center";
+      btn.style.whiteSpace = "nowrap";
+      btn.style.padding = "4px 6px";
+      btn.style.border = "1px solid var(--border-color)";
+      btn.style.borderRadius = "var(--border-radius)";
+      btn.style.userSelect = "none";
+      btn.style.margin = "2px 0";
+      btn.addEventListener("click", onClick);
+      return btn;
+    };
 
-    const createMenuItem = (text, onClick) => {
-      const div = document.createElement("div");
-      div.textContent = text;
-      div.style.cursor = "pointer";
-      div.style.padding = "4px 0";
-      div.addEventListener("click", onClick);
-      return div;
+    const createMenuRow = (items) => {
+      const row = document.createElement("div");
+      row.style.display = "flex";
+      row.style.gap = "2px";
+      row.style.margin = "2px 0";
+      items.forEach(({ text, onClick }) => {
+        const btn = document.createElement("div");
+        btn.textContent = text;
+        btn.style.cursor = "pointer";
+        btn.style.flex = "1";
+        btn.style.textAlign = "center";
+        btn.style.whiteSpace = "nowrap";
+        btn.style.padding = "4px 6px";
+        btn.style.border = "1px solid var(--border-color)";
+        btn.style.borderRadius = "var(--border-radius)";
+        btn.style.userSelect = "none";
+        btn.addEventListener("click", onClick);
+        row.appendChild(btn);
+      });
+      return row;
     };
 
     popupContent.appendChild(
-      createMenuItem("Copy Coordinates", () => {
-        copyToClipboard(fullCoordString)
-          .then(() => {
+      createMenuRow([
+        {
+          text: "Copy Coords",
+          onClick: () => {
+            copyToClipboard(fullCoordString)
+              .then(() => {
+                map.closePopup();
+                Swal.fire({
+                  toast: true,
+                  icon: "success",
+                  title: "Coordinates Copied!",
+                  html: fullCoordString,
+                  showConfirmButton: false,
+                  timer: 1500,
+                });
+              })
+              .catch((err) => {
+                console.error("Could not copy text: ", err);
+                map.closePopup();
+                Swal.fire({
+                  toast: true,
+                  icon: "error",
+                  title: "Failed to Copy",
+                  showConfirmButton: false,
+                  timer: 2000,
+                });
+              });
+          },
+        },
+        {
+          text: "Place Marker",
+          onClick: () => {
+            createAndSaveMarker(latlng);
             map.closePopup();
-            Swal.fire({
-              toast: true,
-              icon: "success",
-              title: "Coordinates Copied!",
-              html: fullCoordString,
-              showConfirmButton: false,
-              timer: 1500,
-            });
-          })
-          .catch((err) => {
-            console.error("Could not copy text: ", err);
-            map.closePopup();
-            Swal.fire({
-              toast: true,
-              icon: "error",
-              title: "Failed to Copy",
-              showConfirmButton: false,
-              timer: 2000,
-            });
-          });
-      }),
+          },
+        },
+      ]),
     );
 
     popupContent.appendChild(
-      createMenuItem("Place Marker", () => {
-        createAndSaveMarker(latlng);
-        map.closePopup();
-      }),
+      createMenuRow([
+        {
+          text: "Route from",
+          onClick: () => {
+            if (window.app && typeof window.app.updateRoutingPoint === "function") {
+              window.app.updateRoutingPoint(latlng, "start");
+            }
+            showRoutingPanel();
+          },
+        },
+        {
+          text: "Route to",
+          onClick: () => {
+            if (window.app && typeof window.app.updateRoutingPoint === "function") {
+              window.app.updateRoutingPoint(latlng, "end");
+            }
+            showRoutingPanel();
+          },
+        },
+      ]),
     );
 
     popupContent.appendChild(
-      createMenuItem("Route from here", () => {
-        if (window.app && typeof window.app.updateRoutingPoint === "function") {
-          window.app.updateRoutingPoint(latlng, "start");
-        }
-        showRoutingPanel();
-      }),
-    );
-
-    popupContent.appendChild(
-      createMenuItem("Route to here", () => {
-        if (window.app && typeof window.app.updateRoutingPoint === "function") {
-          window.app.updateRoutingPoint(latlng, "end");
-        }
-        showRoutingPanel();
-      }),
-    );
-
-    popupContent.appendChild(
-      createMenuItem("Edit on OpenStreetMap", () => {
+      createBtn("Edit on OpenStreetMap", () => {
         const zoom = map.getZoom();
         const url = `https://www.openstreetmap.org/edit?editor=id#map=${zoom}/${latlng.lat}/${latlng.lng}`;
         window.open(url, "_blank");
@@ -111,7 +143,7 @@ function initializeContextMenu(map) {
 
     if (typeof osmIsSignedIn === "function" && osmIsSignedIn()) {
       popupContent.appendChild(
-        createMenuItem("Add to OpenStreetMap", () => {
+        createBtn("Add to OpenStreetMap", () => {
           map.closePopup();
           osmShowContributePicker(latlng);
         }),
