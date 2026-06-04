@@ -39,24 +39,40 @@ const OSM_CONTRIBUTE_CATEGORIES = [
   { id: "viewpoint", name: "Viewpoint", icon: "landscape", tags: { tourism: "viewpoint" } },
 ];
 
-async function osmGeneratePKCE() {
-  const array = new Uint8Array(32);
+function osmRandomBase64url(byteCount) {
+  const array = new Uint8Array(byteCount);
   crypto.getRandomValues(array);
-  const codeVerifier = btoa(String.fromCharCode(...array))
+  return btoa(String.fromCharCode(...array))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=/g, "");
+}
 
+function osmGeneratePKCEPlain() {
+  const codeVerifier = osmRandomBase64url(32);
+  return { codeVerifier, codeChallenge: codeVerifier, method: "plain" };
+}
+
+async function osmGeneratePKCES256() {
+  const codeVerifier = osmRandomBase64url(32);
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(codeVerifier));
   const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=/g, "");
-
-  return { codeVerifier, codeChallenge };
+  return { codeVerifier, codeChallenge, method: "S256" };
 }
 
-async function osmSignIn() {
+let _osmPKCEPair = null;
+osmGeneratePKCES256()
+  .then((pair) => {
+    _osmPKCEPair = pair;
+  })
+  .catch(() => {
+    _osmPKCEPair = osmGeneratePKCEPlain();
+  });
+
+function osmSignIn() {
   if (typeof osmClientId === "undefined" || !osmClientId) {
     Swal.fire({
       title: "OSM not configured",
@@ -65,8 +81,18 @@ async function osmSignIn() {
     return;
   }
 
-  const { codeVerifier, codeChallenge } = await osmGeneratePKCE();
-  const state = crypto.randomUUID();
+  if (!_osmPKCEPair) _osmPKCEPair = osmGeneratePKCEPlain();
+  const { codeVerifier, codeChallenge, method } = _osmPKCEPair;
+  _osmPKCEPair = null;
+  osmGeneratePKCES256()
+    .then((pair) => {
+      _osmPKCEPair = pair;
+    })
+    .catch(() => {
+      _osmPKCEPair = osmGeneratePKCEPlain();
+    });
+
+  const state = osmRandomBase64url(16);
 
   sessionStorage.setItem("osmCodeVerifier", codeVerifier);
 
@@ -77,7 +103,7 @@ async function osmSignIn() {
     scope: OSM_SCOPE,
     state,
     code_challenge: codeChallenge,
-    code_challenge_method: "S256",
+    code_challenge_method: method,
   });
 
   window.open(`${OSM_AUTH_URL}?${params}`, "_blank");
@@ -185,7 +211,7 @@ async function osmUpdateSettingsUI() {
     if (user) {
       signInBtn.style.display = "none";
       usernameEl.textContent = user.display_name;
-      usernameEl.href = `${OSM_BASE}/user/${encodeURIComponent(user.display_name)}`;
+      usernameEl.href = `${OSM_BASE}/user/${encodeURIComponent(user.display_name)}/history`;
       usernameEl.style.display = "";
       signOutBtn.style.display = "";
       return;
