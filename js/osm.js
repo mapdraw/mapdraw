@@ -14,7 +14,7 @@ const OSM_API_URL = OSM_TEST_MODE
   ? "https://master.apis.dev.openstreetmap.org/api/0.6"
   : "https://api.openstreetmap.org/api/0.6";
 const OSM_REDIRECT_URI = `${window.location.origin}/osm-callback.html`;
-const OSM_SCOPE = "read_prefs write_api";
+const OSM_SCOPE = "read_prefs write_api write_notes";
 
 const OSM_CONTRIBUTE_CATEGORIES = [
   { id: "bench", name: "Bench", icon: "chair", tags: { amenity: "bench" } },
@@ -295,6 +295,47 @@ async function osmShowContributePicker(latlng) {
 
 function osmIsSignedIn() {
   return !!localStorage.getItem("osmAccessToken");
+}
+
+async function osmSubmitNote(latlng, text) {
+  const token = localStorage.getItem("osmAccessToken");
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const params = new URLSearchParams({ lat: latlng.lat, lon: latlng.lng, text });
+  const response = await fetch(`${OSM_API_URL}/notes?${params}`, {
+    method: "POST",
+    headers,
+  });
+
+  if (!response.ok) throw new Error(`Failed to submit note: ${response.status}`);
+}
+
+async function osmShowNotePicker(latlng) {
+  const { value: text } = await Swal.fire({
+    title: "Leave a Note on OpenStreetMap",
+    input: "textarea",
+    inputPlaceholder: "Describe what's missing or incorrect...",
+    confirmButtonText: "Submit",
+    showCancelButton: true,
+    inputValidator: (value) => {
+      if (!value?.trim()) return "Please enter a note.";
+    },
+  });
+
+  if (!text) return;
+
+  try {
+    await osmSubmitNote(latlng, text.trim());
+    Swal.fire({
+      toast: true,
+      icon: "success",
+      title: "Note submitted to OpenStreetMap",
+      showConfirmButton: false,
+      timer: 3000,
+    });
+  } catch (error) {
+    Swal.fire({ title: "Submission Failed", html: error.message });
+  }
 }
 
 async function osmSubmitNode(latlng, tags) {

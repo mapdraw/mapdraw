@@ -135,11 +135,20 @@ function initializeContextMenu(map) {
     popupContent.appendChild(
       createBtn("Edit on OpenStreetMap", () => {
         const zoom = map.getZoom();
-        const url = `https://www.openstreetmap.org/edit?editor=id#map=${zoom}/${latlng.lat}/${latlng.lng}`;
+        const url = `${OSM_BASE}/edit?editor=id#map=${zoom}/${latlng.lat}/${latlng.lng}`;
         window.open(url, "_blank");
         map.closePopup();
       }),
     );
+
+    if (typeof osmShowNotePicker === "function" && osmIsSignedIn()) {
+      popupContent.appendChild(
+        createBtn("Add Note on OpenStreetMap", () => {
+          map.closePopup();
+          osmShowNotePicker(latlng);
+        }),
+      );
+    }
 
     if (typeof osmIsSignedIn === "function" && osmIsSignedIn()) {
       popupContent.appendChild(
