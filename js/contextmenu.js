@@ -4,14 +4,8 @@
 // This module handles the right-click context menu on the map,
 // providing options to copy coordinates, set routing points, and edit on OpenStreetMap.
 function initializeContextMenu(map) {
-  /**
-   * Creates and displays the map's context menu in a popup.
-   * @param {L.LeafletEvent} e - The map event object
-   */
   const showMapContextMenu = (e) => {
-    const latlng = e.latlng;
-    const displayedCoordString = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
-    const fullCoordString = `${latlng.lat}, ${latlng.lng}`;
+    let latlng = e.latlng;
 
     const popupContent = document.createElement("div");
     popupContent.style.textAlign = "center";
@@ -28,9 +22,33 @@ function initializeContextMenu(map) {
       map.closePopup();
     };
 
-    const coordsDiv = document.createElement("div");
-    coordsDiv.innerHTML = `<span>${displayedCoordString}</span>`;
-    popupContent.appendChild(coordsDiv);
+    const dragHandle = document.createElement("div");
+    dragHandle.style.display = "grid";
+    dragHandle.style.gridTemplateColumns = "1fr auto 1fr";
+    dragHandle.style.alignItems = "center";
+    dragHandle.style.cursor = "move";
+    dragHandle.style.userSelect = "none";
+    popupContent.appendChild(dragHandle);
+
+    const latSpan = document.createElement("span");
+    const lngSpan = document.createElement("span");
+    const dragIcon = document.createElement("span");
+    dragIcon.className = "material-symbols";
+    dragIcon.textContent = "drag_indicator";
+    dragIcon.style.fontSize = "16px";
+    dragIcon.style.color = "var(--text-color)";
+
+    latSpan.style.textAlign = "center";
+    lngSpan.style.textAlign = "center";
+    dragHandle.appendChild(latSpan);
+    dragHandle.appendChild(dragIcon);
+    dragHandle.appendChild(lngSpan);
+
+    const updateCoords = () => {
+      latSpan.textContent = latlng.lat.toFixed(5);
+      lngSpan.textContent = latlng.lng.toFixed(5);
+    };
+    updateCoords();
 
     const createBtn = (text, onClick) => {
       const btn = document.createElement("div");
@@ -74,14 +92,15 @@ function initializeContextMenu(map) {
         {
           text: "Copy Coords",
           onClick: () => {
-            copyToClipboard(fullCoordString)
+            const coordString = `${latlng.lat}, ${latlng.lng}`;
+            copyToClipboard(coordString)
               .then(() => {
                 map.closePopup();
                 Swal.fire({
                   toast: true,
                   icon: "success",
                   title: "Coordinates Copied!",
-                  html: fullCoordString,
+                  html: coordString,
                   showConfirmButton: false,
                   timer: 1500,
                 });
@@ -159,7 +178,62 @@ function initializeContextMenu(map) {
       );
     }
 
-    L.popup({ closeButton: false, className: "context-menu-popup" })
+    const clientToContainerPoint = (clientX, clientY) => {
+      const rect = map.getContainer().getBoundingClientRect();
+      return L.point(clientX - rect.left, clientY - rect.top);
+    };
+
+    const startDrag = (startClientX, startClientY, onMove) => {
+      const grabPx = clientToContainerPoint(startClientX, startClientY);
+      const tipPx = map.latLngToContainerPoint(latlng);
+      const offset = grabPx.subtract(tipPx);
+
+      const move = (clientX, clientY) => {
+        const cursorPx = clientToContainerPoint(clientX, clientY);
+        latlng = map.containerPointToLatLng(cursorPx.subtract(offset));
+        popup.setLatLng(latlng);
+        updateCoords();
+      };
+
+      onMove(move);
+    };
+
+    L.DomEvent.on(dragHandle, "mousedown", (startE) => {
+      L.DomEvent.stop(startE);
+      startDrag(startE.clientX, startE.clientY, (move) => {
+        const onMove = (ev) => move(ev.clientX, ev.clientY);
+        const onUp = () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+    });
+
+    L.DomEvent.on(
+      dragHandle,
+      "touchstart",
+      (startE) => {
+        L.DomEvent.stop(startE);
+        const t = startE.touches[0];
+        startDrag(t.clientX, t.clientY, (move) => {
+          const onMove = (ev) => {
+            ev.preventDefault();
+            move(ev.touches[0].clientX, ev.touches[0].clientY);
+          };
+          const onEnd = () => {
+            dragHandle.removeEventListener("touchmove", onMove);
+            dragHandle.removeEventListener("touchend", onEnd);
+          };
+          dragHandle.addEventListener("touchmove", onMove, { passive: false });
+          dragHandle.addEventListener("touchend", onEnd);
+        });
+      },
+      { passive: false },
+    );
+
+    const popup = L.popup({ closeButton: false, className: "context-menu-popup" })
       .setLatLng(latlng)
       .setContent(popupContent)
       .openOn(map);
