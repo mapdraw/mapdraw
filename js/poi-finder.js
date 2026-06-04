@@ -24,7 +24,7 @@ const POI_CATEGORIES = [
     id: "park",
     name: "Park",
     icon: "park",
-    overpassQuery: ["leisure=park", "leisure=nature_reserve"],
+    overpassQuery: "leisure=park",
   },
   {
     id: "camping",
@@ -94,7 +94,7 @@ const POI_CATEGORIES = [
   },
   {
     id: "supermarket",
-    name: "Supermarket",
+    name: "Grocery",
     icon: "shopping_cart",
     overpassQuery: ["shop=supermarket", "shop=convenience"],
   },
