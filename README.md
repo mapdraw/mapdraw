@@ -5,7 +5,7 @@
 
 </div>
 
-MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, and Strava activity integration.
+MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, Strava activity integration, and OpenStreetMap contributions.
 
 ---
 
@@ -42,6 +42,7 @@ The application only sends data to external services for specific, optional feat
 - **Search:** Text queries are sent to OpenStreetMap's Nominatim geocoding service to find and display locations on the map.
 - **POI Finder:** Search queries and map bounds are sent to OpenStreetMap's Overpass API to find points of interest in the current map view.
 - **Strava Integration:** Communicates directly with the Strava API after user authorization.
+- **OpenStreetMap Contributions:** Communicates directly with the OpenStreetMap API after user authorization to submit notes and map contributions.
 
 ---
 
@@ -75,8 +76,6 @@ Deployment to GitHub Pages is handled automatically by the GitHub Action located
 
 **In addition to deploying the site, the workflow also performs critical performance optimizations. It bundles all JavaScript files located between the `<!-- START-BUNDLE -->` and `<!-- END-BUNDLE -->` comments in `index.html` into a single script, minifies it to reduce its size, and updates `index.html` to load the final optimized file (`app.min.js`).**
 
-For the deployment to succeed, you must provide your production API keys as repository secrets. See the **"Configuring API Keys"** section below for details.
-
 ---
 
 ## Configuring API Keys
@@ -98,8 +97,6 @@ To enable features that rely on external services, you must provide your own API
 > The `secrets.js` file is listed in `.gitignore` and will not be committed to the repository, keeping your keys safe.
 
 ### B. For Production Deployment
-
-For the deployment to succeed, you must provide your production API keys as GitHub repository secrets.
 
 1.  In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
 2.  Click **New repository secret** for each key listed below, ensuring the names match the `SNAKE_CASE` format exactly:
