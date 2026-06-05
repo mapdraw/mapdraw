@@ -3,7 +3,7 @@
 // OpenStreetMap Integration Module
 // Handles OAuth 2.0 PKCE authentication and settings panel UI.
 
-const OSM_TEST_MODE = true; // Switch to false for production
+const OSM_TEST_MODE = true; // Overridden to false in production by deploy.yml
 
 const OSM_BASE = OSM_TEST_MODE
   ? "https://master.apis.dev.openstreetmap.org"

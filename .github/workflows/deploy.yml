@@ -27,6 +27,10 @@ jobs:
           echo "const stravaClientId = \"${{ secrets.STRAVA_CLIENT_ID }}\";" >> js/secrets.js
           echo "const stravaClientSecret = \"${{ secrets.STRAVA_CLIENT_SECRET }}\";" >> js/secrets.js
 
+      - name: Set production flags
+        run: |
+          sed -i "s/OSM_TEST_MODE = true/OSM_TEST_MODE = false/" js/osm.js
+
       - name: Replace placeholders
         run: |
           # Extract values from config.js
