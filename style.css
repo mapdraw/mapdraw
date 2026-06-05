@@ -457,6 +457,7 @@ a#info-panel-strava-link:hover {
 }
 #custom-layers-panel span {
   padding-left: 5px;
+  font-size: var(--font-size-12);
 }
 .leaflet-control-layers-selector {
   margin-top: 0;
@@ -542,6 +543,7 @@ a#info-panel-strava-link:hover {
   box-sizing: border-box;
   background-color: var(--background-color);
   color: var(--text-color);
+  font-size: var(--font-size-14);
 }
 
 .panel-input-group button {
