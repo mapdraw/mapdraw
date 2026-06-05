@@ -160,16 +160,13 @@ function initializeContextMenu(map) {
       }),
     );
 
-    if (typeof osmShowNotePicker === "function" && osmIsSignedIn()) {
+    if (typeof osmIsSignedIn === "function" && osmIsSignedIn()) {
       popupContent.appendChild(
         createBtn("Add Note on OpenStreetMap", () => {
           map.closePopup();
           osmShowNotePicker(latlng);
         }),
       );
-    }
-
-    if (typeof osmIsSignedIn === "function" && osmIsSignedIn()) {
       popupContent.appendChild(
         createBtn("Add to OpenStreetMap", () => {
           map.closePopup();
