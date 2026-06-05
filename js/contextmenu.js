@@ -160,15 +160,33 @@ function initializeContextMenu(map) {
       }),
     );
 
-    if (typeof osmIsSignedIn === "function" && osmIsSignedIn()) {
+    if (typeof osmIsSignedIn === "function") {
+      const osmSignInToast = () => {
+        map.closePopup();
+        Swal.fire({
+          toast: true,
+          icon: "info",
+          title: "Sign in to OpenStreetMap in Settings to contribute.",
+          showConfirmButton: false,
+          timer: 3000,
+        });
+      };
       popupContent.appendChild(
         createBtn("Add Note on OpenStreetMap", () => {
+          if (!osmIsSignedIn()) {
+            osmSignInToast();
+            return;
+          }
           map.closePopup();
           osmShowNotePicker(latlng);
         }),
       );
       popupContent.appendChild(
         createBtn("Add to OpenStreetMap", () => {
+          if (!osmIsSignedIn()) {
+            osmSignInToast();
+            return;
+          }
           map.closePopup();
           osmShowContributePicker(latlng);
         }),
