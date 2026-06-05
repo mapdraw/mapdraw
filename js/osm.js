@@ -143,9 +143,6 @@ async function osmExchangeCode(code) {
       client_id: osmClientId,
       code_verifier: codeVerifier,
     };
-    if (typeof osmClientSecret !== "undefined" && osmClientSecret) {
-      tokenParams.client_secret = osmClientSecret;
-    }
 
     const response = await fetch(OSM_TOKEN_URL, {
       method: "POST",

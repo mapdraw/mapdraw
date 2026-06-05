@@ -21,6 +21,7 @@ MapDraw is a simple, powerful web-based editor for creating, viewing, and managi
 - **Routing:** Generate routes for driving, biking, or walking. You can then save the generated route as an editable path.
 - **Elevation Profiles:** Instantly visualize the elevation profile for any path.
 - **Strava Integration:** Connect your Strava account to view your activities on the map, download their original high-resolution GPX tracks, or duplicate them for editing.
+- **OpenStreetMap Contributions:** Sign in with your OpenStreetMap account to leave notes or add missing places directly to the map.
 - **Custom WMS Layers:** Import map layers from any WMS-compatible service. Browse available layers, add them to your map as overlays, and reorder them with drag-and-drop. Your WMS layers are saved locally and persist between sessions.
 - **POI Finder:** Search for points of interest (parks, restaurants, viewpoints, etc.) in the current map view using OpenStreetMap data, and save them directly to your map.
 - **Performance Optimized:** Optional path and area simplification (on by default) for smoother performance. When enabled, simplified copies are made when duplicating tracks/activities/areas (originals preserved), and generated routes are simplified when saved. Configurable in settings.
@@ -90,10 +91,9 @@ To enable features that rely on external services, you must provide your own API
     - `googleApiKey`
     - `mapboxAccessToken`
     - `tracestrackApiKey`
+    - `osmClientId`
     - `stravaClientId` (Optional)
     - `stravaClientSecret` (Optional)
-    - `osmClientId`
-    - `osmClientSecret`
 
 > The `secrets.js` file is listed in `.gitignore` and will not be committed to the repository, keeping your keys safe.
 
@@ -106,10 +106,9 @@ For the deployment to succeed, you must provide your production API keys as GitH
     - `GOOGLE_API_KEY`
     - `MAPBOX_ACCESS_TOKEN`
     - `TRACESTRACK_API_KEY`
+    - `OSM_CLIENT_ID`
     - `STRAVA_CLIENT_ID` (Optional)
     - `STRAVA_CLIENT_SECRET` (Optional)
-    - `OSM_CLIENT_ID`
-    - `OSM_CLIENT_SECRET`
 
 ### Important API Notes
 
@@ -118,6 +117,12 @@ For the deployment to succeed, you must provide your production API keys as GitH
 > - **Geolocation API** (for automatic map centering based on user location)
 > - **Maps Elevation API** (for elevation profiles)
 > - **Maps JavaScript API** (required dependency for the Maps Elevation API)
+
+> **OpenStreetMap API Note:** When registering your OAuth 2 application at openstreetmap.org (for testing: master.apis.dev.openstreetmap.org), make sure to set the redirect URI to `https://YOUR_DOMAIN/osm-callback.html`, uncheck **Confidential application**, and enable the following permissions:
+>
+> - Read user preferences (`read_prefs`)
+> - Modify the map (`write_api`)
+> - Modify notes (`write_notes`)
 
 > **GeoAdmin API Note:** The GeoAdmin API is free and does not require an API key. It only works for paths within Switzerland.
 
