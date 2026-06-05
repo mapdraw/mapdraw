@@ -71,17 +71,17 @@
 
     <div class="container">
       <h1>Privacy Policy for MapDraw</h1>
-      <p><strong>Effective Date:</strong> January 27, 2026</p>
+      <p><strong>Effective Date:</strong> June 5, 2026</p>
 
       <h2>1. Introduction</h2>
       <p>
-        Welcome to MapDraw. This Privacy Policy explains how we handle your information when
-        you use our web application. Your privacy is critically important to us.
+        Welcome to MapDraw. This Privacy Policy explains how we handle your information when you use
+        our web application. Your privacy is critically important to us.
       </p>
       <p>
-        <strong>Core Privacy Principle:</strong> MapDraw operates entirely within your web
-        browser (client-side). Your geographic data files (GeoJSON, GPX, KML, KMZ) are processed on
-        your local machine and are never uploaded to, or stored on, our servers.
+        <strong>Core Privacy Principle:</strong> MapDraw operates entirely within your web browser
+        (client-side). Your geographic data files (GeoJSON, GPX, KML, KMZ) are processed on your
+        local machine and are never uploaded to, or stored on, our servers.
       </p>
 
       <h2>2. Automatic Location Detection</h2>
@@ -116,6 +116,11 @@
           <strong>POI Finder:</strong> Search queries and map bounds are sent to OpenStreetMap's
           Overpass API to find points of interest in the current map view.
         </li>
+        <li>
+          <strong>OpenStreetMap Contributions:</strong> When you submit a note or add a missing
+          place, the relevant data (coordinates, description, or map tags) is sent to the
+          OpenStreetMap API on your behalf.
+        </li>
       </ul>
       <p>
         We encourage you to review the privacy policies of these third-party services for more
@@ -126,75 +131,52 @@
       <p>
         To use the Strava integration, you provide your own personal Strava API credentials (Client
         ID and Client Secret) from an API application you create in your own Strava account. These
-        keys are kept in memory only and are never saved or transmitted to our servers.
+        keys are kept in memory only and are never saved or transmitted to our servers. When you
+        authorize access, the application fetches your basic profile details and activity history
+        (name, type, distance, time, routes) directly from Strava to your browser. MapDraw's servers
+        never receive or have access to this data. The authentication token is stored temporarily in
+        your browser's <code>sessionStorage</code> and is deleted when you close the browser tab.
+        When you use your own Strava API application with MapDraw, you are subject to Strava's API
+        Agreement and their privacy policy. Strava may monitor and collect usage data related to API
+        calls made through your application.
       </p>
-      <p>Your activity data is processed only in your browser and is never stored on any server.</p>
 
-      <h2>5. Information Accessed via the Strava API</h2>
+      <h2>5. OpenStreetMap Integration</h2>
       <p>
-        When you authorize access to your Strava account, the application running in your browser
-        may fetch the following types of data directly from the Strava API:
+        To use the OpenStreetMap contribution features, you sign in with your own OpenStreetMap
+        account via OAuth 2.0. MapDraw never receives your OpenStreetMap password. When you
+        authorize access, the application fetches your username to confirm your identity and submits
+        notes or map contributions on your behalf. All communication happens directly between your
+        browser and OpenStreetMap — MapDraw's servers are never involved. The authentication token
+        is stored in your browser's <code>localStorage</code> so you remain signed in across
+        sessions. You can sign out at any time within the app, or revoke access under "OAuth 2
+        Authorizations" in your OpenStreetMap account settings.
+      </p>
+
+      <h2>6. Your Rights and Data Control</h2>
+      <p>
+        All data fetched from third-party services is used solely to provide the application's
+        functionality and is processed entirely in your browser. MapDraw never receives, stores, or
+        has access to your data. You have full control:
       </p>
       <ul>
         <li>
-          <strong>Strava Profile Information:</strong> Your basic profile details to confirm your
-          identity.
+          <strong>Strava:</strong> All session data is cleared when you close the browser tab. You
+          can delete your Strava API application at any time in your Strava account settings.
         </li>
         <li>
-          <strong>Activity Data:</strong> Your activity history, including details like name, type,
-          distance, time, and summary polylines (routes).
-        </li>
-      </ul>
-      <p>
-        This data is fetched directly from Strava to your browser and processed entirely
-        client-side. MapDraw's servers never receive or have access to this data. An
-        authentication token is stored temporarily in your browser's <code>sessionStorage</code>
-        and is deleted when you close the browser tab.
-      </p>
-
-      <h2>6. How Your Information Is Used</h2>
-      <p>
-        All data fetched from third-party services (including Strava) is used solely to provide the
-        application's functionality and is processed entirely in your browser.
-      </p>
-      <p>
-        <strong>Important:</strong> Because MapDraw operates client-side, we never receive,
-        store, or have access to your Strava data. Your activity information stays entirely within
-        your browser session.
-      </p>
-
-      <h2>7. Strava API Terms</h2>
-      <p>
-        When you create your own Strava API application and use it with MapDraw, you are
-        subject to Strava's API Agreement and their privacy policy. Strava may monitor and collect
-        usage data related to API calls made through your application. Please review Strava's terms
-        for more information.
-      </p>
-
-      <h2>8. Your Rights and Data Control</h2>
-      <p>You have full control over your data.</p>
-      <ul>
-        <li>
-          <strong>Session Data:</strong> All Strava data is automatically cleared from the
-          application when you close your browser tab.
-        </li>
-        <li>
-          <strong>API Credentials:</strong> Your API keys are kept only in memory and are never
-          saved. Simply closing the browser tab or refreshing the page clears them.
-        </li>
-        <li>
-          <strong>Your Strava App:</strong> You can delete or modify your personal Strava API
-          application at any time in your Strava account settings.
+          <strong>OpenStreetMap:</strong> Sign out within the app to clear your token, or revoke
+          access from your OpenStreetMap account settings.
         </li>
       </ul>
 
-      <h2>9. Changes to This Privacy Policy</h2>
+      <h2>7. Changes to This Privacy Policy</h2>
       <p>
         We may update this Privacy Policy from time to time. We will notify you of any changes by
         posting the new Privacy Policy on this page.
       </p>
 
-      <h2>10. Contact Us</h2>
+      <h2>8. Contact Us</h2>
       <p>
         If you have any questions about this Privacy Policy, please contact us at:
         <a href="mailto:mapdrawdev@gmail.com">mapdrawdev@gmail.com</a>.

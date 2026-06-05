@@ -1513,6 +1513,8 @@ async function initializeMap() {
   initializeContextMenu(map);
   const settingsPanel = document.getElementById("settings-panel");
   if (settingsPanel) {
+    initializeOSM(settingsPanel);
+
     const simplificationContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const labelGroup = L.DomUtil.create("div", "", simplificationContainer);
     labelGroup.style.display = "flex";

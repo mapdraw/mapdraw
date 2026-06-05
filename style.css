@@ -457,6 +457,7 @@ a#info-panel-strava-link:hover {
 }
 #custom-layers-panel span {
   padding-left: 5px;
+  font-size: var(--font-size-12);
 }
 .leaflet-control-layers-selector {
   margin-top: 0;
@@ -542,6 +543,7 @@ a#info-panel-strava-link:hover {
   box-sizing: border-box;
   background-color: var(--background-color);
   color: var(--text-color);
+  font-size: var(--font-size-14);
 }
 
 .panel-input-group button {
@@ -1413,7 +1415,7 @@ a#info-panel-strava-link:hover {
 }
 
 .context-menu-popup .leaflet-popup-content {
-  margin: 5px 10px !important;
+  margin: 5px 3px !important;
 }
 
 .leaflet-touch .leaflet-control-layers-toggle {
@@ -1666,9 +1668,12 @@ a#info-panel-strava-link:hover {
   color: var(--text-color);
   border: 1px solid var(--border-color) !important;
 }
-/* The tip is a square rotated 45deg; its top/left edges appear at the seam
-   with the popup body. Making them transparent hides the thin artifact line. */
+/* Overlap the tip into the popup body and match its colors to hide the subpixel seam. */
+.leaflet-popup-tip-container {
+  margin-top: -1px;
+}
 .leaflet-popup-tip {
+  background: var(--background-color) !important;
   border-color: var(--background-color) var(--border-color) var(--border-color)
     var(--background-color) !important;
 }
@@ -2046,6 +2051,48 @@ button.strava-button-secondary:not(:disabled) {
   text-decoration: underline;
 }
 
+/* OSM Settings */
+#settings-panel .osm-profile-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.osm-profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.osm-username {
+  font-size: var(--font-size-14);
+}
+
+.osm-separator {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 2px 0 0;
+}
+
+.osm-auth-btn {
+  font-size: var(--font-size-14);
+  color: var(--highlight-color);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.osm-auth-btn:hover {
+  text-decoration: underline;
+}
+
+.osm-contribute-search::placeholder {
+  color: var(--text-color);
+  opacity: 1;
+}
+
 /* Style for credits link in settings panel */
 .credits-link {
   font-size: var(--font-size-14);
@@ -2072,7 +2119,7 @@ button.strava-button-secondary:not(:disabled) {
 /*
   Current icon subset — update this list when adding new icons, then regenerate the font.
   Paste it as-is into the URL below (replacing ICONS):
-  add,add_circle,cabin,camping,cancel,chair,commute,content_copy,data_object,delete,diagonal_line,directions_bike,directions_car,directions_run,directions_walk,download,drag_indicator,draw,edit,elevation,favorite,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,remove,restaurant,save,search,sentiment_dissatisfied,settings,shopping_cart,visibility,visibility_off,water_drop,wc
+  add,add_circle,cabin,camping,cancel,chair,commute,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_car,directions_run,directions_walk,download,drag_indicator,draw,edit,elevation,favorite,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,recycling,remove,restaurant,save,search,sentiment_dissatisfied,settings,shopping_cart,visibility,visibility_off,water_drop,wc
 
   To verify the list is complete, run in DevTools console (copies to clipboard):
   copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))

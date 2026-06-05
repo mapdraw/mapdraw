@@ -5,7 +5,7 @@
 
 </div>
 
-MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, and Strava activity integration.
+MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, Strava activity integration, and OpenStreetMap contributions.
 
 ---
 
@@ -21,6 +21,7 @@ MapDraw is a simple, powerful web-based editor for creating, viewing, and managi
 - **Routing:** Generate routes for driving, biking, or walking. You can then save the generated route as an editable path.
 - **Elevation Profiles:** Instantly visualize the elevation profile for any path.
 - **Strava Integration:** Connect your Strava account to view your activities on the map, download their original high-resolution GPX tracks, or duplicate them for editing.
+- **OpenStreetMap Contributions:** Sign in with your OpenStreetMap account to leave notes or add missing places directly to the map.
 - **Custom WMS Layers:** Import map layers from any WMS-compatible service. Browse available layers, add them to your map as overlays, and reorder them with drag-and-drop. Your WMS layers are saved locally and persist between sessions.
 - **POI Finder:** Search for points of interest (parks, restaurants, viewpoints, etc.) in the current map view using OpenStreetMap data, and save them directly to your map.
 - **Performance Optimized:** Optional path and area simplification (on by default) for smoother performance. When enabled, simplified copies are made when duplicating tracks/activities/areas (originals preserved), and generated routes are simplified when saved. Configurable in settings.
@@ -41,6 +42,7 @@ The application only sends data to external services for specific, optional feat
 - **Search:** Text queries are sent to OpenStreetMap's Nominatim geocoding service to find and display locations on the map.
 - **POI Finder:** Search queries and map bounds are sent to OpenStreetMap's Overpass API to find points of interest in the current map view.
 - **Strava Integration:** Communicates directly with the Strava API after user authorization.
+- **OpenStreetMap Contributions:** Communicates directly with the OpenStreetMap API after user authorization to submit notes and map contributions.
 
 ---
 
@@ -74,8 +76,6 @@ Deployment to GitHub Pages is handled automatically by the GitHub Action located
 
 **In addition to deploying the site, the workflow also performs critical performance optimizations. It bundles all JavaScript files located between the `<!-- START-BUNDLE -->` and `<!-- END-BUNDLE -->` comments in `index.html` into a single script, minifies it to reduce its size, and updates `index.html` to load the final optimized file (`app.min.js`).**
 
-For the deployment to succeed, you must provide your production API keys as repository secrets. See the **"Configuring API Keys"** section below for details.
-
 ---
 
 ## Configuring API Keys
@@ -90,6 +90,7 @@ To enable features that rely on external services, you must provide your own API
     - `googleApiKey`
     - `mapboxAccessToken`
     - `tracestrackApiKey`
+    - `osmClientId`
     - `stravaClientId` (Optional)
     - `stravaClientSecret` (Optional)
 
@@ -97,13 +98,12 @@ To enable features that rely on external services, you must provide your own API
 
 ### B. For Production Deployment
 
-For the deployment to succeed, you must provide your production API keys as GitHub repository secrets.
-
 1.  In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
 2.  Click **New repository secret** for each key listed below, ensuring the names match the `SNAKE_CASE` format exactly:
     - `GOOGLE_API_KEY`
     - `MAPBOX_ACCESS_TOKEN`
     - `TRACESTRACK_API_KEY`
+    - `OSM_CLIENT_ID`
     - `STRAVA_CLIENT_ID` (Optional)
     - `STRAVA_CLIENT_SECRET` (Optional)
 
@@ -114,6 +114,12 @@ For the deployment to succeed, you must provide your production API keys as GitH
 > - **Geolocation API** (for automatic map centering based on user location)
 > - **Maps Elevation API** (for elevation profiles)
 > - **Maps JavaScript API** (required dependency for the Maps Elevation API)
+
+> **OpenStreetMap API Note:** When registering your OAuth 2 application at openstreetmap.org (for testing: master.apis.dev.openstreetmap.org), make sure to set the redirect URI to `https://YOUR_DOMAIN/osm-callback.html`, uncheck **Confidential application**, and enable the following permissions:
+>
+> - Read user preferences (`read_prefs`)
+> - Modify the map (`write_api`)
+> - Modify notes (`write_notes`)
 
 > **GeoAdmin API Note:** The GeoAdmin API is free and does not require an API key. It only works for paths within Switzerland.
 
