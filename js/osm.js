@@ -211,7 +211,7 @@ async function osmUpdateSettingsUI() {
     if (user) {
       signInBtn.style.display = "none";
       usernameEl.textContent = user.display_name;
-      usernameEl.href = `${OSM_BASE}/user/${encodeURIComponent(user.display_name)}/history`;
+      usernameEl.href = `${OSM_BASE}/user/${encodeURIComponent(user.display_name)}`;
       usernameEl.style.display = "";
       signOutBtn.style.display = "";
       return;
