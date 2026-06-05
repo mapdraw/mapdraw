@@ -95,6 +95,7 @@ function osmSignIn() {
   const state = osmRandomBase64url(16);
 
   sessionStorage.setItem("osmCodeVerifier", codeVerifier);
+  sessionStorage.setItem("osmAuthState", state);
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -106,14 +107,47 @@ function osmSignIn() {
     code_challenge_method: method,
   });
 
-  window.open(`${OSM_AUTH_URL}?${params}`, "_blank");
+  const popup = window.open(`${OSM_AUTH_URL}?${params}`, "_blank");
+  if (!popup) {
+    sessionStorage.removeItem("osmCodeVerifier");
+    sessionStorage.removeItem("osmAuthState");
+    Swal.fire({
+      title: "Popup Blocked",
+      text: "Please allow popups for this site to sign in with OpenStreetMap.",
+    });
+    return;
+  }
 
   const poll = setInterval(async () => {
-    const code = localStorage.getItem("osmAuthCode");
+    const error = localStorage.getItem("osmAuthError");
+    if (error) {
+      clearInterval(poll);
+      localStorage.removeItem("osmAuthError");
+      sessionStorage.removeItem("osmCodeVerifier");
+      sessionStorage.removeItem("osmAuthState");
+      const text =
+        error === "access_denied"
+          ? "You denied access. Please try again and click Accept to sign in."
+          : `Authorization failed: ${error}`;
+      Swal.fire({ title: "Authentication Failed", text });
+      return;
+    }
 
+    const code = localStorage.getItem("osmAuthCode");
     if (code) {
       clearInterval(poll);
       localStorage.removeItem("osmAuthCode");
+
+      const returnedState = localStorage.getItem("osmAuthState");
+      localStorage.removeItem("osmAuthState");
+      const expectedState = sessionStorage.getItem("osmAuthState");
+      sessionStorage.removeItem("osmAuthState");
+
+      if (returnedState !== expectedState) {
+        sessionStorage.removeItem("osmCodeVerifier");
+        Swal.fire({ title: "Authentication Failed", text: "State mismatch. Please try again." });
+        return;
+      }
 
       const success = await osmExchangeCode(code);
       if (success) {
@@ -122,7 +156,14 @@ function osmSignIn() {
     }
   }, 500);
 
-  setTimeout(() => clearInterval(poll), 5 * 60 * 1000);
+  setTimeout(
+    () => {
+      clearInterval(poll);
+      sessionStorage.removeItem("osmCodeVerifier");
+      sessionStorage.removeItem("osmAuthState");
+    },
+    5 * 60 * 1000,
+  );
 }
 
 async function osmExchangeCode(code) {
@@ -304,7 +345,10 @@ async function osmSubmitNote(latlng, text) {
     headers,
   });
 
-  if (!response.ok) throw new Error(`Failed to submit note: ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 429) throw new Error("Rate limit reached. Please try again later.");
+    throw new Error(`Failed to submit note: ${response.status}`);
+  }
 }
 
 async function osmShowNotePicker(latlng) {
@@ -356,19 +400,27 @@ async function osmSubmitNode(latlng, tags) {
       headers,
       body: changesetXml,
     });
-    if (!changesetRes.ok) throw new Error(`Failed to create changeset: ${changesetRes.status}`);
+    if (!changesetRes.ok) {
+      if (changesetRes.status === 429)
+        throw new Error("Rate limit reached. Please try again later.");
+      throw new Error(`Failed to create changeset: ${changesetRes.status}`);
+    }
     changesetId = await changesetRes.text();
 
     const tagsXml = Object.entries(tags)
       .map(([k, v]) => `<tag k="${k}" v="${v}"/>`)
       .join("");
     const nodeXml = `<osm><node lat="${latlng.lat}" lon="${latlng.lng}" changeset="${changesetId}">${tagsXml}</node></osm>`;
-    const nodeRes = await fetch(`${OSM_API_URL}/node/create`, {
-      method: "PUT",
+    const nodeRes = await fetch(`${OSM_API_URL}/nodes`, {
+      method: "POST",
       headers,
       body: nodeXml,
     });
-    if (!nodeRes.ok) throw new Error(`Failed to create node: ${nodeRes.status}`);
+    if (!nodeRes.ok) {
+      if (nodeRes.status === 409) throw new Error("Changeset conflict. Please try again.");
+      if (nodeRes.status === 429) throw new Error("Rate limit reached. Please try again later.");
+      throw new Error(`Failed to create node: ${nodeRes.status}`);
+    }
     const nodeId = await nodeRes.text();
 
     return nodeId.trim();

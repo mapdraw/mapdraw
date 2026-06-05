@@ -11,6 +11,8 @@
         const error = params.get("error");
 
         if (code) {
+          const state = params.get("state");
+          if (state) localStorage.setItem("osmAuthState", state);
           localStorage.setItem("osmAuthCode", code);
           document.getElementById("message").textContent = "Success! You can now close this tab.";
         } else if (error) {
