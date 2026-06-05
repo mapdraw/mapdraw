@@ -92,6 +92,10 @@ function osmSignIn() {
       _osmPKCEPair = osmGeneratePKCEPlain();
     });
 
+  localStorage.removeItem("osmAuthCode");
+  localStorage.removeItem("osmAuthState");
+  localStorage.removeItem("osmAuthError");
+
   const state = osmRandomBase64url(16);
 
   sessionStorage.setItem("osmCodeVerifier", codeVerifier);
