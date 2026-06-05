@@ -17,6 +17,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Inject Google Analytics
+        env:
+          GA_ID: ${{ secrets.GA_MEASUREMENT_ID }}
+        run: |
+          [ -n "$GA_ID" ] && sed -i "s/GA_MEASUREMENT_ID/$GA_ID/g" index.html
+
       - name: Create secrets.js
         run: |
           mkdir -p js

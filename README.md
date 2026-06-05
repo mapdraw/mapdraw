@@ -34,7 +34,7 @@ MapDraw is a simple, powerful web-based editor for creating, viewing, and managi
 
 MapDraw is built as a local-first application. All processing of your imported geographic data files (GeoJSON, GPX, KML, KMZ) happens **entirely in your web browser**. Your files are never uploaded to or stored on any server.
 
-The application only sends data to external services for specific, optional features that require an API. This communication is limited to the minimum data necessary for the feature to function:
+The application sends data to external services only for specific features, and if configured, collects anonymous analytics data. All communication is limited to the minimum data necessary:
 
 - **Initial Map Centering:** Your approximate location is determined using the Google Geolocation API to center the map on your region on first load.
 - **Routing:** When you request a route, the coordinates of your start, end, and via points are sent to the selected routing provider.
@@ -43,6 +43,7 @@ The application only sends data to external services for specific, optional feat
 - **POI Finder:** Search queries and map bounds are sent to OpenStreetMap's Overpass API to find points of interest in the current map view.
 - **Strava Integration:** Communicates directly with the Strava API after user authorization.
 - **OpenStreetMap Contributions:** Communicates directly with the OpenStreetMap API after user authorization to submit notes and map contributions.
+- **Analytics:** If Google Analytics is configured, anonymous usage data is sent to Google to help understand how the application is used.
 
 ---
 
@@ -106,6 +107,7 @@ To enable features that rely on external services, you must provide your own API
     - `OSM_CLIENT_ID`
     - `STRAVA_CLIENT_ID` (Optional)
     - `STRAVA_CLIENT_SECRET` (Optional)
+    - `GA_MEASUREMENT_ID` (Optional — Google Analytics)
 
 ### Important API Notes
 
