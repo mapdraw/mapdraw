@@ -351,7 +351,7 @@ async function osmSubmitNote(latlng, text) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   const params = new URLSearchParams({ lat: latlng.lat, lon: latlng.lng, text });
-  const response = await fetch(`${OSM_API_URL}/notes?${params}`, {
+  const response = await fetch(`${OSM_API_URL}/notes.json?${params}`, {
     method: "POST",
     headers,
   });
@@ -360,6 +360,9 @@ async function osmSubmitNote(latlng, text) {
     if (response.status === 429) throw new Error("Rate limit reached. Please try again later.");
     throw new Error(`Failed to submit note: ${response.status}`);
   }
+
+  const data = await response.json();
+  return data.properties?.id;
 }
 
 async function osmShowNotePicker(latlng) {
@@ -377,13 +380,16 @@ async function osmShowNotePicker(latlng) {
   if (!text) return;
 
   try {
-    await osmSubmitNote(latlng, text.trim());
+    const noteId = await osmSubmitNote(latlng, text.trim());
     Swal.fire({
       toast: true,
       icon: "success",
-      title: "Note submitted to OpenStreetMap",
+      title: "Submitted to OpenStreetMap",
+      html: noteId
+        ? `<a href="${OSM_BASE}/note/${noteId}" target="_blank">Note #${noteId}</a>`
+        : undefined,
       showConfirmButton: false,
-      timer: 3000,
+      timer: 4000,
     });
   } catch (error) {
     Swal.fire({ title: "Submission Failed", html: error.message });
