@@ -1226,7 +1226,7 @@ async function initializeMap() {
 
     const popupContent = document.createElement("div");
     popupContent.style.textAlign = "center";
-    popupContent.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">${label}</div>`;
+    popupContent.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">${escHtml(label)}</div>`;
 
     const saveButton = document.createElement("button");
     saveButton.textContent = "Save to Map";

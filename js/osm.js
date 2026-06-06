@@ -598,7 +598,7 @@ async function osmShowContributions(user) {
     const renderList = (items) =>
       items
         .map((n) => {
-          const displayName = n.comment || `#${n.id}`;
+          const displayName = escHtml(n.comment || `#${n.id}`);
           const iso = new Date(n.createdAt).toISOString().slice(0, 16);
           const [date, time] = iso.split("T");
           const coords = `${parseFloat(n.lat).toFixed(5)}, ${parseFloat(n.lon).toFixed(5)}`;
@@ -634,10 +634,7 @@ async function osmShowContributions(user) {
                 const row = btn.closest(".osm-contribution-row");
                 const nodeId = row.dataset.id;
                 Swal.close();
-                window.showSearchMarker(
-                  L.latLng(lat, lon),
-                  `<a href="${OSM_BASE}/node/${nodeId}" target="_blank" rel="noopener noreferrer">Node: ${nodeId}</a>`,
-                );
+                window.showSearchMarker(L.latLng(lat, lon), `Node: ${nodeId}`);
               });
             });
           Swal.getPopup()
