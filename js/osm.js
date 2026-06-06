@@ -418,7 +418,7 @@ async function osmSubmitNode(latlng, tags) {
 
   let changesetId = null;
   try {
-    const changesetXml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? "MapDrawTest" : "MapDraw"}"/><tag k="comment" v="Created ${tagComment}"/></changeset></osm>`;
+    const changesetXml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/><tag k="comment" v="Created ${tagComment}"/></changeset></osm>`;
     const changesetRes = await fetch(`${OSM_API_URL}/changeset/create`, {
       method: "PUT",
       headers,

@@ -6,6 +6,7 @@ const APP_TITLE = "MapDraw: Draw on Map, GPS, GPX, KML & GeoJSON Editor"; // Use
 // prettier-ignore
 const APP_DESCRIPTION = "Free online GPX, KML, KMZ & GeoJSON viewer & editor. Draw, view & edit GPS tracks with routing, elevation profiles & Strava integration."; // Used in <meta name="description">
 const APP_DOMAIN = "www.mapdraw.net"; // Used for Strava setup instructions
+const OSM_CREATED_BY = "MapDraw"; // OSM changeset created_by tag
 
 // Core Application Colors
 const DEFAULT_COLOR = "#DC143C"; // Crimson
