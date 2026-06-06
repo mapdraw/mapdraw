@@ -610,7 +610,7 @@ async function osmShowSubmissions(user) {
             <small>${date}</small>
           </div>
           <div class="osm-submission-actions">
-            <a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer" style="color:var(--link-color);font-size:12px;">#${n.id}</a>
+            <a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer" style="font-size:12px;">#${n.id}</a>
             <button class="osm-delete-btn" data-id="${n.id}" title="Delete node"><span class="material-symbols material-symbols-fill">cancel</span></button>
           </div>
         </div>`;

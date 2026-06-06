@@ -446,7 +446,7 @@ function displayPOIResults(results, category) {
 
     popupContent += `
         <small style="color: var(--text-color-secondary);">
-          <a href="https://www.openstreetmap.org/${element.type}/${element.id}" target="_blank" style="color: var(--link-color);">
+          <a href="https://www.openstreetmap.org/${element.type}/${element.id}" target="_blank">
             View on OpenStreetMap
           </a>
         </small>

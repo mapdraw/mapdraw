@@ -69,6 +69,10 @@ body.dark-mode {
   -webkit-tap-highlight-color: transparent !important;
 }
 
+a {
+  color: var(--highlight-color);
+}
+
 /* Also remove the focus outline, which can appear as a blue ring */
 *:focus {
   outline: none !important;
