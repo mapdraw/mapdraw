@@ -259,10 +259,10 @@ async function osmUpdateSettingsUI() {
       signOutBtn.style.display = "";
       if (userLinksEl) {
         const encoded = encodeURIComponent(user.display_name);
-        userLinksEl.innerHTML = `<a href="#" id="osm-submissions-link">Submissions</a><a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">History</a><a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
-        userLinksEl.querySelector("#osm-submissions-link").addEventListener("click", (e) => {
+        userLinksEl.innerHTML = `<a href="#" id="osm-contributions-link">Contributions</a><a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">History</a><a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
+        userLinksEl.querySelector("#osm-contributions-link").addEventListener("click", (e) => {
           e.preventDefault();
-          osmShowSubmissions(user);
+          osmShowContributions(user);
         });
         userLinksEl.style.display = "";
       }
@@ -308,13 +308,13 @@ function osmAttachCategoryHandlers(grid, latlng) {
         Swal.fire({
           toast: true,
           icon: "success",
-          title: "Submitted to OpenStreetMap",
+          title: "Contributed to OpenStreetMap",
           html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank">Node: ${nodeId}</a>`,
           showConfirmButton: false,
           timer: 4000,
         });
       } catch (error) {
-        Swal.fire({ title: "Submission Failed", html: error.message });
+        Swal.fire({ title: "Contribution Failed", html: error.message });
       }
     });
   });
@@ -531,12 +531,12 @@ function initializeOSM(settingsPanel) {
   osmUpdateSettingsUI();
 }
 
-async function osmShowSubmissions(user) {
+async function osmShowContributions(user) {
   const token = localStorage.getItem("osmAccessToken");
   if (!token || !user) return;
 
   Swal.fire({
-    title: "Loading submissions…",
+    title: "Loading contributions…",
     allowOutsideClick: false,
     showConfirmButton: false,
     didOpen: () => Swal.showLoading(),
@@ -588,7 +588,7 @@ async function osmShowSubmissions(user) {
 
     if (liveNodes.length === 0) {
       Swal.fire({
-        title: "No submissions found",
+        title: "No contributions found",
         text: "No nodes found in your recent changesets.",
         confirmButtonText: "OK",
       });
@@ -603,13 +603,13 @@ async function osmShowSubmissions(user) {
           const [date, time] = iso.split("T");
           const coords = `${parseFloat(n.lat).toFixed(5)}, ${parseFloat(n.lon).toFixed(5)}`;
           return `
-        <div class="osm-submission-row" data-id="${n.id}">
-          <div class="osm-submission-info">
+        <div class="osm-contribution-row" data-id="${n.id}">
+          <div class="osm-contribution-info">
             <strong><a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer">Node: ${n.id}</a></strong>
             <span>${displayName}</span>
-            <small class="osm-submission-meta"><span>${date}</span><span>${time}</span><a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}">${coords}</a></small>
+            <small class="osm-contribution-meta"><span>${date}</span><span>${time}</span><a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}">${coords}</a></small>
           </div>
-          <div class="osm-submission-actions">
+          <div class="osm-contribution-actions">
             <button class="osm-delete-btn" data-id="${n.id}" title="Delete node"><span class="material-symbols material-symbols-fill">cancel</span></button>
           </div>
         </div>`;
@@ -618,11 +618,11 @@ async function osmShowSubmissions(user) {
 
     const show = (items, scrollTop = 0) => {
       Swal.fire({
-        title: "My OSM Submissions",
-        html: `<div id="osm-submissions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
+        title: "My OSM Contributions",
+        html: `<div id="osm-contributions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
         confirmButtonText: "Close",
         didOpen: () => {
-          const scroller = document.getElementById("osm-submissions-scroll");
+          const scroller = document.getElementById("osm-contributions-scroll");
           if (scroller) scroller.scrollTop = scrollTop;
           Swal.getPopup()
             .querySelectorAll(".osm-goto-btn")
@@ -631,7 +631,7 @@ async function osmShowSubmissions(user) {
                 e.preventDefault();
                 const lat = parseFloat(btn.dataset.lat);
                 const lon = parseFloat(btn.dataset.lon);
-                const row = btn.closest(".osm-submission-row");
+                const row = btn.closest(".osm-contribution-row");
                 const nodeId = row.dataset.id;
                 Swal.close();
                 window.showSearchMarker(
@@ -646,7 +646,7 @@ async function osmShowSubmissions(user) {
               btn.addEventListener("click", async () => {
                 const nodeId = btn.dataset.id;
                 const savedScroll =
-                  document.getElementById("osm-submissions-scroll")?.scrollTop ?? 0;
+                  document.getElementById("osm-contributions-scroll")?.scrollTop ?? 0;
                 const { isConfirmed } = await Swal.fire({
                   title: "Delete node?",
                   text: "This will permanently remove it from OpenStreetMap.",
@@ -681,7 +681,7 @@ async function osmShowSubmissions(user) {
 
     show(liveNodes);
   } catch (err) {
-    Swal.fire({ icon: "error", title: "Failed to load submissions", text: err.message });
+    Swal.fire({ icon: "error", title: "Failed to load contributions", text: err.message });
   }
 }
 

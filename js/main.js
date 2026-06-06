@@ -1260,7 +1260,7 @@ async function initializeMap() {
     map.flyTo(locationLatLng, map.getZoom() < 16 ? 16 : map.getZoom());
   };
 
-  // Exposed for use in osm.js submissions panel
+  // Exposed for use in osm.js contributions panel
   window.showSearchMarker = onSearchResult;
 
   // Attach search modal to search button

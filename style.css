@@ -2119,7 +2119,7 @@ button.strava-button-secondary:not(:disabled) {
   opacity: 1;
 }
 
-.osm-submission-row {
+.osm-contribution-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2127,28 +2127,28 @@ button.strava-button-secondary:not(:disabled) {
   border-bottom: 1px solid var(--border-color);
   gap: 8px;
 }
-.osm-submission-row:last-child {
+.osm-contribution-row:last-child {
   border-bottom: none;
 }
-.osm-submission-info {
+.osm-contribution-info {
   display: flex;
   flex-direction: column;
   text-align: left;
 }
-.osm-submission-info strong,
-.osm-submission-info span,
-.osm-submission-info small {
+.osm-contribution-info strong,
+.osm-contribution-info span,
+.osm-contribution-info small {
   font-size: var(--font-size-14);
 }
-.osm-submission-info span,
-.osm-submission-info small {
+.osm-contribution-info span,
+.osm-contribution-info small {
   color: var(--text-color);
 }
-.osm-submission-meta {
+.osm-contribution-meta {
   display: flex;
   gap: 12px;
 }
-.osm-submission-actions {
+.osm-contribution-actions {
   display: flex;
   align-items: center;
   gap: 8px;
