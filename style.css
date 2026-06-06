@@ -1267,8 +1267,8 @@ a#info-panel-strava-link:hover {
 
 /* Default cancel button style */
 .swal2-cancel {
-  background-color: var(--text-color) !important;
-  color: var(--background-color) !important;
+  background-color: var(--background2-color) !important;
+  color: var(--text-color) !important;
 }
 
 /* Default deny button style */
