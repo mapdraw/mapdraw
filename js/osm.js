@@ -602,12 +602,14 @@ async function osmShowSubmissions(user) {
       items
         .map((n) => {
           const displayName = n.comment || `#${n.id}`;
-          const date = new Date(n.createdAt).toISOString().slice(0, 16).replace("T", " ");
+          const iso = new Date(n.createdAt).toISOString().slice(0, 16);
+          const [date, time] = iso.split("T");
+          const coords = `${parseFloat(n.lat).toFixed(5)}, ${parseFloat(n.lon).toFixed(5)}`;
           return `
         <div class="osm-submission-row" data-id="${n.id}">
           <div class="osm-submission-info">
             <strong>${displayName}</strong>
-            <small>${date}</small>
+            <small>${date}, ${time}, <a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}" style="font-size:inherit;">${coords}</a></small>
           </div>
           <div class="osm-submission-actions">
             <a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer" style="font-size:12px;">#${n.id}</a>
@@ -625,6 +627,26 @@ async function osmShowSubmissions(user) {
         didOpen: () => {
           const scroller = document.getElementById("osm-submissions-scroll");
           if (scroller) scroller.scrollTop = scrollTop;
+          Swal.getPopup()
+            .querySelectorAll(".osm-goto-btn")
+            .forEach((btn) => {
+              btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                const lat = parseFloat(btn.dataset.lat);
+                const lon = parseFloat(btn.dataset.lon);
+                Swal.close();
+                map.flyTo([lat, lon], Math.max(map.getZoom(), 17));
+                const dot = L.circleMarker([lat, lon], {
+                  radius: 10,
+                  fillColor: COLOR_BLACK,
+                  color: COLOR_WHITE,
+                  weight: 3,
+                  opacity: 1,
+                  fillOpacity: 1,
+                }).addTo(map);
+                map.once("moveend", () => setTimeout(() => map.removeLayer(dot), 3000));
+              });
+            });
           Swal.getPopup()
             .querySelectorAll(".osm-delete-btn")
             .forEach((btn) => {
