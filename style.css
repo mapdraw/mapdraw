@@ -2070,6 +2070,12 @@ button.strava-button-secondary:not(:disabled) {
   color: var(--highlight-color);
 }
 
+.osm-username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .osm-separator {
   border: none;
   border-top: 1px solid var(--border-color);
