@@ -411,61 +411,54 @@ async function osmShowNotePicker(latlng) {
   }
 }
 
+async function osmWithChangeset(comment, token, fn) {
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "text/xml" };
+  const xml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/><tag k="comment" v="${comment}"/></changeset></osm>`;
+  const res = await fetch(`${OSM_API_URL}/changeset/create`, { method: "PUT", headers, body: xml });
+  if (!res.ok) {
+    if (res.status === 429) throw new Error("Rate limit reached. Please try again later.");
+    throw new Error(`Could not create changeset: ${res.status}`);
+  }
+  const changesetId = (await res.text()).trim();
+  try {
+    return await fn(changesetId, headers);
+  } finally {
+    await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
+}
+
 async function osmSubmitNode(latlng, tags) {
   const token = localStorage.getItem("osmAccessToken");
   if (!token) throw new Error("Not signed in");
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "text/xml",
-  };
 
   const tagComment = Object.entries(tags)
     .map(([k, v]) => `${k}=${v}`)
     .join(", ");
 
-  let changesetId = null;
   try {
-    const changesetXml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/><tag k="comment" v="Created ${tagComment}"/></changeset></osm>`;
-    const changesetRes = await fetch(`${OSM_API_URL}/changeset/create`, {
-      method: "PUT",
-      headers,
-      body: changesetXml,
+    return await osmWithChangeset(`Created ${tagComment}`, token, async (changesetId, headers) => {
+      const tagsXml = Object.entries(tags)
+        .map(([k, v]) => `<tag k="${k}" v="${v}"/>`)
+        .join("");
+      const nodeXml = `<osm><node lat="${latlng.lat}" lon="${latlng.lng}" changeset="${changesetId}">${tagsXml}</node></osm>`;
+      const nodeRes = await fetch(`${OSM_API_URL}/nodes`, {
+        method: "POST",
+        headers,
+        body: nodeXml,
+      });
+      if (!nodeRes.ok) {
+        if (nodeRes.status === 409) throw new Error("Changeset conflict. Please try again.");
+        if (nodeRes.status === 429) throw new Error("Rate limit reached. Please try again later.");
+        throw new Error(`Failed to create node: ${nodeRes.status}`);
+      }
+      return (await nodeRes.text()).trim();
     });
-    if (!changesetRes.ok) {
-      if (changesetRes.status === 429)
-        throw new Error("Rate limit reached. Please try again later.");
-      throw new Error(`Failed to create changeset: ${changesetRes.status}`);
-    }
-    changesetId = await changesetRes.text();
-
-    const tagsXml = Object.entries(tags)
-      .map(([k, v]) => `<tag k="${k}" v="${v}"/>`)
-      .join("");
-    const nodeXml = `<osm><node lat="${latlng.lat}" lon="${latlng.lng}" changeset="${changesetId}">${tagsXml}</node></osm>`;
-    const nodeRes = await fetch(`${OSM_API_URL}/nodes`, {
-      method: "POST",
-      headers,
-      body: nodeXml,
-    });
-    if (!nodeRes.ok) {
-      if (nodeRes.status === 409) throw new Error("Changeset conflict. Please try again.");
-      if (nodeRes.status === 429) throw new Error("Rate limit reached. Please try again later.");
-      throw new Error(`Failed to create node: ${nodeRes.status}`);
-    }
-    const nodeId = await nodeRes.text();
-
-    return nodeId.trim();
   } catch (error) {
     console.error("OSM submit error:", error);
     throw error;
-  } finally {
-    if (changesetId) {
-      await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {});
-    }
   }
 }
 
@@ -665,6 +658,14 @@ async function osmShowContributions(user) {
                   });
                   if (remaining.length > 0) {
                     show(remaining, savedScroll);
+                  } else {
+                    Swal.fire({
+                      toast: true,
+                      title: "No more contributions",
+                      icon: "info",
+                      timer: 2000,
+                      showConfirmButton: false,
+                    });
                   }
                 } catch (err) {
                   await Swal.fire({ icon: "error", title: "Delete failed", text: err.message });
@@ -686,8 +687,6 @@ async function osmDeleteNode(nodeId, token) {
   token = token ?? localStorage.getItem("osmAccessToken");
   if (!token) throw new Error("Not signed in");
 
-  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "text/xml" };
-
   // Fetch current version
   const nodeRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -700,17 +699,7 @@ async function osmDeleteNode(nodeId, token) {
   const lon = nodeEl?.getAttribute("lon");
   if (!version || !lat || !lon) throw new Error("Could not read node data");
 
-  // Create changeset
-  const csXml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/><tag k="comment" v="Deleted node ${nodeId}"/></changeset></osm>`;
-  const csRes = await fetch(`${OSM_API_URL}/changeset/create`, {
-    method: "PUT",
-    headers,
-    body: csXml,
-  });
-  if (!csRes.ok) throw new Error(`Could not create changeset: ${csRes.status}`);
-  const changesetId = (await csRes.text()).trim();
-
-  try {
+  await osmWithChangeset(`Deleted node ${nodeId}`, token, async (changesetId, headers) => {
     const deleteXml = `<osm><node id="${nodeId}" lat="${lat}" lon="${lon}" version="${version}" changeset="${changesetId}"/></osm>`;
     const delRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
       method: "DELETE",
@@ -724,10 +713,5 @@ async function osmDeleteNode(nodeId, token) {
       if (delRes.status === 403) throw new Error("You don't have permission to delete this node.");
       throw new Error(msg || `Delete failed: ${delRes.status}`);
     }
-  } finally {
-    await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}` },
-    }).catch(() => {});
-  }
+  });
 }
