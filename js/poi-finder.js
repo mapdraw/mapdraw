@@ -58,7 +58,7 @@ const POI_CATEGORIES = [
   },
   {
     id: "fireplace",
-    name: "Barbecue / Fire Pit",
+    name: "BBQ / Fire Pit",
     icon: "outdoor_grill",
     overpassQuery: ["amenity=bbq", "leisure=firepit"],
   },
