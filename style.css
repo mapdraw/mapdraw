@@ -1419,6 +1419,9 @@ a#info-panel-strava-link:hover {
 .leaflet-popup-content {
   font-size: var(--font-size-12) !important;
 }
+.leaflet-popup-content a {
+  color: var(--highlight-color);
+}
 
 .leaflet-popup-content-wrapper {
   border-radius: var(--border-radius) !important;
@@ -2127,12 +2130,14 @@ button.strava-button-secondary:not(:disabled) {
   flex-direction: column;
   text-align: left;
 }
-.osm-submission-info strong {
+.osm-submission-info strong,
+.osm-submission-info span,
+.osm-submission-info small {
   font-size: var(--font-size-14);
 }
+.osm-submission-info span,
 .osm-submission-info small {
-  font-size: var(--font-size-12);
-  color: var(--text-color-secondary);
+  color: var(--text-color);
 }
 .osm-submission-actions {
   display: flex;

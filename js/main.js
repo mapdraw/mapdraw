@@ -1235,7 +1235,8 @@ async function initializeMap() {
     popupContent.appendChild(saveButton);
 
     L.DomEvent.on(saveButton, "click", () => {
-      createAndSaveMarker(locationLatLng, label);
+      const plainLabel = label.replace(/<[^>]*>/g, "").trim();
+      createAndSaveMarker(locationLatLng, plainLabel);
 
       // Clean up the temporary marker and input
       if (temporarySearchMarker) {
@@ -1258,6 +1259,9 @@ async function initializeMap() {
 
     map.flyTo(locationLatLng, map.getZoom() < 16 ? 16 : map.getZoom());
   };
+
+  // Exposed for use in osm.js submissions panel
+  window.showSearchMarker = onSearchResult;
 
   // Attach search modal to search button
   attachSearchModalToInput(searchBtn, "Search Location", onSearchResult);

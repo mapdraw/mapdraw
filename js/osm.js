@@ -568,9 +568,6 @@ async function osmShowSubmissions(user) {
         lon: n.getAttribute("lon"),
         comment,
         createdAt,
-        tags: Object.fromEntries(
-          [...n.querySelectorAll("tag")].map((t) => [t.getAttribute("k"), t.getAttribute("v")]),
-        ),
       }));
     };
     const nodes = [];
@@ -608,11 +605,11 @@ async function osmShowSubmissions(user) {
           return `
         <div class="osm-submission-row" data-id="${n.id}">
           <div class="osm-submission-info">
-            <strong>${displayName}</strong>
-            <small>${date}, ${time}, <a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}" style="font-size:inherit;">${coords}</a></small>
+            <strong><a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer">Node: ${n.id}</a></strong>
+            <span>${displayName}</span>
+            <small>${date} / ${time} / <a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}">${coords}</a></small>
           </div>
           <div class="osm-submission-actions">
-            <a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer" style="font-size:12px;">#${n.id}</a>
             <button class="osm-delete-btn" data-id="${n.id}" title="Delete node"><span class="material-symbols material-symbols-fill">cancel</span></button>
           </div>
         </div>`;
@@ -634,17 +631,13 @@ async function osmShowSubmissions(user) {
                 e.preventDefault();
                 const lat = parseFloat(btn.dataset.lat);
                 const lon = parseFloat(btn.dataset.lon);
+                const row = btn.closest(".osm-submission-row");
+                const nodeId = row.dataset.id;
                 Swal.close();
-                map.flyTo([lat, lon], Math.max(map.getZoom(), 17));
-                const dot = L.circleMarker([lat, lon], {
-                  radius: 10,
-                  fillColor: COLOR_BLACK,
-                  color: COLOR_WHITE,
-                  weight: 3,
-                  opacity: 1,
-                  fillOpacity: 1,
-                }).addTo(map);
-                map.once("moveend", () => setTimeout(() => map.removeLayer(dot), 3000));
+                window.showSearchMarker(
+                  L.latLng(lat, lon),
+                  `<a href="${OSM_BASE}/node/${nodeId}" target="_blank" rel="noopener noreferrer">Node: ${nodeId}</a>`,
+                );
               });
             });
           Swal.getPopup()
