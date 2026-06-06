@@ -285,6 +285,13 @@ function osmAttachCategoryHandlers(grid, latlng) {
       const cat = OSM_CONTRIBUTE_CATEGORIES.find((c) => c.id === btn.dataset.id);
       if (!cat) return;
       Swal.close();
+      const { isConfirmed } = await Swal.fire({
+        title: `Add ${cat.name}?`,
+        text: "This will be submitted to OpenStreetMap.",
+        showCancelButton: true,
+        confirmButtonText: "Submit",
+      });
+      if (!isConfirmed) return;
       try {
         const nodeId = await osmSubmitNode(latlng, cat.tags);
         Swal.fire({
