@@ -383,8 +383,12 @@ async function osmShowNotePicker(latlng) {
     inputPlaceholder: "Describe what's missing or incorrect...",
     confirmButtonText: "Submit",
     showCancelButton: true,
-    inputValidator: (value) => {
-      if (!value?.trim()) return "Please enter a note.";
+    didOpen: () => {
+      const confirmButton = Swal.getConfirmButton();
+      confirmButton.disabled = true;
+      Swal.getInput().addEventListener("input", (e) => {
+        confirmButton.disabled = !e.target.value.trim();
+      });
     },
   });
 
