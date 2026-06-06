@@ -1265,10 +1265,10 @@ a#info-panel-strava-link:hover {
   color: var(--background-color) !important;
 }
 
-/* Default cancel button style - red background */
+/* Default cancel button style */
 .swal2-cancel {
-  background-color: var(--color-red) !important;
-  color: var(--color-white) !important;
+  background-color: var(--text-color) !important;
+  color: var(--background-color) !important;
 }
 
 /* Default deny button style */
@@ -2099,6 +2099,48 @@ button.strava-button-secondary:not(:disabled) {
 .osm-contribute-search::placeholder {
   color: var(--text-color);
   opacity: 1;
+}
+
+.osm-submission-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+.osm-submission-row:last-child {
+  border-bottom: none;
+}
+.osm-submission-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.osm-submission-info strong {
+  font-size: var(--font-size-14);
+}
+.osm-submission-info small {
+  font-size: var(--font-size-12);
+  color: var(--text-color-secondary);
+}
+.osm-submission-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.osm-delete-btn {
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--color-red);
+}
+.osm-confirm-danger {
+  background-color: var(--color-red) !important;
+  color: var(--color-white) !important;
 }
 
 /* Style for credits link in settings panel */

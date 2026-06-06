@@ -259,7 +259,11 @@ async function osmUpdateSettingsUI() {
       signOutBtn.style.display = "";
       if (userLinksEl) {
         const encoded = encodeURIComponent(user.display_name);
-        userLinksEl.innerHTML = `<a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">Edit history</a> / <a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
+        userLinksEl.innerHTML = `<a href="#" id="osm-submissions-link">Submissions</a> / <a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">Edit history</a> / <a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
+        userLinksEl.querySelector("#osm-submissions-link").addEventListener("click", (e) => {
+          e.preventDefault();
+          osmShowSubmissions(user);
+        });
         userLinksEl.style.display = "";
       }
       return;
@@ -521,4 +525,194 @@ function initializeOSM(settingsPanel) {
   L.DomEvent.on(osmContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
 
   osmUpdateSettingsUI();
+}
+
+async function osmShowSubmissions(user) {
+  const token = localStorage.getItem("osmAccessToken");
+  if (!token || !user) return;
+
+  Swal.fire({
+    title: "Loading submissions…",
+    allowOutsideClick: false,
+    showConfirmButton: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  try {
+    // Fetch recent changesets
+    const csRes = await fetch(
+      `${OSM_API_URL}/changesets?display_name=${encodeURIComponent(user.display_name)}&limit=100`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!csRes.ok) throw new Error(`Changesets fetch failed: ${csRes.status}`);
+    const csXml = new DOMParser().parseFromString(await csRes.text(), "text/xml");
+    const changesets = [...csXml.querySelectorAll("changeset")];
+
+    // Download changesets in batches of 10 and collect created nodes
+    const fetchChangeset = async (cs) => {
+      const csId = cs.getAttribute("id");
+      const comment = cs.querySelector('tag[k="comment"]')?.getAttribute("v") ?? "";
+      const createdAt = cs.getAttribute("created_at") ?? "";
+      const dlRes = await fetch(`${OSM_API_URL}/changeset/${csId}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!dlRes.ok) return [];
+      const dlXml = new DOMParser().parseFromString(await dlRes.text(), "text/xml");
+      return [...dlXml.querySelectorAll("create > node")].map((n) => ({
+        id: n.getAttribute("id"),
+        lat: n.getAttribute("lat"),
+        lon: n.getAttribute("lon"),
+        comment,
+        createdAt,
+        tags: Object.fromEntries(
+          [...n.querySelectorAll("tag")].map((t) => [t.getAttribute("k"), t.getAttribute("v")]),
+        ),
+      }));
+    };
+    const nodes = [];
+    for (let i = 0; i < changesets.length; i += 10) {
+      const batch = await Promise.all(changesets.slice(i, i + 10).map(fetchChangeset));
+      nodes.push(...batch.flat());
+    }
+
+    // Verify each node is still live in parallel (410 = deleted)
+    const liveFlags = await Promise.all(
+      nodes.map((n) =>
+        fetch(`${OSM_API_URL}/node/${n.id}`, { headers: { Authorization: `Bearer ${token}` } })
+          .then((r) => r.ok)
+          .catch(() => false),
+      ),
+    );
+    const liveNodes = nodes.filter((_, i) => liveFlags[i]);
+
+    if (liveNodes.length === 0) {
+      Swal.fire({
+        title: "No submissions found",
+        text: "No nodes found in your recent changesets.",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+
+    const renderList = (items) =>
+      items
+        .map((n) => {
+          const displayName = n.comment || `#${n.id}`;
+          const date = new Date(n.createdAt).toISOString().slice(0, 16).replace("T", " ");
+          return `
+        <div class="osm-submission-row" data-id="${n.id}">
+          <div class="osm-submission-info">
+            <strong>${displayName}</strong>
+            <small>${date}</small>
+          </div>
+          <div class="osm-submission-actions">
+            <a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer" style="color:var(--link-color);font-size:12px;">#${n.id}</a>
+            <button class="osm-delete-btn" data-id="${n.id}" title="Delete node"><span class="material-symbols material-symbols-fill">cancel</span></button>
+          </div>
+        </div>`;
+        })
+        .join("");
+
+    const show = (items, scrollTop = 0) => {
+      Swal.fire({
+        title: "My OSM Submissions",
+        html: `<div id="osm-submissions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
+        confirmButtonText: "Close",
+        didOpen: () => {
+          const scroller = document.getElementById("osm-submissions-scroll");
+          if (scroller) scroller.scrollTop = scrollTop;
+          Swal.getPopup()
+            .querySelectorAll(".osm-delete-btn")
+            .forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const nodeId = btn.dataset.id;
+                const savedScroll =
+                  document.getElementById("osm-submissions-scroll")?.scrollTop ?? 0;
+                const { isConfirmed } = await Swal.fire({
+                  title: "Delete node?",
+                  text: "This will permanently remove it from OpenStreetMap.",
+                  confirmButtonText: "Delete",
+                  showDenyButton: true,
+                  denyButtonText: "Cancel",
+                  customClass: { confirmButton: "osm-confirm-danger" },
+                });
+                if (!isConfirmed) return show(items, savedScroll);
+                try {
+                  await osmDeleteNode(nodeId, token);
+                  const remaining = items.filter((n) => n.id !== nodeId);
+                  if (remaining.length === 0) {
+                    Swal.fire({
+                      toast: true,
+                      icon: "success",
+                      title: "All deleted!",
+                      timer: 1500,
+                      showConfirmButton: false,
+                    });
+                  } else {
+                    show(remaining, savedScroll);
+                  }
+                } catch (err) {
+                  await Swal.fire({ icon: "error", title: "Delete failed", text: err.message });
+                  show(items, savedScroll);
+                }
+              });
+            });
+        },
+      });
+    };
+
+    show(liveNodes);
+  } catch (err) {
+    Swal.fire({ icon: "error", title: "Failed to load submissions", text: err.message });
+  }
+}
+
+async function osmDeleteNode(nodeId, token) {
+  token = token ?? localStorage.getItem("osmAccessToken");
+  if (!token) throw new Error("Not signed in");
+
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "text/xml" };
+
+  // Fetch current version
+  const nodeRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!nodeRes.ok) throw new Error(`Could not fetch node: ${nodeRes.status}`);
+  const nodeXml = new DOMParser().parseFromString(await nodeRes.text(), "text/xml");
+  const nodeEl = nodeXml.querySelector("node");
+  const version = nodeEl?.getAttribute("version");
+  const lat = nodeEl?.getAttribute("lat");
+  const lon = nodeEl?.getAttribute("lon");
+  if (!version || !lat || !lon) throw new Error("Could not read node data");
+
+  // Create changeset
+  const csXml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/><tag k="comment" v="Deleted node ${nodeId}"/></changeset></osm>`;
+  const csRes = await fetch(`${OSM_API_URL}/changeset/create`, {
+    method: "PUT",
+    headers,
+    body: csXml,
+  });
+  if (!csRes.ok) throw new Error(`Could not create changeset: ${csRes.status}`);
+  const changesetId = (await csRes.text()).trim();
+
+  try {
+    const deleteXml = `<osm><node id="${nodeId}" lat="${lat}" lon="${lon}" version="${version}" changeset="${changesetId}"/></osm>`;
+    const delRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
+      method: "DELETE",
+      headers,
+      body: deleteXml,
+    });
+    if (!delRes.ok) {
+      const msg = await delRes.text();
+      if (delRes.status === 412)
+        throw new Error("Node is still used by a way or relation and cannot be deleted.");
+      if (delRes.status === 403) throw new Error("You don't have permission to delete this node.");
+      throw new Error(msg || `Delete failed: ${delRes.status}`);
+    }
+  } finally {
+    await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
 }
