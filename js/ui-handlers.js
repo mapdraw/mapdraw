@@ -464,7 +464,7 @@ function updateOverviewList() {
                 : "This action cannot be undone.",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonColor: "var(--color-red)",
+            customClass: { confirmButton: "swal-confirm-danger" },
             confirmButtonText: "Yes, clear all",
           }).then((result) => {
             if (result.isConfirmed) {

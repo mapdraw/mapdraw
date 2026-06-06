@@ -1281,6 +1281,12 @@ a#info-panel-strava-link:hover {
   color: var(--text-color) !important;
 }
 
+/* Danger confirm button for destructive actions */
+.swal-confirm-danger {
+  background-color: var(--color-red) !important;
+  color: var(--color-white) !important;
+}
+
 /* Disabled state for all buttons */
 .swal2-confirm:disabled,
 .swal2-cancel:disabled,
@@ -2141,10 +2147,6 @@ button.strava-button-secondary:not(:disabled) {
   background: none;
   border: none;
   color: var(--color-red);
-}
-.osm-confirm-danger {
-  background-color: var(--color-red) !important;
-  color: var(--color-white) !important;
 }
 
 /* Style for credits link in settings panel */
