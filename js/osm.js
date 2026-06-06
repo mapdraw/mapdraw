@@ -632,8 +632,7 @@ async function osmShowSubmissions(user) {
                   title: "Delete node?",
                   text: "This will permanently remove it from OpenStreetMap.",
                   confirmButtonText: "Delete",
-                  showDenyButton: true,
-                  denyButtonText: "Cancel",
+                  showCancelButton: true,
                   customClass: { confirmButton: "osm-confirm-danger" },
                 });
                 if (!isConfirmed) return show(items, savedScroll);
