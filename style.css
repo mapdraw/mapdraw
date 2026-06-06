@@ -2064,8 +2064,10 @@ button.strava-button-secondary:not(:disabled) {
   align-items: center;
 }
 
-.osm-username {
+.osm-username,
+.osm-user-links a {
   font-size: var(--font-size-14);
+  color: var(--highlight-color);
 }
 
 .osm-separator {

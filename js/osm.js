@@ -243,6 +243,7 @@ async function osmUpdateSettingsUI() {
   const signInBtn = document.getElementById("osm-sign-in-btn");
   const signOutBtn = document.getElementById("osm-sign-out-btn");
   const usernameEl = document.getElementById("osm-username");
+  const userLinksEl = document.getElementById("osm-user-links");
 
   if (!signInBtn) return;
 
@@ -256,6 +257,11 @@ async function osmUpdateSettingsUI() {
       usernameEl.href = `${OSM_BASE}/user/${encodeURIComponent(user.display_name)}`;
       usernameEl.style.display = "";
       signOutBtn.style.display = "";
+      if (userLinksEl) {
+        const encoded = encodeURIComponent(user.display_name);
+        userLinksEl.innerHTML = `<a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">Edit history</a> / <a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
+        userLinksEl.style.display = "";
+      }
       return;
     }
   }
@@ -263,6 +269,7 @@ async function osmUpdateSettingsUI() {
   signInBtn.style.display = "";
   usernameEl.style.display = "none";
   signOutBtn.style.display = "none";
+  if (userLinksEl) userLinksEl.style.display = "none";
 }
 
 function osmRenderCategories(filter = "") {
@@ -502,6 +509,10 @@ function initializeOSM(settingsPanel) {
   usernameEl.rel = "noopener noreferrer";
   usernameEl.style.color = "var(--highlight-color)";
   usernameEl.style.display = "none";
+
+  const osmUserLinks = L.DomUtil.create("div", "osm-user-links", osmContainer);
+  osmUserLinks.id = "osm-user-links";
+  osmUserLinks.style.display = "none";
 
   L.DomUtil.create("hr", "osm-separator", osmContainer);
 
