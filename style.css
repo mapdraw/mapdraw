@@ -2144,6 +2144,10 @@ button.strava-button-secondary:not(:disabled) {
 .osm-submission-info small {
   color: var(--text-color);
 }
+.osm-submission-meta {
+  display: flex;
+  gap: 12px;
+}
 .osm-submission-actions {
   display: flex;
   align-items: center;

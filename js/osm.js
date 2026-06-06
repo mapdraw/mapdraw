@@ -607,7 +607,7 @@ async function osmShowSubmissions(user) {
           <div class="osm-submission-info">
             <strong><a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer">Node: ${n.id}</a></strong>
             <span>${displayName}</span>
-            <small>${date} / ${time} / <a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}">${coords}</a></small>
+            <small class="osm-submission-meta"><span>${date}</span><span>${time}</span><a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}">${coords}</a></small>
           </div>
           <div class="osm-submission-actions">
             <button class="osm-delete-btn" data-id="${n.id}" title="Delete node"><span class="material-symbols material-symbols-fill">cancel</span></button>
