@@ -259,7 +259,7 @@ async function osmUpdateSettingsUI() {
       signOutBtn.style.display = "";
       if (userLinksEl) {
         const encoded = encodeURIComponent(user.display_name);
-        userLinksEl.innerHTML = `<a href="#" id="osm-submissions-link">Submissions</a> / <a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">Edit history</a> / <a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
+        userLinksEl.innerHTML = `<a href="#" id="osm-submissions-link">Submissions</a><a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">History</a><a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
         userLinksEl.querySelector("#osm-submissions-link").addEventListener("click", (e) => {
           e.preventDefault();
           osmShowSubmissions(user);

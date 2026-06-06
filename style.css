@@ -2077,6 +2077,11 @@ button.strava-button-secondary:not(:disabled) {
   align-items: center;
 }
 
+.osm-user-links {
+  display: flex;
+  gap: 12px;
+}
+
 .osm-username,
 .osm-user-links a {
   font-size: var(--font-size-14);
