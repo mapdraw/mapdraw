@@ -309,7 +309,7 @@ function osmAttachCategoryHandlers(grid, latlng) {
           toast: true,
           icon: "success",
           title: "Submitted to OpenStreetMap",
-          html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank">${cat.name} #${nodeId}</a>`,
+          html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank">Node: ${nodeId}</a>`,
           showConfirmButton: false,
           timer: 4000,
         });
@@ -658,15 +658,15 @@ async function osmShowSubmissions(user) {
                 try {
                   await osmDeleteNode(nodeId, token);
                   const remaining = items.filter((n) => n.id !== nodeId);
-                  if (remaining.length === 0) {
-                    Swal.fire({
-                      toast: true,
-                      icon: "success",
-                      title: "All deleted!",
-                      timer: 1500,
-                      showConfirmButton: false,
-                    });
-                  } else {
+                  await Swal.fire({
+                    toast: true,
+                    icon: "success",
+                    title: "Deleted from OpenStreetMap",
+                    html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank" rel="noopener noreferrer">Node: ${nodeId}</a>`,
+                    timer: 1500,
+                    showConfirmButton: false,
+                  });
+                  if (remaining.length > 0) {
                     show(remaining, savedScroll);
                   }
                 } catch (err) {
