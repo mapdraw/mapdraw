@@ -163,7 +163,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const panel = document.getElementById("data-editor-panel");
 
   const getCmTheme = () =>
-    document.body.classList.contains("dark-mode") ? CM_THEME_DARK : CM_THEME_LIGHT;
+    document.body.classList.contains("dark-mode") || document.body.classList.contains("glass-mode")
+      ? CM_THEME_DARK
+      : CM_THEME_LIGHT;
 
   // Lazily initialize CodeMirror on first tab click so it measures correct dimensions
   // regardless of whether the tab was hidden at page load (e.g. mobile with force-desktop-layout).

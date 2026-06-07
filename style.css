@@ -50,7 +50,8 @@
   --overview-header-height: 32px;
 }
 
-body.dark-mode {
+body.dark-mode,
+body.glass-mode .swal2-container /* in glass mode, SweetAlert uses the same style as dark mode */ {
   /* Dark Theme Variables */
   --icon-color: var(--color-white);
   --border-color: #bdbdbd;
@@ -59,6 +60,137 @@ body.dark-mode {
   --background2-color: #5f6368;
   --text-color: var(--color-white);
   color: var(--color-white);
+}
+
+/* Glass Theme */
+body.glass-mode {
+  /* Glass Theme Variables */
+  --icon-color: #f1f5f9;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --divider-color: rgba(255, 255, 255, 0.12);
+  --background-color: transparent;
+  --background2-color: rgba(255, 255, 255, 0.06);
+  --text-color: #f1f5f9;
+  --glass-bg: rgba(2, 6, 23, 0.48);
+  color: #f1f5f9;
+}
+
+/* Glass panels */
+body.glass-mode #info-panel,
+body.glass-mode #tab-container,
+body.glass-mode #custom-layers-panel,
+body.glass-mode .top-right-btn,
+body.glass-mode .leaflet-draw-actions,
+body.glass-mode .download-submenu {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid var(--border-color) !important;
+  box-shadow:
+    rgba(255, 255, 255, 0.16) 0px 1px 0px inset,
+    rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
+}
+
+body.glass-mode #tab-container {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+/* Left toolbar: pill-shaped glass */
+body.glass-mode .leaflet-top.leaflet-left {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border-radius: 50px;
+  border: 1px solid var(--border-color);
+  box-shadow:
+    rgba(255, 255, 255, 0.16) 0px 1px 0px inset,
+    rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
+}
+
+/* Elevation panel: top border only */
+body.glass-mode #elevation-div {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border-top: 1px solid var(--border-color) !important;
+}
+
+/* Context menu popup — TODO: tip color doesn't perfectly match wrapper due to backdrop-filter rendering on rotated elements */
+body.glass-mode .leaflet-popup-content-wrapper {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid var(--border-color) !important;
+}
+body.glass-mode .leaflet-popup-tip {
+  background: var(--glass-bg) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Name field focus */
+body.glass-mode #info-panel-name:focus {
+  color: var(--color-white) !important;
+}
+
+/* Data editor action buttons */
+body.glass-mode #data-editor-restore,
+body.glass-mode #data-editor-apply,
+body.glass-mode #data-editor-copy,
+body.glass-mode #data-editor-copy-clean,
+body.glass-mode #data-editor-find {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  color: var(--color-white) !important;
+}
+
+/* Active button states */
+body.glass-mode #clear-route-btn:not(:disabled),
+body.glass-mode #save-route-btn:not(:disabled),
+body.glass-mode .panel-input-group button.active,
+body.glass-mode .routing-profile-selector .profile-btn.active {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  color: var(--color-white) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols,
+body.glass-mode #routing-pen-btn.active .material-symbols {
+  color: var(--color-white) !important;
+}
+
+/* WMS import button */
+body.glass-mode .wms-import-button {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  color: var(--color-white) !important;
+}
+
+/* Disabled toolbar buttons: faded */
+body.glass-mode .leaflet-bar a.leaflet-disabled,
+body.glass-mode .leaflet-draw-toolbar a.leaflet-disabled,
+body.glass-mode .leaflet-control-custom a.leaflet-disabled,
+body.glass-mode .leaflet-control-custom.disabled > a {
+  opacity: 0.25 !important;
+  background-color: transparent !important;
+}
+
+/* Popup menus: transparent inner items so container glass shows through */
+body.glass-mode .leaflet-draw-actions a,
+body.glass-mode .leaflet-draw-actions a:hover,
+body.glass-mode .download-submenu button {
+  background-color: transparent !important;
+}
+
+/* Credits bar: glass only on desktop — on mobile it's empty when install button is hidden */
+@media (min-width: 769px) {
+  body.glass-mode #bottom-left-credits {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid var(--border-color) !important;
+    box-shadow:
+      rgba(255, 255, 255, 0.16) 0px 1px 0px inset,
+      rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
+  }
 }
 
 * {

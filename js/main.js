@@ -1,10 +1,12 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
-// Apply saved theme on load (dark mode if explicitly saved, otherwise light is default)
+// Apply saved theme on load (dark/glass if explicitly saved, otherwise light is default)
 (function () {
   const savedTheme = localStorage.getItem("theme");
   if (savedTheme === "dark") {
     document.body.classList.add("dark-mode");
+  } else if (savedTheme === "glass") {
+    document.body.classList.add("glass-mode");
   }
 })();
 
@@ -1573,20 +1575,25 @@ async function initializeMap() {
 
     const themeToggleContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const themeLabel = L.DomUtil.create("label", "", themeToggleContainer);
-    themeLabel.htmlFor = "theme-toggle";
-    themeLabel.innerText = "Dark Mode";
-    const themeCheckbox = L.DomUtil.create("input", "", themeToggleContainer);
-    themeCheckbox.type = "checkbox";
-    themeCheckbox.id = "theme-toggle";
-    themeCheckbox.checked = document.body.classList.contains("dark-mode");
-    L.DomEvent.on(themeCheckbox, "change", (e) => {
-      if (e.target.checked) {
-        document.body.classList.add("dark-mode");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.body.classList.remove("dark-mode");
-        localStorage.setItem("theme", "light");
-      }
+    themeLabel.innerText = "Theme";
+    const themeSelect = L.DomUtil.create("select", "", themeToggleContainer);
+    themeSelect.id = "theme-select";
+    const currentTheme = localStorage.getItem("theme") || "light";
+    [
+      ["light", "Light"],
+      ["dark", "Dark"],
+      ["glass", "Glass"],
+    ].forEach(([value, label]) => {
+      const option = L.DomUtil.create("option", "", themeSelect);
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === currentTheme;
+    });
+    L.DomEvent.on(themeSelect, "change", (e) => {
+      document.body.classList.remove("dark-mode", "glass-mode");
+      if (e.target.value === "dark") document.body.classList.add("dark-mode");
+      else if (e.target.value === "glass") document.body.classList.add("glass-mode");
+      localStorage.setItem("theme", e.target.value);
     });
     L.DomEvent.on(themeToggleContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
 
