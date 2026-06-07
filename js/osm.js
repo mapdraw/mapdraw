@@ -537,10 +537,9 @@ async function osmShowContributions(user) {
 
   try {
     // Fetch recent changesets
-    const csRes = await fetch(
-      `${OSM_API_URL}/changesets?display_name=${encodeURIComponent(user.display_name)}&limit=100`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const csRes = await fetch(`${OSM_API_URL}/changesets?user=${user.id}&limit=100`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!csRes.ok) throw new Error(`Changesets fetch failed: ${csRes.status}`);
     const csXml = new DOMParser().parseFromString(await csRes.text(), "text/xml");
     const changesets = [...csXml.querySelectorAll("changeset")];
