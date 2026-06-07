@@ -595,7 +595,10 @@ async function osmShowContributions(user) {
           const displayName = escHtml(n.comment || `#${n.id}`);
           const d = new Date(n.createdAt);
           const valid = !isNaN(d);
-          const date = valid ? d.toLocaleDateString() : "Unknown";
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const date = valid ? `${yyyy}-${mm}-${dd}` : "Unknown";
           const time = valid
             ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
             : "";
