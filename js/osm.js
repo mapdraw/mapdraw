@@ -414,7 +414,7 @@ async function osmShowNotePicker(latlng) {
 
 async function osmWithChangeset(comment, token, fn) {
   const headers = { Authorization: `Bearer ${token}`, "Content-Type": "text/xml" };
-  const xml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/><tag k="comment" v="${comment}"/></changeset></osm>`;
+  const xml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/>${comment ? `<tag k="comment" v="${comment}"/>` : ""}</changeset></osm>`;
   const res = await fetch(`${OSM_API_URL}/changeset/create`, { method: "PUT", headers, body: xml });
   if (!res.ok) {
     if (res.status === 429) throw new Error("Rate limit reached. Please try again later.");
