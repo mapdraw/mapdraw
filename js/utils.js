@@ -1,5 +1,14 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
+function escHtml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /**
  * Ensures the Google Maps API is loaded only once. Returns a promise that resolves
  * when the API is ready, handling concurrent load requests gracefully.

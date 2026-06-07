@@ -200,6 +200,7 @@ async function osmExchangeCode(code) {
     if (!response.ok || data.error) {
       throw new Error(data.error_description || data.error || "Token exchange failed");
     }
+    if (!data.access_token) throw new Error("No access token received");
 
     localStorage.setItem("osmAccessToken", data.access_token);
     sessionStorage.removeItem("osmCodeVerifier");
@@ -259,7 +260,11 @@ async function osmUpdateSettingsUI() {
       signOutBtn.style.display = "";
       if (userLinksEl) {
         const encoded = encodeURIComponent(user.display_name);
-        userLinksEl.innerHTML = `<a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">Edit history</a> / <a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
+        userLinksEl.innerHTML = `<a href="#" id="osm-contributions-link">Contributions</a><a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">History</a><a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
+        userLinksEl.querySelector("#osm-contributions-link").addEventListener("click", (e) => {
+          e.preventDefault();
+          osmShowContributions(user);
+        });
         userLinksEl.style.display = "";
       }
       return;
@@ -304,13 +309,13 @@ function osmAttachCategoryHandlers(grid, latlng) {
         Swal.fire({
           toast: true,
           icon: "success",
-          title: "Submitted to OpenStreetMap",
-          html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank">${cat.name} #${nodeId}</a>`,
+          title: "Contributed to OpenStreetMap",
+          html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank">Node: ${nodeId}</a>`,
           showConfirmButton: false,
           timer: 4000,
         });
       } catch (error) {
-        Swal.fire({ title: "Submission Failed", html: error.message });
+        Swal.fire({ title: "Contribution Failed", html: error.message });
       }
     });
   });
@@ -379,8 +384,12 @@ async function osmShowNotePicker(latlng) {
     inputPlaceholder: "Describe what's missing or incorrect...",
     confirmButtonText: "Submit",
     showCancelButton: true,
-    inputValidator: (value) => {
-      if (!value?.trim()) return "Please enter a note.";
+    didOpen: () => {
+      const confirmButton = Swal.getConfirmButton();
+      confirmButton.disabled = true;
+      Swal.getInput().addEventListener("input", (e) => {
+        confirmButton.disabled = !e.target.value.trim();
+      });
     },
   });
 
@@ -403,61 +412,54 @@ async function osmShowNotePicker(latlng) {
   }
 }
 
+async function osmWithChangeset(comment, token, fn) {
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "text/xml" };
+  const xml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/><tag k="comment" v="${comment}"/></changeset></osm>`;
+  const res = await fetch(`${OSM_API_URL}/changeset/create`, { method: "PUT", headers, body: xml });
+  if (!res.ok) {
+    if (res.status === 429) throw new Error("Rate limit reached. Please try again later.");
+    throw new Error(`Could not create changeset: ${res.status}`);
+  }
+  const changesetId = (await res.text()).trim();
+  try {
+    return await fn(changesetId, headers);
+  } finally {
+    await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
+}
+
 async function osmSubmitNode(latlng, tags) {
   const token = localStorage.getItem("osmAccessToken");
   if (!token) throw new Error("Not signed in");
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "text/xml",
-  };
 
   const tagComment = Object.entries(tags)
     .map(([k, v]) => `${k}=${v}`)
     .join(", ");
 
-  let changesetId = null;
   try {
-    const changesetXml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/><tag k="comment" v="Created ${tagComment}"/></changeset></osm>`;
-    const changesetRes = await fetch(`${OSM_API_URL}/changeset/create`, {
-      method: "PUT",
-      headers,
-      body: changesetXml,
+    return await osmWithChangeset(`Created ${tagComment}`, token, async (changesetId, headers) => {
+      const tagsXml = Object.entries(tags)
+        .map(([k, v]) => `<tag k="${k}" v="${v}"/>`)
+        .join("");
+      const nodeXml = `<osm><node lat="${latlng.lat}" lon="${latlng.lng}" changeset="${changesetId}">${tagsXml}</node></osm>`;
+      const nodeRes = await fetch(`${OSM_API_URL}/nodes`, {
+        method: "POST",
+        headers,
+        body: nodeXml,
+      });
+      if (!nodeRes.ok) {
+        if (nodeRes.status === 409) throw new Error("Changeset conflict. Please try again.");
+        if (nodeRes.status === 429) throw new Error("Rate limit reached. Please try again later.");
+        throw new Error(`Failed to create node: ${nodeRes.status}`);
+      }
+      return (await nodeRes.text()).trim();
     });
-    if (!changesetRes.ok) {
-      if (changesetRes.status === 429)
-        throw new Error("Rate limit reached. Please try again later.");
-      throw new Error(`Failed to create changeset: ${changesetRes.status}`);
-    }
-    changesetId = await changesetRes.text();
-
-    const tagsXml = Object.entries(tags)
-      .map(([k, v]) => `<tag k="${k}" v="${v}"/>`)
-      .join("");
-    const nodeXml = `<osm><node lat="${latlng.lat}" lon="${latlng.lng}" changeset="${changesetId}">${tagsXml}</node></osm>`;
-    const nodeRes = await fetch(`${OSM_API_URL}/nodes`, {
-      method: "POST",
-      headers,
-      body: nodeXml,
-    });
-    if (!nodeRes.ok) {
-      if (nodeRes.status === 409) throw new Error("Changeset conflict. Please try again.");
-      if (nodeRes.status === 429) throw new Error("Rate limit reached. Please try again later.");
-      throw new Error(`Failed to create node: ${nodeRes.status}`);
-    }
-    const nodeId = await nodeRes.text();
-
-    return nodeId.trim();
   } catch (error) {
     console.error("OSM submit error:", error);
     throw error;
-  } finally {
-    if (changesetId) {
-      await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {});
-    }
   }
 }
 
@@ -521,4 +523,229 @@ function initializeOSM(settingsPanel) {
   L.DomEvent.on(osmContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
 
   osmUpdateSettingsUI();
+}
+
+async function osmShowContributions(user) {
+  const token = localStorage.getItem("osmAccessToken");
+  if (!token || !user) return;
+
+  Swal.fire({
+    title: "Loading contributions…",
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  try {
+    // Fetch recent changesets
+    const csRes = await fetch(`${OSM_API_URL}/changesets?user=${user.id}&limit=100`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!csRes.ok) throw new Error(`Changesets fetch failed: ${csRes.status}`);
+    const csXml = new DOMParser().parseFromString(await csRes.text(), "text/xml");
+    const changesets = [...csXml.querySelectorAll("changeset")];
+
+    // Download changesets in batches of 10 and collect created nodes
+    const fetchChangeset = async (cs) => {
+      const csId = cs.getAttribute("id");
+      const comment = cs.querySelector('tag[k="comment"]')?.getAttribute("v") ?? "";
+      const createdAt = cs.getAttribute("created_at") ?? "";
+      let dlRes;
+      try {
+        dlRes = await fetch(`${OSM_API_URL}/changeset/${csId}/download`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        return [];
+      }
+      if (!dlRes.ok) return [];
+      const dlXml = new DOMParser().parseFromString(await dlRes.text(), "text/xml");
+      return [...dlXml.querySelectorAll("create > node")].map((n) => ({
+        id: n.getAttribute("id"),
+        lat: n.getAttribute("lat"),
+        lon: n.getAttribute("lon"),
+        comment,
+        createdAt,
+      }));
+    };
+    const nodes = [];
+    for (let i = 0; i < changesets.length; i += 10) {
+      const batch = await Promise.all(changesets.slice(i, i + 10).map(fetchChangeset));
+      nodes.push(...batch.flat());
+    }
+
+    // Verify each node is still live in batches of 10 (410 = deleted)
+    const liveFlags = [];
+    for (let i = 0; i < nodes.length; i += 10) {
+      const batch = nodes.slice(i, i + 10);
+      const flags = await Promise.all(
+        batch.map((n) =>
+          fetch(`${OSM_API_URL}/node/${n.id}`, { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.ok || (r.status !== 410 && r.status !== 404 && r.status !== 401))
+            .catch(() => true),
+        ),
+      );
+      liveFlags.push(...flags);
+    }
+    const liveNodes = nodes.filter((_, i) => liveFlags[i]);
+
+    if (liveNodes.length === 0) {
+      Swal.fire({
+        title: "No contributions found",
+        html: "No contributed points found in your recent changesets.<br><br>To add points, right-click (desktop) or long press (mobile) the map to open the context menu.",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+
+    const renderList = (items) =>
+      items
+        .map((n) => {
+          const displayName = escHtml(n.comment || `#${n.id}`);
+          const d = new Date(n.createdAt);
+          const valid = !isNaN(d);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const date = valid ? `${yyyy}-${mm}-${dd}` : "Unknown";
+          const time = valid
+            ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+            : "";
+          const coords = `${parseFloat(n.lat).toFixed(5)}, ${parseFloat(n.lon).toFixed(5)}`;
+          return `
+        <div class="osm-contribution-row" data-id="${n.id}">
+          <div class="osm-contribution-info">
+            <strong><a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer">Node: ${n.id}</a></strong>
+            <span>${displayName}</span>
+            <small class="osm-contribution-meta"><span>${date}</span><span>${time}</span><a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}">${coords}</a></small>
+          </div>
+          <div class="osm-contribution-actions">
+            <button class="osm-delete-btn" data-id="${n.id}" title="Delete node"><span class="material-symbols material-symbols-fill">cancel</span></button>
+          </div>
+        </div>`;
+        })
+        .join("");
+
+    const show = (items, scrollTop = 0) => {
+      Swal.fire({
+        title: "My OSM Contributions",
+        html: `<div id="osm-contributions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
+        confirmButtonText: "Close",
+        didOpen: () => {
+          const scroller = document.getElementById("osm-contributions-scroll");
+          if (scroller) scroller.scrollTop = scrollTop;
+          Swal.getPopup()
+            .querySelectorAll(".osm-goto-btn")
+            .forEach((btn) => {
+              btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                const lat = parseFloat(btn.dataset.lat);
+                const lon = parseFloat(btn.dataset.lon);
+                const row = btn.closest(".osm-contribution-row");
+                const nodeId = row.dataset.id;
+                Swal.close();
+                window.showSearchMarker(L.latLng(lat, lon), `Node: ${nodeId}`);
+              });
+            });
+          Swal.getPopup()
+            .querySelectorAll(".osm-delete-btn")
+            .forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const nodeId = btn.dataset.id;
+                const savedScroll =
+                  document.getElementById("osm-contributions-scroll")?.scrollTop ?? 0;
+                const { isConfirmed } = await Swal.fire({
+                  title: "Delete node?",
+                  text: "This will permanently remove it from OpenStreetMap.",
+                  confirmButtonText: "Delete",
+                  showCancelButton: true,
+                  customClass: { confirmButton: "swal-confirm-danger" },
+                });
+                if (!isConfirmed) return show(items, savedScroll);
+                try {
+                  await osmDeleteNode(nodeId, token);
+                  const remaining = items.filter((n) => n.id !== nodeId);
+                  await Swal.fire({
+                    toast: true,
+                    icon: "success",
+                    title: "Deleted from OpenStreetMap",
+                    html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank" rel="noopener noreferrer">Node: ${nodeId}</a>`,
+                    timer: 1500,
+                    showConfirmButton: false,
+                  });
+                  if (remaining.length > 0) {
+                    show(remaining, savedScroll);
+                  } else {
+                    Swal.fire({
+                      toast: true,
+                      title: "No more contributions",
+                      icon: "info",
+                      timer: 2000,
+                      showConfirmButton: false,
+                    });
+                  }
+                } catch (err) {
+                  const alreadyGone = /\b(404|410)\b/.test(err.message);
+                  if (alreadyGone) {
+                    const remaining = items.filter((n) => n.id !== nodeId);
+                    if (remaining.length > 0) {
+                      show(remaining, savedScroll);
+                    } else {
+                      Swal.fire({
+                        toast: true,
+                        title: "No more contributions",
+                        icon: "info",
+                        timer: 2000,
+                        showConfirmButton: false,
+                      });
+                    }
+                  } else {
+                    await Swal.fire({ icon: "error", title: "Delete failed", text: err.message });
+                    show(items, savedScroll);
+                  }
+                }
+              });
+            });
+        },
+      });
+    };
+
+    show(liveNodes);
+  } catch (err) {
+    Swal.fire({ icon: "error", title: "Failed to load contributions", text: err.message });
+  }
+}
+
+async function osmDeleteNode(nodeId, token) {
+  token = token ?? localStorage.getItem("osmAccessToken");
+  if (!token) throw new Error("Not signed in");
+
+  // Fetch current version
+  const nodeRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!nodeRes.ok) throw new Error(`Could not fetch node: ${nodeRes.status}`);
+  const nodeXml = new DOMParser().parseFromString(await nodeRes.text(), "text/xml");
+  const nodeEl = nodeXml.querySelector("node");
+  const version = nodeEl?.getAttribute("version");
+  const lat = nodeEl?.getAttribute("lat");
+  const lon = nodeEl?.getAttribute("lon");
+  if (!version || !lat || !lon) throw new Error("Could not read node data");
+
+  await osmWithChangeset(`Deleted node ${nodeId}`, token, async (changesetId, headers) => {
+    const deleteXml = `<osm><node id="${nodeId}" lat="${lat}" lon="${lon}" version="${version}" changeset="${changesetId}"/></osm>`;
+    const delRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
+      method: "DELETE",
+      headers,
+      body: deleteXml,
+    });
+    if (!delRes.ok) {
+      const msg = await delRes.text();
+      if (delRes.status === 412)
+        throw new Error("Node is still used by a way or relation and cannot be deleted.");
+      if (delRes.status === 403) throw new Error("You don't have permission to delete this node.");
+      throw new Error(msg || `Delete failed: ${delRes.status}`);
+    }
+  });
 }

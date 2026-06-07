@@ -69,6 +69,10 @@ body.dark-mode {
   -webkit-tap-highlight-color: transparent !important;
 }
 
+a {
+  color: var(--highlight-color);
+}
+
 /* Also remove the focus outline, which can appear as a blue ring */
 *:focus {
   outline: none !important;
@@ -1265,16 +1269,22 @@ a#info-panel-strava-link:hover {
   color: var(--background-color) !important;
 }
 
-/* Default cancel button style - red background */
+/* Default cancel button style */
 .swal2-cancel {
-  background-color: var(--color-red) !important;
-  color: var(--color-white) !important;
+  background-color: var(--background2-color) !important;
+  color: var(--text-color) !important;
 }
 
 /* Default deny button style */
 .swal2-deny {
   background-color: var(--background2-color) !important;
   color: var(--text-color) !important;
+}
+
+/* Danger confirm button for destructive actions */
+.swal-confirm-danger {
+  background-color: var(--color-red) !important;
+  color: var(--color-white) !important;
 }
 
 /* Disabled state for all buttons */
@@ -1408,6 +1418,9 @@ a#info-panel-strava-link:hover {
 /* Leaflet control overrides */
 .leaflet-popup-content {
   font-size: var(--font-size-12) !important;
+}
+.leaflet-popup-content a {
+  color: var(--highlight-color);
 }
 
 .leaflet-popup-content-wrapper {
@@ -2064,6 +2077,11 @@ button.strava-button-secondary:not(:disabled) {
   align-items: center;
 }
 
+.osm-user-links {
+  display: flex;
+  gap: 12px;
+}
+
 .osm-username,
 .osm-user-links a {
   font-size: var(--font-size-14);
@@ -2099,6 +2117,50 @@ button.strava-button-secondary:not(:disabled) {
 .osm-contribute-search::placeholder {
   color: var(--text-color);
   opacity: 1;
+}
+
+.osm-contribution-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+.osm-contribution-row:last-child {
+  border-bottom: none;
+}
+.osm-contribution-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.osm-contribution-info strong,
+.osm-contribution-info span,
+.osm-contribution-info small {
+  font-size: var(--font-size-14);
+}
+.osm-contribution-info span,
+.osm-contribution-info small {
+  color: var(--text-color);
+}
+.osm-contribution-meta {
+  display: flex;
+  gap: 12px;
+}
+.osm-contribution-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.osm-delete-btn {
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--color-red);
 }
 
 /* Style for credits link in settings panel */
