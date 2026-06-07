@@ -733,7 +733,7 @@ async function osmDeleteNode(nodeId, token) {
   const lon = nodeEl?.getAttribute("lon");
   if (!version || !lat || !lon) throw new Error("Could not read node data");
 
-  await osmWithChangeset(`Deleted node ${nodeId}`, token, async (changesetId, headers) => {
+  await osmWithChangeset("", token, async (changesetId, headers) => {
     const deleteXml = `<osm><node id="${nodeId}" lat="${lat}" lon="${lon}" version="${version}" changeset="${changesetId}"/></osm>`;
     const delRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
       method: "DELETE",
