@@ -200,6 +200,7 @@ async function osmExchangeCode(code) {
     if (!response.ok || data.error) {
       throw new Error(data.error_description || data.error || "Token exchange failed");
     }
+    if (!data.access_token) throw new Error("No access token received");
 
     localStorage.setItem("osmAccessToken", data.access_token);
     sessionStorage.removeItem("osmCodeVerifier");
@@ -573,8 +574,8 @@ async function osmShowContributions(user) {
     const liveFlags = await Promise.all(
       nodes.map((n) =>
         fetch(`${OSM_API_URL}/node/${n.id}`, { headers: { Authorization: `Bearer ${token}` } })
-          .then((r) => r.ok)
-          .catch(() => false),
+          .then((r) => r.ok || (r.status !== 410 && r.status !== 404))
+          .catch(() => true),
       ),
     );
     const liveNodes = nodes.filter((_, i) => liveFlags[i]);
