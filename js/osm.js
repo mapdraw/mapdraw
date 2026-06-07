@@ -582,7 +582,7 @@ async function osmShowContributions(user) {
     if (liveNodes.length === 0) {
       Swal.fire({
         title: "No contributions found",
-        text: "No contributed points found in your recent changesets.",
+        html: "No contributed points found in your recent changesets.<br><br>To add points, right-click (desktop) or long press (mobile) the map to open the context menu.",
         confirmButtonText: "OK",
       });
       return;
