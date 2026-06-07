@@ -91,11 +91,6 @@ body.glass-mode .download-submenu {
     rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
 }
 
-body.glass-mode #tab-container {
-  border-radius: var(--border-radius);
-  overflow: hidden;
-}
-
 /* Left toolbar: pill-shaped glass */
 body.glass-mode .leaflet-top.leaflet-left {
   background: var(--glass-bg);
@@ -178,6 +173,18 @@ body.glass-mode .leaflet-draw-actions a,
 body.glass-mode .leaflet-draw-actions a:hover,
 body.glass-mode .download-submenu button {
   background-color: transparent !important;
+}
+
+body.glass-mode #tab-container {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+/* On mobile the tab container reaches the screen edge — no rounded bottom corners */
+@media (max-width: 768px) {
+  body.glass-mode #tab-container {
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+  }
 }
 
 /* Credits bar: glass only on desktop — on mobile it's empty when install button is hidden */
