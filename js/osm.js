@@ -582,7 +582,7 @@ async function osmShowContributions(user) {
     if (liveNodes.length === 0) {
       Swal.fire({
         title: "No contributions found",
-        text: "No nodes found in your recent changesets.",
+        text: "No contributed points found in your recent changesets.",
         confirmButtonText: "OK",
       });
       return;
