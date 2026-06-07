@@ -575,14 +575,19 @@ async function osmShowContributions(user) {
       nodes.push(...batch.flat());
     }
 
-    // Verify each node is still live in parallel (410 = deleted)
-    const liveFlags = await Promise.all(
-      nodes.map((n) =>
-        fetch(`${OSM_API_URL}/node/${n.id}`, { headers: { Authorization: `Bearer ${token}` } })
-          .then((r) => r.ok || (r.status !== 410 && r.status !== 404 && r.status !== 401))
-          .catch(() => true),
-      ),
-    );
+    // Verify each node is still live in batches of 10 (410 = deleted)
+    const liveFlags = [];
+    for (let i = 0; i < nodes.length; i += 10) {
+      const batch = nodes.slice(i, i + 10);
+      const flags = await Promise.all(
+        batch.map((n) =>
+          fetch(`${OSM_API_URL}/node/${n.id}`, { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.ok || (r.status !== 410 && r.status !== 404 && r.status !== 401))
+            .catch(() => true),
+        ),
+      );
+      liveFlags.push(...flags);
+    }
     const liveNodes = nodes.filter((_, i) => liveFlags[i]);
 
     if (liveNodes.length === 0) {
