@@ -592,8 +592,9 @@ async function osmShowContributions(user) {
       items
         .map((n) => {
           const displayName = escHtml(n.comment || `#${n.id}`);
-          const iso = new Date(n.createdAt).toISOString().slice(0, 16);
-          const [date, time] = iso.split("T");
+          const d = new Date(n.createdAt);
+          const date = d.toLocaleDateString();
+          const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
           const coords = `${parseFloat(n.lat).toFixed(5)}, ${parseFloat(n.lon).toFixed(5)}`;
           return `
         <div class="osm-contribution-row" data-id="${n.id}">
