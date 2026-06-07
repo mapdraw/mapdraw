@@ -551,9 +551,14 @@ async function osmShowContributions(user) {
       const csId = cs.getAttribute("id");
       const comment = cs.querySelector('tag[k="comment"]')?.getAttribute("v") ?? "";
       const createdAt = cs.getAttribute("created_at") ?? "";
-      const dlRes = await fetch(`${OSM_API_URL}/changeset/${csId}/download`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      let dlRes;
+      try {
+        dlRes = await fetch(`${OSM_API_URL}/changeset/${csId}/download`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        return [];
+      }
       if (!dlRes.ok) return [];
       const dlXml = new DOMParser().parseFromString(await dlRes.text(), "text/xml");
       return [...dlXml.querySelectorAll("create > node")].map((n) => ({
@@ -574,7 +579,7 @@ async function osmShowContributions(user) {
     const liveFlags = await Promise.all(
       nodes.map((n) =>
         fetch(`${OSM_API_URL}/node/${n.id}`, { headers: { Authorization: `Bearer ${token}` } })
-          .then((r) => r.ok || (r.status !== 410 && r.status !== 404))
+          .then((r) => r.ok || (r.status !== 410 && r.status !== 404 && r.status !== 401))
           .catch(() => true),
       ),
     );
@@ -676,8 +681,24 @@ async function osmShowContributions(user) {
                     });
                   }
                 } catch (err) {
-                  await Swal.fire({ icon: "error", title: "Delete failed", text: err.message });
-                  show(items, savedScroll);
+                  const alreadyGone = /\b(404|410)\b/.test(err.message);
+                  if (alreadyGone) {
+                    const remaining = items.filter((n) => n.id !== nodeId);
+                    if (remaining.length > 0) {
+                      show(remaining, savedScroll);
+                    } else {
+                      Swal.fire({
+                        toast: true,
+                        title: "No more contributions",
+                        icon: "info",
+                        timer: 2000,
+                        showConfirmButton: false,
+                      });
+                    }
+                  } else {
+                    await Swal.fire({ icon: "error", title: "Delete failed", text: err.message });
+                    show(items, savedScroll);
+                  }
                 }
               });
             });
