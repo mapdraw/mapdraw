@@ -531,6 +531,7 @@ async function osmShowContributions(user) {
   Swal.fire({
     title: "Loading contributions…",
     allowOutsideClick: false,
+    allowEscapeKey: false,
     showConfirmButton: false,
     didOpen: () => Swal.showLoading(),
   });
@@ -592,8 +593,11 @@ async function osmShowContributions(user) {
         .map((n) => {
           const displayName = escHtml(n.comment || `#${n.id}`);
           const d = new Date(n.createdAt);
-          const date = d.toLocaleDateString();
-          const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+          const valid = !isNaN(d);
+          const date = valid ? d.toLocaleDateString() : "Unknown";
+          const time = valid
+            ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+            : "";
           const coords = `${parseFloat(n.lat).toFixed(5)}, ${parseFloat(n.lon).toFixed(5)}`;
           return `
         <div class="osm-contribution-row" data-id="${n.id}">
