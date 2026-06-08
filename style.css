@@ -68,7 +68,7 @@ body.glass-mode {
   --background2-color: rgba(255, 255, 255, 0.06);
   --text-color: #f1f5f9;
   --glass-bg: rgba(2, 6, 23, 0.48);
-  --glass-header-bg: #bdbdbd;
+  --glass-header-bg: rgba(95, 99, 104, 0.85);
   --glass-blur: blur(16px) saturate(150%);
   --glass-inset-shadow:
     rgba(255, 255, 255, 0.16) 0px 1px 0px inset, rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
