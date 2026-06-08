@@ -68,6 +68,7 @@ body.glass-mode {
   --background2-color: rgba(255, 255, 255, 0.06);
   --text-color: #f1f5f9;
   --glass-bg: rgba(2, 6, 23, 0.48);
+  --glass-header-bg: #bdbdbd;
   color: #f1f5f9;
 }
 
@@ -105,6 +106,11 @@ body.glass-mode #elevation-div {
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   border-top: 1px solid var(--border-color) !important;
+}
+
+/* Overview list headers: solid color to block scroll-through */
+body.glass-mode .overview-list-header {
+  background: var(--glass-header-bg);
 }
 
 /* Context menu popup */
