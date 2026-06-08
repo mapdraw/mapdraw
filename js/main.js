@@ -1,13 +1,11 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
-// Apply saved theme on load (dark/glass if explicitly saved, otherwise light is default)
+// Apply saved theme on load — glass is default for new users
 (function () {
-  const savedTheme = localStorage.getItem("theme");
-  if (savedTheme === "dark") {
-    document.body.classList.add("dark-mode");
-  } else if (savedTheme === "glass") {
-    document.body.classList.add("glass-mode");
-  }
+  const theme = localStorage.getItem("theme") ?? "glass";
+  if (theme === "dark") document.body.classList.add("dark-mode");
+  else if (theme === "light") document.body.classList.add("light-mode");
+  else document.body.classList.add("glass-mode");
 })();
 
 // Apply saved layout preference on load
@@ -1578,11 +1576,11 @@ async function initializeMap() {
     themeLabel.innerText = "Theme";
     const themeSelect = L.DomUtil.create("select", "", themeToggleContainer);
     themeSelect.id = "theme-select";
-    const currentTheme = localStorage.getItem("theme") || "light";
+    const currentTheme = localStorage.getItem("theme") ?? "glass";
     [
+      ["glass", "Glass"],
       ["light", "Light"],
       ["dark", "Dark"],
-      ["glass", "Glass"],
     ].forEach(([value, label]) => {
       const option = L.DomUtil.create("option", "", themeSelect);
       option.value = value;
@@ -1590,9 +1588,10 @@ async function initializeMap() {
       option.selected = value === currentTheme;
     });
     L.DomEvent.on(themeSelect, "change", (e) => {
-      document.body.classList.remove("dark-mode", "glass-mode");
+      document.body.classList.remove("dark-mode", "light-mode", "glass-mode");
       if (e.target.value === "dark") document.body.classList.add("dark-mode");
-      else if (e.target.value === "glass") document.body.classList.add("glass-mode");
+      else if (e.target.value === "light") document.body.classList.add("light-mode");
+      else document.body.classList.add("glass-mode");
       localStorage.setItem("theme", e.target.value);
     });
     L.DomEvent.on(themeToggleContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);

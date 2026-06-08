@@ -37,34 +37,30 @@
   --icon-size-30: 30px;
   --icon-size-50: 50px;
 
-  /* Light Theme Variables */
-  --icon-color: var(--color-black);
-  --border-color: #757575;
-  --divider-color: var(--border-color);
-  --background-color: var(--color-white);
-  --background2-color: #bdbdbd;
-  --text-color: var(--color-black);
-  color: var(--color-black);
   --highlight-color: var(--color-blue);
   --locate-color: var(--color-blue);
   --overview-header-height: 32px;
 }
 
-body.dark-mode,
-body.glass-mode .swal2-container /* in glass mode, SweetAlert uses the same style as dark mode */ {
-  /* Dark Theme Variables */
-  --icon-color: var(--color-white);
-  --border-color: #bdbdbd;
-  --divider-color: var(--border-color);
-  --background-color: #22242a;
-  --background2-color: #5f6368;
-  --text-color: var(--color-white);
-  color: var(--color-white);
-}
+/*
+ *  ████████╗██╗  ██╗███████╗███╗   ███╗███████╗███████╗
+ *  ╚══██╔══╝██║  ██║██╔════╝████╗ ████║██╔════╝██╔════╝
+ *     ██║   ███████║█████╗  ██╔████╔██║█████╗  ███████╗
+ *     ██║   ██╔══██║██╔══╝  ██║╚██╔╝██║██╔══╝  ╚════██║
+ *     ██║   ██║  ██║███████╗██║ ╚═╝ ██║███████╗███████║
+ *     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚══════╝╚══════╝
+ *
+ *  GLASS > LIGHT > DARK
+ */
 
-/* Glass Theme */
+/*
+ *  ___ _      _   ___ ___
+ * / __| |    /_\ / __/ __|
+ *| (_ | |__ / _ \\__ \__ \
+ * \___|____/_/ \_\___/___/ (default)
+ */
+
 body.glass-mode {
-  /* Glass Theme Variables */
   --icon-color: #f1f5f9;
   --border-color: rgba(255, 255, 255, 0.12);
   --divider-color: rgba(255, 255, 255, 0.12);
@@ -181,6 +177,7 @@ body.glass-mode .download-submenu button {
   background-color: transparent !important;
 }
 
+/* Tab container: clip children to rounded corners */
 body.glass-mode #tab-container {
   border-radius: var(--border-radius);
   overflow: hidden;
@@ -204,6 +201,41 @@ body.glass-mode #tab-container {
       rgba(255, 255, 255, 0.16) 0px 1px 0px inset,
       rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
   }
+}
+
+/*
+ *  _    ___ ___ _  _ _____
+ * | |  |_ _/ __| || |_   _|
+ * | |__ | | (_ | __ | | |
+ * |____|___\___|_||_| |_|
+ */
+
+body.light-mode {
+  --icon-color: var(--color-black);
+  --border-color: #757575;
+  --divider-color: var(--border-color);
+  --background-color: var(--color-white);
+  --background2-color: #bdbdbd;
+  --text-color: var(--color-black);
+  color: var(--color-black);
+}
+
+/*
+ *  ___   _   ___ _  __
+ * |   \ /_\ | _ \ |/ /
+ * | |) / _ \|   / ' <
+ * |___/_/ \_\_|_\_|\_\
+ */
+
+body.dark-mode,
+body.glass-mode .swal2-container /* in glass mode, SweetAlert uses the same style as dark mode */ {
+  --icon-color: var(--color-white);
+  --border-color: #bdbdbd;
+  --divider-color: var(--border-color);
+  --background-color: #22242a;
+  --background2-color: #5f6368;
+  --text-color: var(--color-white);
+  color: var(--color-white);
 }
 
 * {
