@@ -110,7 +110,9 @@ body.glass-mode #elevation-div {
 
 /* Overview list headers: solid color to block scroll-through */
 body.glass-mode .overview-list-header {
-  background: var(--glass-header-bg);
+  /* background: var(--glass-header-bg); */
+  backdrop-filter: var(--background-color);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 /* Context menu popup */
