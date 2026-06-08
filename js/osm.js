@@ -321,7 +321,31 @@ function osmAttachCategoryHandlers(grid, latlng) {
   });
 }
 
+const OSM_MIN_ZOOM = 19;
+
+async function osmRequireZoom(latlng, text) {
+  if (map.getZoom() >= OSM_MIN_ZOOM) return true;
+  const result = await Swal.fire({
+    icon: "warning",
+    title: "Zoom In Required",
+    text,
+    showCancelButton: true,
+    confirmButtonText: "Zoom In",
+    cancelButtonText: "Cancel",
+  });
+  if (result.isConfirmed) {
+    map.setView(latlng, OSM_MIN_ZOOM);
+  }
+  return false;
+}
+
 async function osmShowContributePicker(latlng) {
+  const ok = await osmRequireZoom(
+    latlng,
+    "Please zoom in closer before adding a point for better accuracy and to avoid duplicates.",
+  );
+  if (!ok) return;
+
   await Swal.fire({
     html: `
       <div style="text-align: left;">
@@ -378,6 +402,12 @@ async function osmSubmitNote(latlng, text) {
 }
 
 async function osmShowNotePicker(latlng) {
+  const ok = await osmRequireZoom(
+    latlng,
+    "Please zoom in closer before leaving a note to place it accurately.",
+  );
+  if (!ok) return;
+
   const { value: text } = await Swal.fire({
     title: "Leave a Note on OpenStreetMap",
     input: "textarea",
