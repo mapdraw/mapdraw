@@ -69,6 +69,10 @@ body.glass-mode {
   --text-color: #f1f5f9;
   --glass-bg: rgba(2, 6, 23, 0.48);
   --glass-header-bg: #bdbdbd;
+  --glass-blur: blur(16px) saturate(150%);
+  --glass-inset-shadow:
+    rgba(255, 255, 255, 0.16) 0px 1px 0px inset, rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
+  --glass-btn-bg: rgba(255, 255, 255, 0.22);
   color: #f1f5f9;
 }
 
@@ -80,31 +84,27 @@ body.glass-mode .top-right-btn,
 body.glass-mode .leaflet-draw-actions,
 body.glass-mode .download-submenu {
   background: var(--glass-bg) !important;
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color) !important;
-  box-shadow:
-    rgba(255, 255, 255, 0.16) 0px 1px 0px inset,
-    rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
+  box-shadow: var(--glass-inset-shadow);
 }
 
 /* Left toolbar: pill-shaped glass */
 body.glass-mode .leaflet-top.leaflet-left {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: 50px;
   border: 1px solid var(--border-color);
-  box-shadow:
-    rgba(255, 255, 255, 0.16) 0px 1px 0px inset,
-    rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
+  box-shadow: var(--glass-inset-shadow);
 }
 
 /* Elevation panel: top border only */
 body.glass-mode #elevation-div {
   background: var(--glass-bg) !important;
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--border-color) !important;
 }
 
@@ -116,8 +116,8 @@ body.glass-mode .overview-list-header {
 /* Context menu popup */
 body.glass-mode .leaflet-popup-content-wrapper {
   background: var(--glass-bg) !important;
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color) !important;
 }
 
@@ -132,7 +132,7 @@ body.glass-mode #data-editor-apply,
 body.glass-mode #data-editor-copy,
 body.glass-mode #data-editor-copy-clean,
 body.glass-mode #data-editor-find {
-  background-color: rgba(255, 255, 255, 0.22) !important;
+  background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
 
@@ -141,7 +141,7 @@ body.glass-mode #clear-route-btn:not(:disabled),
 body.glass-mode #save-route-btn:not(:disabled),
 body.glass-mode .panel-input-group button.active,
 body.glass-mode .routing-profile-selector .profile-btn.active {
-  background-color: rgba(255, 255, 255, 0.22) !important;
+  background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
   border-color: rgba(255, 255, 255, 0.3) !important;
 }
@@ -152,20 +152,20 @@ body.glass-mode #routing-pen-btn.active .material-symbols {
 
 /* WMS import button */
 body.glass-mode .wms-import-button {
-  background-color: rgba(255, 255, 255, 0.22) !important;
+  background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
 
 /* Strava export buttons */
 body.glass-mode button.strava-button-secondary:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.22) !important;
+  background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
 
 /* Search result popup button */
 body.glass-mode .leaflet-popup-content-wrapper button,
 body.glass-mode .leaflet-popup-content-wrapper button:hover {
-  background-color: rgba(255, 255, 255, 0.22) !important;
+  background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
 
@@ -202,12 +202,10 @@ body.glass-mode #tab-container {
 @media (min-width: 769px) {
   body.glass-mode #bottom-left-credits {
     background: var(--glass-bg) !important;
-    backdrop-filter: blur(16px) saturate(150%);
-    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--border-color) !important;
-    box-shadow:
-      rgba(255, 255, 255, 0.16) 0px 1px 0px inset,
-      rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
+    box-shadow: var(--glass-inset-shadow);
   }
 }
 
