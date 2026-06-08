@@ -299,7 +299,7 @@ function osmAttachCategoryHandlers(grid, latlng) {
       Swal.close();
       const { isConfirmed } = await Swal.fire({
         title: `Add ${cat.name}?`,
-        text: "This will be submitted to OpenStreetMap.",
+        text: "This will be submitted to OpenStreetMap. Make sure it doesn't already exist nearby.",
         showCancelButton: true,
         confirmButtonText: "Submit",
       });
