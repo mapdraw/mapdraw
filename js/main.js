@@ -1247,7 +1247,7 @@ async function initializeMap() {
     });
 
     temporarySearchMarker
-      .bindPopup(popupContent, { offset: L.point(0, -35), maxWidth: 150 })
+      .bindPopup(popupContent, { offset: L.point(0, -25), maxWidth: 150 })
       .openPopup();
 
     temporarySearchMarker.on("popupclose", () => {

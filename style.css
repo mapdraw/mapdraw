@@ -107,15 +107,12 @@ body.glass-mode #elevation-div {
   border-top: 1px solid var(--border-color) !important;
 }
 
-/* Context menu popup — TODO: tip color doesn't perfectly match wrapper due to backdrop-filter rendering on rotated elements */
+/* Context menu popup */
 body.glass-mode .leaflet-popup-content-wrapper {
   background: var(--glass-bg) !important;
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   border: 1px solid var(--border-color) !important;
-}
-body.glass-mode .leaflet-popup-tip {
-  background: var(--glass-bg) !important;
 }
 
 /* Name field focus */
@@ -1848,22 +1845,15 @@ a#info-panel-strava-link:hover {
 }
 
 /* Search result popup */
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
+.leaflet-popup-content-wrapper {
   box-shadow: none;
   background: none;
   background-color: var(--background-color);
   color: var(--text-color);
   border: 1px solid var(--border-color) !important;
 }
-/* Overlap the tip into the popup body and match its colors to hide the subpixel seam. */
 .leaflet-popup-tip-container {
-  margin-top: -1px;
-}
-.leaflet-popup-tip {
-  background: var(--background-color) !important;
-  border-color: var(--background-color) var(--border-color) var(--border-color)
-    var(--background-color) !important;
+  display: none;
 }
 .leaflet-container a.leaflet-popup-close-button,
 .leaflet-container a.leaflet-popup-close-button:hover {
