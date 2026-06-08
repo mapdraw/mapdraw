@@ -194,7 +194,7 @@ body.glass-mode #tab-container {
 /* On mobile the tab container reaches the screen edge — no rounded bottom corners */
 @media (max-width: 768px) {
   body.glass-mode #tab-container {
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-radius: 0;
   }
 }
 
