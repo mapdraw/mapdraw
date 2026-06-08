@@ -116,8 +116,6 @@ body.glass-mode .leaflet-popup-content-wrapper {
 }
 body.glass-mode .leaflet-popup-tip {
   background: var(--glass-bg) !important;
-  border: none !important;
-  box-shadow: none !important;
 }
 
 /* Name field focus */
