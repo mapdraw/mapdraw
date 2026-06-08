@@ -159,6 +159,12 @@ body.glass-mode .wms-import-button {
   color: var(--color-white) !important;
 }
 
+/* Strava export buttons */
+body.glass-mode button.strava-button-secondary {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  color: var(--color-white) !important;
+}
+
 /* Disabled toolbar buttons: faded */
 body.glass-mode .leaflet-bar a.leaflet-disabled,
 body.glass-mode .leaflet-draw-toolbar a.leaflet-disabled,
