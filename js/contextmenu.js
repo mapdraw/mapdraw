@@ -256,13 +256,16 @@ function initializeContextMenu(map) {
     const tipContainer = popup.getElement().querySelector(".leaflet-popup-tip-container");
     tipContainer.style.display = "flex";
     tipContainer.style.justifyContent = "center";
+    tipContainer.style.overflow = "visible";
+    tipContainer.style.height = "auto";
     tipContainer.innerHTML = "";
     const anchorIcon = document.createElement("span");
     anchorIcon.className = "material-symbols";
-    anchorIcon.textContent = "keyboard_arrow_down";
+    anchorIcon.textContent = "add";
     anchorIcon.style.color = "#000000";
     anchorIcon.style.setProperty("font-size", "24px", "important");
     anchorIcon.style.lineHeight = "1";
+    anchorIcon.style.marginTop = "2px";
     tipContainer.appendChild(anchorIcon);
 
     // DEBUG: red dot at exact latlng to verify arrow alignment
