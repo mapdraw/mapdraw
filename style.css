@@ -108,10 +108,11 @@ body.glass-mode #elevation-div {
   border-top: 1px solid var(--border-color) !important;
 }
 
-/* Overview list headers: solid color to block scroll-through */
+/* Overview list headers */
 body.glass-mode .overview-list-header {
-  backdrop-filter: blur(16px) brightness(0.3);
-  -webkit-backdrop-filter: blur(16px) brightness(0.3);
+  /* backdrop-filter: blur(16px) brightness(0.3);
+  -webkit-backdrop-filter: blur(16px) brightness(0.3); */
+  /* background-color: var(--glass-btn-bg) !important; */
 }
 
 /* Context menu popup */
@@ -576,9 +577,9 @@ a#info-panel-strava-link:hover {
   border-bottom: 1px solid var(--divider-color);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  position: sticky;
+  /* position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 10; */
   display: flex;
   align-items: center;
   cursor: pointer;
