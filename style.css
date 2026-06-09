@@ -114,10 +114,6 @@ body.glass-mode .overview-list-header {
   -webkit-backdrop-filter: blur(16px) brightness(0.3);
 }
 
-/* body.glass-mode .overview-list-header .material-symbols {
-  color: black;
-} */
-
 /* Context menu popup */
 body.glass-mode .leaflet-popup-content-wrapper {
   background: var(--glass-bg) !important;
