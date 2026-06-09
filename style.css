@@ -67,13 +67,21 @@ body.glass-mode {
   --background-color: transparent;
   --background2-color: rgba(255, 255, 255, 0.06);
   --text-color: #f1f5f9;
-  --glass-bg: rgba(2, 6, 23, 0.48);
-  --glass-header-bg: rgba(95, 99, 104, 0.85);
+  color: #f1f5f9;
+  --glass-btn-bg: rgba(255, 255, 255, 0.22);
+  --glass-header-bg: rgba(255, 255, 255, 0.22);
+  /* dark */
+  /* --glass-bg: rgba(2, 6, 23, 0.48);
   --glass-blur: blur(16px) saturate(150%);
   --glass-inset-shadow:
-    rgba(255, 255, 255, 0.16) 0px 1px 0px inset, rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
-  --glass-btn-bg: rgba(255, 255, 255, 0.22);
-  color: #f1f5f9;
+    rgba(255, 255, 255, 0.16) 0px 1px 0px inset, rgba(255, 255, 255, 0.06) 0px -1px 0px inset; */
+  /* light */
+  --glass-bg:
+    linear-gradient(rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.06) 12%, transparent 40%),
+    rgba(0, 0, 0, 0.18);
+  --glass-blur: blur(24px) saturate(140%);
+  --glass-inset-shadow:
+    rgba(255, 255, 255, 0.18) 0px 1px 0px inset, rgba(255, 255, 255, 0.08) 0px -1px 0px inset;
 }
 
 /* Glass panels */
@@ -110,9 +118,7 @@ body.glass-mode #elevation-div {
 
 /* Overview list headers */
 body.glass-mode .overview-list-header {
-  /* backdrop-filter: blur(16px) brightness(0.3);
-  -webkit-backdrop-filter: blur(16px) brightness(0.3); */
-  /* background-color: var(--glass-btn-bg) !important; */
+  /* background-color: var(--glass-header-bg) !important; */
 }
 
 /* Context menu popup */
