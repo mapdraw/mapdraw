@@ -110,10 +110,13 @@ body.glass-mode #elevation-div {
 
 /* Overview list headers: solid color to block scroll-through */
 body.glass-mode .overview-list-header {
-  /* background: var(--glass-header-bg); */
-  backdrop-filter: var(--background-color);
-  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: blur(16px) brightness(0.3);
+  -webkit-backdrop-filter: blur(16px) brightness(0.3);
 }
+
+/* body.glass-mode .overview-list-header .material-symbols {
+  color: black;
+} */
 
 /* Context menu popup */
 body.glass-mode .leaflet-popup-content-wrapper {
