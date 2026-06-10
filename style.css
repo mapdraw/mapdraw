@@ -485,14 +485,22 @@ select:focus {
   text-align: center;
 }
 
-a#info-panel-strava-link {
-  color: var(--strava-color) !important;
-  text-decoration: none !important;
+#info-panel-strava-link {
+  display: none; /* Hidden by default */
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--strava-color);
   font-size: var(--font-size-12);
+  font-weight: bold;
+  margin-top: 5px;
+  padding: 4px 8px;
+  border-radius: var(--border-radius);
+  transition: background-color 0.2s ease-in-out;
 }
 
-a#info-panel-strava-link:hover {
-  text-decoration: underline !important;
+#info-panel-strava-link:hover {
+  text-decoration: underline;
 }
 
 /* Color Picker Styles */
@@ -1055,6 +1063,15 @@ a#info-panel-strava-link:hover {
   border-bottom: none;
 }
 
+/*
+ * ███████╗████████╗██████╗  █████╗ ██╗   ██╗ █████╗
+ * ██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║   ██║██╔══██╗
+ * ███████╗   ██║   ██████╔╝███████║██║   ██║███████║
+ * ╚════██║   ██║   ██╔══██╗██╔══██║╚██╗ ██╔╝██╔══██║
+ * ███████║   ██║   ██║  ██║██║  ██║ ╚████╔╝ ██║  ██║
+ * ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝
+ */
+
 /* Strava Panel Style */
 #strava-panel {
   border: none;
@@ -1095,18 +1112,57 @@ a#info-panel-strava-link:hover {
   width: auto;
 }
 
-#info-panel-strava-link {
-  display: none; /* Hidden by default */
+/* Button styles */
+.strava-button-primary,
+.strava-button-secondary {
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-size: var(--font-size-14);
+  height: 30px;
+  box-sizing: border-box;
+  display: flex;
   align-items: center;
   justify-content: center;
-  text-decoration: none;
-  color: var(--strava-color);
-  font-size: var(--font-size-12);
+}
+
+/* Primary button style (Strava Orange) */
+.strava-button-primary {
+  background-color: var(--strava-color);
+  color: white;
+  border: none;
   font-weight: bold;
-  margin-top: 5px;
-  padding: 4px 8px;
-  border-radius: var(--border-radius);
-  transition: background-color 0.2s ease-in-out;
+}
+
+/* Secondary button style (Theme-Aware) */
+.strava-button-secondary {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* Disabled state for secondary buttons */
+.strava-button-secondary:disabled {
+  cursor: not-allowed;
+}
+
+/* Active state for secondary buttons to match routing buttons */
+button.strava-button-secondary:not(:disabled) {
+  font-weight: bold;
+  background-color: var(--text-color);
+  color: var(--background-color);
+  border: none;
+}
+
+/* Link styles */
+#strava-panel a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+#strava-panel a:hover {
+  text-decoration: underline;
 }
 
 /*
@@ -2306,60 +2362,12 @@ body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
   display: none !important;
 }
 
-/* Strava Panel Button Styles */
-/* Base styles to match routing panel controls */
-.strava-button-primary,
-.strava-button-secondary {
-  border: 1px solid var(--border-color);
-  padding: 6px 12px;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  font-size: var(--font-size-14);
-  height: 30px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Primary button style (Strava Orange) */
-.strava-button-primary {
-  background-color: var(--strava-color);
-  color: white;
-  border: none;
-  font-weight: bold;
-}
-
-/* Secondary button style (Theme-Aware) */
-.strava-button-secondary {
-  background-color: var(--background-color);
-  color: var(--text-color);
-}
-
-/* Disabled state for secondary buttons */
-.strava-button-secondary:disabled {
-  cursor: not-allowed;
-}
-
-/* Active state for secondary buttons to match routing buttons */
-button.strava-button-secondary:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
-}
-
-/* Fix for Privacy Policy Link Style */
-/* This ensures links in these specific panels have no default underline */
-#strava-panel a,
+/* Link styles */
 #settings-panel a {
   color: var(--link-color);
   text-decoration: none;
 }
 
-/* This adds the underline only when the user hovers over them */
-#strava-panel a:hover,
 #settings-panel a:hover {
   text-decoration: underline;
 }
