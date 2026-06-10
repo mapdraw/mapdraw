@@ -213,7 +213,7 @@ body.glass-mode #tab-container {
   }
 }
 
-/* Credits bar: glass only on desktop — on mobile it's empty when install button is hidden */
+/* Credits bar gets glass on real desktop and forced-desktop; skipped on native mobile where the credits link is not shown */
 @media (min-width: 769px) {
   body.glass-mode #bottom-left-credits {
     background: var(--glass-bg) !important;
@@ -222,6 +222,13 @@ body.glass-mode #tab-container {
     border: 1px solid var(--border-color) !important;
     box-shadow: var(--glass-inset-shadow);
   }
+}
+body.glass-mode.force-desktop-layout #bottom-left-credits {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--glass-inset-shadow);
 }
 
 /*
