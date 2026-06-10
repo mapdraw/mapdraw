@@ -1423,7 +1423,7 @@ a#info-panel-strava-link:hover {
 .attribution-toast {
   padding-top: 0;
   width: fit-content !important;
-  background-color: var(--highlight-color) !important;
+  background-color: var(--color-blue) !important;
   color: var(--color-white) !important;
 }
 
@@ -2057,6 +2057,7 @@ a#info-panel-strava-link:hover {
 .settings-slider {
   width: 90px;
   cursor: pointer;
+  accent-color: var(--highlight-color);
 }
 
 .settings-slider-value {
@@ -2642,7 +2643,7 @@ body.using-touch {
       width: 100px;
       height: 30px;
       margin: 5px auto 5px auto;
-      background-color: var(--highlight-color);
+      background-color: var(--color-blue);
       /* border: 1px solid var(--border-color); */
       border-radius: 15px;
       -webkit-tap-highlight-color: transparent;
