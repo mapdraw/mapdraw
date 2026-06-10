@@ -2384,38 +2384,6 @@ body.route-point-select-mode * {
   cursor: none !important;
 }
 
-/* Custom Cursor Styles */
-.custom-cursor {
-  position: absolute;
-  display: none;
-  pointer-events: none; /* Make it unclickable */
-  z-index: 2000; /* Ensure it's on top */
-  width: 50px; /* Match the icon's font-size */
-  height: 50px; /* Match the icon's font-size */
-  /* Anchor the cursor so the bottom-center of the icon is at the mouse pointer */
-  /* Uses 0.9 multiplier to match marker iconAnchor positioning */
-  transform: translate(-25px, calc(-50px * 0.9));
-}
-#custom-cursor-start .material-symbols {
-  color: var(--routing-color-start);
-}
-#custom-cursor-end .material-symbols {
-  color: var(--routing-color-end);
-}
-#custom-cursor-via .material-symbols {
-  color: var(--routing-color-via);
-}
-/* Crosshair cursor during pen draw mode */
-body.pen-draw-mode .leaflet-container,
-body.pen-draw-mode .leaflet-container * {
-  cursor: crosshair !important;
-}
-
-/* Change cursor to 'all-scroll' when hovering over draggable markers */
-.leaflet-marker-draggable {
-  cursor: all-scroll !important;
-}
-
 /* Forcefully removes dotted line style ONLY during editing */
 .map-is-editing path.leaflet-interactive {
   stroke-dasharray: none !important;
@@ -2488,6 +2456,47 @@ body.pen-draw-mode .leaflet-container * {
 body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
 body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
   display: none !important;
+}
+
+/*
+ *  ██████╗██╗   ██╗██████╗ ███████╗ ██████╗ ██████╗ ███████╗
+ * ██╔════╝██║   ██║██╔══██╗██╔════╝██╔═══██╗██╔══██╗██╔════╝
+ * ██║     ██║   ██║██████╔╝███████╗██║   ██║██████╔╝███████╗
+ * ██║     ██║   ██║██╔══██╗╚════██║██║   ██║██╔══██╗╚════██║
+ * ╚██████╗╚██████╔╝██║  ██║███████║╚██████╔╝██║  ██║███████║
+ *  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
+ */
+
+/* Custom Cursor Styles */
+.custom-cursor {
+  position: absolute;
+  display: none;
+  pointer-events: none; /* Make it unclickable */
+  z-index: 2000; /* Ensure it's on top */
+  width: 50px; /* Match the icon's font-size */
+  height: 50px; /* Match the icon's font-size */
+  /* Anchor the cursor so the bottom-center of the icon is at the mouse pointer */
+  /* Uses 0.9 multiplier to match marker iconAnchor positioning */
+  transform: translate(-25px, calc(-50px * 0.9));
+}
+#custom-cursor-start .material-symbols {
+  color: var(--routing-color-start);
+}
+#custom-cursor-end .material-symbols {
+  color: var(--routing-color-end);
+}
+#custom-cursor-via .material-symbols {
+  color: var(--routing-color-via);
+}
+/* Crosshair cursor during pen draw mode */
+body.pen-draw-mode .leaflet-container,
+body.pen-draw-mode .leaflet-container * {
+  cursor: crosshair !important;
+}
+
+/* Change cursor to 'all-scroll' when hovering over draggable markers */
+.leaflet-marker-draggable {
+  cursor: all-scroll !important;
 }
 
 /*
