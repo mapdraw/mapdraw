@@ -2039,9 +2039,16 @@ button.strava-button-secondary:not(:disabled) {
 .wms-layer-description a:visited {
   color: var(--highlight-color);
 }
-/*/////////// End of SWAL section ///////////*/
 
-/* Leaflet control overrides */
+/*
+ * ██████╗  ██████╗ ██████╗ ██╗   ██╗██████╗ ███████╗
+ * ██╔══██╗██╔═══██╗██╔══██╗██║   ██║██╔══██╗██╔════╝
+ * ██████╔╝██║   ██║██████╔╝██║   ██║██████╔╝███████╗
+ * ██╔═══╝ ██║   ██║██╔═══╝ ██║   ██║██╔═══╝ ╚════██║
+ * ██║     ╚██████╔╝██║     ╚██████╔╝██║     ███████║
+ * ╚═╝      ╚═════╝ ╚═╝      ╚═════╝ ╚═╝     ╚══════╝
+ */
+
 .leaflet-popup-content {
   font-size: var(--font-size-12) !important;
 }
@@ -2055,6 +2062,29 @@ button.strava-button-secondary:not(:disabled) {
 
 .context-menu-popup .leaflet-popup-content {
   margin: 5px 3px !important;
+}
+
+/* Search result popup */
+.leaflet-popup-content-wrapper {
+  box-shadow: none;
+  background: none;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color) !important;
+}
+.leaflet-popup-tip-container {
+  display: none;
+}
+.leaflet-container a.leaflet-popup-close-button,
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: var(--text-color);
+}
+.leaflet-popup-content-wrapper button,
+.leaflet-popup-content-wrapper button:hover {
+  border: none !important;
+  font-weight: bold !important;
+  background-color: var(--text-color) !important;
+  color: var(--background-color) !important;
 }
 
 .leaflet-touch .leaflet-control-layers-toggle {
@@ -2231,29 +2261,6 @@ button.strava-button-secondary:not(:disabled) {
 
 #search-btn.offline .icon-search-offline {
   display: inline-block;
-}
-
-/* Search result popup */
-.leaflet-popup-content-wrapper {
-  box-shadow: none;
-  background: none;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color) !important;
-}
-.leaflet-popup-tip-container {
-  display: none;
-}
-.leaflet-container a.leaflet-popup-close-button,
-.leaflet-container a.leaflet-popup-close-button:hover {
-  color: var(--text-color);
-}
-.leaflet-popup-content-wrapper button,
-.leaflet-popup-content-wrapper button:hover {
-  border: none !important;
-  font-weight: bold !important;
-  background-color: var(--text-color) !important;
-  color: var(--background-color) !important;
 }
 
 /* Toolbar styles */
