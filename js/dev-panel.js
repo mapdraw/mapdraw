@@ -184,6 +184,18 @@
         display: flex;
         justify-content: space-between;
       }
+      body.glass-mode #dev-panel {
+        background: var(--glass-bg);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        box-shadow: var(--glass-inset-shadow);
+      }
+      body.glass-mode #dev-header {
+        background: var(--glass-btn-bg);
+      }
+      body.glass-mode .dev-section button {
+        background: var(--glass-btn-bg);
+      }
     `;
 
     document.head.appendChild(style);
