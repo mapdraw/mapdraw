@@ -38,6 +38,8 @@
   --icon-size-50: 50px;
 
   --highlight-color: var(--color-blue);
+  /* SweetAlert links use --highlight-color directly, not --link-color */
+  --link-color: var(--highlight-color);
   --locate-color: var(--color-blue);
   --overview-header-height: 32px;
 }
@@ -63,6 +65,7 @@
 body.glass-mode {
   --icon-color: #f1f5f9;
   --border-color: rgba(255, 255, 255, 0.12);
+  --link-color: var(--text-color);
   --divider-color: rgba(255, 255, 255, 0.12);
   --background-color: transparent;
   --background2-color: rgba(255, 255, 255, 0.06);
@@ -229,6 +232,16 @@ body.glass-mode.force-desktop-layout #bottom-left-credits {
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color) !important;
   box-shadow: var(--glass-inset-shadow);
+}
+
+/* Glass mode: links show underline instead of relying on color to stand out */
+body.glass-mode #strava-panel a,
+body.glass-mode #settings-panel a,
+body.glass-mode #credits-link,
+body.glass-mode .osm-user-links a,
+body.glass-mode .osm-username,
+body.glass-mode .osm-auth-btn {
+  text-decoration: underline;
 }
 
 /*
@@ -1960,11 +1973,11 @@ a#info-panel-strava-link:hover {
   gap: 0;
 }
 #bottom-left-credits a {
-  color: var(--highlight-color);
+  color: var(--link-color);
   text-decoration: none;
 }
 #bottom-left-credits a:hover {
-  color: var(--highlight-color);
+  color: var(--link-color);
   text-decoration: underline;
 }
 
@@ -2251,14 +2264,13 @@ button.strava-button-secondary:not(:disabled) {
 /* Fix for Privacy Policy Link Style */
 /* This ensures links in these specific panels have no default underline */
 #strava-panel a,
-#strava-api-link,
 #settings-panel a {
+  color: var(--link-color);
   text-decoration: none;
 }
 
 /* This adds the underline only when the user hovers over them */
 #strava-panel a:hover,
-#strava-api-link:hover,
 #settings-panel a:hover {
   text-decoration: underline;
 }
@@ -2284,7 +2296,7 @@ button.strava-button-secondary:not(:disabled) {
 .osm-username,
 .osm-user-links a {
   font-size: var(--font-size-14);
-  color: var(--highlight-color);
+  color: var(--link-color);
 }
 
 .osm-username {
@@ -2301,7 +2313,7 @@ button.strava-button-secondary:not(:disabled) {
 
 .osm-auth-btn {
   font-size: var(--font-size-14);
-  color: var(--highlight-color);
+  color: var(--link-color);
   background: none;
   border: none;
   cursor: pointer;
@@ -2365,7 +2377,7 @@ button.strava-button-secondary:not(:disabled) {
 /* Style for credits link in settings panel */
 .credits-link {
   font-size: var(--font-size-14);
-  color: var(--highlight-color) !important;
+  color: var(--link-color);
   text-decoration: none;
 }
 

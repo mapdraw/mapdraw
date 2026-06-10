@@ -1812,7 +1812,7 @@ async function initializeMap() {
     privacyPolicyLink.target = "_blank";
     privacyPolicyLink.innerText = "View Privacy Policy";
     privacyPolicyLink.style.fontSize = "var(--font-size-14)";
-    privacyPolicyLink.style.color = "var(--highlight-color)";
+    privacyPolicyLink.style.color = "var(--link-color)";
 
     const devPanelContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const devPanelLabel = L.DomUtil.create("label", "", devPanelContainer);
@@ -1822,7 +1822,7 @@ async function initializeMap() {
     devPanelLink.href = "#";
     devPanelLink.innerText = "Open Developer Panel";
     devPanelLink.style.fontSize = "var(--font-size-14)";
-    devPanelLink.style.color = "var(--highlight-color)";
+    devPanelLink.style.color = "var(--link-color)";
 
     L.DomEvent.on(devPanelLink, "click", (e) => {
       L.DomEvent.stop(e);

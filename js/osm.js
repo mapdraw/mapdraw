@@ -539,7 +539,7 @@ function initializeOSM(settingsPanel) {
   usernameEl.id = "osm-username";
   usernameEl.target = "_blank";
   usernameEl.rel = "noopener noreferrer";
-  usernameEl.style.color = "var(--highlight-color)";
+  usernameEl.style.color = "var(--link-color)";
   usernameEl.style.display = "none";
 
   const osmUserLinks = L.DomUtil.create("div", "osm-user-links", osmContainer);
