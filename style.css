@@ -1553,6 +1553,80 @@ button.strava-button-secondary:not(:disabled) {
 }
 
 /*
+ * ███████╗██╗     ███████╗██╗   ██╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+ * ██╔════╝██║     ██╔════╝██║   ██║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
+ * █████╗  ██║     █████╗  ██║   ██║███████║   ██║   ██║██║   ██║██╔██╗ ██║
+ * ██╔══╝  ██║     ██╔══╝  ╚██╗ ██╔╝██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
+ * ███████╗███████╗███████╗ ╚████╔╝ ██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
+ * ╚══════╝╚══════╝╚══════╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+ */
+
+/* Elevation Profile Styles */
+#elevation-div {
+  bottom: 0px;
+  height: 250px;
+  left: 0px;
+  position: absolute;
+  text-align: center;
+  visibility: hidden;
+  width: 100%;
+  z-index: 1000;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--background-color);
+}
+
+/* Collapse the elevation panel's height when it's hidden via its inline style.
+   This removes the element from the layout flow, which is crucial for preventing
+   it from capturing touch events on mobile when invisible. */
+#elevation-div[style*="visibility: hidden"] {
+  height: 0;
+}
+
+/* Styles for d3 elevation chart */
+.altitude-area {
+  fill: var(--color-red);
+  fill-opacity: 0.5;
+  /* stroke: var(--color-red); */
+  stroke: none;
+  stroke-width: 1.5;
+}
+
+.axis path,
+.axis line {
+  stroke: var(--text-color);
+  stroke-width: 1;
+}
+
+.axis text {
+  fill: var(--text-color);
+  font-size: var(--font-size-10);
+}
+
+.elevation-hover-tooltip-path {
+  fill: var(--background-color);
+  stroke: var(--text-color);
+  stroke-width: 1px;
+}
+
+.elevation-hover-tooltip-text {
+  fill: var(--text-color);
+  font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
+  font-size: var(--font-size-10);
+  /* Prevent text from being selected on drag */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.material-symbols.elevation-action-icon {
+  cursor: pointer;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
+}
+
+/*
  * ███████╗██╗    ██╗ █████╗ ██╗
  * ██╔════╝██║    ██║██╔══██╗██║
  * ███████╗██║ █╗ ██║███████║██║
@@ -1800,80 +1874,6 @@ button.strava-button-secondary:not(:disabled) {
   height: 30px;
   width: 30px;
   z-index: 4000;
-}
-
-/*
- * ███████╗██╗     ███████╗██╗   ██╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
- * ██╔════╝██║     ██╔════╝██║   ██║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
- * █████╗  ██║     █████╗  ██║   ██║███████║   ██║   ██║██║   ██║██╔██╗ ██║
- * ██╔══╝  ██║     ██╔══╝  ╚██╗ ██╔╝██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
- * ███████╗███████╗███████╗ ╚████╔╝ ██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
- * ╚══════╝╚══════╝╚══════╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
- */
-
-/* Elevation Profile Styles */
-#elevation-div {
-  bottom: 0px;
-  height: 250px;
-  left: 0px;
-  position: absolute;
-  text-align: center;
-  visibility: hidden;
-  width: 100%;
-  z-index: 1000;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--background-color);
-}
-
-/* Collapse the elevation panel's height when it's hidden via its inline style.
-   This removes the element from the layout flow, which is crucial for preventing
-   it from capturing touch events on mobile when invisible. */
-#elevation-div[style*="visibility: hidden"] {
-  height: 0;
-}
-
-/* Styles for d3 elevation chart */
-.altitude-area {
-  fill: var(--color-red);
-  fill-opacity: 0.5;
-  /* stroke: var(--color-red); */
-  stroke: none;
-  stroke-width: 1.5;
-}
-
-.axis path,
-.axis line {
-  stroke: var(--text-color);
-  stroke-width: 1;
-}
-
-.axis text {
-  fill: var(--text-color);
-  font-size: var(--font-size-10);
-}
-
-.elevation-hover-tooltip-path {
-  fill: var(--background-color);
-  stroke: var(--text-color);
-  stroke-width: 1px;
-}
-
-.elevation-hover-tooltip-text {
-  fill: var(--text-color);
-  font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
-  font-size: var(--font-size-10);
-  /* Prevent text from being selected on drag */
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-.material-symbols.elevation-action-icon {
-  cursor: pointer;
-  vertical-align: middle;
-  position: relative;
-  top: -2px;
 }
 
 /* Style for the download submenu */
