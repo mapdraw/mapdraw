@@ -1552,6 +1552,194 @@ button.strava-button-secondary:not(:disabled) {
   gap: 10px;
 }
 
+#settings-panel .settings-control-item {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-14);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: auto;
+}
+
+/* Make routing and elevation provider select boxes the same width */
+#settings-panel select {
+  width: 130px;
+  /* Styles to match other dropdowns */
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  height: 30px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* Only apply pointer cursor to labels in items that contain a checkbox */
+#settings-panel .settings-control-item:has(input[type="checkbox"]) label {
+  cursor: pointer;
+  user-select: none; /* Prevent text selection on click */
+}
+#settings-panel .settings-control-item input[type="checkbox"] {
+  vertical-align: middle;
+  margin-right: 8px;
+  transform: scale(1.2);
+}
+
+.settings-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-slider {
+  width: 90px;
+  cursor: pointer;
+  accent-color: var(--highlight-color);
+}
+
+.settings-slider-value {
+  min-width: 20px;
+  text-align: right;
+  font-size: var(--font-size-14);
+}
+
+/* Shared styles for all panel info icons */
+#strava-info-icon,
+.settings-info-icon {
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+/* Styles for the info icon in the settings panel */
+.settings-info-icon {
+  font-size: var(--icon-size-16);
+  font-weight: bold;
+  color: var(--text-color);
+  line-height: 1;
+}
+
+/* Link styles */
+#settings-panel a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+#settings-panel a:hover {
+  text-decoration: underline;
+}
+
+/* OSM Settings */
+#settings-panel .osm-profile-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.osm-profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.osm-user-links {
+  display: flex;
+  gap: 12px;
+}
+
+.osm-username,
+.osm-user-links a {
+  font-size: var(--font-size-14);
+  color: var(--link-color);
+}
+
+.osm-username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.osm-separator {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 2px 0 0;
+}
+
+.osm-auth-btn {
+  font-size: var(--font-size-14);
+  color: var(--link-color);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.osm-auth-btn:hover {
+  text-decoration: underline;
+}
+
+.osm-contribute-search::placeholder {
+  color: var(--text-color);
+  opacity: 1;
+}
+
+.osm-contribution-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+.osm-contribution-row:last-child {
+  border-bottom: none;
+}
+.osm-contribution-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.osm-contribution-info strong,
+.osm-contribution-info span,
+.osm-contribution-info small {
+  font-size: var(--font-size-14);
+}
+.osm-contribution-info span,
+.osm-contribution-info small {
+  color: var(--text-color);
+}
+.osm-contribution-meta {
+  display: flex;
+  gap: 12px;
+}
+.osm-contribution-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.osm-delete-btn {
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--color-red);
+}
+
+/* Style for credits link in settings panel */
+.credits-link {
+  font-size: var(--font-size-14);
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.credits-link:hover {
+  text-decoration: underline;
+}
+
 /*
  * ███████╗██╗     ███████╗██╗   ██╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
  * ██╔════╝██║     ██╔════╝██║   ██║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
@@ -2190,75 +2378,6 @@ button.strava-button-secondary:not(:disabled) {
   display: none;
 }
 
-/* Settings Control Item Styles are now inside the settings panel */
-#settings-panel .settings-control-item {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-14);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: auto;
-}
-
-/* Make routing and elevation provider select boxes the same width */
-#settings-panel select {
-  width: 130px;
-  /* Styles to match other dropdowns */
-  background-color: var(--background-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  height: 30px;
-  padding: 6px;
-  box-sizing: border-box;
-}
-
-/* Only apply pointer cursor to labels in items that contain a checkbox */
-#settings-panel .settings-control-item:has(input[type="checkbox"]) label {
-  cursor: pointer;
-  user-select: none; /* Prevent text selection on click */
-}
-#settings-panel .settings-control-item input[type="checkbox"] {
-  vertical-align: middle;
-  margin-right: 8px;
-  transform: scale(1.2);
-}
-
-.settings-slider-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.settings-slider {
-  width: 90px;
-  cursor: pointer;
-  accent-color: var(--highlight-color);
-}
-
-.settings-slider-value {
-  min-width: 20px;
-  text-align: right;
-  font-size: var(--font-size-14);
-}
-
-/* Shared styles for all panel info icons */
-#strava-info-icon,
-.settings-info-icon {
-  cursor: pointer;
-  margin-left: 5px;
-}
-
-/* Styles for the info icon in the settings panel */
-.settings-info-icon {
-  font-size: var(--icon-size-16);
-  font-weight: bold;
-  color: var(--text-color);
-  line-height: 1;
-}
-
 /* Hide the default browser cursor and use our custom one during selection mode */
 body.route-point-select-mode,
 body.route-point-select-mode * {
@@ -2369,126 +2488,6 @@ body.pen-draw-mode .leaflet-container * {
 body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
 body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
   display: none !important;
-}
-
-/* Link styles */
-#settings-panel a {
-  color: var(--link-color);
-  text-decoration: none;
-}
-
-#settings-panel a:hover {
-  text-decoration: underline;
-}
-
-/* OSM Settings */
-#settings-panel .osm-profile-item {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
-}
-
-.osm-profile-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.osm-user-links {
-  display: flex;
-  gap: 12px;
-}
-
-.osm-username,
-.osm-user-links a {
-  font-size: var(--font-size-14);
-  color: var(--link-color);
-}
-
-.osm-username {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.osm-separator {
-  border: none;
-  border-top: 1px solid var(--border-color);
-  margin: 2px 0 0;
-}
-
-.osm-auth-btn {
-  font-size: var(--font-size-14);
-  color: var(--link-color);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  font-family: inherit;
-}
-
-.osm-auth-btn:hover {
-  text-decoration: underline;
-}
-
-.osm-contribute-search::placeholder {
-  color: var(--text-color);
-  opacity: 1;
-}
-
-.osm-contribution-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-color);
-  gap: 8px;
-}
-.osm-contribution-row:last-child {
-  border-bottom: none;
-}
-.osm-contribution-info {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-.osm-contribution-info strong,
-.osm-contribution-info span,
-.osm-contribution-info small {
-  font-size: var(--font-size-14);
-}
-.osm-contribution-info span,
-.osm-contribution-info small {
-  color: var(--text-color);
-}
-.osm-contribution-meta {
-  display: flex;
-  gap: 12px;
-}
-.osm-contribution-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-.osm-delete-btn {
-  padding: 0;
-  line-height: 1;
-  cursor: pointer;
-  background: none;
-  border: none;
-  color: var(--color-red);
-}
-
-/* Style for credits link in settings panel */
-.credits-link {
-  font-size: var(--font-size-14);
-  color: var(--link-color);
-  text-decoration: none;
-}
-
-.credits-link:hover {
-  text-decoration: underline;
 }
 
 /*
