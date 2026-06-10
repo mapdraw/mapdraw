@@ -2416,6 +2416,21 @@ body.route-point-select-mode * {
   display: none;
 }
 
+/* Round editing handles (vertex dots shown when editing shapes) */
+.leaflet-editing-icon,
+.leaflet-middle-icon {
+  border-radius: 50%;
+}
+
+/*
+ * ███████╗ ██████╗ █████╗ ██╗     ███████╗
+ * ██╔════╝██╔════╝██╔══██╗██║     ██╔════╝
+ * ███████╗██║     ███████║██║     █████╗
+ * ╚════██║██║     ██╔══██║██║     ██╔══╝
+ * ███████║╚██████╗██║  ██║███████╗███████╗
+ * ╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝
+ */
+
 .leaflet-control-scale {
   margin-left: 0 !important;
   margin-bottom: 25px !important; /* Space above credits container */
@@ -2447,11 +2462,6 @@ body.route-point-select-mode * {
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
 } */
-
-.leaflet-editing-icon,
-.leaflet-middle-icon {
-  border-radius: 50%;
-}
 
 /* Hide the scale control and bottom credits when the elevation chart is visible */
 body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
