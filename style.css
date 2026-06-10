@@ -618,6 +618,118 @@ select:focus {
 }
 
 /*
+ * ████████╗ █████╗ ██████╗ ███████╗
+ * ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝
+ *    ██║   ███████║██████╔╝███████╗
+ *    ██║   ██╔══██║██╔══██╗╚════██║
+ *    ██║   ██║  ██║██████╔╝███████║
+ *    ╚═╝   ╚═╝  ╚═╝╚═════╝ ╚══════╝
+ */
+
+/* Tab System Styles */
+#tab-container {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* allow flex to shrink below content size */
+  overflow: hidden;
+}
+
+#tab-buttons {
+  display: flex;
+  width: 100%;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 8px 5px; /* Reduced padding slightly to help with spacing */
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--background2-color);
+  border-right: none;
+  outline: none;
+  color: var(--text-color);
+  min-width: 0;
+  display: flex; /* Use flexbox for alignment */
+  justify-content: center;
+  align-items: center;
+  height: 35px;
+}
+
+.tab-button.active {
+  /* color: var(--text-color); */
+  border-bottom-color: var(--background-color);
+}
+
+#tab-btn-overview {
+  border-radius: var(--border-radius) 0 0 0;
+  border-right: none;
+}
+
+/* Routing button is now in the middle */
+#tab-btn-routing {
+  border-radius: 0;
+  border-right: none;
+}
+
+#tab-btn-strava {
+  flex: 0 0 60px; /* Don't grow, fixed width */
+  border-radius: 0;
+  border-right: none;
+}
+
+#tab-btn-data {
+  flex: 0 0 40px;
+  padding: 8px;
+  border-radius: 0;
+}
+
+/* Settings icon button has fixed size */
+#tab-btn-settings {
+  flex: 0 0 40px; /* Don't grow, fixed width */
+  padding: 8px;
+  border-radius: 0 var(--border-radius) 0 0;
+  border-right: 1px solid var(--border-color);
+}
+
+.tab-button.active {
+  background-color: var(--background-color);
+}
+
+#tab-btn-heart {
+  display: none; /* Hidden by default on desktop */
+}
+
+#tab-content {
+  background-color: transparent;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tab-panel {
+  display: none; /* Hidden by default */
+}
+
+.tab-panel.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/*
  *  ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
  * ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
  * ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
@@ -638,6 +750,11 @@ select:focus {
   overflow: hidden;
   box-sizing: border-box;
   padding-top: 10px;
+}
+
+/* Overview panel: list is the scroll container, not the panel itself */
+#overview-panel {
+  overflow-y: hidden;
 }
 
 #overview-panel.is-empty {
@@ -1257,123 +1374,6 @@ button.strava-button-secondary:not(:disabled) {
 .search-modal-suggestions .autocomplete-suggestion-item:hover,
 .search-modal-suggestions .autocomplete-suggestion-item.active {
   background-color: var(--highlight-color) !important;
-}
-
-/*
- * ████████╗ █████╗ ██████╗ ███████╗
- * ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝
- *    ██║   ███████║██████╔╝███████╗
- *    ██║   ██╔══██║██╔══██╗╚════██║
- *    ██║   ██║  ██║██████╔╝███████║
- *    ╚═╝   ╚═╝  ╚═╝╚═════╝ ╚══════╝
- */
-
-/* Tab System Styles */
-#tab-container {
-  width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0; /* allow flex to shrink below content size */
-  overflow: hidden;
-}
-
-#tab-buttons {
-  display: flex;
-  width: 100%;
-}
-
-.tab-button {
-  flex: 1;
-  padding: 8px 5px; /* Reduced padding slightly to help with spacing */
-  font-size: var(--font-size-14);
-  font-weight: bold;
-  cursor: pointer;
-  border: 1px solid var(--border-color);
-  background-color: var(--background2-color);
-  border-right: none;
-  outline: none;
-  color: var(--text-color);
-  min-width: 0;
-  display: flex; /* Use flexbox for alignment */
-  justify-content: center;
-  align-items: center;
-  height: 35px;
-}
-
-.tab-button.active {
-  /* color: var(--text-color); */
-  border-bottom-color: var(--background-color);
-}
-
-#tab-btn-overview {
-  border-radius: var(--border-radius) 0 0 0;
-  border-right: none;
-}
-
-/* Routing button is now in the middle */
-#tab-btn-routing {
-  border-radius: 0;
-  border-right: none;
-}
-
-#tab-btn-strava {
-  flex: 0 0 60px; /* Don't grow, fixed width */
-  border-radius: 0;
-  border-right: none;
-}
-
-#tab-btn-data {
-  flex: 0 0 40px;
-  padding: 8px;
-  border-radius: 0;
-}
-
-/* Settings icon button has fixed size */
-#tab-btn-settings {
-  flex: 0 0 40px; /* Don't grow, fixed width */
-  padding: 8px;
-  border-radius: 0 var(--border-radius) 0 0;
-  border-right: 1px solid var(--border-color);
-}
-
-.tab-button.active {
-  background-color: var(--background-color);
-}
-
-#tab-btn-heart {
-  display: none; /* Hidden by default on desktop */
-}
-
-#tab-content {
-  background-color: transparent;
-  padding: 0;
-  border: 1px solid var(--border-color);
-  border-top: none;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.tab-panel {
-  display: none; /* Hidden by default */
-}
-
-.tab-panel.active {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-/* Overview panel: list is the scroll container, not the panel itself */
-#overview-panel {
-  overflow-y: hidden;
 }
 
 /*
