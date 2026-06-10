@@ -2379,12 +2379,6 @@ button.strava-button-secondary:not(:disabled) {
   display: none;
 }
 
-/* Hide the default browser cursor and use our custom one during selection mode */
-body.route-point-select-mode,
-body.route-point-select-mode * {
-  cursor: none !important;
-}
-
 /* Forcefully removes dotted line style ONLY during editing */
 .map-is-editing path.leaflet-interactive {
   stroke-dasharray: none !important;
@@ -2508,6 +2502,12 @@ body.pen-draw-mode .leaflet-container * {
 /* Change cursor to 'all-scroll' when hovering over draggable markers */
 .leaflet-marker-draggable {
   cursor: all-scroll !important;
+}
+
+/* Hide the default browser cursor and use our custom one during selection mode */
+body.route-point-select-mode,
+body.route-point-select-mode * {
+  cursor: none !important;
 }
 
 /*
