@@ -441,6 +441,100 @@ select:focus {
 }
 
 /*
+ * ███████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗
+ * ██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝██║  ██║
+ * ███████╗█████╗  ███████║██████╔╝██║     ███████║
+ * ╚════██║██╔══╝  ██╔══██║██╔══██╗██║     ██╔══██║
+ * ███████║███████╗██║  ██║██║  ██║╚██████╗██║  ██║
+ * ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+ */
+
+/* Autocomplete suggestion item styles (used inside search modal) */
+.autocomplete-suggestion-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color);
+}
+
+.autocomplete-suggestion-item:hover,
+.autocomplete-suggestion-item.active {
+  background-color: var(--highlight-color) !important;
+}
+
+/* Search Modal Styles */
+/* Modal container customization */
+.search-modal {
+  font-family: inherit !important;
+}
+
+#search-modal-input:focus {
+  outline: none !important;
+  border-color: var(--border-color) !important;
+  box-shadow: none !important;
+}
+
+#search-modal-input[data-offline="true"] {
+  background-color: var(--color-red) !important;
+  color: white !important;
+  border-color: var(--color-red) !important;
+}
+
+#search-modal-input[data-offline="true"]::placeholder {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Suggestions dropdown inside modal */
+.search-modal-suggestions {
+  display: none;
+  position: relative;
+  padding: 0;
+  background-color: var(--background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: var(--border-radius);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Make input connect visually with suggestions when open */
+.search-modal-container:has(.search-modal-suggestions[style*="display: block"])
+  #search-modal-input {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.search-modal-suggestions[style*="display: block"] {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  margin-top: 0 !important;
+  border-top: none !important;
+}
+
+/* Suggestion items inherit from existing styles */
+.search-modal-suggestions .autocomplete-suggestion-item {
+  padding: 12px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--divider-color);
+  text-align: left;
+}
+
+.search-modal-suggestions .autocomplete-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.search-modal-suggestions .autocomplete-suggestion-item:hover,
+.search-modal-suggestions .autocomplete-suggestion-item.active {
+  background-color: var(--highlight-color) !important;
+}
+
+/*
  * ██╗███╗   ██╗███████╗ ██████╗
  * ██║████╗  ██║██╔════╝██╔═══██╗
  * ██║██╔██╗ ██║█████╗  ██║   ██║
@@ -1280,100 +1374,6 @@ button.strava-button-secondary:not(:disabled) {
 
 #strava-panel a:hover {
   text-decoration: underline;
-}
-
-/*
- * ███████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗
- * ██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝██║  ██║
- * ███████╗█████╗  ███████║██████╔╝██║     ███████║
- * ╚════██║██╔══╝  ██╔══██║██╔══██╗██║     ██╔══██║
- * ███████║███████╗██║  ██║██║  ██║╚██████╗██║  ██║
- * ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
- */
-
-/* Autocomplete suggestion item styles (used inside search modal) */
-.autocomplete-suggestion-item {
-  padding: 8px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-color);
-}
-
-.autocomplete-suggestion-item:hover,
-.autocomplete-suggestion-item.active {
-  background-color: var(--highlight-color) !important;
-}
-
-/* Search Modal Styles */
-/* Modal container customization */
-.search-modal {
-  font-family: inherit !important;
-}
-
-#search-modal-input:focus {
-  outline: none !important;
-  border-color: var(--border-color) !important;
-  box-shadow: none !important;
-}
-
-#search-modal-input[data-offline="true"] {
-  background-color: var(--color-red) !important;
-  color: white !important;
-  border-color: var(--color-red) !important;
-}
-
-#search-modal-input[data-offline="true"]::placeholder {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-/* Suggestions dropdown inside modal */
-.search-modal-suggestions {
-  display: none;
-  position: relative;
-  padding: 0;
-  background-color: var(--background-color);
-  border: 1px solid var(--divider-color);
-  border-radius: var(--border-radius);
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-/* Make input connect visually with suggestions when open */
-.search-modal-container:has(.search-modal-suggestions[style*="display: block"])
-  #search-modal-input {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-.search-modal-suggestions[style*="display: block"] {
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  margin-top: 0 !important;
-  border-top: none !important;
-}
-
-/* Suggestion items inherit from existing styles */
-.search-modal-suggestions .autocomplete-suggestion-item {
-  padding: 12px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-color);
-  border-bottom: 1px solid var(--divider-color);
-  text-align: left;
-}
-
-.search-modal-suggestions .autocomplete-suggestion-item:last-child {
-  border-bottom: none;
-}
-
-.search-modal-suggestions .autocomplete-suggestion-item:hover,
-.search-modal-suggestions .autocomplete-suggestion-item.active {
-  background-color: var(--highlight-color) !important;
 }
 
 /*
