@@ -353,6 +353,15 @@ select:focus {
   fill: var(--icon-color); /* Use a faded grey for the icon itself */
 }
 
+/*
+ * ██╗███╗   ██╗███████╗ ██████╗
+ * ██║████╗  ██║██╔════╝██╔═══██╗
+ * ██║██╔██╗ ██║█████╗  ██║   ██║
+ * ██║██║╚██╗██║██╔══╝  ██║   ██║
+ * ██║██║ ╚████║██║     ╚██████╔╝
+ * ╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝
+ */
+
 /* Info panel for selected items */
 #info-panel {
   position: relative; /* Needed for color picker positioning */
@@ -513,6 +522,15 @@ a#info-panel-strava-link:hover {
   border: 2px solid var(--text-color);
 }
 
+/*
+ *  ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
+ * ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
+ * ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
+ * ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
+ * ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
+ *  ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
+ */
+
 /* Overview panel styles */
 #overview-panel {
   width: 100%;
@@ -638,6 +656,15 @@ a#info-panel-strava-link:hover {
   border-bottom: none;
 }
 
+/*
+ * ██╗      █████╗ ██╗   ██╗███████╗██████╗ ███████╗
+ * ██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗██╔════╝
+ * ██║     ███████║ ╚████╔╝ █████╗  ██████╔╝███████╗
+ * ██║     ██╔══██║  ╚██╔╝  ██╔══╝  ██╔══██╗╚════██║
+ * ███████╗██║  ██║   ██║   ███████╗██║  ██║███████║
+ * ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
+ */
+
 /* Custom Layers Panel Styles */
 .layer-icon {
   vertical-align: middle;
@@ -710,6 +737,15 @@ a#info-panel-strava-link:hover {
   box-shadow: none !important;
   background-color: transparent !important;
 }
+
+/*
+ * ██████╗  ██████╗ ██╗   ██╗████████╗██╗███╗   ██╗ ██████╗
+ * ██╔══██╗██╔═══██╗██║   ██║╚══██╔══╝██║████╗  ██║██╔════╝
+ * ██████╔╝██║   ██║██║   ██║   ██║   ██║██╔██╗ ██║██║  ███╗
+ * ██╔══██╗██║   ██║██║   ██║   ██║   ██║██║╚██╗██║██║   ██║
+ * ██║  ██║╚██████╔╝╚██████╔╝   ██║   ██║██║ ╚████║╚██████╔╝
+ * ╚═╝  ╚═╝ ╚═════╝  ╚═════╝    ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝
+ */
 
 /* Routing Panel Styles */
 #routing-panel {
@@ -936,6 +972,84 @@ a#info-panel-strava-link:hover {
   margin-left: 5px;
 }
 
+/* Directions Panel Styles */
+#directions-panel {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden; /* To contain the rounded corners */
+  display: none; /* Hidden by default, shown when a route is found */
+  flex-direction: column; /* Applied when JS sets display: flex */
+}
+
+#directions-panel:not(.collapsed) {
+  flex: 1;
+  min-height: 0;
+}
+
+#directions-panel-header {
+  padding: 0 12px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+  background-color: var(--background-color);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--font-size-12);
+  border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+#directions-panel.collapsed #directions-panel-header {
+  border-bottom: none;
+}
+
+.directions-panel-header-arrow.material-symbols {
+  font-size: var(--icon-size-20) !important;
+  margin-right: 5px;
+}
+
+/* Default state (collapsed): arrow points down */
+#directions-panel.collapsed .directions-panel-header-arrow::before {
+  content: "keyboard_arrow_down";
+}
+
+/* Expanded state: arrow points up */
+#directions-panel:not(.collapsed) .directions-panel-header-arrow::before {
+  content: "keyboard_arrow_up";
+}
+
+#directions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background-color: var(--background-color);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+#directions-panel.collapsed #directions-list {
+  display: none;
+}
+
+.direction-item {
+  padding: 8px 12px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-12);
+  border-bottom: 1px solid var(--divider-color);
+  box-sizing: border-box;
+}
+
+.direction-item:last-child {
+  border-bottom: none;
+}
+
 /* Strava Panel Style */
 #strava-panel {
   border: none;
@@ -989,6 +1103,15 @@ a#info-panel-strava-link:hover {
   border-radius: var(--border-radius);
   transition: background-color 0.2s ease-in-out;
 }
+
+/*
+ * ███████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗
+ * ██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝██║  ██║
+ * ███████╗█████╗  ███████║██████╔╝██║     ███████║
+ * ╚════██║██╔══╝  ██╔══██║██╔══██╗██║     ██╔══██║
+ * ███████║███████╗██║  ██║██║  ██║╚██████╗██║  ██║
+ * ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+ */
 
 /* Autocomplete suggestion item styles (used inside search modal) */
 .autocomplete-suggestion-item {
@@ -1075,83 +1198,14 @@ a#info-panel-strava-link:hover {
   background-color: var(--highlight-color) !important;
 }
 
-/* Directions Panel Styles */
-#directions-panel {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  overflow: hidden; /* To contain the rounded corners */
-  display: none; /* Hidden by default, shown when a route is found */
-  flex-direction: column; /* Applied when JS sets display: flex */
-}
-
-#directions-panel:not(.collapsed) {
-  flex: 1;
-  min-height: 0;
-}
-
-#directions-panel-header {
-  padding: 0 12px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  font-weight: normal;
-  background-color: var(--background-color);
-  cursor: pointer;
-  user-select: none;
-  font-size: var(--font-size-12);
-  border-bottom: 1px solid var(--border-color);
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
-
-#directions-panel.collapsed #directions-panel-header {
-  border-bottom: none;
-}
-
-.directions-panel-header-arrow.material-symbols {
-  font-size: var(--icon-size-20) !important;
-  margin-right: 5px;
-}
-
-/* Default state (collapsed): arrow points down */
-#directions-panel.collapsed .directions-panel-header-arrow::before {
-  content: "keyboard_arrow_down";
-}
-
-/* Expanded state: arrow points up */
-#directions-panel:not(.collapsed) .directions-panel-header-arrow::before {
-  content: "keyboard_arrow_up";
-}
-
-#directions-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  background-color: var(--background-color);
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
-
-#directions-panel.collapsed #directions-list {
-  display: none;
-}
-
-.direction-item {
-  padding: 8px 12px;
-  min-height: 30px;
-  display: flex;
-  align-items: center;
-  font-size: var(--font-size-12);
-  border-bottom: 1px solid var(--divider-color);
-  box-sizing: border-box;
-}
-
-.direction-item:last-child {
-  border-bottom: none;
-}
+/*
+ * ████████╗ █████╗ ██████╗ ███████╗
+ * ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝
+ *    ██║   ███████║██████╔╝███████╗
+ *    ██║   ██╔══██║██╔══██╗╚════██║
+ *    ██║   ██║  ██║██████╔╝███████║
+ *    ╚═╝   ╚═╝  ╚═╝╚═════╝ ╚══════╝
+ */
 
 /* Tab System Styles */
 #tab-container {
@@ -1269,6 +1323,15 @@ a#info-panel-strava-link:hover {
   background-color: var(--background-color);
   gap: 10px;
 }
+
+/*
+ * ███████╗██████╗ ██╗████████╗ ██████╗ ██████╗
+ * ██╔════╝██╔══██╗██║╚══██╔══╝██╔═══██╗██╔══██╗
+ * █████╗  ██║  ██║██║   ██║   ██║   ██║██████╔╝
+ * ██╔══╝  ██║  ██║██║   ██║   ██║   ██║██╔══██╗
+ * ███████╗██████╔╝██║   ██║   ╚██████╔╝██║  ██║
+ * ╚══════╝╚═════╝ ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
+ */
 
 /* Data Editor Panel */
 
@@ -1418,6 +1481,15 @@ a#info-panel-strava-link:hover {
 #data-editor-panel .cm-find-highlight {
   animation: cm-find-fade 3s ease-out forwards;
 }
+
+/*
+ * ███████╗██╗    ██╗ █████╗ ██╗
+ * ██╔════╝██║    ██║██╔══██╗██║
+ * ███████╗██║ █╗ ██║███████║██║
+ * ╚════██║██║███╗██║██╔══██║██║
+ * ███████║╚███╔███╔╝██║  ██║███████╗
+ * ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝
+ */
 
 /* Themed Sweetalert2 Styles */
 /* This block styles all SweetAlert2 popups to respect the selected
@@ -1659,6 +1731,15 @@ a#info-panel-strava-link:hover {
   width: 30px;
   z-index: 4000;
 }
+
+/*
+ * ███████╗██╗     ███████╗██╗   ██╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+ * ██╔════╝██║     ██╔════╝██║   ██║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
+ * █████╗  ██║     █████╗  ██║   ██║███████║   ██║   ██║██║   ██║██╔██╗ ██║
+ * ██╔══╝  ██║     ██╔══╝  ╚██╗ ██╔╝██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
+ * ███████╗███████╗███████╗ ╚████╔╝ ██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
+ * ╚══════╝╚══════╝╚══════╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+ */
 
 /* Elevation Profile Styles */
 #elevation-div {
@@ -2388,6 +2469,15 @@ button.strava-button-secondary:not(:disabled) {
   text-decoration: underline;
 }
 
+/*
+ * ███████╗ ██████╗ ███╗   ██╗████████╗███████╗
+ * ██╔════╝██╔═══██╗████╗  ██║╚══██╔══╝██╔════╝
+ * █████╗  ██║   ██║██╔██╗ ██║   ██║   ███████╗
+ * ██╔══╝  ██║   ██║██║╚██╗██║   ██║   ╚════██║
+ * ██║     ╚██████╔╝██║ ╚████║   ██║   ███████║
+ * ╚═╝      ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝
+ */
+
 /* Roboto Font Styles Start */
 @font-face {
   font-family: "Roboto";
@@ -2549,6 +2639,15 @@ body.using-touch {
   cursor: pointer;
   font-size: var(--font-size-14);
 }
+
+/*
+ * ███╗   ███╗ ██████╗ ██████╗ ██╗██╗     ███████╗
+ * ████╗ ████║██╔═══██╗██╔══██╗██║██║     ██╔════╝
+ * ██╔████╔██║██║   ██║██████╔╝██║██║     █████╗
+ * ██║╚██╔╝██║██║   ██║██╔══██╗██║██║     ██╔══╝
+ * ██║ ╚═╝ ██║╚██████╔╝██████╔╝██║███████╗███████╗
+ * ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚══════╝╚══════╝
+ */
 
 /* Mobile Specific Styles Start */
 
