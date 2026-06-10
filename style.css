@@ -70,21 +70,25 @@ body.glass-mode {
   color: #f1f5f9;
   --glass-btn-bg: rgba(255, 255, 255, 0.22);
   --glass-header-bg: rgba(255, 255, 255, 0.22);
-  /* dark
+  /* dark */
   --glass-bg: rgba(2, 6, 23, 0.48);
   --glass-blur: blur(16px) saturate(150%);
-  --glass-inset-shadow: rgba(255, 255, 255, 0.16) 0px 1px 0px inset, rgba(255, 255, 255, 0.06) 0px -1px 0px inset; */
+  --glass-inset-shadow:
+    rgba(255, 255, 255, 0.16) 0px 1px 0px inset, rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
   /* mid */
-  --glass-bg:
+  /* --glass-bg:
     linear-gradient(rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 12%, transparent 40%),
     rgba(2, 6, 23, 0.32);
   --glass-blur: blur(20px) saturate(145%);
   --glass-inset-shadow:
-    rgba(255, 255, 255, 0.17) 0px 1px 0px inset, rgba(255, 255, 255, 0.07) 0px -1px 0px inset;
-  /* light
-  --glass-bg: linear-gradient(rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.06) 12%, transparent 40%), rgba(0, 0, 0, 0.18);
+    rgba(255, 255, 255, 0.17) 0px 1px 0px inset, rgba(255, 255, 255, 0.07) 0px -1px 0px inset; */
+  /* light */
+  /* --glass-bg:
+    linear-gradient(rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.06) 12%, transparent 40%),
+    rgba(0, 0, 0, 0.18);
   --glass-blur: blur(24px) saturate(140%);
-  --glass-inset-shadow: rgba(255, 255, 255, 0.18) 0px 1px 0px inset, rgba(255, 255, 255, 0.08) 0px -1px 0px inset; */
+  --glass-inset-shadow:
+    rgba(255, 255, 255, 0.18) 0px 1px 0px inset, rgba(255, 255, 255, 0.08) 0px -1px 0px inset; */
 }
 
 /* Glass panels */
