@@ -2168,6 +2168,75 @@ button.strava-button-secondary:not(:disabled) {
   z-index: 500;
 }
 
+/* Toolbar styles */
+.leaflet-touch .leaflet-bar,
+.leaflet-draw {
+  border: none;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+.leaflet-bar a,
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+  background-color: var(--background-color);
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+/* Style disabled Leaflet zoom controls */
+.leaflet-bar a.leaflet-disabled {
+  color: var(--text-color);
+  background-color: var(--background2-color);
+  cursor: not-allowed;
+}
+/* This rule targets the first custom control to round its top corners */
+.leaflet-left > .leaflet-control-custom:first-child a {
+  border-radius: 50px 50px 0 0 !important;
+}
+.leaflet-left > .leaflet-bar:last-child a,
+#map > div.leaflet-control-container > div.leaflet-top.leaflet-left > div:nth-child(6) {
+  border-radius: 0 0 50px 50px !important;
+}
+
+.leaflet-touch .leaflet-draw-actions {
+  left: 40px;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+.leaflet-draw-actions a,
+.leaflet-draw-actions a:hover {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* Style for disabled custom buttons */
+.leaflet-control-custom.disabled > a {
+  background-color: var(--background2-color);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.leaflet-control-custom.disabled .icon {
+  fill: var(--icon-color) !important;
+}
+
+/* Border around the toolbar */
+#map > div.leaflet-control-container > div.leaflet-top.leaflet-left {
+  border: 1px solid var(--border-color);
+  border-radius: 50px 50px 50px 50px !important;
+}
+.leaflet-control-locate a .leaflet-control-locate-location-arrow {
+  display: none;
+}
+.locate-active a {
+  background-color: var(--locate-color) !important;
+}
+.locate-active .icon-locate {
+  fill: var(--color-white) !important;
+}
+
 /*
  * ████████╗ ██████╗ ██████╗     ██████╗ ██╗ ██████╗ ██╗  ██╗████████╗
  * ╚══██╔══╝██╔═══██╗██╔══██╗    ██╔══██╗██║██╔════╝ ██║  ██║╚══██╔══╝
@@ -2276,49 +2345,6 @@ button.strava-button-secondary:not(:disabled) {
   display: inline-block;
 }
 
-/* Toolbar styles */
-.leaflet-touch .leaflet-bar,
-.leaflet-draw {
-  border: none;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  margin: 0 !important;
-}
-.leaflet-bar a,
-.leaflet-bar a:hover,
-.leaflet-bar a:focus {
-  background-color: var(--background-color);
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-/* Style disabled Leaflet zoom controls */
-.leaflet-bar a.leaflet-disabled {
-  color: var(--text-color);
-  background-color: var(--background2-color);
-  cursor: not-allowed;
-}
-/* This rule targets the first custom control to round its top corners */
-.leaflet-left > .leaflet-control-custom:first-child a {
-  border-radius: 50px 50px 0 0 !important;
-}
-.leaflet-left > .leaflet-bar:last-child a,
-#map > div.leaflet-control-container > div.leaflet-top.leaflet-left > div:nth-child(6) {
-  border-radius: 0 0 50px 50px !important;
-}
-
-.leaflet-touch .leaflet-draw-actions {
-  left: 40px;
-  border: 1px solid var(--border-color) !important;
-  border-radius: var(--border-radius);
-  overflow: hidden;
-}
-.leaflet-draw-actions a,
-.leaflet-draw-actions a:hover {
-  background-color: var(--background-color);
-  color: var(--text-color);
-}
-
 /* Bottom Left Credits Container */
 #bottom-left-credits {
   position: fixed;
@@ -2366,32 +2392,6 @@ button.strava-button-secondary:not(:disabled) {
 
 .leaflet-marker-shadow {
   display: none !important;
-}
-
-/* Style for disabled custom buttons */
-.leaflet-control-custom.disabled > a {
-  background-color: var(--background2-color);
-  cursor: not-allowed;
-  opacity: 1;
-}
-
-.leaflet-control-custom.disabled .icon {
-  fill: var(--icon-color) !important;
-}
-
-/* Border around the toolbar */
-#map > div.leaflet-control-container > div.leaflet-top.leaflet-left {
-  border: 1px solid var(--border-color);
-  border-radius: 50px 50px 50px 50px !important;
-}
-.leaflet-control-locate a .leaflet-control-locate-location-arrow {
-  display: none;
-}
-.locate-active a {
-  background-color: var(--locate-color) !important;
-}
-.locate-active .icon-locate {
-  fill: var(--color-white) !important;
 }
 
 /* Hide routing machine's default itinerary */
