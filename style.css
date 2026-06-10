@@ -2406,6 +2406,53 @@ button.strava-button-secondary:not(:disabled) {
 }
 
 /*
+ * ███████╗ ██████╗ █████╗ ██╗     ███████╗
+ * ██╔════╝██╔════╝██╔══██╗██║     ██╔════╝
+ * ███████╗██║     ███████║██║     █████╗
+ * ╚════██║██║     ██╔══██║██║     ██╔══╝
+ * ███████║╚██████╗██║  ██║███████╗███████╗
+ * ╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝
+ */
+
+.leaflet-control-scale {
+  margin-left: 0 !important;
+  margin-bottom: 25px !important; /* Space above credits container */
+}
+
+/* Minimal version of the scale control */
+.leaflet-control-scale-line {
+  height: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  border: 1px solid var(--color-black);
+  border-top: none;
+  background: none;
+  text-shadow: none;
+  color: var(--color-black);
+}
+
+/* Styled version of the scale control */
+/* .leaflet-control-scale-line {
+  border: 1px solid var(--border-color);
+  background: var(--background-color);
+  text-shadow: none;
+  color: var(--text-color);
+  border-radius: var(--border-radius) !important;
+}
+
+.leaflet-control-scale-line:not(:first-child) {
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+} */
+
+/* Hide the scale control and bottom credits when the elevation chart is visible */
+body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
+body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
+  display: none !important;
+}
+
+/*
  * ██╗      █████╗ ██╗   ██╗ ██████╗ ██╗   ██╗████████╗
  * ██║     ██╔══██╗╚██╗ ██╔╝██╔═══██╗██║   ██║╚══██╔══╝
  * ██║     ███████║ ╚████╔╝ ██║   ██║██║   ██║   ██║
@@ -2452,53 +2499,6 @@ button.strava-button-secondary:not(:disabled) {
 .leaflet-editing-icon,
 .leaflet-middle-icon {
   border-radius: 50%;
-}
-
-/*
- * ███████╗ ██████╗ █████╗ ██╗     ███████╗
- * ██╔════╝██╔════╝██╔══██╗██║     ██╔════╝
- * ███████╗██║     ███████║██║     █████╗
- * ╚════██║██║     ██╔══██║██║     ██╔══╝
- * ███████║╚██████╗██║  ██║███████╗███████╗
- * ╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝
- */
-
-.leaflet-control-scale {
-  margin-left: 0 !important;
-  margin-bottom: 25px !important; /* Space above credits container */
-}
-
-/* Minimal version of the scale control */
-.leaflet-control-scale-line {
-  height: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  border: 1px solid var(--color-black);
-  border-top: none;
-  background: none;
-  text-shadow: none;
-  color: var(--color-black);
-}
-
-/* Styled version of the scale control */
-/* .leaflet-control-scale-line {
-  border: 1px solid var(--border-color);
-  background: var(--background-color);
-  text-shadow: none;
-  color: var(--text-color);
-  border-radius: var(--border-radius) !important;
-}
-
-.leaflet-control-scale-line:not(:first-child) {
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-} */
-
-/* Hide the scale control and bottom credits when the elevation chart is visible */
-body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
-body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
-  display: none !important;
 }
 
 /*
