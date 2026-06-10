@@ -2167,11 +2167,6 @@ button.strava-button-secondary:not(:disabled) {
 .leaflet-bottom.leaflet-left {
   z-index: 500;
 }
-.leaflet-right .leaflet-control {
-  border: 1px solid var(--border-color) !important;
-  margin-right: 10px !important;
-  margin-top: 10px !important;
-}
 
 /* Top-right button container */
 #top-right-container {
