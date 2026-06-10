@@ -359,88 +359,6 @@ select:focus {
 }
 
 /*
- * ██╗      █████╗ ██╗   ██╗███████╗██████╗ ███████╗
- * ██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗██╔════╝
- * ██║     ███████║ ╚████╔╝ █████╗  ██████╔╝███████╗
- * ██║     ██╔══██║  ╚██╔╝  ██╔══╝  ██╔══██╗╚════██║
- * ███████╗██║  ██║   ██║   ███████╗██║  ██║███████║
- * ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
- */
-
-/* Custom Layers Panel Styles */
-.layer-icon {
-  vertical-align: middle;
-  margin-right: 0;
-  padding: 0 !important;
-}
-
-.material-symbols.layer-icon {
-  font-size: var(--icon-size-16) !important;
-}
-
-#custom-layers-panel {
-  display: none; /* Hidden by default */
-  position: absolute;
-  top: 10px;
-  left: 51px; /* The toolbar width is ~40px, so 51px provides a 10px gap */
-  z-index: 1003; /* Ensure it's above the map but consistent with other panels */
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  max-height: calc(100dvh - 60px);
-  overflow-y: auto;
-  width: 200px;
-}
-
-/* Style the form content that we will move into the panel */
-#custom-layers-panel .leaflet-control-layers-form {
-  padding: 6px;
-  background-color: transparent;
-  border-radius: var(--border-radius);
-}
-#custom-layers-panel .leaflet-control-layers-separator {
-  height: 1px;
-  background-color: var(--border-color);
-  border-top: none;
-  margin: 3px 0;
-}
-#custom-layers-panel label div {
-  display: flex;
-  align-items: center;
-  height: 20px;
-}
-#custom-layers-panel span {
-  padding-left: 5px;
-  font-size: var(--font-size-12);
-}
-.leaflet-control-layers-selector {
-  margin-top: 0;
-  position: relative;
-  top: 0;
-}
-
-/* WMS custom layer truncation */
-#custom-layers-panel .wms-custom-layer .layer-name-text {
-  width: 150px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  vertical-align: middle;
-}
-#custom-layers-panel .wms-custom-layer .layer-name-container {
-  display: inline-flex;
-  align-items: center;
-}
-
-/* Remove default Leaflet control styling from the content inside our panel */
-#custom-layers-panel .leaflet-control-layers {
-  border: none !important;
-  box-shadow: none !important;
-  background-color: transparent !important;
-}
-
-/*
  * ███████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝██║  ██║
  * ███████╗█████╗  ███████║██████╔╝██║     ███████║
@@ -2085,6 +2003,88 @@ button.strava-button-secondary:not(:disabled) {
   font-weight: bold !important;
   background-color: var(--text-color) !important;
   color: var(--background-color) !important;
+}
+
+/*
+ * ██╗      █████╗ ██╗   ██╗███████╗██████╗ ███████╗
+ * ██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗██╔════╝
+ * ██║     ███████║ ╚████╔╝ █████╗  ██████╔╝███████╗
+ * ██║     ██╔══██║  ╚██╔╝  ██╔══╝  ██╔══██╗╚════██║
+ * ███████╗██║  ██║   ██║   ███████╗██║  ██║███████║
+ * ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
+ */
+
+/* Custom Layers Panel Styles */
+.layer-icon {
+  vertical-align: middle;
+  margin-right: 0;
+  padding: 0 !important;
+}
+
+.material-symbols.layer-icon {
+  font-size: var(--icon-size-16) !important;
+}
+
+#custom-layers-panel {
+  display: none; /* Hidden by default */
+  position: absolute;
+  top: 10px;
+  left: 51px; /* The toolbar width is ~40px, so 51px provides a 10px gap */
+  z-index: 1003; /* Ensure it's above the map but consistent with other panels */
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  max-height: calc(100dvh - 60px);
+  overflow-y: auto;
+  width: 200px;
+}
+
+/* Style the form content that we will move into the panel */
+#custom-layers-panel .leaflet-control-layers-form {
+  padding: 6px;
+  background-color: transparent;
+  border-radius: var(--border-radius);
+}
+#custom-layers-panel .leaflet-control-layers-separator {
+  height: 1px;
+  background-color: var(--border-color);
+  border-top: none;
+  margin: 3px 0;
+}
+#custom-layers-panel label div {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+#custom-layers-panel span {
+  padding-left: 5px;
+  font-size: var(--font-size-12);
+}
+.leaflet-control-layers-selector {
+  margin-top: 0;
+  position: relative;
+  top: 0;
+}
+
+/* WMS custom layer truncation */
+#custom-layers-panel .wms-custom-layer .layer-name-text {
+  width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+}
+#custom-layers-panel .wms-custom-layer .layer-name-container {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Remove default Leaflet control styling from the content inside our panel */
+#custom-layers-panel .leaflet-control-layers {
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
 }
 
 /*
