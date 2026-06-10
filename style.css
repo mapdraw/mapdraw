@@ -2274,6 +2274,12 @@ button.strava-button-secondary:not(:disabled) {
   -webkit-tap-highlight-color: transparent;
 }
 
+.icon-chevron-left,
+.icon-chevron-right {
+  width: 24px;
+  fill: var(--icon-color);
+}
+
 /* Individual button widths */
 #poi-finder-btn {
   padding: 0 12px;
@@ -2399,19 +2405,14 @@ button.strava-button-secondary:not(:disabled) {
   padding-right: 0;
 }
 
-.leaflet-marker-shadow {
-  display: none !important;
-}
-
-/* Hide routing machine's default itinerary */
-.leaflet-routing-container {
-  display: none;
-}
-
-/* Forcefully removes dotted line style ONLY during editing */
-.map-is-editing path.leaflet-interactive {
-  stroke-dasharray: none !important;
-}
+/*
+ * ██╗      █████╗ ██╗   ██╗ ██████╗ ██╗   ██╗████████╗
+ * ██║     ██╔══██╗╚██╗ ██╔╝██╔═══██╗██║   ██║╚══██╔══╝
+ * ██║     ███████║ ╚████╔╝ ██║   ██║██║   ██║   ██║
+ * ██║     ██╔══██║  ╚██╔╝  ██║   ██║██║   ██║   ██║
+ * ███████╗██║  ██║   ██║   ╚██████╔╝╚██████╔╝   ██║
+ * ╚══════╝╚═╝  ╚═╝   ╚═╝    ╚═════╝  ╚═════╝    ╚═╝
+ */
 
 /* Main container for all right-side panels (MODIFIED) */
 #main-right-container {
@@ -2429,14 +2430,22 @@ button.strava-button-secondary:not(:disabled) {
   cursor: auto;
 }
 
-.icon-chevron-left,
-.icon-chevron-right {
-  width: 24px;
-  fill: var(--icon-color);
-}
-
 #main-right-container.hidden {
   display: none;
+}
+
+.leaflet-marker-shadow {
+  display: none !important;
+}
+
+/* Hide routing machine's default itinerary */
+.leaflet-routing-container {
+  display: none;
+}
+
+/* Forcefully removes dotted line style ONLY during editing */
+.map-is-editing path.leaflet-interactive {
+  stroke-dasharray: none !important;
 }
 
 /* Round editing handles (vertex dots shown when editing shapes) */
