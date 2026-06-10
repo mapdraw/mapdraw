@@ -2087,6 +2087,15 @@ button.strava-button-secondary:not(:disabled) {
   color: var(--background-color) !important;
 }
 
+/*
+ * ████████╗ ██████╗  ██████╗ ██╗     ██████╗  █████╗ ██████╗
+ * ╚══██╔══╝██╔═══██╗██╔═══██╗██║     ██╔══██╗██╔══██╗██╔══██╗
+ *    ██║   ██║   ██║██║   ██║██║     ██████╔╝███████║██████╔╝
+ *    ██║   ██║   ██║██║   ██║██║     ██╔══██╗██╔══██║██╔══██╗
+ *    ██║   ╚██████╔╝╚██████╔╝███████╗██████╔╝██║  ██║██║  ██║
+ *    ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+ */
+
 .leaflet-touch .leaflet-control-layers-toggle {
   background-position: center center;
   background-size: 22px 22px;
