@@ -1376,15 +1376,6 @@ button.strava-button-secondary:not(:disabled) {
   overflow-y: hidden;
 }
 
-/* Settings Panel Style */
-#settings-panel {
-  padding: 10px;
-  border: none;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  background-color: var(--background-color);
-  gap: 10px;
-}
-
 /*
  * ███████╗██████╗ ██╗████████╗ ██████╗ ██████╗
  * ██╔════╝██╔══██╗██║╚══██╔══╝██╔═══██╗██╔══██╗
@@ -1541,6 +1532,24 @@ button.strava-button-secondary:not(:disabled) {
 
 #data-editor-panel .cm-find-highlight {
   animation: cm-find-fade 3s ease-out forwards;
+}
+
+/*
+ * ███████╗███████╗████████╗████████╗██╗███╗   ██╗ ██████╗ ███████╗
+ * ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██║████╗  ██║██╔════╝ ██╔════╝
+ * ███████╗█████╗     ██║      ██║   ██║██╔██╗ ██║██║  ███╗███████╗
+ * ╚════██║██╔══╝     ██║      ██║   ██║██║╚██╗██║██║   ██║╚════██║
+ * ███████║███████╗   ██║      ██║   ██║██║ ╚████║╚██████╔╝███████║
+ * ╚══════╝╚══════╝   ╚═╝      ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+ */
+
+/* Settings Panel Style */
+#settings-panel {
+  padding: 10px;
+  border: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  background-color: var(--background-color);
+  gap: 10px;
 }
 
 /*
