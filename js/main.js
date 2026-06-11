@@ -507,11 +507,13 @@ async function initializeMap() {
     FoundPlaces: poiSearchResults,
     WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
       maxZoom: 19,
+      zIndex: 200,
     }),
     WaymarkedTrailsCycling: L.tileLayer(
       "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
       {
         maxZoom: 19,
+        zIndex: 200,
       },
     ),
   };
