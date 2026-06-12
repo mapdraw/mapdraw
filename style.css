@@ -254,7 +254,9 @@ body.glass-mode #settings-panel a,
 body.glass-mode #credits-link,
 body.glass-mode .osm-user-links a,
 body.glass-mode .osm-username,
-body.glass-mode .osm-auth-btn {
+body.glass-mode .osm-auth-btn,
+body.glass-mode .leaflet-popup-content a {
+  color: var(--link-color) !important;
   text-decoration: underline;
 }
 
