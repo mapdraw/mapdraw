@@ -358,6 +358,41 @@ select:focus {
   fill: var(--icon-color); /* Use a faded grey for the icon itself */
 }
 
+/* Main container for all right-side panels (MODIFIED) */
+#main-right-container {
+  position: absolute;
+  top: 50px;
+  right: 10px;
+  width: 340px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: calc(100vw - 61px);
+  max-height: calc(100dvh - 60px);
+  overflow: hidden;
+  cursor: auto;
+}
+
+#main-right-container.hidden {
+  display: none;
+}
+
+.leaflet-marker-shadow {
+  display: none !important;
+}
+
+/* Forcefully removes dotted line style ONLY during editing */
+.map-is-editing path.leaflet-interactive {
+  stroke-dasharray: none !important;
+}
+
+/* Round editing handles (vertex dots shown when editing shapes) */
+.leaflet-editing-icon,
+.leaflet-middle-icon {
+  border-radius: 50%;
+}
+
 /*
  * ███████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗
  * ██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝██║  ██║
@@ -883,6 +918,11 @@ select:focus {
  * ██║  ██║╚██████╔╝╚██████╔╝   ██║   ██║██║ ╚████║╚██████╔╝
  * ╚═╝  ╚═╝ ╚═════╝  ╚═════╝    ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝
  */
+
+/* Hide routing machine's default itinerary */
+.leaflet-routing-container {
+  display: none;
+}
 
 /* Routing Panel Styles */
 #routing-panel {
@@ -2445,55 +2485,6 @@ button.strava-button-secondary:not(:disabled) {
 body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
 body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
   display: none !important;
-}
-
-/*
- * ██╗      █████╗ ██╗   ██╗ ██████╗ ██╗   ██╗████████╗
- * ██║     ██╔══██╗╚██╗ ██╔╝██╔═══██╗██║   ██║╚══██╔══╝
- * ██║     ███████║ ╚████╔╝ ██║   ██║██║   ██║   ██║
- * ██║     ██╔══██║  ╚██╔╝  ██║   ██║██║   ██║   ██║
- * ███████╗██║  ██║   ██║   ╚██████╔╝╚██████╔╝   ██║
- * ╚══════╝╚═╝  ╚═╝   ╚═╝    ╚═════╝  ╚═════╝    ╚═╝
- */
-
-/* Main container for all right-side panels (MODIFIED) */
-#main-right-container {
-  position: absolute;
-  top: 50px;
-  right: 10px;
-  width: 340px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: calc(100vw - 61px);
-  max-height: calc(100dvh - 60px);
-  overflow: hidden;
-  cursor: auto;
-}
-
-#main-right-container.hidden {
-  display: none;
-}
-
-.leaflet-marker-shadow {
-  display: none !important;
-}
-
-/* Hide routing machine's default itinerary */
-.leaflet-routing-container {
-  display: none;
-}
-
-/* Forcefully removes dotted line style ONLY during editing */
-.map-is-editing path.leaflet-interactive {
-  stroke-dasharray: none !important;
-}
-
-/* Round editing handles (vertex dots shown when editing shapes) */
-.leaflet-editing-icon,
-.leaflet-middle-icon {
-  border-radius: 50%;
 }
 
 /*
