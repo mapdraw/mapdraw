@@ -471,7 +471,7 @@ select:focus {
   border-top: none !important;
 }
 
-/* Suggestion items inherit from existing styles */
+/* Suggestion items inside the search modal */
 .search-modal-suggestions .autocomplete-suggestion-item {
   padding: 12px 10px;
   cursor: pointer;
@@ -2095,7 +2095,7 @@ button.strava-button-secondary:not(:disabled) {
   width: 200px;
 }
 
-/* Style the form content that we will move into the panel */
+/* Form content inside the panel */
 #custom-layers-panel .leaflet-control-layers-form {
   padding: 6px;
   background-color: transparent;
@@ -2312,7 +2312,7 @@ button.strava-button-secondary:not(:disabled) {
   z-index: 1001;
   display: flex;
   flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
-  gap: 10px; /* Easily adjustable */
+  gap: 10px;
 }
 
 /* Base button styles */
@@ -2742,8 +2742,6 @@ body.using-touch {
  * ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚══════╝╚══════╝
  */
 
-/* Mobile Specific Styles Start */
-
 /* Applies styles for devices with a coarse pointer (e.g., a finger on a touchscreen). */
 @media (pointer: coarse) {
   /* Fix the behavior where a long-press incorrectly selects UI text on touch devices */
@@ -3028,4 +3026,3 @@ body.using-touch {
     /* Mobile Bottom Sheet Styles End */
   }
 }
-/* Mobile Specific Styles End */
