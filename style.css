@@ -85,7 +85,7 @@ body.glass-mode {
   --background-color: transparent;
   --background2-color: rgba(255, 255, 255, 0.06);
   --text-color: #f1f5f9;
-  color: #f1f5f9;
+  color: var(--text-color);
   --glass-btn-bg: rgba(255, 255, 255, 0.22);
   --glass-header-bg: rgba(255, 255, 255, 0.22);
   --glass-bg: rgba(2, 6, 23, 0.48);
@@ -108,14 +108,24 @@ body.glass-mode .download-submenu {
   box-shadow: var(--glass-inset-shadow);
 }
 
-/* Left toolbar: pill-shaped glass */
+/* Left toolbar: pill-shaped glass.
+   backdrop-filter lives on ::before so the parent is not a backdrop root —
+   child .leaflet-draw-actions and .download-submenu can then blur the map. */
 body.glass-mode .leaflet-top.leaflet-left {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: 50px;
   border: 1px solid var(--border-color);
   box-shadow: var(--glass-inset-shadow);
+}
+body.glass-mode .leaflet-top.leaflet-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* Elevation panel: top border only */
@@ -196,11 +206,15 @@ body.glass-mode .leaflet-control-custom.disabled > a {
   background-color: transparent !important;
 }
 
-/* Popup menus: transparent inner items so container glass shows through */
+/* Toolbar submenus: transparent inner items so container glass shows through */
 body.glass-mode .leaflet-draw-actions a,
 body.glass-mode .leaflet-draw-actions a:hover,
 body.glass-mode .download-submenu button {
   background-color: transparent !important;
+}
+body.glass-mode .download-submenu button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
 }
 
 /* Tab container: clip children to rounded corners */
