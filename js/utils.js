@@ -606,6 +606,15 @@ function createAndSaveMarker(lat, lon, name) {
     icon: createMarkerIcon(DEFAULT_COLOR, STYLE_CONFIG.marker.default.opacity),
   });
 
+  // DEBUG: red dot at exact latlng to verify marker alignment
+  // L.circleMarker(latLng, {
+  //   radius: 4,
+  //   color: "red",
+  //   fillColor: "red",
+  //   fillOpacity: 1,
+  //   weight: 0,
+  // }).addTo(map);
+
   newMarker.pathType = "drawn";
   newMarker.feature = {
     properties: {

@@ -252,6 +252,31 @@ function initializeContextMenu(map) {
       .setLatLng(latlng)
       .setContent(popupContent)
       .openOn(map);
+
+    const tipContainer = popup.getElement().querySelector(".leaflet-popup-tip-container");
+    tipContainer.style.display = "flex";
+    tipContainer.style.justifyContent = "center";
+    tipContainer.style.overflow = "visible";
+    tipContainer.style.height = "auto";
+    tipContainer.innerHTML = "";
+    const anchorIcon = document.createElement("span");
+    anchorIcon.className = "material-symbols";
+    anchorIcon.textContent = "add";
+    anchorIcon.style.color = "#000000";
+    anchorIcon.style.setProperty("font-size", "24px", "important");
+    anchorIcon.style.lineHeight = "1";
+    anchorIcon.style.marginTop = "2px";
+    tipContainer.appendChild(anchorIcon);
+
+    // DEBUG: red dot at exact latlng to verify arrow alignment
+    // const debugDot = L.circleMarker(latlng, {
+    //   radius: 4,
+    //   color: "red",
+    //   fillColor: "red",
+    //   fillOpacity: 1,
+    //   weight: 0,
+    // }).addTo(map);
+    // popup.on("remove", () => map.removeLayer(debugDot));
   };
 
   // This single event listener handles both desktop right-click and mobile long-press

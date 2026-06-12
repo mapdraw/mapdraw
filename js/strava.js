@@ -186,7 +186,7 @@ function showConnectUI() {
       </button>
       <p style="font-size: var(--font-size-12); color: var(--text-color); margin-top: 5px;">
         By connecting, you agree to the ${APP_NAME}<br>
-        <a href="/privacy.html" target="_blank" style="color: var(--highlight-color);">Privacy Policy</a>
+        <a href="/privacy.html" target="_blank" style="color: var(--link-color);">Privacy Policy</a>
       </p>
     </div>
   `;

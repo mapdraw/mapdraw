@@ -63,7 +63,8 @@
   <body>
     <script>
       (function () {
-        if (localStorage.getItem("theme") === "dark") {
+        const theme = localStorage.getItem("theme") ?? "glass";
+        if (theme !== "light") {
           document.body.classList.add("dark-mode");
         }
       })();

@@ -1,11 +1,11 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
-// Apply saved theme on load (dark mode if explicitly saved, otherwise light is default)
+// Apply saved theme on load — glass is default for new users
 (function () {
-  const savedTheme = localStorage.getItem("theme");
-  if (savedTheme === "dark") {
-    document.body.classList.add("dark-mode");
-  }
+  const theme = localStorage.getItem("theme") ?? "glass";
+  if (theme === "dark") document.body.classList.add("dark-mode");
+  else if (theme === "light") document.body.classList.add("light-mode");
+  else document.body.classList.add("glass-mode");
 })();
 
 // Apply saved layout preference on load
@@ -1249,7 +1249,7 @@ async function initializeMap() {
     });
 
     temporarySearchMarker
-      .bindPopup(popupContent, { offset: L.point(0, -35), maxWidth: 150 })
+      .bindPopup(popupContent, { offset: L.point(0, -25), maxWidth: 150 })
       .openPopup();
 
     temporarySearchMarker.on("popupclose", () => {
@@ -1575,20 +1575,26 @@ async function initializeMap() {
 
     const themeToggleContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const themeLabel = L.DomUtil.create("label", "", themeToggleContainer);
-    themeLabel.htmlFor = "theme-toggle";
-    themeLabel.innerText = "Dark Mode";
-    const themeCheckbox = L.DomUtil.create("input", "", themeToggleContainer);
-    themeCheckbox.type = "checkbox";
-    themeCheckbox.id = "theme-toggle";
-    themeCheckbox.checked = document.body.classList.contains("dark-mode");
-    L.DomEvent.on(themeCheckbox, "change", (e) => {
-      if (e.target.checked) {
-        document.body.classList.add("dark-mode");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.body.classList.remove("dark-mode");
-        localStorage.setItem("theme", "light");
-      }
+    themeLabel.innerText = "Theme";
+    const themeSelect = L.DomUtil.create("select", "", themeToggleContainer);
+    themeSelect.id = "theme-select";
+    const currentTheme = localStorage.getItem("theme") ?? "glass";
+    [
+      ["glass", "Glass"],
+      ["light", "Light"],
+      ["dark", "Dark"],
+    ].forEach(([value, label]) => {
+      const option = L.DomUtil.create("option", "", themeSelect);
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === currentTheme;
+    });
+    L.DomEvent.on(themeSelect, "change", (e) => {
+      document.body.classList.remove("dark-mode", "light-mode", "glass-mode");
+      if (e.target.value === "dark") document.body.classList.add("dark-mode");
+      else if (e.target.value === "light") document.body.classList.add("light-mode");
+      else document.body.classList.add("glass-mode");
+      localStorage.setItem("theme", e.target.value);
     });
     L.DomEvent.on(themeToggleContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
 
@@ -1808,7 +1814,7 @@ async function initializeMap() {
     privacyPolicyLink.target = "_blank";
     privacyPolicyLink.innerText = "View Privacy Policy";
     privacyPolicyLink.style.fontSize = "var(--font-size-14)";
-    privacyPolicyLink.style.color = "var(--highlight-color)";
+    privacyPolicyLink.style.color = "var(--link-color)";
 
     const devPanelContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const devPanelLabel = L.DomUtil.create("label", "", devPanelContainer);
@@ -1818,7 +1824,7 @@ async function initializeMap() {
     devPanelLink.href = "#";
     devPanelLink.innerText = "Open Developer Panel";
     devPanelLink.style.fontSize = "var(--font-size-14)";
-    devPanelLink.style.color = "var(--highlight-color)";
+    devPanelLink.style.color = "var(--link-color)";
 
     L.DomEvent.on(devPanelLink, "click", (e) => {
       L.DomEvent.stop(e);
