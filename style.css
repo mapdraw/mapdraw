@@ -362,7 +362,7 @@ select:focus {
   fill: var(--icon-color); /* Use a faded grey for the icon itself */
 }
 
-/* Main container for all right-side panels (MODIFIED) */
+/* Main container for all right-side panels */
 #main-right-container {
   position: absolute;
   top: 50px;
@@ -509,7 +509,7 @@ select:focus {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   text-align: center;
-  width: 100%; /* Take full width of parent */
+  width: 100%;
   min-height: 90px;
   display: flex;
   flex-direction: column;
@@ -715,7 +715,6 @@ select:focus {
 }
 
 .tab-button.active {
-  /* color: var(--text-color); */
   border-bottom-color: var(--background-color);
 }
 
@@ -724,7 +723,6 @@ select:focus {
   border-right: none;
 }
 
-/* Routing button is now in the middle */
 #tab-btn-routing {
   border-radius: 0;
   border-right: none;
