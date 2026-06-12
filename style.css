@@ -764,11 +764,6 @@ select:focus {
   padding-top: 10px;
 }
 
-/* Overview panel: list is the scroll container, not the panel itself */
-#overview-panel {
-  overflow-y: hidden;
-}
-
 #overview-panel.is-empty {
   padding-top: 0;
 }
