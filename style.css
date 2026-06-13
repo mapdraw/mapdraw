@@ -111,11 +111,6 @@ body.glass-mode .download-submenu {
 /* Left toolbar: pill-shaped glass.
    backdrop-filter lives on ::before so the parent is not a backdrop root —
    child .leaflet-draw-actions and .download-submenu can then blur the map. */
-body.glass-mode .leaflet-top.leaflet-left {
-  border-radius: 50px;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--glass-inset-shadow);
-}
 body.glass-mode .leaflet-top.leaflet-left::before {
   content: "";
   position: absolute;
@@ -124,6 +119,8 @@ body.glass-mode .leaflet-top.leaflet-left::before {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--glass-inset-shadow);
   z-index: -1;
   pointer-events: none;
 }
