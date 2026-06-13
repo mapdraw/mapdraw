@@ -19,98 +19,52 @@ const POI_STYLE = {
 
 // POI Categories with OSM tags and material symbols
 const POI_CATEGORIES = [
-  // Outdoor Activities (Priority)
+  // Outdoor
+  { id: "park", name: "Park", icon: "park", overpassQuery: "leisure=park" },
+  { id: "viewpoint", name: "Viewpoint", icon: "landscape", overpassQuery: "tourism=viewpoint" },
+  // Accommodation
+  { id: "camp_site", name: "Camp Site", icon: "camping", overpassQuery: "tourism=camp_site" },
+  { id: "alpine_hut", name: "Alpine Hut", icon: "cabin", overpassQuery: "tourism=alpine_hut" },
   {
-    id: "park",
-    name: "Park",
-    icon: "park",
-    overpassQuery: "leisure=park",
-  },
-  {
-    id: "camping",
-    name: "Camping",
-    icon: "camping",
-    overpassQuery: "tourism=camp_site",
-  },
-  {
-    id: "viewpoint",
-    name: "Viewpoint",
-    icon: "landscape",
-    overpassQuery: "tourism=viewpoint",
-  },
-  {
-    id: "shelter",
-    name: "Shelter / Hut",
+    id: "wilderness_hut",
+    name: "Wilderness Hut",
     icon: "cabin",
-    overpassQuery: ["tourism=alpine_hut", "tourism=wilderness_hut", "amenity=shelter"],
+    overpassQuery: "tourism=wilderness_hut",
   },
+  // Amenities
   {
     id: "drinking_water",
     name: "Drinking Water",
     icon: "water_drop",
     overpassQuery: "amenity=drinking_water",
   },
+  { id: "toilets", name: "Toilets", icon: "wc", overpassQuery: "amenity=toilets" },
+  { id: "shelter", name: "Shelter", icon: "roofing", overpassQuery: "amenity=shelter" },
   {
-    id: "toilet",
-    name: "Toilets",
-    icon: "wc",
-    overpassQuery: "amenity=toilets",
+    id: "firepit",
+    name: "Fire Pit",
+    icon: "local_fire_department",
+    overpassQuery: "leisure=firepit",
   },
-  {
-    id: "fireplace",
-    name: "BBQ / Fire Pit",
-    icon: "outdoor_grill",
-    overpassQuery: ["amenity=bbq", "leisure=firepit"],
-  },
-  {
-    id: "bench",
-    name: "Bench",
-    icon: "chair",
-    overpassQuery: "amenity=bench",
-  },
-  // Transport & Supplies
-  {
-    id: "parking",
-    name: "Parking",
-    icon: "local_parking",
-    overpassQuery: "amenity=parking",
-  },
-  {
-    id: "public_transport",
-    name: "Public Transport",
-    icon: "commute",
-    overpassQuery: [
-      "highway=bus_stop",
-      "railway=tram_stop",
-      "railway=station",
-      "public_transport=station",
-    ],
-  },
-  {
-    id: "gas_station",
-    name: "Fuel Station",
-    icon: "local_gas_station",
-    overpassQuery: "amenity=fuel",
-  },
+  { id: "bbq", name: "BBQ", icon: "outdoor_grill", overpassQuery: "amenity=bbq" },
+  { id: "bench", name: "Bench", icon: "chair", overpassQuery: "amenity=bench" },
+  // Transport
+  { id: "parking", name: "Parking", icon: "local_parking", overpassQuery: "amenity=parking" },
+  { id: "station", name: "Station", icon: "train", overpassQuery: "railway=station" },
+  { id: "tram_stop", name: "Tram Stop", icon: "tram", overpassQuery: "railway=tram_stop" },
+  { id: "bus_stop", name: "Bus Stop", icon: "directions_bus", overpassQuery: "highway=bus_stop" },
+  { id: "fuel", name: "Fuel", icon: "local_gas_station", overpassQuery: "amenity=fuel" },
+  // Supplies
   {
     id: "supermarket",
-    name: "Grocery",
+    name: "Supermarket",
     icon: "shopping_cart",
-    overpassQuery: ["shop=supermarket", "shop=convenience"],
+    overpassQuery: "shop=supermarket",
   },
+  { id: "convenience", name: "Convenience", icon: "storefront", overpassQuery: "shop=convenience" },
   // Food & Drink
-  {
-    id: "restaurant",
-    name: "Restaurant",
-    icon: "restaurant",
-    overpassQuery: "amenity=restaurant",
-  },
-  {
-    id: "cafe",
-    name: "Cafe",
-    icon: "local_cafe",
-    overpassQuery: "amenity=cafe",
-  },
+  { id: "restaurant", name: "Restaurant", icon: "restaurant", overpassQuery: "amenity=restaurant" },
+  { id: "cafe", name: "Cafe", icon: "local_cafe", overpassQuery: "amenity=cafe" },
 ];
 
 // Global POI layer group and abort controller

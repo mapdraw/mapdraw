@@ -19,24 +19,31 @@ const OSM_SCOPE = "read_prefs write_api write_notes";
 const OSM_CONTRIBUTE_CATEGORIES = [
   { id: "bench", name: "Bench", icon: "chair", tags: { amenity: "bench" } },
   { id: "picnic_table", name: "Picnic Table", icon: "deck", tags: { leisure: "picnic_table" } },
-  { id: "waste_basket", name: "Waste Basket", icon: "delete", tags: { amenity: "waste_basket" } },
-  { id: "recycling", name: "Recycling", icon: "recycling", tags: { amenity: "recycling" } },
+  { id: "firepit", name: "Fire Pit", icon: "local_fire_department", tags: { leisure: "firepit" } },
   { id: "bbq", name: "BBQ", icon: "outdoor_grill", tags: { amenity: "bbq" } },
-  { id: "shelter", name: "Shelter", icon: "cabin", tags: { amenity: "shelter" } },
-  { id: "toilets", name: "Toilets", icon: "wc", tags: { amenity: "toilets" } },
   {
     id: "drinking_water",
     name: "Drinking Water",
     icon: "water_drop",
     tags: { amenity: "drinking_water" },
   },
+  { id: "toilets", name: "Toilets", icon: "wc", tags: { amenity: "toilets" } },
+  { id: "waste_basket", name: "Waste Basket", icon: "delete", tags: { amenity: "waste_basket" } },
+  { id: "recycling", name: "Recycling", icon: "recycling", tags: { amenity: "recycling" } },
+  { id: "shelter", name: "Shelter", icon: "roofing", tags: { amenity: "shelter" } },
+  { id: "viewpoint", name: "Viewpoint", icon: "landscape", tags: { tourism: "viewpoint" } },
   {
     id: "bicycle_parking",
     name: "Bicycle Parking",
     icon: "directions_bike",
     tags: { amenity: "bicycle_parking" },
   },
-  { id: "viewpoint", name: "Viewpoint", icon: "landscape", tags: { tourism: "viewpoint" } },
+  {
+    id: "fitness_station",
+    name: "Fitness Station",
+    icon: "fitness_center",
+    tags: { leisure: "fitness_station" },
+  },
 ];
 
 function osmRandomBase64url(byteCount) {

@@ -2598,7 +2598,7 @@ body.route-point-select-mode * {
 /*
   Current icon subset — update this list when adding new icons, then regenerate the font.
   Paste it as-is into the URL below (replacing ICONS):
-  add,add_circle,cabin,camping,cancel,chair,commute,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_car,directions_run,directions_walk,download,drag_indicator,draw,edit,elevation,favorite,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,recycling,remove,restaurant,save,search,sentiment_dissatisfied,settings,shopping_cart,visibility,visibility_off,water_drop,wc
+  add,add_circle,cabin,camping,cancel,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water_drop,wc
 
   To verify the list is complete, run in DevTools console (copies to clipboard):
   copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))
