@@ -269,7 +269,7 @@ function initializeContextMenu(map) {
       { passive: false },
     );
 
-    const popup = L.popup({ closeButton: false, className: "context-menu-popup" })
+    const popup = L.popup({ closeButton: false, className: "context-menu-popup", autoPan: false })
       .setLatLng(latlng)
       .setContent(popupContent)
       .openOn(map);
