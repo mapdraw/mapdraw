@@ -5,7 +5,10 @@
 // providing options to copy coordinates, set routing points, and edit on OpenStreetMap.
 function initializeContextMenu(map) {
   const showMapContextMenu = (e) => {
+    // latlng stays unwrapped for popup positioning (avoids jumping across world copies).
+    // wrappedLatlng normalizes longitude to ±180 for all display and action use.
     let latlng = e.latlng;
+    let wrappedLatlng = latlng.wrap();
 
     const popupContent = document.createElement("div");
     popupContent.style.textAlign = "center";
@@ -56,8 +59,9 @@ function initializeContextMenu(map) {
     dragHandle.appendChild(lngSpan);
 
     const updateCoords = () => {
-      latSpan.textContent = latlng.lat.toFixed(5);
-      lngSpan.textContent = latlng.lng.toFixed(5);
+      wrappedLatlng = latlng.wrap();
+      latSpan.textContent = wrappedLatlng.lat.toFixed(5);
+      lngSpan.textContent = wrappedLatlng.lng.toFixed(5);
     };
     updateCoords();
 
@@ -104,7 +108,7 @@ function initializeContextMenu(map) {
         {
           text: "Copy Coords",
           onClick: () => {
-            const coordString = `${latlng.lat}, ${latlng.lng}`;
+            const coordString = `${wrappedLatlng.lat}, ${wrappedLatlng.lng}`;
             copyToClipboard(coordString)
               .then(() => {
                 map.closePopup();
@@ -133,7 +137,7 @@ function initializeContextMenu(map) {
         {
           text: "Place Marker",
           onClick: () => {
-            createAndSaveMarker(latlng);
+            createAndSaveMarker(wrappedLatlng);
             map.closePopup();
           },
         },
@@ -146,7 +150,7 @@ function initializeContextMenu(map) {
           text: "Route from",
           onClick: () => {
             if (window.app && typeof window.app.updateRoutingPoint === "function") {
-              window.app.updateRoutingPoint(latlng, "start");
+              window.app.updateRoutingPoint(wrappedLatlng, "start");
             }
             showRoutingPanel();
           },
@@ -155,7 +159,7 @@ function initializeContextMenu(map) {
           text: "Route to",
           onClick: () => {
             if (window.app && typeof window.app.updateRoutingPoint === "function") {
-              window.app.updateRoutingPoint(latlng, "end");
+              window.app.updateRoutingPoint(wrappedLatlng, "end");
             }
             showRoutingPanel();
           },
@@ -166,7 +170,7 @@ function initializeContextMenu(map) {
     popupContent.appendChild(
       createBtn("Edit on OpenStreetMap", () => {
         const zoom = map.getZoom();
-        const url = `${OSM_BASE}/edit?editor=id#map=${zoom}/${latlng.lat}/${latlng.lng}`;
+        const url = `${OSM_BASE}/edit?editor=id#map=${zoom}/${wrappedLatlng.lat}/${wrappedLatlng.lng}`;
         window.open(url, "_blank");
         map.closePopup();
       }),
@@ -193,7 +197,7 @@ function initializeContextMenu(map) {
                 return;
               }
               map.closePopup();
-              osmShowNotePicker(latlng);
+              osmShowNotePicker(wrappedLatlng);
             },
           },
           {
@@ -204,7 +208,7 @@ function initializeContextMenu(map) {
                 return;
               }
               map.closePopup();
-              osmShowContributePicker(latlng);
+              osmShowContributePicker(wrappedLatlng);
             },
           },
         ]),
