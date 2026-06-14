@@ -28,6 +28,7 @@ function initializeContextMenu(map) {
     dragHandle.style.alignItems = "center";
     dragHandle.style.cursor = "move";
     dragHandle.style.userSelect = "none";
+    dragHandle.style.overflow = "visible";
     popupContent.appendChild(dragHandle);
 
     const latSpan = document.createElement("span");
@@ -36,12 +37,22 @@ function initializeContextMenu(map) {
     dragIcon.className = "material-symbols";
     dragIcon.textContent = "drag_indicator";
     dragIcon.style.setProperty("font-size", "var(--icon-size-16)", "important");
-    dragIcon.style.color = "var(--text-color)";
+    dragIcon.style.color = "#ffffff";
+
+    const dragPill = document.createElement("div");
+    dragPill.style.backgroundColor = "var(--highlight-color)";
+    dragPill.style.borderRadius = "100px";
+    dragPill.style.padding = "3px 6px";
+    dragPill.style.display = "flex";
+    dragPill.style.alignItems = "center";
+    dragPill.style.justifyContent = "center";
+    dragPill.style.marginTop = "-20px";
+    dragPill.appendChild(dragIcon);
 
     latSpan.style.textAlign = "center";
     lngSpan.style.textAlign = "center";
     dragHandle.appendChild(latSpan);
-    dragHandle.appendChild(dragIcon);
+    dragHandle.appendChild(dragPill);
     dragHandle.appendChild(lngSpan);
 
     const updateCoords = () => {
@@ -75,6 +86,7 @@ function initializeContextMenu(map) {
         btn.textContent = text;
         btn.style.cursor = "pointer";
         btn.style.flex = "1";
+        btn.style.minWidth = "0";
         btn.style.textAlign = "center";
         btn.style.whiteSpace = "nowrap";
         btn.style.padding = "4px 6px";
@@ -172,26 +184,34 @@ function initializeContextMenu(map) {
         });
       };
       popupContent.appendChild(
-        createBtn("Add Note on OpenStreetMap", () => {
-          if (!osmIsSignedIn()) {
-            osmSignInToast();
-            return;
-          }
-          map.closePopup();
-          osmShowNotePicker(latlng);
-        }),
-      );
-      popupContent.appendChild(
-        createBtn("Add to OpenStreetMap", () => {
-          if (!osmIsSignedIn()) {
-            osmSignInToast();
-            return;
-          }
-          map.closePopup();
-          osmShowContributePicker(latlng);
-        }),
+        createMenuRow([
+          {
+            text: "OSM Note",
+            onClick: () => {
+              if (!osmIsSignedIn()) {
+                osmSignInToast();
+                return;
+              }
+              map.closePopup();
+              osmShowNotePicker(latlng);
+            },
+          },
+          {
+            text: "Add to OSM",
+            onClick: () => {
+              if (!osmIsSignedIn()) {
+                osmSignInToast();
+                return;
+              }
+              map.closePopup();
+              osmShowContributePicker(latlng);
+            },
+          },
+        ]),
       );
     }
+
+    let debugDot;
 
     const clientToContainerPoint = (clientX, clientY) => {
       const rect = map.getContainer().getBoundingClientRect();
@@ -208,6 +228,7 @@ function initializeContextMenu(map) {
         latlng = map.containerPointToLatLng(cursorPx.subtract(offset));
         popup.setLatLng(latlng);
         updateCoords();
+        debugDot?.setLatLng(latlng);
       };
 
       onMove(move);
@@ -269,7 +290,7 @@ function initializeContextMenu(map) {
     tipContainer.appendChild(anchorIcon);
 
     // DEBUG: red dot at exact latlng to verify arrow alignment
-    // const debugDot = L.circleMarker(latlng, {
+    // debugDot = L.circleMarker(latlng, {
     //   radius: 4,
     //   color: "red",
     //   fillColor: "red",
