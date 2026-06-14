@@ -144,6 +144,7 @@ body.glass-mode .leaflet-popup-content-wrapper {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color) !important;
+  box-shadow: var(--glass-inset-shadow);
 }
 
 /* Name field focus */
