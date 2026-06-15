@@ -12,7 +12,7 @@ function initializeContextMenu(map) {
 
     const popupContent = document.createElement("div");
     popupContent.style.textAlign = "center";
-    popupContent.style.cursor = "default";
+    popupContent.style.cursor = "move";
 
     const showRoutingPanel = () => {
       document.getElementById("main-right-container").classList.remove("hidden");
@@ -68,7 +68,6 @@ function initializeContextMenu(map) {
     const createBtn = (text, onClick) => {
       const btn = document.createElement("div");
       btn.textContent = text;
-      btn.style.cursor = "pointer";
       btn.style.textAlign = "center";
       btn.style.whiteSpace = "nowrap";
       btn.style.padding = "4px 6px";
@@ -88,7 +87,6 @@ function initializeContextMenu(map) {
       items.forEach(({ text, onClick }) => {
         const btn = document.createElement("div");
         btn.textContent = text;
-        btn.style.cursor = "pointer";
         btn.style.flex = "1";
         btn.style.minWidth = "0";
         btn.style.textAlign = "center";
@@ -273,13 +271,73 @@ function initializeContextMenu(map) {
       { passive: false },
     );
 
-    const popup = L.popup({ closeButton: false, className: "context-menu-popup", autoPan: false })
+    // Whole-menu drag: 5px threshold distinguishes drag from click; on mouseup after a drag,
+    // a capture-phase click listener fires once to swallow the browser-generated click so
+    // buttons under the cursor don't trigger. touchstart is not stopped so taps still work —
+    // preventDefault is deferred to touchmove once dragging is confirmed.
+    L.DomEvent.on(popupContent, "mousedown", (startE) => {
+      L.DomEvent.stop(startE);
+      startDrag(startE.clientX, startE.clientY, (move) => {
+        let dragging = false;
+        const onMove = (ev) => {
+          if (!dragging) {
+            const dx = ev.clientX - startE.clientX;
+            const dy = ev.clientY - startE.clientY;
+            if (Math.sqrt(dx * dx + dy * dy) >= 5) dragging = true;
+          }
+          if (dragging) move(ev.clientX, ev.clientY);
+        };
+        const onUp = () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          if (dragging) {
+            document.addEventListener(
+              "click",
+              (ev) => {
+                ev.stopPropagation();
+                ev.preventDefault();
+              },
+              { capture: true, once: true },
+            );
+          }
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+    });
+
+    L.DomEvent.on(popupContent, "touchstart", (startE) => {
+      const t = startE.touches[0];
+      startDrag(t.clientX, t.clientY, (move) => {
+        let dragging = false;
+        const onMove = (ev) => {
+          const touch = ev.touches[0];
+          if (!dragging) {
+            const dx = touch.clientX - t.clientX;
+            const dy = touch.clientY - t.clientY;
+            if (Math.sqrt(dx * dx + dy * dy) >= 5) dragging = true;
+          }
+          if (dragging) {
+            ev.preventDefault();
+            move(touch.clientX, touch.clientY);
+          }
+        };
+        const onEnd = () => {
+          popupContent.removeEventListener("touchmove", onMove);
+          popupContent.removeEventListener("touchend", onEnd);
+        };
+        popupContent.addEventListener("touchmove", onMove, { passive: false });
+        popupContent.addEventListener("touchend", onEnd);
+      });
+    });
+
+    const popup = L.popup({ closeButton: false, className: "context-menu-popup", autoPan: false }) // autoPan: false — otherwise dragging beyond the map edges scrolls the map
       .setLatLng(latlng)
       .setContent(popupContent)
       .openOn(map);
 
     const popupEl = popup.getElement();
-    popupEl.style.overflow = "visible";
+    popupEl.style.overflow = "visible"; // allows dragPill and side pills to render outside popup bounds
 
     const tipContainer = popupEl.querySelector(".leaflet-popup-tip-container");
     tipContainer.style.display = "flex";
