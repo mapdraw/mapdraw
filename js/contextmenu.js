@@ -38,7 +38,7 @@ function initializeContextMenu(map) {
     const lngSpan = document.createElement("span");
     const dragIcon = document.createElement("span");
     dragIcon.className = "material-symbols";
-    dragIcon.textContent = "drag_indicator";
+    dragIcon.textContent = "drag_pan";
     dragIcon.style.setProperty("font-size", "var(--icon-size-16)", "important");
     dragIcon.style.color = "#ffffff";
 
@@ -278,7 +278,10 @@ function initializeContextMenu(map) {
       .setContent(popupContent)
       .openOn(map);
 
-    const tipContainer = popup.getElement().querySelector(".leaflet-popup-tip-container");
+    const popupEl = popup.getElement();
+    popupEl.style.overflow = "visible";
+
+    const tipContainer = popupEl.querySelector(".leaflet-popup-tip-container");
     tipContainer.style.display = "flex";
     tipContainer.style.justifyContent = "center";
     tipContainer.style.overflow = "visible";
@@ -292,6 +295,67 @@ function initializeContextMenu(map) {
     anchorIcon.style.lineHeight = "1";
     anchorIcon.style.marginTop = "2px";
     tipContainer.appendChild(anchorIcon);
+
+    const makeSidePill = (side) => {
+      const icon = document.createElement("span");
+      icon.className = "material-symbols";
+      icon.textContent = "drag_pan";
+      icon.style.setProperty("font-size", "var(--icon-size-16)", "important");
+      icon.style.color = "#ffffff";
+
+      const pill = document.createElement("div");
+      pill.style.backgroundColor = "var(--highlight-color)";
+      pill.style.borderRadius = "100px";
+      pill.style.padding = "3px 6px";
+      pill.style.display = "flex";
+      pill.style.alignItems = "center";
+      pill.style.justifyContent = "center";
+      pill.style.position = "absolute";
+      pill.style.bottom = "-15px";
+      pill.style[side] = "-15px";
+      pill.style.cursor = "move";
+      pill.style.userSelect = "none";
+      pill.appendChild(icon);
+      popupEl.appendChild(pill);
+
+      L.DomEvent.on(pill, "mousedown", (startE) => {
+        L.DomEvent.stop(startE);
+        startDrag(startE.clientX, startE.clientY, (move) => {
+          const onMove = (ev) => move(ev.clientX, ev.clientY);
+          const onUp = () => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+          };
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        });
+      });
+
+      L.DomEvent.on(
+        pill,
+        "touchstart",
+        (startE) => {
+          L.DomEvent.stop(startE);
+          const t = startE.touches[0];
+          startDrag(t.clientX, t.clientY, (move) => {
+            const onMove = (ev) => {
+              ev.preventDefault();
+              move(ev.touches[0].clientX, ev.touches[0].clientY);
+            };
+            const onEnd = () => {
+              pill.removeEventListener("touchmove", onMove);
+              pill.removeEventListener("touchend", onEnd);
+            };
+            pill.addEventListener("touchmove", onMove, { passive: false });
+            pill.addEventListener("touchend", onEnd);
+          });
+        },
+        { passive: false },
+      );
+    };
+
+    makeSidePill("left");
+    makeSidePill("right");
 
     // DEBUG: red dot at exact latlng to verify arrow alignment
     // debugDot = L.circleMarker(latlng, {
