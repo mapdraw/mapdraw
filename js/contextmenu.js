@@ -65,20 +65,6 @@ function initializeContextMenu(map) {
     };
     updateCoords();
 
-    const createBtn = (text, onClick) => {
-      const btn = document.createElement("div");
-      btn.textContent = text;
-      btn.style.textAlign = "center";
-      btn.style.whiteSpace = "nowrap";
-      btn.style.padding = "4px 6px";
-      btn.style.border = "1px solid var(--border-color)";
-      btn.style.borderRadius = "var(--border-radius)";
-      btn.style.userSelect = "none";
-      btn.style.margin = "2px 0";
-      btn.addEventListener("click", onClick);
-      return btn;
-    };
-
     const createMenuRow = (items) => {
       const row = document.createElement("div");
       row.style.display = "flex";
@@ -163,15 +149,6 @@ function initializeContextMenu(map) {
           },
         },
       ]),
-    );
-
-    popupContent.appendChild(
-      createBtn("Edit on OpenStreetMap", () => {
-        const zoom = map.getZoom();
-        const url = `${OSM_BASE}/edit?editor=id#map=${zoom}/${wrappedLatlng.lat}/${wrappedLatlng.lng}`;
-        window.open(url, "_blank");
-        map.closePopup();
-      }),
     );
 
     if (typeof osmIsSignedIn === "function") {
