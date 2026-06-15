@@ -303,7 +303,7 @@ async function initializeMap() {
     TracestrackTopo: '<span class="material-symbols layer-icon">globe</span> Tracestrack Topo',
     TopPlusOpen: '<span class="fi fi-de fis"></span> TopPlusOpen',
     Swisstopo: '<span class="fi fi-ch fis"></span> Swisstopo',
-    Empty: '<span class="material-symbols layer-icon">cancel</span> No Base Layer',
+    Empty: '<span class="material-symbols layer-icon">cancel</span> No Base Map',
     DrawnItems: '<span class="material-symbols layer-icon">edit</span> Drawn Items',
     ImportedFiles: '<span class="material-symbols layer-icon">folder_open</span> Imported Files',
     StravaActivities:
@@ -576,26 +576,31 @@ async function initializeMap() {
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
 
-  const userContentNames = [
-    "DrawnItems",
-    "ImportedFiles",
-    "StravaActivities",
-    "FoundPlaces",
-    "WaymarkedTrailsHiking",
-    "WaymarkedTrailsCycling",
-  ];
+  const tileOverlayNames = ["WaymarkedTrailsHiking", "WaymarkedTrailsCycling"];
+
+  const userContentNames = ["DrawnItems", "ImportedFiles", "StravaActivities", "FoundPlaces"];
+
+  const renderOverlayCheckboxes = (names) => {
+    for (const name of names) {
+      if (allOverlayMaps[name]) {
+        const layer = allOverlayMaps[name];
+        const layerId = L.Util.stamp(layer);
+        const isChecked = map.hasLayer(layer) ? 'checked="checked"' : "";
+        const displayName = layerDisplayNames[name] || name;
+        formContent += `<label data-layer-name="${name}"><div><input type="checkbox" class="leaflet-control-layers-selector" ${isChecked} data-layer-id="${layerId}" data-layer-name="${name}"><span> ${displayName}</span></div></label>`;
+      }
+    }
+  };
+
+  formContent += '<div class="leaflet-control-layers-user-content">';
+  renderOverlayCheckboxes(tileOverlayNames);
+  formContent += "</div>";
+
+  formContent += '<div class="leaflet-control-layers-separator"></div>';
 
   // User content layers (not sortable, always on top)
   formContent += '<div class="leaflet-control-layers-user-content">';
-  for (const name of userContentNames) {
-    if (allOverlayMaps[name]) {
-      const layer = allOverlayMaps[name];
-      const layerId = L.Util.stamp(layer);
-      const isChecked = map.hasLayer(layer) ? 'checked="checked"' : "";
-      const displayName = layerDisplayNames[name] || name;
-      formContent += `<label data-layer-name="${name}"><div><input type="checkbox" class="leaflet-control-layers-selector" ${isChecked} data-layer-id="${layerId}" data-layer-name="${name}"><span> ${displayName}</span></div></label>`;
-    }
-  }
+  renderOverlayCheckboxes(userContentNames);
   formContent += "</div>";
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
@@ -606,7 +611,7 @@ async function initializeMap() {
 
   // Add Import Maps button for custom WMS layers
   formContent += `
-    <div style="padding: 4px 6px;">
+    <div style="padding: 4px 6px 0;">
       <button
         id="wms-import-btn"
         class="wms-import-button"
