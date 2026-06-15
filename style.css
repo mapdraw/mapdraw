@@ -2048,7 +2048,7 @@ button.strava-button-secondary:not(:disabled) {
 }
 
 .context-menu-popup .leaflet-popup-content {
-  margin: 5px 3px !important;
+  margin: 5px 1px !important;
 }
 
 /* Search result popup */

@@ -49,7 +49,7 @@ function initializeContextMenu(map) {
     dragPill.style.display = "flex";
     dragPill.style.alignItems = "center";
     dragPill.style.justifyContent = "center";
-    dragPill.style.marginTop = "-20px";
+    dragPill.style.marginTop = "-25px";
     dragPill.appendChild(dragIcon);
 
     latSpan.style.textAlign = "center";
@@ -77,7 +77,7 @@ function initializeContextMenu(map) {
         btn.style.minWidth = "0";
         btn.style.textAlign = "center";
         btn.style.whiteSpace = "nowrap";
-        btn.style.padding = "4px 6px";
+        btn.style.padding = "4px 3px";
         btn.style.border = "1px solid var(--border-color)";
         btn.style.borderRadius = "var(--border-radius)";
         btn.style.userSelect = "none";
@@ -346,8 +346,8 @@ function initializeContextMenu(map) {
       pill.style.alignItems = "center";
       pill.style.justifyContent = "center";
       pill.style.position = "absolute";
-      pill.style.bottom = "-15px";
-      pill.style[side] = "-15px";
+      pill.style.bottom = "-16px";
+      pill.style[side] = "-14px";
       pill.style.cursor = "move";
       pill.style.userSelect = "none";
       pill.appendChild(icon);
