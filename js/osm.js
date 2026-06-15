@@ -17,21 +17,23 @@ const OSM_REDIRECT_URI = `${window.location.origin}/osm-callback.html`;
 const OSM_SCOPE = "read_prefs write_api write_notes";
 
 const OSM_CONTRIBUTE_CATEGORIES = [
+  { id: "viewpoint", name: "Viewpoint", icon: "landscape", tags: { tourism: "viewpoint" } },
+  { id: "playground", name: "Playground", icon: "playground", tags: { leisure: "playground" } },
   { id: "bench", name: "Bench", icon: "chair", tags: { amenity: "bench" } },
   { id: "picnic_table", name: "Picnic Table", icon: "deck", tags: { leisure: "picnic_table" } },
-  { id: "firepit", name: "Fire Pit", icon: "local_fire_department", tags: { leisure: "firepit" } },
-  { id: "bbq", name: "BBQ", icon: "outdoor_grill", tags: { amenity: "bbq" } },
   {
     id: "drinking_water",
     name: "Drinking Water",
     icon: "water_drop",
     tags: { amenity: "drinking_water" },
   },
+  { id: "fountain", name: "Fountain", icon: "water", tags: { amenity: "fountain" } },
+  { id: "firepit", name: "Fire Pit", icon: "local_fire_department", tags: { leisure: "firepit" } },
+  { id: "bbq", name: "BBQ", icon: "outdoor_grill", tags: { amenity: "bbq" } },
   { id: "toilets", name: "Toilets", icon: "wc", tags: { amenity: "toilets" } },
+  { id: "shelter", name: "Shelter", icon: "roofing", tags: { amenity: "shelter" } },
   { id: "waste_basket", name: "Waste Basket", icon: "delete", tags: { amenity: "waste_basket" } },
   { id: "recycling", name: "Recycling", icon: "recycling", tags: { amenity: "recycling" } },
-  { id: "shelter", name: "Shelter", icon: "roofing", tags: { amenity: "shelter" } },
-  { id: "viewpoint", name: "Viewpoint", icon: "landscape", tags: { tourism: "viewpoint" } },
   {
     id: "bicycle_parking",
     name: "Bicycle Parking",
