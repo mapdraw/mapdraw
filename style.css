@@ -90,13 +90,10 @@ body.glass-mode {
   --glass-header-bg: var(--border-color);
   --glass-bg: rgba(2, 6, 23, 0.48);
   --glass-blur: blur(16px) saturate(150%);
-  --glass-inset-shadow:
-    rgba(255, 255, 255, 0.16) 0px 1px 0px inset, rgba(255, 255, 255, 0.06) 0px -1px 0px inset;
 }
 
 /* Glass panels */
 body.glass-mode #info-panel,
-body.glass-mode #tab-container,
 body.glass-mode #custom-layers-panel,
 body.glass-mode .top-right-btn,
 body.glass-mode .leaflet-draw-actions,
@@ -105,7 +102,6 @@ body.glass-mode .download-submenu {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color) !important;
-  box-shadow: var(--glass-inset-shadow);
 }
 
 /* Left toolbar: pill-shaped glass.
@@ -120,7 +116,6 @@ body.glass-mode .leaflet-top.leaflet-left::before {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color);
-  box-shadow: var(--glass-inset-shadow);
   z-index: -1;
   pointer-events: none;
 }
@@ -149,7 +144,6 @@ body.glass-mode .leaflet-popup-content-wrapper {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color) !important;
-  box-shadow: var(--glass-inset-shadow);
 }
 
 /* Name field focus */
@@ -220,8 +214,11 @@ body.glass-mode .download-submenu button:disabled {
   cursor: not-allowed;
 }
 
-/* Tab container: clip children to rounded corners */
+/* Tab container: no outer border, tab-buttons and tab-content provide the frame */
 body.glass-mode #tab-container {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--border-radius);
   overflow: hidden;
 }
@@ -240,7 +237,6 @@ body.glass-mode #tab-container {
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--border-color) !important;
-    box-shadow: var(--glass-inset-shadow);
   }
 }
 body.glass-mode.force-desktop-layout #bottom-left-credits {
@@ -248,7 +244,6 @@ body.glass-mode.force-desktop-layout #bottom-left-credits {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color) !important;
-  box-shadow: var(--glass-inset-shadow);
 }
 
 /* Glass mode: links show underline instead of relying on color to stand out */
