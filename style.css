@@ -125,6 +125,11 @@ body.glass-mode .leaflet-top.leaflet-left::before {
   pointer-events: none;
 }
 
+/* ::before already draws the border; cancel the duplicate to avoid a double-border shine */
+body.glass-mode #map > div.leaflet-control-container > div.leaflet-top.leaflet-left {
+  border: none;
+}
+
 /* Elevation panel: top border only */
 body.glass-mode #elevation-div {
   background: var(--glass-bg) !important;
