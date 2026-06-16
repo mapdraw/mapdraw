@@ -79,15 +79,15 @@
 
 body.glass-mode {
   --icon-color: #f1f5f9;
-  --border-color: rgba(255, 255, 255, 0.12);
+  --border-color: rgba(255, 255, 255, 0.22);
   --link-color: var(--text-color);
-  --divider-color: rgba(255, 255, 255, 0.12);
+  --divider-color: var(--border-color);
   --background-color: transparent;
   --background2-color: rgba(255, 255, 255, 0.06);
   --text-color: #f1f5f9;
   color: var(--text-color);
-  --glass-btn-bg: rgba(255, 255, 255, 0.22);
-  --glass-header-bg: rgba(255, 255, 255, 0.22);
+  --glass-btn-bg: var(--border-color);
+  --glass-header-bg: var(--border-color);
   --glass-bg: rgba(2, 6, 23, 0.48);
   --glass-blur: blur(16px) saturate(150%);
   --glass-inset-shadow:
