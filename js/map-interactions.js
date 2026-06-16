@@ -126,7 +126,7 @@ function deselectCurrentItem() {
   document.getElementById("elevation-div").style.visibility = "hidden";
   isElevationProfileVisible = false;
   updateElevationToggleIconColor();
-  elevationToggleControl.getContainer().title = "No path selected";
+  elevationToggleControl.getContainer().title = "Select a path to show elevation";
   L.DomUtil.addClass(elevationToggleControl.getContainer(), "disabled");
 
   const downloadContainer = downloadControl.getContainer();

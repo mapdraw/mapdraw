@@ -900,7 +900,7 @@ async function initializeMap() {
         "leaflet-bar leaflet-control leaflet-control-custom",
       );
       container.id = "elevation-button";
-      container.title = "No path selected";
+      container.title = "Select a path to show elevation";
       container.innerHTML = '<a href="#" role="button"></a>';
       L.DomEvent.on(container, "click", (ev) => {
         L.DomEvent.stop(ev);
