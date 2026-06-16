@@ -936,8 +936,8 @@ async function initializeMap() {
       container.innerHTML =
         '<a href="#" role="button"></a>' +
         '<div class="download-submenu">' +
-        '<button id="download-gpx-single" disabled title="Download selected item as GPX">GPX (Selected Item)</button>' +
-        '<button id="download-geojson-single" disabled title="Download selected item as GeoJSON">GeoJSON (Selected Item)</button>' +
+        '<button id="download-gpx-single" disabled title="Select an item to download as GPX">GPX (Selected Item)</button>' +
+        '<button id="download-geojson-single" disabled title="Select an item to download as GeoJSON">GeoJSON (Selected Item)</button>' +
         '<button id="download-geojson" title="Download everything as GeoJSON">GeoJSON (Everything)</button>' +
         '<button id="download-kml" title="Download everything as KML">KML (Everything)</button>' +
         '<button id="share-link" title="Copy share link for everything">Copy Share Link (Everything)</button>' +
