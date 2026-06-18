@@ -2326,7 +2326,7 @@ button.strava-button-secondary:not(:disabled) {
   z-index: 1001;
   display: flex;
   flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
-  gap: 10px;
+  gap: 5px;
 }
 
 /* Base button styles */
