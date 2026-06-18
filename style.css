@@ -2107,6 +2107,7 @@ button.strava-button-secondary:not(:disabled) {
   max-height: calc(100dvh - 60px);
   overflow-y: auto;
   width: 200px;
+  user-select: none;
 }
 
 /* Form content inside the panel */
