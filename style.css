@@ -2358,6 +2358,158 @@ button.strava-button-secondary:not(:disabled) {
   padding: 0 12px;
 }
 
+/* POI Finder Modal Styles */
+.poi-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.poi-category-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--background-color);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: var(--font-size-14);
+}
+
+.poi-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.poi-group-label {
+  font-size: var(--font-size-12);
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 4px 4px;
+  text-align: left;
+}
+
+.poi-group-label:first-child {
+  padding-top: 2px;
+}
+
+.poi-category-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--background-color);
+}
+
+.poi-cat-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.poi-cat-name {
+  flex: 1;
+  font-size: var(--font-size-14);
+  color: var(--text-color);
+  text-align: left;
+}
+
+.poi-cat-status {
+  font-size: var(--font-size-12);
+  color: var(--text-color-secondary);
+  min-width: 28px;
+  text-align: right;
+}
+
+.poi-load-btn {
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.poi-load-btn:hover {
+  color: var(--text-color);
+}
+
+.poi-load-btn.poi-load-busy {
+  animation: poi-spin 1s linear infinite;
+  pointer-events: none;
+  color: var(--text-color);
+}
+
+.poi-clear-btn {
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  vertical-align: middle;
+  user-select: none;
+}
+
+.poi-clear-btn:hover {
+  color: var(--text-color);
+}
+
+@keyframes poi-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.poi-loading-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--text-color-secondary);
+  animation: poi-pulse 1s ease-in-out infinite;
+}
+
+@keyframes poi-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.poi-marker {
+  background: none !important;
+  border: none !important;
+}
+
+.poi-marker-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--default-color, #3388ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 0 2px white,
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.poi-marker-icon .material-symbols {
+  font-size: 15px;
+  color: white;
+}
+
 #search-btn {
   width: 32px;
   padding: 0;
@@ -2725,26 +2877,6 @@ body.using-touch {
   .leaflet-draw-tooltip {
     display: none !important;
   }
-}
-
-/* POI Finder Modal Styles */
-.poi-category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.poi-category-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  background: var(--background-color);
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: var(--font-size-14);
 }
 
 /* MOBILE */

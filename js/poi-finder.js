@@ -3,141 +3,242 @@
 /**
  * POI Finder
  *
- * Simple category-based search for OpenStreetMap features using Overpass API.
- * Displays results as read-only markers on the map.
+ * Category-based search for OpenStreetMap features using Overpass API.
+ * Each category has its own layer. Load for current view is triggered explicitly
+ * per category. Results accumulate across loads; OSM element ID deduplication
+ * prevents duplicates.
  */
 
-// POI Marker Styling - centralized configuration
-const POI_STYLE = {
-  color: DEFAULT_COLOR,
-  outlineColor: COLOR_WHITE,
-  outlineWeight: 3,
-  markerRadius: 8,
-  clusterMinSize: 30,
-  clusterMaxSize: 50,
-};
+const POI_CLUSTER_MIN_SIZE = 30;
+const POI_CLUSTER_MAX_SIZE = 50;
 
-// POI Categories with OSM tags and material symbols
 const POI_CATEGORIES = [
   // Outdoor
-  { id: "park", name: "Park", icon: "park", overpassQuery: "leisure=park" },
-  { id: "viewpoint", name: "Viewpoint", icon: "landscape", overpassQuery: "tourism=viewpoint" },
+  {
+    id: "park",
+    group: "Outdoor",
+    name: "Park",
+    icon: "park",
+    color: "#4CAF50",
+    overpassQuery: "leisure=park",
+  },
+  {
+    id: "viewpoint",
+    group: "Outdoor",
+    name: "Viewpoint",
+    icon: "landscape",
+    color: "#4CAF50",
+    overpassQuery: "tourism=viewpoint",
+  },
   // Accommodation
-  { id: "camp_site", name: "Camp Site", icon: "camping", overpassQuery: "tourism=camp_site" },
-  { id: "alpine_hut", name: "Alpine Hut", icon: "cabin", overpassQuery: "tourism=alpine_hut" },
+  {
+    id: "camp_site",
+    group: "Accommodation",
+    name: "Camp Site",
+    icon: "camping",
+    color: "#FF9800",
+    overpassQuery: "tourism=camp_site",
+  },
+  {
+    id: "alpine_hut",
+    group: "Accommodation",
+    name: "Alpine Hut",
+    icon: "cabin",
+    color: "#FF9800",
+    overpassQuery: "tourism=alpine_hut",
+  },
   {
     id: "wilderness_hut",
+    group: "Accommodation",
     name: "Wilderness Hut",
     icon: "cabin",
+    color: "#FF9800",
     overpassQuery: "tourism=wilderness_hut",
   },
   // Amenities
   {
     id: "drinking_water",
+    group: "Amenities",
     name: "Drinking Water",
     icon: "water_drop",
+    color: "#2196F3",
     overpassQuery: "amenity=drinking_water",
   },
-  { id: "toilets", name: "Toilets", icon: "wc", overpassQuery: "amenity=toilets" },
-  { id: "shelter", name: "Shelter", icon: "roofing", overpassQuery: "amenity=shelter" },
+  {
+    id: "toilets",
+    group: "Amenities",
+    name: "Toilets",
+    icon: "wc",
+    color: "#2196F3",
+    overpassQuery: "amenity=toilets",
+  },
+  {
+    id: "shelter",
+    group: "Amenities",
+    name: "Shelter",
+    icon: "roofing",
+    color: "#2196F3",
+    overpassQuery: "amenity=shelter",
+  },
   {
     id: "firepit",
+    group: "Amenities",
     name: "Fire Pit",
     icon: "local_fire_department",
+    color: "#F44336",
     overpassQuery: "leisure=firepit",
   },
-  { id: "bbq", name: "BBQ", icon: "outdoor_grill", overpassQuery: "amenity=bbq" },
-  { id: "bench", name: "Bench", icon: "chair", overpassQuery: "amenity=bench" },
+  {
+    id: "bbq",
+    group: "Amenities",
+    name: "BBQ",
+    icon: "outdoor_grill",
+    color: "#F44336",
+    overpassQuery: "amenity=bbq",
+  },
+  {
+    id: "bench",
+    group: "Amenities",
+    name: "Bench",
+    icon: "chair",
+    color: "#795548",
+    overpassQuery: "amenity=bench",
+  },
   // Transport
-  { id: "parking", name: "Parking", icon: "local_parking", overpassQuery: "amenity=parking" },
-  { id: "station", name: "Station", icon: "train", overpassQuery: "railway=station" },
-  { id: "tram_stop", name: "Tram Stop", icon: "tram", overpassQuery: "railway=tram_stop" },
-  { id: "bus_stop", name: "Bus Stop", icon: "directions_bus", overpassQuery: "highway=bus_stop" },
-  { id: "fuel", name: "Fuel", icon: "local_gas_station", overpassQuery: "amenity=fuel" },
+  {
+    id: "parking",
+    group: "Transport",
+    name: "Parking",
+    icon: "local_parking",
+    color: "#607D8B",
+    overpassQuery: "amenity=parking",
+  },
+  {
+    id: "station",
+    group: "Transport",
+    name: "Station",
+    icon: "train",
+    color: "#607D8B",
+    overpassQuery: "railway=station",
+  },
+  {
+    id: "tram_stop",
+    group: "Transport",
+    name: "Tram Stop",
+    icon: "tram",
+    color: "#607D8B",
+    overpassQuery: "railway=tram_stop",
+  },
+  {
+    id: "bus_stop",
+    group: "Transport",
+    name: "Bus Stop",
+    icon: "directions_bus",
+    color: "#607D8B",
+    overpassQuery: "highway=bus_stop",
+  },
+  {
+    id: "fuel",
+    group: "Transport",
+    name: "Fuel",
+    icon: "local_gas_station",
+    color: "#607D8B",
+    overpassQuery: "amenity=fuel",
+  },
   // Supplies
   {
     id: "supermarket",
+    group: "Supplies",
     name: "Supermarket",
     icon: "shopping_cart",
+    color: "#E91E63",
     overpassQuery: "shop=supermarket",
   },
-  { id: "convenience", name: "Convenience", icon: "storefront", overpassQuery: "shop=convenience" },
+  {
+    id: "convenience",
+    group: "Supplies",
+    name: "Convenience",
+    icon: "storefront",
+    color: "#E91E63",
+    overpassQuery: "shop=convenience",
+  },
   // Food & Drink
-  { id: "restaurant", name: "Restaurant", icon: "restaurant", overpassQuery: "amenity=restaurant" },
-  { id: "cafe", name: "Cafe", icon: "local_cafe", overpassQuery: "amenity=cafe" },
+  {
+    id: "restaurant",
+    group: "Food & Drink",
+    name: "Restaurant",
+    icon: "restaurant",
+    color: "#FF5722",
+    overpassQuery: "amenity=restaurant",
+  },
+  {
+    id: "cafe",
+    group: "Food & Drink",
+    name: "Cafe",
+    icon: "local_cafe",
+    color: "#FF5722",
+    overpassQuery: "amenity=cafe",
+  },
 ];
 
-// Global POI layer group and abort controller
-let poiSearchResults = null;
-let currentAbortController = null;
+// Master layer group registered in the layer control — all category layers are children of this
+const poiMasterLayer = L.layerGroup();
+
+// Per-category state: cluster layer, dedup marker Map, in-flight load controller
+const poiState = {};
 
 /**
  * Initialize POI finder
  */
 function initPoiFinder() {
-  // Create POI marker cluster group and add to map (will be shown in layer control)
-  poiSearchResults = L.markerClusterGroup({
+  POI_CATEGORIES.forEach((cat) => {
+    poiState[cat.id] = {
+      layer: createCategoryClusterGroup(),
+      markers: new Map(), // OSM element id → Leaflet marker
+      loadingController: null,
+    };
+  });
+}
+
+/**
+ * Build a MarkerClusterGroup styled for a specific category
+ */
+function createCategoryClusterGroup() {
+  return L.markerClusterGroup({
     maxClusterRadius: 50,
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true,
     disableClusteringAtZoom: 17,
-    iconCreateFunction: function (cluster) {
+    iconCreateFunction(cluster) {
       const count = cluster.getChildCount();
       const size = Math.min(
-        POI_STYLE.clusterMaxSize,
-        Math.max(POI_STYLE.clusterMinSize, POI_STYLE.clusterMinSize + Math.log(count) * 5),
+        POI_CLUSTER_MAX_SIZE,
+        Math.max(POI_CLUSTER_MIN_SIZE, POI_CLUSTER_MIN_SIZE + Math.log(count) * 5),
       );
-
       return L.divIcon({
         html: `<div style="
-          width: ${size}px;
-          height: ${size}px;
-          border-radius: 50%;
-          background-color: ${POI_STYLE.color};
-          box-shadow: 0 0 0 ${POI_STYLE.outlineWeight}px ${
-            POI_STYLE.outlineColor
-          }, 0 2px 4px rgba(0,0,0,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: bold;
-          color: white;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-          font-size: ${Math.min(16, size / 2.5)}px;
+          width:${size}px;height:${size}px;border-radius:50%;
+          background-color:${DEFAULT_COLOR};
+          box-shadow:0 0 0 3px white,0 2px 4px rgba(0,0,0,0.3);
+          display:flex;align-items:center;justify-content:center;
+          font-weight:bold;color:white;
+          text-shadow:0 1px 2px rgba(0,0,0,0.5);
+          font-size:${Math.min(16, size / 2.5)}px;
         ">${count}</div>`,
         className: "poi-cluster-icon",
         iconSize: L.point(size, size),
       });
     },
-  }).addTo(map);
-
-  // Layer will be added to layer control in main.js
-
-  // Update button text based on whether there are results
-  updatePOIFinderButton();
+  });
 }
 
 /**
- * Update the Find/Clear button text and tooltip
- */
-function updatePOIFinderButton() {
-  const button = document.getElementById("poi-finder-btn");
-  if (!button) return;
-
-  const hasResults = poiSearchResults && poiSearchResults.getLayers().length > 0;
-  const newText = hasResults ? "Clear Places" : "Find Places";
-  button.textContent = newText;
-  button.setAttribute("title", newText);
-}
-
-/**
- * Show POI finder modal
+ * Open the Find Places modal — shows all categories with visibility toggles
  */
 async function showPoiFinder() {
-  // Check minimum zoom level to prevent overly large area searches
-  const MIN_ZOOM_LEVEL = 12;
-  if (map.getZoom() < MIN_ZOOM_LEVEL) {
+  const MIN_ZOOM = 12;
+  if (map.getZoom() < MIN_ZOOM) {
     const result = await Swal.fire({
       icon: "warning",
       title: "Zoom In Required",
@@ -146,157 +247,232 @@ async function showPoiFinder() {
       confirmButtonText: "Zoom In",
       cancelButtonText: "Cancel",
     });
-
-    // Auto-zoom to minimum level when user clicks "Zoom In"
     if (result.isConfirmed) {
-      map.setView(map.getCenter(), MIN_ZOOM_LEVEL);
-      // Wait for zoom animation to complete before showing categories
+      map.setView(map.getCenter(), MIN_ZOOM);
       await new Promise((resolve) => setTimeout(resolve, 300));
-      // Recursively call to show category selection after zoom
       return showPoiFinder();
     }
     return;
   }
 
-  const categoryButtons = POI_CATEGORIES.map(
-    (cat) => `
-    <button
-      class="poi-category-btn"
-      data-category="${cat.id}"
-    >
-      <span class="material-symbols" style="font-size: 20px;">${cat.icon}</span>
-      <span>${cat.name}</span>
-    </button>
-  `,
-  ).join("");
+  const html = POI_CATEGORIES.map((cat) => {
+    const isLoading = !!poiState[cat.id].loadingController;
+    const count = poiState[cat.id].markers.size;
+    return `
+      <div class="poi-category-row">
+        <span class="material-symbols poi-cat-icon">${cat.icon}</span>
+        <span class="poi-cat-name">${cat.name}</span>
+        <span id="poi-status-${cat.id}" class="poi-cat-status">${renderStatus(isLoading, count)}</span>
+        <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Load for current view">${isLoading ? "sync" : "search"}</span>
+      </div>`;
+  }).join("");
 
   await Swal.fire({
-    html: `
-      <div style="text-align: left;">
-        <p style="font-size: var(--font-size-12); color: var(--text-color); margin: 0 0 12px 0; text-align: center;">
-          Find places in current view
-        </p>
-        <div class="poi-category-grid">
-          ${categoryButtons}
-        </div>
-      </div>
-    `,
+    html: `<div class="poi-category-list">${html}</div>`,
     confirmButtonText: "Close",
-    customClass: {
-      popup: "poi-finder-modal",
-    },
+    customClass: { popup: "poi-finder-modal" },
     didOpen: () => {
-      // Add click handlers to category buttons
-      document.querySelectorAll(".poi-category-btn").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const categoryId = btn.dataset.category;
-          const category = POI_CATEGORIES.find((c) => c.id === categoryId);
-          if (category) {
-            Swal.close();
-            await searchPOICategory(category);
-          }
+      document.querySelectorAll(".poi-load-btn").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const cat = POI_CATEGORIES.find((c) => c.id === el.dataset.category);
+          if (cat) loadCategory(cat);
+        });
+      });
+      document.querySelectorAll(".poi-clear-btn").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const cat = POI_CATEGORIES.find((c) => c.id === el.dataset.category);
+          if (cat) clearCategory(cat);
         });
       });
     },
   });
 }
 
-/**
- * Search for POIs in a category
- */
-async function searchPOICategory(category) {
-  // Create new abort controller
-  currentAbortController = new AbortController();
+function renderStatus(isLoading, count) {
+  if (isLoading) return '<span class="poi-loading-dot"></span>';
+  if (count > 0)
+    return `${count.toLocaleString()} <span class="poi-clear-btn material-symbols" data-category="">close</span>`;
+  return "";
+}
 
-  // Show loading indicator with cancel button
-  Swal.fire({
-    title: "Searching...",
-    html: `
-      <div style="text-align: center;">
-        <p style="margin-bottom: 20px;">Looking for ${category.name}</p>
-        <div class="swal2-loader" style="display: block; margin: 0 auto 20px;"></div>
-        <button id="poi-cancel-btn" class="swal2-cancel swal2-styled" style="display: inline-block;">Cancel</button>
-      </div>
-    `,
-    allowOutsideClick: false,
-    showCancelButton: false,
-    showConfirmButton: false,
-    didOpen: () => {
-      // Add cancel button handler
-      document.getElementById("poi-cancel-btn").addEventListener("click", () => {
-        if (currentAbortController) {
-          currentAbortController.abort();
-        }
-        Swal.close();
-      });
-    },
-  });
+/**
+ * Load POIs for the current viewport into a category layer
+ */
+async function loadCategory(cat) {
+  if (map.getZoom() < 12) {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Zoom In Required",
+      text: "Please zoom in closer to search for places.",
+      showCancelButton: true,
+      confirmButtonText: "Zoom In",
+      cancelButtonText: "Cancel",
+    });
+    if (result.isConfirmed) {
+      map.setView(map.getCenter(), 12);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    return;
+  }
+
+  const state = poiState[cat.id];
+
+  if (!poiMasterLayer.hasLayer(state.layer)) {
+    poiMasterLayer.addLayer(state.layer);
+  }
+  if (window.ensurePoiLayerVisible) {
+    window.ensurePoiLayerVisible();
+  }
+
+  // Abort any in-flight request for this category
+  if (state.loadingController) {
+    state.loadingController.abort();
+  }
+  const controller = new AbortController();
+  state.loadingController = controller;
+
+  updateCategoryRowUI(cat.id, true, state.markers.size);
 
   try {
-    const bounds = map.getBounds();
-    const RESULT_LIMIT = 1000;
     const results = await queryOverpass(
-      category.overpassQuery,
-      bounds,
-      currentAbortController.signal,
-      RESULT_LIMIT,
+      cat.overpassQuery,
+      map.getBounds(),
+      controller.signal,
+      1000,
     );
 
-    Swal.close();
+    if (controller.signal.aborted) return;
 
-    if (results.length === 0) {
-      Swal.fire({
-        title: "No Results",
-        text: `No ${category.name} found in current map view`,
-        timer: 2000,
-        showConfirmButton: false,
-      });
-      return;
-    }
-
-    // Clear existing POI results
-    clearPOIResults();
-
-    // Display results on map
-    displayPOIResults(results, category);
-
-    // Ensure the POI layer is visible in layer control
-    if (window.ensurePoiLayerVisible) {
-      window.ensurePoiLayerVisible();
-    }
-
-    // Update button to show "Clear"
-    updatePOIFinderButton();
-
-    // Show success message with limit warning if needed
-    const hitLimit = results.length >= RESULT_LIMIT;
-    Swal.fire({
-      title: "Found!",
-      html: hitLimit
-        ? `Showing first ${results.length} ${category.name}${
-            results.length !== 1 ? "s" : ""
-          }<br><small style="color: var(--text-color-secondary);"><strong>Search again after zooming in for complete area coverage.</strong></small>`
-        : `${results.length} ${category.name}${results.length !== 1 ? "s" : ""} found`,
-      timer: hitLimit ? 3000 : 2000,
-      showConfirmButton: hitLimit,
+    results.forEach((element) => {
+      if (state.markers.has(element.id)) return;
+      const marker = createPOIMarker(element, cat);
+      if (!marker) return;
+      state.markers.set(element.id, marker);
+      state.layer.addLayer(marker);
     });
-  } catch (error) {
-    if (error.name === "AbortError") {
-      Swal.fire({
-        title: "Cancelled",
-        text: "Search was cancelled",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-    } else {
-      Swal.fire({
-        icon: "error",
-        title: "Search Failed",
-        text: error.message || "Could not complete search. Please try again.",
-        confirmButtonText: "OK",
-      });
+
+    updateCategoryRowUI(cat.id, false, state.markers.size);
+  } catch (err) {
+    if (err.name === "AbortError") return;
+    updateCategoryRowUI(cat.id, false, state.markers.size);
+    Swal.fire({
+      icon: "error",
+      title: "Load Failed",
+      text: err.message || "Could not load places. Please try again.",
+      confirmButtonText: "OK",
+    });
+  } finally {
+    if (state.loadingController === controller) {
+      state.loadingController = null;
     }
   }
+}
+
+/**
+ * Clear all results for a category
+ */
+function clearCategory(cat) {
+  const state = poiState[cat.id];
+  if (state.loadingController) {
+    state.loadingController.abort();
+    state.loadingController = null;
+  }
+  if (poiMasterLayer.hasLayer(state.layer)) {
+    poiMasterLayer.removeLayer(state.layer);
+  }
+  state.layer.clearLayers();
+  state.markers.clear();
+  updateCategoryRowUI(cat.id, false, 0);
+}
+
+/**
+ * Reflect current state in the modal row — safe to call when modal is closed
+ */
+function updateCategoryRowUI(categoryId, isLoading, count) {
+  const loadEl = document.getElementById(`poi-load-${categoryId}`);
+  const statusEl = document.getElementById(`poi-status-${categoryId}`);
+  if (loadEl) {
+    loadEl.classList.toggle("poi-load-busy", isLoading);
+    loadEl.textContent = isLoading ? "sync" : "search";
+  }
+  if (statusEl) {
+    statusEl.innerHTML = renderStatus(isLoading, count);
+    // Wire up any newly rendered clear buttons
+    statusEl.querySelectorAll(".poi-clear-btn").forEach((el) => {
+      el.dataset.category = categoryId;
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const cat = POI_CATEGORIES.find((c) => c.id === categoryId);
+        if (cat) clearCategory(cat);
+      });
+    });
+  }
+}
+
+/**
+ * Create a single POI marker with a category icon and popup
+ */
+function createPOIMarker(element, cat) {
+  let lat, lon;
+  if (element.type === "node") {
+    lat = element.lat;
+    lon = element.lon;
+  } else if (element.center) {
+    lat = element.center.lat;
+    lon = element.center.lon;
+  } else {
+    return null;
+  }
+
+  const icon = L.divIcon({
+    html: `<div class="poi-marker-icon"><span class="material-symbols">${cat.icon}</span></div>`,
+    className: "poi-marker",
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -16],
+  });
+
+  const marker = L.marker([lat, lon], { icon });
+
+  const name = element.tags?.name || cat.name;
+  const tags = element.tags || {};
+  const interestingTags = ["operator", "opening_hours", "website", "phone", "description"];
+
+  let popupContent = `
+    <div style="overflow-wrap:break-word;text-align:center;">
+      <strong><span class="material-symbols" style="font-size:16px;vertical-align:middle;">${cat.icon}</span> ${name}</strong><br>
+  `;
+  interestingTags.forEach((tag) => {
+    if (tags[tag]) {
+      popupContent += `<small>${tag.replace("_", " ")}: ${tags[tag]}</small><br>`;
+    }
+  });
+  popupContent += `
+      <small style="color:var(--text-color-secondary);">
+        <a href="https://www.openstreetmap.org/${element.type}/${element.id}" target="_blank">View on OpenStreetMap</a>
+      </small>
+    </div>
+    <div style="text-align:center;margin-top:8px;">
+      <button id="save-poi-marker-${element.id}" style="padding:5px 10px;border:1px solid #ccc;border-radius:var(--border-radius);cursor:pointer;background-color:#f0f0f0;">
+        Save to Map
+      </button>
+    </div>
+  `;
+
+  marker.bindPopup(L.popup({ maxWidth: 150 }).setContent(popupContent));
+  marker.on("popupopen", () => {
+    const btn = document.getElementById(`save-poi-marker-${element.id}`);
+    if (btn) {
+      btn.addEventListener("click", () => {
+        createAndSaveMarker(lat, lon, name);
+        marker.closePopup();
+      });
+    }
+  });
+
+  return marker;
 }
 
 /**
@@ -379,110 +555,17 @@ async function queryOverpass(osmQuery, bounds, signal, limit = 1000) {
   throw new Error(lastError?.message || "All Overpass endpoints failed. Please try again.");
 }
 
-/**
- * Display POI results on map
- */
-function displayPOIResults(results, category) {
-  results.forEach((element) => {
-    let lat, lon;
-
-    // Get coordinates based on element type
-    if (element.type === "node") {
-      lat = element.lat;
-      lon = element.lon;
-    } else if (element.center) {
-      lat = element.center.lat;
-      lon = element.center.lon;
-    } else {
-      return; // Skip if no coordinates
-    }
-
-    // Create circle marker with white outline for visibility on all base maps
-    const marker = L.circleMarker([lat, lon], {
-      radius: POI_STYLE.markerRadius,
-      fillColor: POI_STYLE.color,
-      color: POI_STYLE.outlineColor,
-      weight: POI_STYLE.outlineWeight,
-      opacity: 1,
-      fillOpacity: 1,
-    });
-
-    // Create popup content
-    const name = element.tags?.name || category.name;
-    const tags = element.tags || {};
-
-    let popupContent = `
-      <div style="overflow-wrap: break-word; text-align: center;">
-        <strong><span class="material-symbols" style="font-size: 16px; vertical-align: middle;">${category.icon}</span> ${name}</strong><br>
-    `;
-
-    // Add relevant tags
-    const interestingTags = ["operator", "opening_hours", "website", "phone", "description"];
-    interestingTags.forEach((tag) => {
-      if (tags[tag]) {
-        const tagLabel = tag.replace("_", " ");
-        popupContent += `<small>${tagLabel}: ${tags[tag]}</small><br>`;
-      }
-    });
-
-    popupContent += `
-        <small style="color: var(--text-color-secondary);">
-          <a href="https://www.openstreetmap.org/${element.type}/${element.id}" target="_blank">
-            View on OpenStreetMap
-          </a>
-        </small>
-      </div>
-      <div style="text-align: center; margin-top: 8px;">
-        <button id="save-poi-marker-${element.id}" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: var(--border-radius); cursor: pointer; background-color: #f0f0f0;">
-          Save to Map
-        </button>
-      </div>
-    `;
-
-    const popup = L.popup({ maxWidth: 150 });
-    popup.setContent(popupContent);
-    marker.bindPopup(popup);
-
-    // Add event listener for "Save as Marker" button when popup opens
-    marker.on("popupopen", () => {
-      const saveButton = document.getElementById(`save-poi-marker-${element.id}`);
-      if (saveButton) {
-        saveButton.addEventListener("click", () => {
-          createAndSaveMarker(lat, lon, name);
-          marker.closePopup();
-        });
-      }
-    });
-
-    marker.addTo(poiSearchResults);
-  });
-}
-
-/**
- * Clear all POI results from map
- */
-function clearPOIResults() {
-  if (poiSearchResults) {
-    // MarkerClusterGroup.clearLayers() only works when layer is on the map
-    // Temporarily add it if needed, clear, then restore previous state
-    const wasOnMap = map.hasLayer(poiSearchResults);
-    if (!wasOnMap) {
-      map.addLayer(poiSearchResults);
-    }
-
-    poiSearchResults.clearLayers();
-
-    // Remove from map again if it wasn't on the map before
-    if (!wasOnMap) {
-      map.removeLayer(poiSearchResults);
-    }
-  }
-  // Update button to show "Find"
-  updatePOIFinderButton();
-}
-
 // Make functions globally available
 window.initPoiFinder = initPoiFinder;
 window.showPoiFinder = showPoiFinder;
-window.clearPOIResults = clearPOIResults;
-window.updatePOIFinderButton = updatePOIFinderButton;
+window.poiMasterLayer = poiMasterLayer;
+
+// Compatibility aliases expected by main.js
+window.poiSearchResults = poiMasterLayer;
+window.clearPOIResults = function () {
+  POI_CATEGORIES.forEach((cat) => clearCategory(cat));
+};
+window.updatePOIFinderButton = function () {
+  const btn = document.getElementById("poi-finder-btn");
+  if (btn) btn.textContent = "Find Places";
+};
