@@ -282,7 +282,6 @@ async function searchPOICategory(category) {
     });
   } catch (error) {
     if (error.name === "AbortError") {
-      // Request was cancelled
       Swal.fire({
         title: "Cancelled",
         text: "Search was cancelled",
@@ -303,17 +302,22 @@ async function searchPOICategory(category) {
 /**
  * Query Overpass API
  */
+const OVERPASS_ENDPOINTS = [
+  "https://lz4.overpass-api.de/api/interpreter",
+  "https://overpass-api.de/api/interpreter",
+  "https://z.overpass-api.de/api/interpreter",
+];
+
+// How long to wait for a single endpoint before giving up and trying the next one.
+// Without this, a slow/hanging server could stall the search for the full query timeout (25s).
+const ENDPOINT_TIMEOUT_MS = 8000;
+
 async function queryOverpass(osmQuery, bounds, signal, limit = 1000) {
-  // Handle both single query strings and arrays of queries
   const queries = Array.isArray(osmQuery) ? osmQuery : [osmQuery];
 
-  // Build query parts for each tag
+  const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
   const queryParts = queries
-    .flatMap((q) => [
-      `node[${q}](${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()});`,
-      `way[${q}](${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()});`,
-      `relation[${q}](${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()});`,
-    ])
+    .flatMap((q) => [`node[${q}](${bbox});`, `way[${q}](${bbox});`, `relation[${q}](${bbox});`])
     .join("\n      ");
 
   const query = `
@@ -324,32 +328,55 @@ async function queryOverpass(osmQuery, bounds, signal, limit = 1000) {
     out center ${limit};
   `;
 
-  // Primary endpoint: Official lz4 load-balanced instance (fastest and most reliable)
-  // Fallbacks for reference if the primary goes down:
-  // - https://overpass-api.de/api/interpreter
-  // - https://z.overpass-api.de/api/interpreter
-  // - https://overpass.kumi.systems/api/interpreter (Note: known to occasionally timeout)
-  const response = await fetch("https://lz4.overpass-api.de/api/interpreter", {
-    method: "POST",
-    body: query,
-    signal: signal,
-  });
+  let lastError;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    try {
+      // Combine the user's cancel signal with a per-endpoint timeout.
+      // If the endpoint doesn't respond in time we move on to the next one,
+      // but if the user cancels we stop immediately regardless.
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), ENDPOINT_TIMEOUT_MS);
+      const onAbort = () => timeoutController.abort();
+      signal.addEventListener("abort", onAbort, { once: true });
+      const endpointSignal = timeoutController.signal;
 
-  if (!response.ok) {
-    // Provide specific error messages for different failure types
-    if (response.status === 504) {
-      throw new Error("504 Gateway Timeout. Try zooming in closer or selecting another area.");
-    } else if (response.status === 429) {
-      throw new Error("429 Too Many Requests. Please wait a moment and try again.");
-    } else if (response.status === 400) {
-      throw new Error("400 Bad Request. Invalid query syntax. Please report this bug.");
-    } else {
-      throw new Error(`Overpass API request failed: ${response.status} ${response.statusText}`);
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          body: query,
+          signal: endpointSignal,
+        });
+        if (response.status === 400) {
+          throw new Error("400 Bad Request. Invalid query syntax. Please report this bug.");
+        }
+        if (response.status === 504) {
+          throw new Error("504 Gateway Timeout. Try zooming in closer or selecting another area.");
+        }
+        if (response.status === 429) {
+          lastError = new Error("Too Many Requests. Please wait a moment and try again.");
+          continue;
+        }
+        if (!response.ok) {
+          lastError = new Error(`HTTP ${response.status}`);
+          continue;
+        }
+        const data = await response.json();
+        return data.elements || [];
+      } finally {
+        clearTimeout(timeoutId);
+        signal.removeEventListener("abort", onAbort);
+      }
+    } catch (err) {
+      // User cancelled — stop immediately
+      if (err.name === "AbortError" && signal.aborted) throw err;
+      // Hard query errors — retrying won't help
+      if (err.message.startsWith("400") || err.message.startsWith("504")) throw err;
+      // Endpoint timed out or failed — try the next one
+      lastError = err.name === "AbortError" ? new Error("Endpoint timed out.") : err;
     }
   }
-
-  const data = await response.json();
-  return data.elements || [];
+  throw new Error(lastError?.message || "All Overpass endpoints failed. Please try again.");
 }
 
 /**
