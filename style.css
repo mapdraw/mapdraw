@@ -2587,6 +2587,10 @@ button.strava-button-secondary:not(:disabled) {
   white-space: nowrap;
 }
 
+#offline-indicator .material-symbols {
+  color: inherit;
+}
+
 #offline-indicator.visible {
   display: flex;
 }
