@@ -411,6 +411,11 @@ select:focus {
   border-radius: 50%;
 }
 
+#sheet-handle {
+  /* Hide sheet-handle on desktop */
+  display: none;
+}
+
 /* SEARCH */
 /*
  * ███████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗
@@ -1246,6 +1251,16 @@ select:focus {
 
 .direction-item:last-child {
   border-bottom: none;
+}
+
+.routing-panel-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  margin: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* STRAVA */
@@ -2308,6 +2323,22 @@ button.strava-button-secondary:not(:disabled) {
 .locate-active .icon-locate {
   fill: var(--color-white) !important;
 }
+.locate-active .material-symbols {
+  color: var(--color-white) !important;
+}
+
+/* Distance labels shown while drawing polylines */
+.distance-label {
+  pointer-events: none;
+  font-size: var(--font-size-12);
+  font-weight: bold;
+  color: white;
+  text-shadow:
+    -1px -1px 0 black,
+    1px -1px 0 black,
+    -1px 1px 0 black,
+    1px 1px 0 black;
+}
 
 /* TOP RIGHT */
 /*
@@ -2720,6 +2751,28 @@ body.route-point-select-mode * {
   cursor: none !important;
 }
 
+/* Forcefully sets the cursor to a crosshair for the marker icon
+   whenever any drawing tool is active (class added via main.js L.Draw.Event.DRAWSTART) */
+body.leaflet-is-drawing .leaflet-marker-icon {
+  cursor: crosshair !important;
+}
+
+/* Styles for touch input */
+body.using-touch {
+  /* This line resets the cursor, overriding 'cursor: none'. */
+  cursor: auto !important;
+
+  /* Hide the routing marker cursors on touch devices without mouse */
+  .custom-cursor {
+    display: none !important;
+  }
+
+  /* Hide the leaflet draw tooltips on touch devices without mouse */
+  .leaflet-draw-tooltip {
+    display: none !important;
+  }
+}
+
 /* FONTS */
 /*
  * ███████╗ ██████╗ ███╗   ██╗████████╗███████╗
@@ -2730,16 +2783,13 @@ body.route-point-select-mode * {
  * ╚═╝      ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝
  */
 
-/* Roboto Font Styles Start */
 @font-face {
   font-family: "Roboto";
   font-style: normal;
   font-weight: 100 900;
   src: url(/fonts/Roboto-VariableFont_wdth,wght.woff2) format("woff2");
 }
-/* Roboto Font Styles End */
 
-/* Material Symbols Styles Start */
 /* Instructions for self hosting: https://developers.google.com/fonts/docs/material_symbols#self-hosting_the_font */
 /* Downloaded font here: https://github.com/google/material-design-icons/tree/master/variablefont */
 /*
@@ -2811,65 +2861,6 @@ body.route-point-select-mode * {
     "wght" 200,
     "GRAD" 0,
     "opsz" 24 !important;
-}
-
-/* Forcefully sets the cursor to a crosshair for the marker icon
-   whenever any drawing tool is active (class added via main.js L.Draw.Event.DRAWSTART) */
-body.leaflet-is-drawing .leaflet-marker-icon {
-  cursor: crosshair !important;
-}
-
-/* Distance labels shown while drawing polylines */
-.distance-label {
-  pointer-events: none;
-  font-size: var(--font-size-12);
-  font-weight: bold;
-  color: white;
-  text-shadow:
-    -1px -1px 0 black,
-    1px -1px 0 black,
-    -1px 1px 0 black,
-    1px 1px 0 black;
-}
-
-.locate-active .material-symbols {
-  color: var(--color-white) !important;
-}
-
-.routing-panel-icon {
-  width: 16px;
-  height: 16px;
-  display: block;
-  margin: auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-/* Material Symbols Styles End */
-
-#sheet-handle {
-  /* Hide sheet-handle on desktop */
-  display: none;
-}
-
-/* Styles for mouse input */
-/* body:not(.using-touch) {
-} */
-
-/* Styles for touch input */
-body.using-touch {
-  /* This line resets the cursor, overriding 'cursor: none'. */
-  cursor: auto !important;
-
-  /* Hide the routing marker cursors on touch devices without mouse */
-  .custom-cursor {
-    display: none !important;
-  }
-
-  /* Hide the leaflet draw tooltips on touch devices without mouse */
-  .leaflet-draw-tooltip {
-    display: none !important;
-  }
 }
 
 /* MOBILE */
