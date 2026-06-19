@@ -12,174 +12,180 @@
 const POI_CLUSTER_MIN_SIZE = 30;
 const POI_CLUSTER_MAX_SIZE = 50;
 
-const POI_CATEGORIES = [
-  // Outdoor
-  {
-    id: "park",
-    group: "Outdoor",
-    name: "Park",
-    icon: "park",
-    color: "#4CAF50",
-    overpassQuery: "leisure=park",
-  },
-  {
-    id: "viewpoint",
-    group: "Outdoor",
-    name: "Viewpoint",
-    icon: "landscape",
-    color: "#4CAF50",
-    overpassQuery: "tourism=viewpoint",
-  },
-  // Accommodation
-  {
-    id: "camp_site",
-    group: "Accommodation",
-    name: "Camp Site",
-    icon: "camping",
-    color: "#FF9800",
-    overpassQuery: "tourism=camp_site",
-  },
-  {
-    id: "alpine_hut",
-    group: "Accommodation",
-    name: "Alpine Hut",
-    icon: "cabin",
-    color: "#FF9800",
-    overpassQuery: "tourism=alpine_hut",
-  },
-  {
-    id: "wilderness_hut",
-    group: "Accommodation",
-    name: "Wilderness Hut",
-    icon: "cabin",
-    color: "#FF9800",
-    overpassQuery: "tourism=wilderness_hut",
-  },
-  // Amenities
-  {
-    id: "drinking_water",
-    group: "Amenities",
-    name: "Drinking Water",
-    icon: "water_drop",
-    color: "#2196F3",
-    overpassQuery: "amenity=drinking_water",
-  },
-  {
-    id: "toilets",
-    group: "Amenities",
-    name: "Toilets",
-    icon: "wc",
-    color: "#2196F3",
-    overpassQuery: "amenity=toilets",
-  },
-  {
-    id: "shelter",
-    group: "Amenities",
-    name: "Shelter",
-    icon: "roofing",
-    color: "#2196F3",
-    overpassQuery: "amenity=shelter",
-  },
-  {
-    id: "firepit",
-    group: "Amenities",
-    name: "Fire Pit",
-    icon: "local_fire_department",
-    color: "#F44336",
-    overpassQuery: "leisure=firepit",
-  },
-  {
-    id: "bbq",
-    group: "Amenities",
-    name: "BBQ",
-    icon: "outdoor_grill",
-    color: "#F44336",
-    overpassQuery: "amenity=bbq",
-  },
-  {
-    id: "bench",
-    group: "Amenities",
-    name: "Bench",
-    icon: "chair",
-    color: "#795548",
-    overpassQuery: "amenity=bench",
-  },
-  // Transport
-  {
-    id: "parking",
-    group: "Transport",
-    name: "Parking",
-    icon: "local_parking",
-    color: "#607D8B",
-    overpassQuery: "amenity=parking",
-  },
-  {
-    id: "station",
-    group: "Transport",
-    name: "Station",
-    icon: "train",
-    color: "#607D8B",
-    overpassQuery: "railway=station",
-  },
-  {
-    id: "tram_stop",
-    group: "Transport",
-    name: "Tram Stop",
-    icon: "tram",
-    color: "#607D8B",
-    overpassQuery: "railway=tram_stop",
-  },
-  {
-    id: "bus_stop",
-    group: "Transport",
-    name: "Bus Stop",
-    icon: "directions_bus",
-    color: "#607D8B",
-    overpassQuery: "highway=bus_stop",
-  },
-  {
-    id: "fuel",
-    group: "Transport",
-    name: "Fuel",
-    icon: "local_gas_station",
-    color: "#607D8B",
-    overpassQuery: "amenity=fuel",
-  },
-  // Supplies
-  {
-    id: "supermarket",
-    group: "Supplies",
-    name: "Supermarket",
-    icon: "shopping_cart",
-    color: "#E91E63",
-    overpassQuery: "shop=supermarket",
-  },
-  {
-    id: "convenience",
-    group: "Supplies",
-    name: "Convenience",
-    icon: "storefront",
-    color: "#E91E63",
-    overpassQuery: "shop=convenience",
-  },
-  // Food & Drink
-  {
-    id: "restaurant",
-    group: "Food & Drink",
-    name: "Restaurant",
-    icon: "restaurant",
-    color: "#FF5722",
-    overpassQuery: "amenity=restaurant",
-  },
-  {
-    id: "cafe",
-    group: "Food & Drink",
-    name: "Cafe",
-    icon: "local_cafe",
-    color: "#FF5722",
-    overpassQuery: "amenity=cafe",
-  },
-];
+const POI_CATEGORIES = (() => {
+  const colorOutdoor = "#228B22";
+  const colorAccommodation = "#FF8C00";
+  const colorAmenities = "#00CED1";
+  const colorTransport = "#4169E1";
+  const colorFoodShopping = "#FF6347";
+  return [
+    // Outdoor
+    {
+      id: "park",
+      group: "Outdoor",
+      name: "Park",
+      icon: "park",
+      color: colorOutdoor,
+      overpassQuery: "leisure=park",
+    },
+    {
+      id: "viewpoint",
+      group: "Outdoor",
+      name: "Viewpoint",
+      icon: "landscape",
+      color: colorOutdoor,
+      overpassQuery: "tourism=viewpoint",
+    },
+    // Accommodation
+    {
+      id: "camp_site",
+      group: "Accommodation",
+      name: "Camp Site",
+      icon: "camping",
+      color: colorAccommodation,
+      overpassQuery: "tourism=camp_site",
+    },
+    {
+      id: "alpine_hut",
+      group: "Accommodation",
+      name: "Alpine Hut",
+      icon: "cabin",
+      color: colorAccommodation,
+      overpassQuery: "tourism=alpine_hut",
+    },
+    {
+      id: "wilderness_hut",
+      group: "Accommodation",
+      name: "Wilderness Hut",
+      icon: "cabin",
+      color: colorAccommodation,
+      overpassQuery: "tourism=wilderness_hut",
+    },
+    // Amenities
+    {
+      id: "drinking_water",
+      group: "Amenities",
+      name: "Drinking Water",
+      icon: "water_drop",
+      color: colorAmenities,
+      overpassQuery: "amenity=drinking_water",
+    },
+    {
+      id: "toilets",
+      group: "Amenities",
+      name: "Toilets",
+      icon: "wc",
+      color: colorAmenities,
+      overpassQuery: "amenity=toilets",
+    },
+    {
+      id: "shelter",
+      group: "Amenities",
+      name: "Shelter",
+      icon: "roofing",
+      color: colorAmenities,
+      overpassQuery: "amenity=shelter",
+    },
+    {
+      id: "firepit",
+      group: "Amenities",
+      name: "Fire Pit",
+      icon: "local_fire_department",
+      color: colorAmenities,
+      overpassQuery: "leisure=firepit",
+    },
+    {
+      id: "bbq",
+      group: "Amenities",
+      name: "BBQ",
+      icon: "outdoor_grill",
+      color: colorAmenities,
+      overpassQuery: "amenity=bbq",
+    },
+    {
+      id: "bench",
+      group: "Amenities",
+      name: "Bench",
+      icon: "chair",
+      color: colorAmenities,
+      overpassQuery: "amenity=bench",
+    },
+    // Transport
+    {
+      id: "parking",
+      group: "Transport",
+      name: "Parking",
+      icon: "local_parking",
+      color: colorTransport,
+      overpassQuery: "amenity=parking",
+    },
+    {
+      id: "station",
+      group: "Transport",
+      name: "Station",
+      icon: "train",
+      color: colorTransport,
+      overpassQuery: "railway=station",
+    },
+    {
+      id: "tram_stop",
+      group: "Transport",
+      name: "Tram Stop",
+      icon: "tram",
+      color: colorTransport,
+      overpassQuery: "railway=tram_stop",
+    },
+    {
+      id: "bus_stop",
+      group: "Transport",
+      name: "Bus Stop",
+      icon: "directions_bus",
+      color: colorTransport,
+      overpassQuery: "highway=bus_stop",
+    },
+    {
+      id: "fuel",
+      group: "Transport",
+      name: "Fuel",
+      icon: "local_gas_station",
+      color: colorTransport,
+      overpassQuery: "amenity=fuel",
+    },
+    // Food & Shopping
+    {
+      id: "supermarket",
+      group: "Food & Shopping",
+      name: "Supermarket",
+      icon: "shopping_cart",
+      color: colorFoodShopping,
+      overpassQuery: "shop=supermarket",
+    },
+    {
+      id: "convenience",
+      group: "Food & Shopping",
+      name: "Convenience",
+      icon: "storefront",
+      color: colorFoodShopping,
+      overpassQuery: "shop=convenience",
+    },
+    {
+      id: "restaurant",
+      group: "Food & Shopping",
+      name: "Restaurant",
+      icon: "restaurant",
+      color: colorFoodShopping,
+      overpassQuery: "amenity=restaurant",
+    },
+    {
+      id: "cafe",
+      group: "Food & Shopping",
+      name: "Cafe",
+      icon: "local_cafe",
+      color: colorFoodShopping,
+      overpassQuery: "amenity=cafe",
+    },
+  ]; // return
+})();
 
 // Master layer group registered in the layer control — all category layers are children of this
 const poiMasterLayer = L.layerGroup();
@@ -193,7 +199,7 @@ const poiState = {};
 function initPoiFinder() {
   POI_CATEGORIES.forEach((cat) => {
     poiState[cat.id] = {
-      layer: createCategoryClusterGroup(),
+      layer: createCategoryClusterGroup(cat.color),
       markers: new Map(), // OSM element id → Leaflet marker
       loadingController: null,
     };
@@ -201,9 +207,9 @@ function initPoiFinder() {
 }
 
 /**
- * Build a MarkerClusterGroup styled for a specific category
+ * Build a MarkerClusterGroup styled for a specific category color
  */
-function createCategoryClusterGroup() {
+function createCategoryClusterGroup(color) {
   return L.markerClusterGroup({
     maxClusterRadius: 50,
     spiderfyOnMaxZoom: true,
@@ -219,7 +225,7 @@ function createCategoryClusterGroup() {
       return L.divIcon({
         html: `<div style="
           width:${size}px;height:${size}px;border-radius:50%;
-          background-color:${DEFAULT_COLOR};
+          background-color:${color};
           box-shadow:0 0 0 3px white,0 2px 4px rgba(0,0,0,0.3);
           display:flex;align-items:center;justify-content:center;
           font-weight:bold;color:white;
@@ -256,14 +262,17 @@ async function showPoiFinder() {
   }
 
   const html = POI_CATEGORIES.map((cat) => {
-    const isLoading = !!poiState[cat.id].loadingController;
-    const count = poiState[cat.id].markers.size;
+    const state = poiState[cat.id];
+    const isLoading = !!state.loadingController;
+    const count = state.markers.size;
+    const isVisible = count > 0 && poiMasterLayer.hasLayer(state.layer);
     return `
       <div class="poi-category-row">
-        <span class="material-symbols poi-cat-icon">${cat.icon}</span>
+        <span class="material-symbols poi-cat-icon" style="color:${cat.color}">${cat.icon}</span>
         <span class="poi-cat-name">${cat.name}</span>
-        <span id="poi-status-${cat.id}" class="poi-cat-status">${renderStatus(isLoading, count)}</span>
-        <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Load for current view">${isLoading ? "sync" : "search"}</span>
+        <span id="poi-status-${cat.id}" class="poi-cat-status">${renderStatus(isLoading, count, cat.id)}</span>
+        <span id="poi-vis-${cat.id}" class="poi-vis-btn material-symbols${count === 0 ? " poi-vis-hidden" : ""}" data-category="${cat.id}" title="Toggle visibility">${isVisible ? "visibility" : "visibility_off"}</span>
+        <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Load for current view">${isLoading ? "autorenew" : "search"}</span>
       </div>`;
   }).join("");
 
@@ -286,14 +295,21 @@ async function showPoiFinder() {
           if (cat) clearCategory(cat);
         });
       });
+      document.querySelectorAll(".poi-vis-btn").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const cat = POI_CATEGORIES.find((c) => c.id === el.dataset.category);
+          if (cat) toggleCategoryVisibility(cat);
+        });
+      });
     },
   });
 }
 
-function renderStatus(isLoading, count) {
+function renderStatus(isLoading, count, catId) {
   if (isLoading) return '<span class="poi-loading-dot"></span>';
   if (count > 0)
-    return `${count.toLocaleString()} <span class="poi-clear-btn material-symbols" data-category="">close</span>`;
+    return `${count.toLocaleString()} <span class="poi-clear-btn material-symbols material-symbols-fill" data-category="${catId}">cancel</span>`;
   return "";
 }
 
@@ -346,10 +362,11 @@ async function loadCategory(cat) {
     if (controller.signal.aborted) return;
 
     results.forEach((element) => {
-      if (state.markers.has(element.id)) return;
+      const key = `${element.type}/${element.id}`;
+      if (state.markers.has(key)) return;
       const marker = createPOIMarker(element, cat);
       if (!marker) return;
-      state.markers.set(element.id, marker);
+      state.markers.set(key, marker);
       state.layer.addLayer(marker);
     });
 
@@ -368,6 +385,20 @@ async function loadCategory(cat) {
       state.loadingController = null;
     }
   }
+}
+
+/**
+ * Toggle map visibility for a category without clearing its markers
+ */
+function toggleCategoryVisibility(cat) {
+  const state = poiState[cat.id];
+  if (state.markers.size === 0) return;
+  if (poiMasterLayer.hasLayer(state.layer)) {
+    poiMasterLayer.removeLayer(state.layer);
+  } else {
+    poiMasterLayer.addLayer(state.layer);
+  }
+  updateCategoryRowUI(cat.id, !!state.loadingController, state.markers.size);
 }
 
 /**
@@ -393,21 +424,25 @@ function clearCategory(cat) {
 function updateCategoryRowUI(categoryId, isLoading, count) {
   const loadEl = document.getElementById(`poi-load-${categoryId}`);
   const statusEl = document.getElementById(`poi-status-${categoryId}`);
+  const visEl = document.getElementById(`poi-vis-${categoryId}`);
   if (loadEl) {
     loadEl.classList.toggle("poi-load-busy", isLoading);
-    loadEl.textContent = isLoading ? "sync" : "search";
+    loadEl.textContent = isLoading ? "autorenew" : "search";
   }
   if (statusEl) {
-    statusEl.innerHTML = renderStatus(isLoading, count);
-    // Wire up any newly rendered clear buttons
+    statusEl.innerHTML = renderStatus(isLoading, count, categoryId);
     statusEl.querySelectorAll(".poi-clear-btn").forEach((el) => {
-      el.dataset.category = categoryId;
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         const cat = POI_CATEGORIES.find((c) => c.id === categoryId);
         if (cat) clearCategory(cat);
       });
     });
+  }
+  if (visEl) {
+    const isVisible = count > 0 && poiMasterLayer.hasLayer(poiState[categoryId].layer);
+    visEl.classList.toggle("poi-vis-hidden", count === 0);
+    visEl.textContent = isVisible ? "visibility" : "visibility_off";
   }
 }
 
@@ -427,7 +462,7 @@ function createPOIMarker(element, cat) {
   }
 
   const icon = L.divIcon({
-    html: `<div class="poi-marker-icon"><span class="material-symbols">${cat.icon}</span></div>`,
+    html: `<div class="poi-marker-icon" style="background-color:${cat.color}"><span class="material-symbols">${cat.icon}</span></div>`,
     className: "poi-marker",
     iconSize: [28, 28],
     iconAnchor: [14, 14],

@@ -2382,8 +2382,6 @@ button.strava-button-secondary:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  max-height: 60vh;
-  overflow-y: auto;
 }
 
 .poi-group-label {
@@ -2422,10 +2420,29 @@ button.strava-button-secondary:not(:disabled) {
 }
 
 .poi-cat-status {
-  font-size: var(--font-size-12);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--font-size-14);
   color: var(--text-color-secondary);
-  min-width: 28px;
-  text-align: right;
+}
+
+.poi-vis-btn {
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.poi-vis-btn:hover {
+  color: var(--text-color);
+}
+
+.poi-vis-btn.poi-vis-hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .poi-load-btn {
@@ -2448,11 +2465,11 @@ button.strava-button-secondary:not(:disabled) {
 }
 
 .poi-clear-btn {
-  font-size: 14px;
+  font-size: 18px;
   cursor: pointer;
   color: var(--text-color-secondary);
-  vertical-align: middle;
   user-select: none;
+  line-height: 1;
 }
 
 .poi-clear-btn:hover {
@@ -2496,7 +2513,6 @@ button.strava-button-secondary:not(:disabled) {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: var(--default-color, #3388ff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2752,7 +2768,7 @@ body.route-point-select-mode * {
 /*
   Current icon subset — update this list when adding new icons, then regenerate the font.
   Paste it as-is into the URL below (replacing ICONS):
-  add,add_circle,cabin,camping,cancel,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,playground,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
+  add,add_circle,autorenew,cabin,camping,cancel,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,playground,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
 
   To verify the list is complete, run in DevTools console (copies to clipboard):
   copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))

@@ -1206,14 +1206,7 @@ async function initializeMap() {
   if (poiFinderBtn) {
     poiFinderBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      const hasResults = poiSearchResults && poiSearchResults.getLayers().length > 0;
-      if (hasResults) {
-        // Clear existing results
-        clearPOIResults();
-      } else {
-        // Show POI finder modal
-        showPoiFinder();
-      }
+      showPoiFinder();
     });
   }
 
