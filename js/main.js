@@ -1990,58 +1990,33 @@ document.addEventListener("DOMContentLoaded", initializeMap);
 
 // Offline indicator
 (function () {
-  const searchBtn = document.getElementById("search-btn");
-  const poiFinderBtn = document.getElementById("poi-finder-btn");
-  const routeStart = document.getElementById("route-start");
-  const routeEnd = document.getElementById("route-end");
-  const routeVia = document.getElementById("route-via");
+  const indicator = document.getElementById("offline-indicator");
+  const toDisable = [
+    document.getElementById("search-btn"),
+    document.getElementById("poi-finder-btn"),
+    document.getElementById("route-start"),
+    document.getElementById("route-end"),
+    document.getElementById("route-via"),
+  ];
 
-  const setOffline = (element) => {
-    element.disabled = true;
-    element.classList.add("offline");
-    if (element.id === "poi-finder-btn") {
-      element.textContent = "OFFLINE";
-    }
+  const setOffline = () => {
+    indicator.classList.add("visible");
+    toDisable.forEach((el) => {
+      el.disabled = true;
+    });
+    if (typeof Swal !== "undefined" && Swal.isVisible()) Swal.close();
   };
 
-  const setOnline = (element) => {
-    element.disabled = false;
-    element.classList.remove("offline");
-    if (element.id === "poi-finder-btn") {
-      // Update button text based on current state instead of always setting to "Find Places"
-      if (window.updatePOIFinderButton) {
-        window.updatePOIFinderButton();
-      }
-    }
+  const setOnline = () => {
+    indicator.classList.remove("visible");
+    toDisable.forEach((el) => {
+      el.disabled = false;
+    });
   };
 
-  window.addEventListener("offline", () => {
-    setOffline(searchBtn);
-    setOffline(poiFinderBtn);
-    setOffline(routeStart);
-    setOffline(routeEnd);
-    setOffline(routeVia);
-    // Close any open search modal
-    if (typeof Swal !== "undefined" && Swal.isVisible()) {
-      Swal.close();
-    }
-  });
-
-  window.addEventListener("online", () => {
-    setOnline(searchBtn);
-    setOnline(poiFinderBtn);
-    setOnline(routeStart);
-    setOnline(routeEnd);
-    setOnline(routeVia);
-  });
-
-  if (!navigator.onLine) {
-    setOffline(searchBtn);
-    setOffline(poiFinderBtn);
-    setOffline(routeStart);
-    setOffline(routeEnd);
-    setOffline(routeVia);
-  }
+  window.addEventListener("offline", setOffline);
+  window.addEventListener("online", setOnline);
+  if (!navigator.onLine) setOffline();
 })();
 
 // console.log("User Agent:", navigator.userAgent);

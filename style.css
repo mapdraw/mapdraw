@@ -453,16 +453,6 @@ select:focus {
   box-shadow: none !important;
 }
 
-#search-modal-input[data-offline="true"] {
-  background-color: var(--color-red) !important;
-  color: white !important;
-  border-color: var(--color-red) !important;
-}
-
-#search-modal-input[data-offline="true"]::placeholder {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
 /* Suggestions dropdown inside modal */
 .search-modal-suggestions {
   display: none;
@@ -2359,6 +2349,8 @@ button.strava-button-secondary:not(:disabled) {
   display: flex;
   flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
   gap: 5px;
+  max-width: calc(100vw - 61px);
+  overflow: hidden;
 }
 
 /* Base button styles */
@@ -2387,6 +2379,7 @@ button.strava-button-secondary:not(:disabled) {
 /* Individual button widths */
 #poi-finder-btn {
   padding: 0 12px;
+  white-space: nowrap;
 }
 
 /* POI Finder Modal Styles */
@@ -2576,28 +2569,26 @@ button.strava-button-secondary:not(:disabled) {
   display: none;
 }
 
-/* Offline state styling */
-#poi-finder-btn.offline {
-  background: red !important;
-  color: white !important;
-  border-color: red !important;
-  cursor: not-allowed !important;
-}
-
-#search-btn.offline {
-  cursor: not-allowed !important;
-}
-
-#search-btn .icon-search-offline {
+/* Offline indicator */
+#offline-indicator {
   display: none;
+  background: var(--color-red);
+  color: var(--color-white);
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  padding: 0 10px;
+  width: 105px;
+  height: 32px;
+  border-radius: var(--border-radius);
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
-#search-btn.offline .icon-search-online {
-  display: none;
-}
-
-#search-btn.offline .icon-search-offline {
-  display: inline-block;
+#offline-indicator.visible {
+  display: flex;
 }
 
 /* CREDITS */
@@ -2919,6 +2910,14 @@ body.using-touch {
 
   /* Ignore following styles if desktop layout is forced */
   body:not(.force-desktop-layout) {
+    #offline-indicator {
+      position: fixed;
+      top: 50px;
+      right: 10px;
+      width: 190px;
+      max-width: calc(100vw - 81px);
+    }
+
     /* Move the scale up on mobile */
     .leaflet-bottom .leaflet-control-scale {
       position: absolute;
