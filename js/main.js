@@ -757,6 +757,9 @@ async function initializeMap() {
     }
   };
 
+  // Restore saved POI results now that the layer control and ensurePoiLayerVisible are ready
+  if (window._restorePoiFromDb) _restorePoiFromDb();
+
   // Function to save overlay order to localStorage
   function saveOverlayOrder() {
     const overlayLabels = overlaysList.querySelectorAll("label");
@@ -1246,9 +1249,7 @@ async function initializeMap() {
       map.closePopup();
     });
 
-    temporarySearchMarker
-      .bindPopup(popupContent, { offset: L.point(0, -25), maxWidth: 150 })
-      .openPopup();
+    temporarySearchMarker.bindPopup(popupContent, { maxWidth: 150 }).openPopup();
 
     temporarySearchMarker.on("popupclose", () => {
       if (temporarySearchMarker && map.hasLayer(temporarySearchMarker)) {

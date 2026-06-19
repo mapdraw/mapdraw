@@ -11,18 +11,19 @@
 
 const POI_CLUSTER_MIN_SIZE = 30;
 const POI_CLUSTER_MAX_SIZE = 50;
+const POI_MIN_ZOOM = 12;
+const POI_RESULT_LIMIT = 1000;
 
 const POI_CATEGORIES = (() => {
   const colorOutdoor = "#228B22";
   const colorAccommodation = "#FF8C00";
-  const colorAmenities = "#00CED1";
+  const colorAmenities = "#20B2AA";
   const colorTransport = "#4169E1";
   const colorFoodShopping = "#FF6347";
   return [
     // Outdoor
     {
       id: "park",
-      group: "Outdoor",
       name: "Park",
       icon: "park",
       color: colorOutdoor,
@@ -30,7 +31,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "viewpoint",
-      group: "Outdoor",
       name: "Viewpoint",
       icon: "landscape",
       color: colorOutdoor,
@@ -39,7 +39,6 @@ const POI_CATEGORIES = (() => {
     // Accommodation
     {
       id: "camp_site",
-      group: "Accommodation",
       name: "Camp Site",
       icon: "camping",
       color: colorAccommodation,
@@ -47,7 +46,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "alpine_hut",
-      group: "Accommodation",
       name: "Alpine Hut",
       icon: "cabin",
       color: colorAccommodation,
@@ -55,7 +53,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "wilderness_hut",
-      group: "Accommodation",
       name: "Wilderness Hut",
       icon: "cabin",
       color: colorAccommodation,
@@ -64,7 +61,6 @@ const POI_CATEGORIES = (() => {
     // Amenities
     {
       id: "drinking_water",
-      group: "Amenities",
       name: "Drinking Water",
       icon: "water_drop",
       color: colorAmenities,
@@ -72,7 +68,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "toilets",
-      group: "Amenities",
       name: "Toilets",
       icon: "wc",
       color: colorAmenities,
@@ -80,7 +75,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "shelter",
-      group: "Amenities",
       name: "Shelter",
       icon: "roofing",
       color: colorAmenities,
@@ -88,7 +82,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "firepit",
-      group: "Amenities",
       name: "Fire Pit",
       icon: "local_fire_department",
       color: colorAmenities,
@@ -96,7 +89,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "bbq",
-      group: "Amenities",
       name: "BBQ",
       icon: "outdoor_grill",
       color: colorAmenities,
@@ -104,7 +96,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "bench",
-      group: "Amenities",
       name: "Bench",
       icon: "chair",
       color: colorAmenities,
@@ -113,7 +104,6 @@ const POI_CATEGORIES = (() => {
     // Transport
     {
       id: "parking",
-      group: "Transport",
       name: "Parking",
       icon: "local_parking",
       color: colorTransport,
@@ -121,7 +111,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "station",
-      group: "Transport",
       name: "Station",
       icon: "train",
       color: colorTransport,
@@ -129,7 +118,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "tram_stop",
-      group: "Transport",
       name: "Tram Stop",
       icon: "tram",
       color: colorTransport,
@@ -137,7 +125,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "bus_stop",
-      group: "Transport",
       name: "Bus Stop",
       icon: "directions_bus",
       color: colorTransport,
@@ -145,7 +132,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "fuel",
-      group: "Transport",
       name: "Fuel",
       icon: "local_gas_station",
       color: colorTransport,
@@ -154,7 +140,6 @@ const POI_CATEGORIES = (() => {
     // Food & Shopping
     {
       id: "supermarket",
-      group: "Food & Shopping",
       name: "Supermarket",
       icon: "shopping_cart",
       color: colorFoodShopping,
@@ -162,7 +147,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "convenience",
-      group: "Food & Shopping",
       name: "Convenience",
       icon: "storefront",
       color: colorFoodShopping,
@@ -170,7 +154,6 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "restaurant",
-      group: "Food & Shopping",
       name: "Restaurant",
       icon: "restaurant",
       color: colorFoodShopping,
@@ -178,32 +161,119 @@ const POI_CATEGORIES = (() => {
     },
     {
       id: "cafe",
-      group: "Food & Shopping",
       name: "Cafe",
       icon: "local_cafe",
       color: colorFoodShopping,
       overpassQuery: "amenity=cafe",
     },
-  ]; // return
+  ];
 })();
 
 // Master layer group registered in the layer control — all category layers are children of this
 const poiMasterLayer = L.layerGroup();
 
-// Per-category state: cluster layer, dedup marker Map, in-flight load controller
+// Per-category state: cluster layer, marker Map (dedup+count), raw element Map (persistence), load controller
 const poiState = {};
 
+const POI_DB_KEY = "poiResults";
+const POI_POPUP_TAGS = ["operator", "opening_hours", "website", "phone", "description"];
+
 /**
- * Initialize POI finder
+ * Initialize POI finder and restore any previously saved results
  */
 function initPoiFinder() {
   POI_CATEGORIES.forEach((cat) => {
     poiState[cat.id] = {
       layer: createCategoryClusterGroup(cat.color),
-      markers: new Map(), // OSM element id → Leaflet marker
+      markers: new Map(), // key → Leaflet marker
+      rawElements: new Map(), // key → raw OSM element (for persistence)
       loadingController: null,
     };
   });
+}
+
+/**
+ * Returns [lat, lon] for any OSM element, or null if coordinates are unavailable.
+ */
+function _elementLatLon(element) {
+  if (element.type === "node") return [element.lat, element.lon];
+  if (element.center) return [element.center.lat, element.center.lon];
+  return null;
+}
+
+/**
+ * Pure diff function — no Leaflet or browser APIs, safe to unit-test.
+ *
+ * Given the currently stored raw elements, a fresh Overpass result set, and the
+ * bounding box that was queried, returns:
+ *   toRemove — keys of stored elements that fall inside the queried bounds but
+ *              are no longer returned by Overpass (i.e. deleted from OSM).
+ *   toAdd    — new elements from Overpass that are not yet stored.
+ *
+ * Elements outside the queried bounds are left untouched: we have no fresh data
+ * for those areas so we cannot tell whether they still exist.
+ */
+function _computePoiDiff(rawElements, newResults, bounds) {
+  const newKeys = new Set(newResults.map((el) => `${el.type}/${el.id}`));
+
+  const toRemove = [];
+  for (const [key, element] of rawElements) {
+    const ll = _elementLatLon(element);
+    if (!ll) continue;
+    if (bounds.contains(ll) && !newKeys.has(key)) toRemove.push(key);
+  }
+
+  const toAdd = [];
+  for (const element of newResults) {
+    const key = `${element.type}/${element.id}`;
+    if (!rawElements.has(key)) toAdd.push(element);
+  }
+
+  return { toRemove, toAdd };
+}
+
+async function _savePoiDb() {
+  try {
+    const toStore = {};
+    POI_CATEGORIES.forEach((cat) => {
+      const { rawElements } = poiState[cat.id];
+      if (rawElements.size > 0) toStore[cat.id] = Array.from(rawElements.values());
+    });
+    if (Object.keys(toStore).length === 0) {
+      await idbKeyval.del(POI_DB_KEY);
+    } else {
+      await idbKeyval.set(POI_DB_KEY, toStore);
+    }
+  } catch (e) {
+    console.warn("POI: IndexedDB save failed", e);
+  }
+}
+
+async function _restorePoiFromDb() {
+  try {
+    const stored = await idbKeyval.get(POI_DB_KEY);
+    if (!stored) return;
+    for (const [catId, elements] of Object.entries(stored)) {
+      const cat = POI_CATEGORIES.find((c) => c.id === catId);
+      if (!cat) continue;
+      const state = poiState[catId];
+      elements.forEach((element) => {
+        const key = `${element.type}/${element.id}`;
+        if (state.markers.has(key)) return;
+        const marker = createPOIMarker(element, cat);
+        if (!marker) return;
+        state.markers.set(key, marker);
+        state.rawElements.set(key, element);
+        state.layer.addLayer(marker);
+      });
+      if (state.markers.size > 0 && !poiMasterLayer.hasLayer(state.layer)) {
+        poiMasterLayer.addLayer(state.layer);
+      }
+    }
+    if (window.ensurePoiLayerVisible) window.ensurePoiLayerVisible();
+  } catch (e) {
+    console.warn("POI: IndexedDB restore failed", e);
+  }
 }
 
 /**
@@ -243,24 +313,6 @@ function createCategoryClusterGroup(color) {
  * Open the Find Places modal — shows all categories with visibility toggles
  */
 async function showPoiFinder() {
-  const MIN_ZOOM = 12;
-  if (map.getZoom() < MIN_ZOOM) {
-    const result = await Swal.fire({
-      icon: "warning",
-      title: "Zoom In Required",
-      text: "Please zoom in closer to search for places. This helps ensure faster and more complete results.",
-      showCancelButton: true,
-      confirmButtonText: "Zoom In",
-      cancelButtonText: "Cancel",
-    });
-    if (result.isConfirmed) {
-      map.setView(map.getCenter(), MIN_ZOOM);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return showPoiFinder();
-    }
-    return;
-  }
-
   const html = POI_CATEGORIES.map((cat) => {
     const state = poiState[cat.id];
     const isLoading = !!state.loadingController;
@@ -272,15 +324,39 @@ async function showPoiFinder() {
         <span class="poi-cat-name">${cat.name}</span>
         <span id="poi-status-${cat.id}" class="poi-cat-status">${renderStatus(isLoading, count, cat.id)}</span>
         <span id="poi-vis-${cat.id}" class="poi-vis-btn material-symbols${count === 0 ? " poi-vis-hidden" : ""}" data-category="${cat.id}" title="Toggle visibility">${isVisible ? "visibility" : "visibility_off"}</span>
-        <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Load for current view">${isLoading ? "autorenew" : "search"}</span>
-      </div>`;
+        <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Search for current view">${isLoading ? "autorenew" : "search"}</span>
+      </div>
+      <div id="poi-msg-${cat.id}" class="poi-cat-msg" style="display:none"></div>`;
   }).join("");
 
   await Swal.fire({
     html: `<div class="poi-category-list">${html}</div>`,
     confirmButtonText: "Close",
-    customClass: { popup: "poi-finder-modal" },
+    showDenyButton: true,
+    denyButtonText: "Clear All",
+    customClass: { popup: "poi-finder-modal", denyButton: "swal-confirm-danger" },
+    preDeny: async () => {
+      const anyLoaded = POI_CATEGORIES.some((cat) => poiState[cat.id].markers.size > 0);
+      if (!anyLoaded) return false;
+      const result = await Swal.fire({
+        title: "Clear all found places?",
+        text: "This action cannot be undone.",
+        icon: "warning",
+        showCancelButton: true,
+        customClass: { confirmButton: "swal-confirm-danger" },
+        confirmButtonText: "Yes, clear all",
+      });
+      if (result.isConfirmed) {
+        POI_CATEGORIES.forEach((cat) => clearCategory(cat));
+      } else {
+        showPoiFinder();
+      }
+      return false;
+    },
     didOpen: () => {
+      const denyBtn = Swal.getDenyButton();
+      if (denyBtn)
+        denyBtn.disabled = !POI_CATEGORIES.some((cat) => poiState[cat.id].markers.size > 0);
       document.querySelectorAll(".poi-load-btn").forEach((el) => {
         el.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -306,10 +382,26 @@ async function showPoiFinder() {
   });
 }
 
+function showCategoryMsg(catId, text) {
+  const el = document.getElementById(`poi-msg-${catId}`);
+  if (el) {
+    el.textContent = text;
+    el.style.display = "block";
+  }
+}
+
+function clearCategoryMsg(catId) {
+  const el = document.getElementById(`poi-msg-${catId}`);
+  if (el) {
+    el.style.display = "none";
+    el.textContent = "";
+  }
+}
+
 function renderStatus(isLoading, count, catId) {
   if (isLoading) return '<span class="poi-loading-dot"></span>';
   if (count > 0)
-    return `${count.toLocaleString()} <span class="poi-clear-btn material-symbols material-symbols-fill" data-category="${catId}">cancel</span>`;
+    return `${count.toLocaleString()} <span class="poi-clear-btn material-symbols material-symbols-fill" data-category="${catId}" title="Clear">cancel</span>`;
   return "";
 }
 
@@ -317,19 +409,20 @@ function renderStatus(isLoading, count, catId) {
  * Load POIs for the current viewport into a category layer
  */
 async function loadCategory(cat) {
-  if (map.getZoom() < 12) {
+  if (map.getZoom() < POI_MIN_ZOOM) {
     const result = await Swal.fire({
       icon: "warning",
       title: "Zoom In Required",
-      text: "Please zoom in closer to search for places.",
+      text: `Please zoom in to level ${POI_MIN_ZOOM} or closer to search for places.`,
       showCancelButton: true,
       confirmButtonText: "Zoom In",
       cancelButtonText: "Cancel",
     });
     if (result.isConfirmed) {
-      map.setView(map.getCenter(), 12);
+      map.setView(map.getCenter(), POI_MIN_ZOOM);
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
+    showPoiFinder();
     return;
   }
 
@@ -349,37 +442,54 @@ async function loadCategory(cat) {
   const controller = new AbortController();
   state.loadingController = controller;
 
+  clearCategoryMsg(cat.id);
   updateCategoryRowUI(cat.id, true, state.markers.size);
+
+  // Capture bounds now — used for both the query and the diff after the async call
+  const bounds = map.getBounds();
 
   try {
     const results = await queryOverpass(
       cat.overpassQuery,
-      map.getBounds(),
+      bounds,
       controller.signal,
-      1000,
+      POI_RESULT_LIMIT,
     );
 
     if (controller.signal.aborted) return;
 
-    results.forEach((element) => {
+    const { toRemove, toAdd } = _computePoiDiff(state.rawElements, results, bounds);
+
+    toRemove.forEach((key) => {
+      const marker = state.markers.get(key);
+      if (marker) state.layer.removeLayer(marker);
+      state.markers.delete(key);
+      state.rawElements.delete(key);
+    });
+
+    toAdd.forEach((element) => {
       const key = `${element.type}/${element.id}`;
-      if (state.markers.has(key)) return;
       const marker = createPOIMarker(element, cat);
       if (!marker) return;
       state.markers.set(key, marker);
+      state.rawElements.set(key, element);
       state.layer.addLayer(marker);
     });
 
+    _savePoiDb();
     updateCategoryRowUI(cat.id, false, state.markers.size);
+    if (state.markers.size === 0) {
+      showCategoryMsg(cat.id, `No ${cat.name.toLowerCase()} found in current view.`);
+    } else if (results.length >= POI_RESULT_LIMIT) {
+      showCategoryMsg(
+        cat.id,
+        `Showing first ${POI_RESULT_LIMIT.toLocaleString()} results. Zoom in and search again for complete coverage.`,
+      );
+    }
   } catch (err) {
     if (err.name === "AbortError") return;
     updateCategoryRowUI(cat.id, false, state.markers.size);
-    Swal.fire({
-      icon: "error",
-      title: "Load Failed",
-      text: err.message || "Could not load places. Please try again.",
-      confirmButtonText: "OK",
-    });
+    showCategoryMsg(cat.id, err.message || "Could not load places. Please try again.");
   } finally {
     if (state.loadingController === controller) {
       state.loadingController = null;
@@ -415,6 +525,8 @@ function clearCategory(cat) {
   }
   state.layer.clearLayers();
   state.markers.clear();
+  state.rawElements.clear();
+  _savePoiDb();
   updateCategoryRowUI(cat.id, false, 0);
 }
 
@@ -444,44 +556,38 @@ function updateCategoryRowUI(categoryId, isLoading, count) {
     visEl.classList.toggle("poi-vis-hidden", count === 0);
     visEl.textContent = isVisible ? "visibility" : "visibility_off";
   }
+  const denyBtn = Swal.getDenyButton();
+  if (denyBtn) denyBtn.disabled = !POI_CATEGORIES.some((cat) => poiState[cat.id].markers.size > 0);
 }
 
 /**
  * Create a single POI marker with a category icon and popup
  */
 function createPOIMarker(element, cat) {
-  let lat, lon;
-  if (element.type === "node") {
-    lat = element.lat;
-    lon = element.lon;
-  } else if (element.center) {
-    lat = element.center.lat;
-    lon = element.center.lon;
-  } else {
-    return null;
-  }
+  const ll = _elementLatLon(element);
+  if (!ll) return null;
+  const [lat, lon] = ll;
 
   const icon = L.divIcon({
     html: `<div class="poi-marker-icon" style="background-color:${cat.color}"><span class="material-symbols">${cat.icon}</span></div>`,
     className: "poi-marker",
     iconSize: [28, 28],
     iconAnchor: [14, 14],
-    popupAnchor: [0, -16],
+    popupAnchor: [0, -5],
   });
 
   const marker = L.marker([lat, lon], { icon });
 
   const name = element.tags?.name || cat.name;
   const tags = element.tags || {};
-  const interestingTags = ["operator", "opening_hours", "website", "phone", "description"];
 
   let popupContent = `
     <div style="overflow-wrap:break-word;text-align:center;">
       <strong><span class="material-symbols" style="font-size:16px;vertical-align:middle;">${cat.icon}</span> ${name}</strong><br>
   `;
-  interestingTags.forEach((tag) => {
+  POI_POPUP_TAGS.forEach((tag) => {
     if (tags[tag]) {
-      popupContent += `<small>${tag.replace("_", " ")}: ${tags[tag]}</small><br>`;
+      popupContent += `<small>${tag.replaceAll("_", " ")}: ${tags[tag]}</small><br>`;
     }
   });
   popupContent += `
@@ -520,10 +626,11 @@ const OVERPASS_ENDPOINTS = [
 ];
 
 // How long to wait for a single endpoint before giving up and trying the next one.
-// Without this, a slow/hanging server could stall the search for the full query timeout (25s).
 const ENDPOINT_TIMEOUT_MS = 8000;
+// Server-side Overpass timeout sent in the query directive.
+const OVERPASS_TIMEOUT_S = 25;
 
-async function queryOverpass(osmQuery, bounds, signal, limit = 1000) {
+async function queryOverpass(osmQuery, bounds, signal, limit = POI_RESULT_LIMIT) {
   const queries = Array.isArray(osmQuery) ? osmQuery : [osmQuery];
 
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
@@ -532,7 +639,7 @@ async function queryOverpass(osmQuery, bounds, signal, limit = 1000) {
     .join("\n      ");
 
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:${OVERPASS_TIMEOUT_S}];
     (
       ${queryParts}
     );
@@ -593,13 +700,11 @@ async function queryOverpass(osmQuery, bounds, signal, limit = 1000) {
 // Make functions globally available
 window.initPoiFinder = initPoiFinder;
 window.showPoiFinder = showPoiFinder;
+window._restorePoiFromDb = _restorePoiFromDb;
 window.poiMasterLayer = poiMasterLayer;
 
 // Compatibility aliases expected by main.js
 window.poiSearchResults = poiMasterLayer;
-window.clearPOIResults = function () {
-  POI_CATEGORIES.forEach((cat) => clearCategory(cat));
-};
 window.updatePOIFinderButton = function () {
   const btn = document.getElementById("poi-finder-btn");
   if (btn) btn.textContent = "Find Places";

@@ -2359,42 +2359,10 @@ button.strava-button-secondary:not(:disabled) {
 }
 
 /* POI Finder Modal Styles */
-.poi-category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.poi-category-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  background: var(--background-color);
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: var(--font-size-14);
-}
-
 .poi-category-list {
   display: flex;
   flex-direction: column;
   gap: 3px;
-}
-
-.poi-group-label {
-  font-size: var(--font-size-12);
-  color: var(--text-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 10px 4px 4px;
-  text-align: left;
-}
-
-.poi-group-label:first-child {
-  padding-top: 2px;
 }
 
 .poi-category-row {
@@ -2405,6 +2373,15 @@ button.strava-button-secondary:not(:disabled) {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   background: var(--background-color);
+}
+
+.poi-cat-msg {
+  padding: 8px 10px;
+  border-radius: var(--border-radius);
+  background: var(--color-red);
+  color: #fff;
+  font-size: var(--font-size-14);
+  text-align: left;
 }
 
 .poi-cat-icon {
