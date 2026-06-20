@@ -590,7 +590,7 @@ function createPOIMarker(element, cat) {
       </small>
     </div>
     <div style="text-align:center;margin-top:8px;">
-      <button id="save-poi-marker-${element.id}" style="padding:5px 10px;border:1px solid #ccc;border-radius:var(--border-radius);cursor:pointer;background-color:#f0f0f0;">
+      <button id="save-poi-marker-${element.type}-${element.id}" style="padding:5px 10px;border:1px solid #ccc;border-radius:var(--border-radius);cursor:pointer;background-color:#f0f0f0;">
         Save to Map
       </button>
     </div>
@@ -598,12 +598,16 @@ function createPOIMarker(element, cat) {
 
   marker.bindPopup(L.popup({ maxWidth: 150 }).setContent(popupContent));
   marker.on("popupopen", () => {
-    const btn = document.getElementById(`save-poi-marker-${element.id}`);
+    const btn = document.getElementById(`save-poi-marker-${element.type}-${element.id}`);
     if (btn) {
-      btn.addEventListener("click", () => {
-        createAndSaveMarker(lat, lon, name);
-        marker.closePopup();
-      });
+      btn.addEventListener(
+        "click",
+        () => {
+          createAndSaveMarker(lat, lon, name);
+          marker.closePopup();
+        },
+        { once: true },
+      );
     }
   });
 
