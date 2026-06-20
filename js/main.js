@@ -1249,7 +1249,9 @@ async function initializeMap() {
       map.closePopup();
     });
 
-    temporarySearchMarker.bindPopup(popupContent, { maxWidth: 150 }).openPopup();
+    temporarySearchMarker
+      .bindPopup(popupContent, { maxWidth: 150, closeButton: false })
+      .openPopup();
 
     temporarySearchMarker.on("popupclose", () => {
       if (temporarySearchMarker && map.hasLayer(temporarySearchMarker)) {

@@ -2068,6 +2068,7 @@ button.strava-button-secondary:not(:disabled) {
 
 .leaflet-popup-content {
   font-size: var(--font-size-12) !important;
+  margin: 10px !important;
 }
 .leaflet-popup-content a {
   color: var(--highlight-color);

@@ -607,7 +607,7 @@ function createPOIMarker(element, cat) {
     </div>
   `;
 
-  marker.bindPopup(L.popup({ maxWidth: 150 }).setContent(popupContent));
+  marker.bindPopup(L.popup({ maxWidth: 150, closeButton: false }).setContent(popupContent));
   marker.on("popupopen", () => {
     const btn = document.getElementById(`save-poi-marker-${element.type}-${element.id}`);
     if (btn) {
