@@ -182,6 +182,7 @@ const POI_POPUP_TAGS = ["operator", "opening_hours", "website", "phone", "descri
  * Initialize POI finder and restore any previously saved results
  */
 function initPoiFinder() {
+  poiMasterLayer.addTo(map);
   POI_CATEGORIES.forEach((cat) => {
     poiState[cat.id] = {
       layer: createCategoryClusterGroup(cat.color),
