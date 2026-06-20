@@ -1842,6 +1842,14 @@ button.strava-button-secondary:not(:disabled) {
   flex: 1 1 auto !important;
 }
 
+.swal2-html-container a {
+  color: var(--highlight-color);
+  text-decoration: none;
+}
+.swal2-html-container a:hover {
+  text-decoration: underline;
+}
+
 .attribution-toast {
   padding-top: 0;
   width: fit-content !important;
@@ -2046,6 +2054,10 @@ button.strava-button-secondary:not(:disabled) {
 }
 .leaflet-popup-content a {
   color: var(--highlight-color);
+  text-decoration: none;
+}
+body:not(.glass-mode) .leaflet-popup-content a:hover {
+  text-decoration: underline;
 }
 
 .leaflet-popup-content-wrapper {
