@@ -2415,10 +2415,10 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 #poi-finder-btn.poi-has-results::after {
   content: "";
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 7px;
-  height: 7px;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background-color: var(--color-blue);
 }
