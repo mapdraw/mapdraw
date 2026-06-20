@@ -1860,6 +1860,10 @@ button.strava-button-secondary:not(:disabled) {
 .attribution-toast .swal2-html-container {
   color: var(--color-white) !important;
 }
+.attribution-toast .swal2-html-container a {
+  color: var(--color-white);
+  text-decoration: underline;
+}
 
 /* Center text in toast notifications */
 .swal2-toast .swal2-title {
