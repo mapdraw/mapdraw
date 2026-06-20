@@ -205,32 +205,22 @@ function _elementLatLon(element) {
 /**
  * Pure diff function — no Leaflet or browser APIs, safe to unit-test.
  *
- * Given the currently stored raw elements, a fresh Overpass result set, and the
- * bounding box that was queried, returns:
- *   toRemove — keys of stored elements that fall inside the queried bounds but
- *              are no longer returned by Overpass (i.e. deleted from OSM).
- *   toAdd    — new elements from Overpass that are not yet stored.
+ * All stored elements inside the queried bounds are removed and replaced with
+ * the fresh Overpass results. This ensures updates to existing OSM elements
+ * (tag changes, renames, etc.) are always reflected after a search.
  *
  * Elements outside the queried bounds are left untouched: we have no fresh data
  * for those areas so we cannot tell whether they still exist.
  */
 function _computePoiDiff(rawElements, newResults, bounds) {
-  const newKeys = new Set(newResults.map((el) => `${el.type}/${el.id}`));
-
   const toRemove = [];
   for (const [key, element] of rawElements) {
     const ll = _elementLatLon(element);
     if (!ll) continue;
-    if (bounds.contains(ll) && !newKeys.has(key)) toRemove.push(key);
+    if (bounds.contains(ll)) toRemove.push(key);
   }
 
-  const toAdd = [];
-  for (const element of newResults) {
-    const key = `${element.type}/${element.id}`;
-    if (!rawElements.has(key)) toAdd.push(element);
-  }
-
-  return { toRemove, toAdd };
+  return { toRemove, toAdd: newResults };
 }
 
 async function _savePoiDb() {
