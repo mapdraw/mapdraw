@@ -262,6 +262,7 @@ async function _restorePoiFromDb() {
       }
     }
     if (window.ensurePoiLayerVisible) window.ensurePoiLayerVisible();
+    _updatePoiFinderDot();
     // Remove any stored data for categories that no longer exist in POI_CATEGORIES
     _savePoiDb();
   } catch (e) {
@@ -524,6 +525,15 @@ function clearCategory(cat) {
   updateCategoryRowUI(cat.id, false, 0);
 }
 
+function _updatePoiFinderDot() {
+  const btn = document.getElementById("poi-finder-btn");
+  if (btn)
+    btn.classList.toggle(
+      "poi-has-results",
+      POI_CATEGORIES.some((cat) => poiState[cat.id].markers.size > 0),
+    );
+}
+
 /**
  * Reflect current state in the modal row — safe to call when modal is closed
  */
@@ -552,6 +562,7 @@ function updateCategoryRowUI(categoryId, isLoading, count) {
   }
   const denyBtn = Swal.getDenyButton();
   if (denyBtn) denyBtn.disabled = !POI_CATEGORIES.some((cat) => poiState[cat.id].markers.size > 0);
+  _updatePoiFinderDot();
 }
 
 /**
