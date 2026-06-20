@@ -1241,9 +1241,8 @@ select:focus {
 .routing-panel-icon {
   width: 16px;
   height: 16px;
-  display: block;
+  display: flex !important;
   margin: auto;
-  display: flex;
   justify-content: center;
   align-items: center;
 }
