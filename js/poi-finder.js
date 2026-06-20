@@ -462,6 +462,7 @@ async function loadCategory(cat) {
 
     toAdd.forEach((element) => {
       const key = `${element.type}/${element.id}`;
+      if (state.markers.has(key)) return;
       const marker = createPOIMarker(element, cat);
       if (!marker) return;
       state.markers.set(key, marker);
@@ -576,11 +577,11 @@ function createPOIMarker(element, cat) {
 
   let popupContent = `
     <div style="overflow-wrap:break-word;text-align:center;">
-      <strong><span class="material-symbols" style="font-size:16px;vertical-align:middle;">${cat.icon}</span> ${name}</strong><br>
+      <strong><span class="material-symbols" style="font-size:16px;vertical-align:middle;">${cat.icon}</span> ${escHtml(name)}</strong><br>
   `;
   POI_POPUP_TAGS.forEach((tag) => {
     if (tags[tag]) {
-      popupContent += `<small>${tag.replaceAll("_", " ")}: ${tags[tag]}</small><br>`;
+      popupContent += `<small>${tag.replaceAll("_", " ")}: ${escHtml(tags[tag])}</small><br>`;
     }
   });
   popupContent += `
@@ -684,10 +685,15 @@ async function queryOverpass(osmQuery, bounds, signal, limit = POI_RESULT_LIMIT)
       // Hard query errors — retrying won't help
       if (err.message.startsWith("400") || err.message.startsWith("504")) throw err;
       // Endpoint timed out or failed — try the next one
-      lastError = err.name === "AbortError" ? new Error("Endpoint timed out.") : err;
+      lastError =
+        err.name === "AbortError"
+          ? new Error("Endpoint timed out.")
+          : new Error("Could not connect to Overpass API. Please try again later.");
     }
   }
-  throw new Error(lastError?.message || "All Overpass endpoints failed. Please try again.");
+  throw new Error(
+    lastError?.message || "Could not connect to Overpass API. Please try again later.",
+  );
 }
 
 // Make functions globally available
