@@ -2527,25 +2527,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   }
 }
 
-.poi-loading-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background-color: var(--text-color-secondary);
-  animation: poi-pulse 1s ease-in-out infinite;
-}
-
-@keyframes poi-pulse {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 .poi-marker {
   background: none !important;
   border: none !important;

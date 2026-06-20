@@ -393,7 +393,7 @@ function clearCategoryMsg(catId) {
 }
 
 function renderStatus(isLoading, count, catId) {
-  if (isLoading) return '<span class="poi-loading-dot"></span>';
+  if (isLoading) return "";
   if (count > 0)
     return `${count.toLocaleString()} <span class="poi-clear-btn material-symbols material-symbols-fill" data-category="${catId}" title="Clear">cancel</span>`;
   return "";
