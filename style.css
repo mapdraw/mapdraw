@@ -133,11 +133,6 @@ body.glass-mode #elevation-div {
   border-top: 1px solid var(--border-color) !important;
 }
 
-/* Overview list headers */
-body.glass-mode .overview-list-header {
-  /* background-color: var(--glass-header-bg) !important; */
-}
-
 /* Context menu popup */
 body.glass-mode .leaflet-popup-content-wrapper {
   background: var(--glass-bg) !important;
