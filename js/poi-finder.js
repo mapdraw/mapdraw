@@ -705,10 +705,4 @@ window.initPoiFinder = initPoiFinder;
 window.showPoiFinder = showPoiFinder;
 window._restorePoiFromDb = _restorePoiFromDb;
 window.poiMasterLayer = poiMasterLayer;
-
-// Compatibility aliases expected by main.js
 window.poiSearchResults = poiMasterLayer;
-window.updatePOIFinderButton = function () {
-  const btn = document.getElementById("poi-finder-btn");
-  if (btn) btn.textContent = "Find Places";
-};
