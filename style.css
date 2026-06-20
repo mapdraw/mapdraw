@@ -1674,6 +1674,25 @@ button.strava-button-secondary:not(:disabled) {
   opacity: 1;
 }
 
+.osm-contribute-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.osm-contribute-category-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--background-color);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: var(--font-size-14);
+}
+
 .osm-contribution-row {
   display: flex;
   justify-content: space-between;

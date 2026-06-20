@@ -292,7 +292,7 @@ function osmRenderCategories(filter = "") {
   )
     .map(
       (cat) => `
-    <button class="poi-category-btn osm-contribute-btn" data-id="${cat.id}">
+    <button class="osm-contribute-category-btn osm-contribute-btn" data-id="${cat.id}">
       <span class="material-symbols" style="font-size: 20px;">${cat.icon}</span>
       <span>${cat.name}</span>
     </button>`,
@@ -368,7 +368,7 @@ async function osmShowContributePicker(latlng) {
           class="osm-contribute-search"
           style="width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--background-color); color: var(--text-color); font-size: var(--font-size-14);"
         />
-        <div class="poi-category-grid" id="osm-contribute-grid">
+        <div class="osm-contribute-grid" id="osm-contribute-grid">
           ${osmRenderCategories()}
         </div>
       </div>
