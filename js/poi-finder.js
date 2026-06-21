@@ -189,7 +189,18 @@ const poiMasterLayer = L.layerGroup();
 const poiState = {};
 
 const POI_DB_KEY = "poiResults";
-const POI_POPUP_TAGS = ["operator", "opening_hours", "website", "phone", "description"];
+
+function _formatPopupTagValue(tag, rawValue) {
+  const display = escHtml(rawValue);
+  if (tag === "website" || tag.startsWith("website:") || tag.endsWith(":website")) {
+    return `<a href="${encodeURI(rawValue)}" target="_blank" rel="noopener">${display}</a>`;
+  }
+  if (tag === "phone" || tag === "contact:phone")
+    return `<a href="tel:${encodeURI(rawValue)}">${display}</a>`;
+  if (tag === "email" || tag === "contact:email")
+    return `<a href="mailto:${encodeURI(rawValue)}">${display}</a>`;
+  return display;
+}
 
 /**
  * Initialize POI finder and restore any previously saved results
@@ -419,11 +430,12 @@ async function showPoiFinder() {
   });
 }
 
-function showCategoryMsg(catId, text) {
+function showCategoryMsg(catId, text, isInfo = false) {
   const el = document.getElementById(`poi-msg-${catId}`);
   if (el) {
     el.textContent = text;
     el.style.display = "block";
+    el.classList.toggle("poi-cat-msg--info", isInfo);
   }
 }
 
@@ -455,13 +467,13 @@ async function loadCategory(cat) {
       .map((q) => q.trim().toLowerCase())
       .filter(Boolean);
     if (queries.length === 0) {
-      showCategoryMsg(cat.id, "Enter an OSM tag query, e.g. amenity=drinking_water");
+      showCategoryMsg(cat.id, "Enter an OSM tag query, e.g. amenity=drinking_water", true);
       return;
     }
     const invalid = queries.find((q) => {
-      if (!q.includes("=")) return true;
-      const [key, val] = q.split("=");
-      return !key.trim() || !val.trim();
+      const i = q.indexOf("=");
+      if (i === -1) return true;
+      return !q.slice(0, i).trim() || !q.slice(i + 1).trim();
     });
     if (invalid) {
       showCategoryMsg(
@@ -557,11 +569,13 @@ async function loadCategory(cat) {
         cat.isCustom
           ? "No results found in current view."
           : `No ${cat.name.toLowerCase()} found in current view.`,
+        true,
       );
     } else if (results.length >= POI_RESULT_LIMIT) {
       showCategoryMsg(
         cat.id,
         `Showing first ${POI_RESULT_LIMIT.toLocaleString()} results. Zoom in and search again for complete coverage.`,
+        true,
       );
     }
   } catch (err) {
@@ -692,10 +706,9 @@ function createPOIMarker(element, cat) {
     if (matched)
       popupContent += `<small style="color:var(--text-color-secondary);">${escHtml(matched)}</small><br>`;
   }
-  POI_POPUP_TAGS.forEach((tag) => {
-    if (tags[tag]) {
-      popupContent += `<small>${tag.replaceAll("_", " ")}: ${escHtml(tags[tag])}</small><br>`;
-    }
+  Object.entries(tags).forEach(([tag, val]) => {
+    if (tag === "name" || !val) return;
+    popupContent += `<small>${escHtml(tag.replaceAll("_", " "))}: ${_formatPopupTagValue(tag, val)}</small><br>`;
   });
   popupContent += `
       <small style="color:var(--text-color-secondary);">
@@ -703,7 +716,7 @@ function createPOIMarker(element, cat) {
       </small>
     </div>
     <div style="text-align:center;margin-top:8px;">
-      <button id="save-poi-marker-${element.type}-${element.id}" style="padding:5px 10px;border:1px solid #ccc;border-radius:var(--border-radius);cursor:pointer;background-color:#f0f0f0;">
+      <button id="save-poi-marker-${element.type}-${element.id}" style="padding:5px 10px;border-radius:var(--border-radius);cursor:pointer;">
         Save to Map
       </button>
     </div>
@@ -737,7 +750,7 @@ const OVERPASS_ENDPOINTS = [
 ];
 
 // How long to wait for a single endpoint before giving up and trying the next one.
-const ENDPOINT_TIMEOUT_MS = 8000;
+const ENDPOINT_TIMEOUT_MS = 10000;
 // Server-side Overpass timeout sent in the query directive.
 const OVERPASS_TIMEOUT_S = 25;
 
@@ -822,4 +835,3 @@ window.initPoiFinder = initPoiFinder;
 window.showPoiFinder = showPoiFinder;
 window._restorePoiFromDb = _restorePoiFromDb;
 window.poiMasterLayer = poiMasterLayer;
-window.poiSearchResults = poiMasterLayer;

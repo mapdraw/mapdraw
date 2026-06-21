@@ -504,7 +504,7 @@ async function initializeMap() {
     DrawnItems: drawnItems,
     ImportedFiles: importedItems,
     StravaActivities: stravaActivitiesLayer,
-    FoundPlaces: poiSearchResults,
+    FoundPlaces: poiMasterLayer,
     WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
       maxZoom: 19,
       zIndex: 200,
