@@ -21,6 +21,15 @@ const POI_CATEGORIES = (() => {
   const colorTransport = "#4169E1";
   const colorFoodShopping = "#FF6347";
   return [
+    // Custom
+    {
+      id: "custom",
+      name: "Custom",
+      icon: "category",
+      color: "#696969",
+      overpassQuery: "",
+      isCustom: true,
+    },
     // Outdoor
     {
       id: "park",
@@ -169,6 +178,10 @@ const POI_CATEGORIES = (() => {
   ];
 })();
 
+let customQueryValue = "";
+let customLastSearchedQuery = "";
+const POI_CUSTOM_QUERY_KEY = "poiCustomQuery";
+
 // Master layer group registered in the layer control — all category layers are children of this
 const poiMasterLayer = L.layerGroup();
 
@@ -242,6 +255,11 @@ async function _savePoiDb() {
 
 async function _restorePoiFromDb() {
   try {
+    const savedQuery = await idbKeyval.get(POI_CUSTOM_QUERY_KEY);
+    if (savedQuery) {
+      customQueryValue = savedQuery;
+      customLastSearchedQuery = savedQuery;
+    }
     const stored = await idbKeyval.get(POI_DB_KEY);
     if (!stored) return;
     for (const [catId, elements] of Object.entries(stored)) {
@@ -312,15 +330,19 @@ async function showPoiFinder() {
     const isLoading = !!state.loadingController;
     const count = state.markers.size;
     const isVisible = count > 0 && poiMasterLayer.hasLayer(state.layer);
-    return `
+    const row = `
       <div class="poi-category-row">
         <span class="material-symbols poi-cat-icon" style="color:${cat.color}">${cat.icon}</span>
         <span class="poi-cat-name">${cat.name}</span>
+        ${cat.isCustom ? '<span id="poi-custom-info-btn" class="settings-info-icon material-symbols" title="What\'s this?">info</span>' : ""}
         <span id="poi-status-${cat.id}" class="poi-cat-status">${renderStatus(isLoading, count, cat.id)}</span>
         <span id="poi-vis-${cat.id}" class="poi-vis-btn material-symbols${count === 0 ? " poi-vis-hidden" : ""}" data-category="${cat.id}" title="Toggle visibility">${isVisible ? "visibility" : "visibility_off"}</span>
         <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Search for current view">${isLoading ? "autorenew" : "search"}</span>
-      </div>
-      <div id="poi-msg-${cat.id}" class="poi-cat-msg" style="display:none"></div>`;
+      </div>`;
+    const content = cat.isCustom
+      ? `<div class="poi-custom-group">${row}<div class="poi-custom-input-row"><textarea id="poi-custom-query-input" class="poi-custom-input" placeholder="e.g. amenity=pharmacy, tourism=hotel" rows="1">${escHtml(customQueryValue)}</textarea></div></div>`
+      : row;
+    return `${content}<div id="poi-msg-${cat.id}" class="poi-cat-msg" style="display:none"></div>`;
   }).join("");
 
   await Swal.fire({
@@ -372,6 +394,26 @@ async function showPoiFinder() {
           if (cat) toggleCategoryVisibility(cat);
         });
       });
+      const customInfoBtn = document.getElementById("poi-custom-info-btn");
+      if (customInfoBtn) {
+        customInfoBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          Swal.fire({
+            title: "Custom Query",
+            html: `<p style="text-align:left;margin:0 0 12px 0">Enter an OSM tag in <code>key=value</code> format. Separate multiple tags with commas to search for several types at once.</p><p style="text-align:left;margin:0 0 12px 0"><strong>Example:</strong> <code>amenity=pharmacy, tourism=hotel</code></p><p style="text-align:left;margin:0"><a href="https://wiki.openstreetmap.org/wiki/Map_features" target="_blank">Browse all possible map features</a></p>`,
+            confirmButtonText: "Got it!",
+          }).then(() => showPoiFinder());
+        });
+      }
+      const customInput = document.getElementById("poi-custom-query-input");
+      if (customInput) {
+        customInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            loadCategory(POI_CATEGORIES.find((c) => c.isCustom));
+          }
+        });
+      }
     },
   });
 }
@@ -403,6 +445,32 @@ function renderStatus(isLoading, count, catId) {
  * Load POIs for the current viewport into a category layer
  */
 async function loadCategory(cat) {
+  let osmQuery = cat.overpassQuery;
+  if (cat.isCustom) {
+    const input = document.getElementById("poi-custom-query-input");
+    const rawInput = (input ? input.value : customQueryValue).trim();
+    const queries = rawInput
+      .split(",")
+      .map((q) => q.trim())
+      .filter(Boolean);
+    if (queries.length === 0) {
+      showCategoryMsg(cat.id, "Enter an OSM tag query, e.g. amenity=drinking_water");
+      return;
+    }
+    if (rawInput !== customLastSearchedQuery && poiState[cat.id].rawElements.size > 0) {
+      const state = poiState[cat.id];
+      state.layer.clearLayers();
+      state.markers.clear();
+      state.rawElements.clear();
+    }
+    customQueryValue = rawInput;
+    customLastSearchedQuery = rawInput;
+    try {
+      await idbKeyval.set(POI_CUSTOM_QUERY_KEY, rawInput);
+    } catch (e) {}
+    osmQuery = queries.length === 1 ? queries[0] : queries;
+  }
+
   if (map.getZoom() < POI_MIN_ZOOM) {
     const result = await Swal.fire({
       icon: "warning",
@@ -443,12 +511,7 @@ async function loadCategory(cat) {
   const bounds = map.getBounds();
 
   try {
-    const results = await queryOverpass(
-      cat.overpassQuery,
-      bounds,
-      controller.signal,
-      POI_RESULT_LIMIT,
-    );
+    const results = await queryOverpass(osmQuery, bounds, controller.signal, POI_RESULT_LIMIT);
 
     if (controller.signal.aborted) return;
 
@@ -474,7 +537,12 @@ async function loadCategory(cat) {
     _savePoiDb();
     updateCategoryRowUI(cat.id, false, state.markers.size);
     if (state.markers.size === 0) {
-      showCategoryMsg(cat.id, `No ${cat.name.toLowerCase()} found in current view.`);
+      showCategoryMsg(
+        cat.id,
+        cat.isCustom
+          ? "No results found in current view."
+          : `No ${cat.name.toLowerCase()} found in current view.`,
+      );
     } else if (results.length >= POI_RESULT_LIMIT) {
       showCategoryMsg(
         cat.id,
@@ -521,6 +589,13 @@ function clearCategory(cat) {
   state.layer.clearLayers();
   state.markers.clear();
   state.rawElements.clear();
+  if (cat.isCustom) {
+    customQueryValue = "";
+    customLastSearchedQuery = "";
+    idbKeyval.del(POI_CUSTOM_QUERY_KEY).catch(() => {});
+    const input = document.getElementById("poi-custom-query-input");
+    if (input) input.value = "";
+  }
   _savePoiDb();
   updateCategoryRowUI(cat.id, false, 0);
 }
@@ -590,6 +665,18 @@ function createPOIMarker(element, cat) {
     <div style="overflow-wrap:break-word;text-align:center;">
       <strong><span class="material-symbols" style="font-size:16px;vertical-align:middle;">${cat.icon}</span> ${escHtml(name)}</strong><br>
   `;
+  if (cat.isCustom && customLastSearchedQuery) {
+    const queries = customLastSearchedQuery
+      .split(",")
+      .map((q) => q.trim())
+      .filter(Boolean);
+    const matched = queries.find((q) => {
+      const [key, val] = q.split("=");
+      return val ? tags[key] === val : key in tags;
+    });
+    if (matched)
+      popupContent += `<small style="color:var(--text-color-secondary);">${escHtml(matched)}</small><br>`;
+  }
   POI_POPUP_TAGS.forEach((tag) => {
     if (tags[tag]) {
       popupContent += `<small>${tag.replaceAll("_", " ")}: ${escHtml(tags[tag])}</small><br>`;

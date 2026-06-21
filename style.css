@@ -2469,6 +2469,10 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   color: var(--text-color-secondary);
 }
 
+.poi-cat-status:empty {
+  display: none;
+}
+
 .poi-vis-btn {
   font-size: 20px;
   cursor: pointer;
@@ -2483,8 +2487,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 }
 
 .poi-vis-btn.poi-vis-hidden {
-  visibility: hidden;
-  pointer-events: none;
+  display: none;
 }
 
 .poi-load-btn {
@@ -2525,6 +2528,41 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   to {
     transform: rotate(360deg);
   }
+}
+
+.poi-custom-group {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.poi-custom-group .poi-category-row {
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0;
+}
+
+.poi-custom-input-row {
+  padding: 6px 10px;
+}
+
+.poi-custom-input {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--text-color);
+  font-family: monospace !important;
+  font-size: var(--font-size-14);
+  line-height: 1.4;
+  outline: none;
+  box-sizing: border-box;
+  resize: none;
+  field-sizing: content;
+}
+
+.poi-custom-input::placeholder {
+  color: #696969;
 }
 
 .poi-marker {
@@ -2812,7 +2850,7 @@ body.using-touch {
 /*
   Current icon subset — update this list when adding new icons, then regenerate the font.
   Paste it as-is into the URL below (replacing ICONS):
-  add,add_circle,autorenew,cabin,camping,cancel,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,playground,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
+  add,add_circle,autorenew,cabin,camping,cancel,category,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,playground,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
 
   To verify the list is complete, run in DevTools console (copies to clipboard):
   copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))
