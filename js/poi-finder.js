@@ -746,7 +746,11 @@ async function queryOverpass(osmQuery, bounds, signal, limit = POI_RESULT_LIMIT)
 
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
   const queryParts = queries
-    .flatMap((q) => [`node[${q}](${bbox});`, `way[${q}](${bbox});`, `relation[${q}](${bbox});`])
+    .flatMap((q) => {
+      const i = q.indexOf("=");
+      const filter = i === -1 ? `["${q}"]` : `["${q.slice(0, i)}"="${q.slice(i + 1)}"]`;
+      return [`node${filter}(${bbox});`, `way${filter}(${bbox});`, `relation${filter}(${bbox});`];
+    })
     .join("\n      ");
 
   const query = `
