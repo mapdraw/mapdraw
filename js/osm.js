@@ -356,11 +356,9 @@ async function osmShowContributePicker(latlng) {
   if (!ok) return;
 
   await Swal.fire({
+    title: "Add to OpenStreetMap",
     html: `
       <div style="text-align: left;">
-        <p style="font-size: var(--font-size-12); color: var(--text-color); margin: 0 0 12px 0; text-align: center;">
-          Add to OpenStreetMap
-        </p>
         <input
           id="osm-contribute-search"
           type="text"

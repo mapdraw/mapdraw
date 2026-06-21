@@ -346,6 +346,7 @@ async function showPoiFinder() {
   }).join("");
 
   await Swal.fire({
+    title: "Find Places",
     html: `<div class="poi-category-list">${html}</div>`,
     confirmButtonText: "Close",
     showDenyButton: true,
