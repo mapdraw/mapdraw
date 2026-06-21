@@ -452,7 +452,7 @@ async function loadCategory(cat) {
     const rawInput = (input ? input.value : customQueryValue).trim();
     const queries = rawInput
       .split(",")
-      .map((q) => q.trim())
+      .map((q) => q.trim().toLowerCase())
       .filter(Boolean);
     if (queries.length === 0) {
       showCategoryMsg(cat.id, "Enter an OSM tag query, e.g. amenity=drinking_water");
@@ -470,16 +470,18 @@ async function loadCategory(cat) {
       );
       return;
     }
-    if (rawInput !== customLastSearchedQuery && poiState[cat.id].rawElements.size > 0) {
+    const normalizedInput = queries.join(", ");
+    if (normalizedInput !== customLastSearchedQuery && poiState[cat.id].rawElements.size > 0) {
       const state = poiState[cat.id];
       state.layer.clearLayers();
       state.markers.clear();
       state.rawElements.clear();
     }
-    customQueryValue = rawInput;
-    customLastSearchedQuery = rawInput;
+    if (input) input.value = normalizedInput;
+    customQueryValue = normalizedInput;
+    customLastSearchedQuery = normalizedInput;
     try {
-      await idbKeyval.set(POI_CUSTOM_QUERY_KEY, rawInput);
+      await idbKeyval.set(POI_CUSTOM_QUERY_KEY, normalizedInput);
     } catch (e) {}
     osmQuery = queries.length === 1 ? queries[0] : queries;
   }
