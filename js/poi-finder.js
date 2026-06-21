@@ -292,6 +292,7 @@ async function _restorePoiFromDb() {
       const cat = POI_CATEGORIES.find((c) => c.id === catId);
       if (!cat) continue;
       const state = poiState[catId];
+      if (!state) continue;
       elements.forEach((element) => {
         const key = `${element.type}/${element.id}`;
         if (state.markers.has(key)) return;
@@ -488,6 +489,7 @@ async function loadCategory(cat) {
     const invalid = queries.find((q) => {
       const i = q.indexOf("=");
       if (i === -1) return true;
+      if (q.includes('"') || q.includes("[") || q.includes("]")) return true;
       return !q.slice(0, i).trim() || !q.slice(i + 1).trim();
     });
     if (invalid) {
@@ -498,18 +500,8 @@ async function loadCategory(cat) {
       return;
     }
     const normalizedInput = queries.join(", ");
-    if (normalizedInput !== customLastSearchedQuery && poiState[cat.id].rawElements.size > 0) {
-      const state = poiState[cat.id];
-      state.layer.clearLayers();
-      state.markers.clear();
-      state.rawElements.clear();
-    }
     if (input) input.value = normalizedInput;
     customQueryValue = normalizedInput;
-    customLastSearchedQuery = normalizedInput;
-    try {
-      await idbKeyval.set(POI_CUSTOM_QUERY_KEY, normalizedInput);
-    } catch (e) {}
     osmQuery = queries.length === 1 ? queries[0] : queries;
   }
 
@@ -531,6 +523,19 @@ async function loadCategory(cat) {
   }
 
   const state = poiState[cat.id];
+
+  if (cat.isCustom) {
+    if (customQueryValue !== customLastSearchedQuery && state.rawElements.size > 0) {
+      state.layer.clearLayers();
+      state.markers.clear();
+      state.rawElements.clear();
+      _savePoiDb();
+    }
+    customLastSearchedQuery = customQueryValue;
+    try {
+      await idbKeyval.set(POI_CUSTOM_QUERY_KEY, customQueryValue);
+    } catch (e) {}
+  }
 
   if (!poiMasterLayer.hasLayer(state.layer)) {
     poiMasterLayer.addLayer(state.layer);
@@ -586,7 +591,10 @@ async function loadCategory(cat) {
           : `No ${cat.name.toLowerCase()} found in current view.`,
         true,
       );
-    } else if (results.length >= POI_RESULT_LIMIT) {
+    } else if (
+      results.filter((e) => e.type !== "node").length >= POI_RESULT_LIMIT ||
+      results.filter((e) => e.type === "node").length >= POI_RESULT_LIMIT
+    ) {
       showCategoryMsg(
         cat.id,
         `Showing first ${POI_RESULT_LIMIT.toLocaleString()} results. Zoom in and search again for complete coverage.`,
@@ -715,8 +723,8 @@ function createPOIMarker(element, cat) {
       .map((q) => q.trim())
       .filter(Boolean);
     const matched = queries.find((q) => {
-      const [key, val] = q.split("=");
-      return tags[key] === val;
+      const i = q.indexOf("=");
+      return i !== -1 && tags[q.slice(0, i)] === q.slice(i + 1);
     });
     if (matched)
       popupContent += `<small style="color:var(--text-color-secondary);">${escHtml(matched)}</small><br>`;
@@ -774,20 +782,27 @@ async function queryOverpass(osmQuery, bounds, signal, limit = POI_RESULT_LIMIT)
   const queries = Array.isArray(osmQuery) ? osmQuery : [osmQuery];
 
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-  const queryParts = queries
-    .map((q) => {
-      const i = q.indexOf("=");
-      const filter = i === -1 ? `["${q}"]` : `["${q.slice(0, i)}"="${q.slice(i + 1)}"]`;
-      return `nwr${filter}(${bbox});`;
-    })
+  const filters = queries.map((q) => {
+    const i = q.indexOf("=");
+    return i === -1 ? `["${q}"]` : `["${q.slice(0, i)}"="${q.slice(i + 1)}"]`;
+  });
+  const wayRelParts = filters
+    .flatMap((f) => [`way${f}(${bbox});`, `relation${f}(${bbox});`])
     .join("\n      ");
+  const nodeParts = filters.map((f) => `node${f}(${bbox});`).join("\n      ");
 
+  // Ways and relations are output first so that the per-type limit is not
+  // consumed entirely by nodes in dense areas (e.g. amenity=parking in a city).
   const query = `
     [out:json][timeout:${OVERPASS_TIMEOUT_S}];
     (
-      ${queryParts}
+      ${wayRelParts}
     );
     out center ${limit};
+    (
+      ${nodeParts}
+    );
+    out ${limit};
   `;
 
   let lastError;
