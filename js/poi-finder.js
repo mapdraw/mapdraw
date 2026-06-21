@@ -457,6 +457,18 @@ async function loadCategory(cat) {
       showCategoryMsg(cat.id, "Enter an OSM tag query, e.g. amenity=drinking_water");
       return;
     }
+    const invalid = queries.find((q) => {
+      if (!q.includes("=")) return true;
+      const [key, val] = q.split("=");
+      return !key.trim() || !val.trim();
+    });
+    if (invalid) {
+      showCategoryMsg(
+        cat.id,
+        `Invalid query "${invalid}". Use key=value format, e.g. amenity=pharmacy`,
+      );
+      return;
+    }
     if (rawInput !== customLastSearchedQuery && poiState[cat.id].rawElements.size > 0) {
       const state = poiState[cat.id];
       state.layer.clearLayers();
