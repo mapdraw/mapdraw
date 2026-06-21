@@ -2584,7 +2584,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   align-items: center;
   justify-content: center;
   box-shadow:
-    0 0 0 2px white,
+    0 0 0 2px var(--color-white),
     0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
