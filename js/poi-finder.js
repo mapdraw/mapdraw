@@ -480,7 +480,12 @@ async function loadCategory(cat) {
     const rawInput = (input ? input.value : customQueryValue).trim();
     const queries = rawInput
       .split(",")
-      .map((q) => q.trim().toLowerCase())
+      .map((q) =>
+        q
+          .trim()
+          .toLowerCase()
+          .replace(/\s*=\s*/, "="),
+      )
       .filter(Boolean);
     if (queries.length === 0) {
       showCategoryMsg(cat.id, "Enter an OSM tag query, e.g. amenity=drinking_water", true);
