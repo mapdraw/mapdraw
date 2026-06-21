@@ -204,7 +204,11 @@ const POI_POPUP_TAGS = [
 function _formatPopupTagValue(tag, rawValue) {
   const display = escHtml(rawValue);
   if (tag === "website" || tag.startsWith("website:") || tag.endsWith(":website")) {
-    return `<a href="${encodeURI(rawValue)}" target="_blank" rel="noopener">${display}</a>`;
+    const safe =
+      rawValue.startsWith("http://") || rawValue.startsWith("https://")
+        ? rawValue
+        : `https://${rawValue}`;
+    return `<a href="${encodeURI(safe)}" target="_blank" rel="noopener">${display}</a>`;
   }
   if (tag === "phone" || tag === "contact:phone")
     return `<a href="tel:${encodeURI(rawValue)}">${display}</a>`;
