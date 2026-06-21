@@ -687,7 +687,7 @@ function createPOIMarker(element, cat) {
       .filter(Boolean);
     const matched = queries.find((q) => {
       const [key, val] = q.split("=");
-      return val ? tags[key] === val : key in tags;
+      return tags[key] === val;
     });
     if (matched)
       popupContent += `<small style="color:var(--text-color-secondary);">${escHtml(matched)}</small><br>`;
