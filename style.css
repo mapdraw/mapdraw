@@ -2540,6 +2540,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   overflow: hidden;
+  margin-bottom: 36px;
 }
 
 .poi-custom-group .poi-category-row {
