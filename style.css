@@ -602,7 +602,8 @@ select:focus {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: none;
+  border: 2px solid var(--text-color);
+  box-sizing: border-box;
   cursor: pointer;
   transition: transform 0.1s ease-in-out;
   position: absolute;
