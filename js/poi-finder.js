@@ -189,6 +189,17 @@ const poiMasterLayer = L.layerGroup();
 const poiState = {};
 
 const POI_DB_KEY = "poiResults";
+const POI_POPUP_TAGS = [
+  "opening_hours",
+  "website",
+  "phone",
+  "email",
+  "operator",
+  "cuisine",
+  "description",
+  "fee",
+  "wheelchair",
+];
 
 function _formatPopupTagValue(tag, rawValue) {
   const display = escHtml(rawValue);
@@ -706,9 +717,10 @@ function createPOIMarker(element, cat) {
     if (matched)
       popupContent += `<small style="color:var(--text-color-secondary);">${escHtml(matched)}</small><br>`;
   }
-  Object.entries(tags).forEach(([tag, val]) => {
-    if (tag === "name" || !val) return;
-    popupContent += `<small>${escHtml(tag.replaceAll("_", " "))}: ${_formatPopupTagValue(tag, val)}</small><br>`;
+  POI_POPUP_TAGS.forEach((tag) => {
+    if (tags[tag]) {
+      popupContent += `<small>${tag.replaceAll("_", " ")}: ${_formatPopupTagValue(tag, tags[tag])}</small><br>`;
+    }
   });
   popupContent += `
       <small style="color:var(--text-color-secondary);">
