@@ -309,7 +309,7 @@ async function _restorePoiFromDb() {
     if (window.ensurePoiLayerVisible) window.ensurePoiLayerVisible();
     _updatePoiFinderDot();
     // Remove any stored data for categories that no longer exist in POI_CATEGORIES
-    _savePoiDb();
+    await _savePoiDb();
   } catch (e) {
     console.warn("POI: IndexedDB restore failed", e);
   }
