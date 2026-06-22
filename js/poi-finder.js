@@ -439,9 +439,8 @@ async function showPoiFinder() {
       });
       if (result.isConfirmed) {
         POI_CATEGORIES.forEach((cat) => clearCategory(cat));
-      } else {
-        await showPoiFinder();
       }
+      await showPoiFinder();
       return false;
     },
     didOpen: () => {
@@ -738,8 +737,11 @@ function updateCategoryRowUI(categoryId, isLoading, count) {
     visEl.classList.toggle("poi-vis-hidden", count === 0);
     visEl.textContent = isVisible ? "visibility" : "visibility_off";
   }
-  const denyBtn = Swal.getDenyButton();
-  if (denyBtn) denyBtn.disabled = !POI_CATEGORIES.some((cat) => poiState[cat.id].markers.size > 0);
+  if (Swal.getPopup()?.classList.contains("poi-finder-modal")) {
+    const denyBtn = Swal.getDenyButton();
+    if (denyBtn)
+      denyBtn.disabled = !POI_CATEGORIES.some((cat) => poiState[cat.id].markers.size > 0);
+  }
   _updatePoiFinderDot();
 }
 
