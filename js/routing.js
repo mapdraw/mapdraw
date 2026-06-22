@@ -1054,6 +1054,7 @@ function initializeRouting() {
         text: 'The route was simplified and added to the "Drawn Items" layer.',
         timer: 2500,
         showConfirmButton: false,
+        customClass: { popup: "swal-no-actions" },
       });
     } else {
       Swal.fire({
@@ -1062,6 +1063,7 @@ function initializeRouting() {
         text: 'The route has been added to the "Drawn Items" layer.',
         timer: 2500,
         showConfirmButton: false,
+        customClass: { popup: "swal-no-actions" },
       });
     }
   };

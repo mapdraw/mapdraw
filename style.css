@@ -1848,6 +1848,10 @@ button.strava-button-secondary:not(:disabled) {
   padding-bottom: 0 !important;
 }
 
+.swal-no-actions {
+  padding-bottom: 10px !important;
+}
+
 /* Title text */
 .swal2-title {
   color: var(--text-color) !important;
