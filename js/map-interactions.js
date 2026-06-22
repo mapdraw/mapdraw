@@ -59,6 +59,7 @@ function createMarkerIcon(
     className: "svg-marker-icon",
     iconSize: [size, size],
     iconAnchor: [size / 2, size * 0.9 + anchorOffsetY],
+    popupAnchor: [0, -30],
   });
 }
 

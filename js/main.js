@@ -504,7 +504,7 @@ async function initializeMap() {
     DrawnItems: drawnItems,
     ImportedFiles: importedItems,
     StravaActivities: stravaActivitiesLayer,
-    FoundPlaces: poiSearchResults,
+    FoundPlaces: poiMasterLayer,
     WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
       maxZoom: 19,
       zIndex: 200,
@@ -611,7 +611,7 @@ async function initializeMap() {
 
   // Add Import Maps button for custom WMS layers
   formContent += `
-    <div style="padding: 4px 6px 0;">
+    <div style="padding: 4px 0px 0;">
       <button
         id="wms-import-btn"
         class="wms-import-button"
@@ -756,6 +756,9 @@ async function initializeMap() {
       reapplyOverlayZIndex();
     }
   };
+
+  // Restore saved POI results now that the layer control and ensurePoiLayerVisible are ready
+  if (window._restorePoiFromDb) _restorePoiFromDb();
 
   // Function to save overlay order to localStorage
   function saveOverlayOrder() {
@@ -1206,14 +1209,7 @@ async function initializeMap() {
   if (poiFinderBtn) {
     poiFinderBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      const hasResults = poiSearchResults && poiSearchResults.getLayers().length > 0;
-      if (hasResults) {
-        // Clear existing results
-        clearPOIResults();
-      } else {
-        // Show POI finder modal
-        showPoiFinder();
-      }
+      showPoiFinder();
     });
   }
 
@@ -1254,7 +1250,7 @@ async function initializeMap() {
     });
 
     temporarySearchMarker
-      .bindPopup(popupContent, { offset: L.point(0, -25), maxWidth: 150 })
+      .bindPopup(popupContent, { maxWidth: 150, closeButton: false })
       .openPopup();
 
     temporarySearchMarker.on("popupclose", () => {
@@ -1996,58 +1992,33 @@ document.addEventListener("DOMContentLoaded", initializeMap);
 
 // Offline indicator
 (function () {
-  const searchBtn = document.getElementById("search-btn");
-  const poiFinderBtn = document.getElementById("poi-finder-btn");
-  const routeStart = document.getElementById("route-start");
-  const routeEnd = document.getElementById("route-end");
-  const routeVia = document.getElementById("route-via");
+  const indicator = document.getElementById("offline-indicator");
+  const toDisable = [
+    document.getElementById("search-btn"),
+    document.getElementById("poi-finder-btn"),
+    document.getElementById("route-start"),
+    document.getElementById("route-end"),
+    document.getElementById("route-via"),
+  ];
 
-  const setOffline = (element) => {
-    element.disabled = true;
-    element.classList.add("offline");
-    if (element.id === "poi-finder-btn") {
-      element.textContent = "OFFLINE";
-    }
+  const setOffline = () => {
+    indicator.classList.add("visible");
+    toDisable.forEach((el) => {
+      if (el) el.disabled = true;
+    });
+    if (typeof Swal !== "undefined" && Swal.isVisible()) Swal.close();
   };
 
-  const setOnline = (element) => {
-    element.disabled = false;
-    element.classList.remove("offline");
-    if (element.id === "poi-finder-btn") {
-      // Update button text based on current state instead of always setting to "Find Places"
-      if (window.updatePOIFinderButton) {
-        window.updatePOIFinderButton();
-      }
-    }
+  const setOnline = () => {
+    indicator.classList.remove("visible");
+    toDisable.forEach((el) => {
+      if (el) el.disabled = false;
+    });
   };
 
-  window.addEventListener("offline", () => {
-    setOffline(searchBtn);
-    setOffline(poiFinderBtn);
-    setOffline(routeStart);
-    setOffline(routeEnd);
-    setOffline(routeVia);
-    // Close any open search modal
-    if (typeof Swal !== "undefined" && Swal.isVisible()) {
-      Swal.close();
-    }
-  });
-
-  window.addEventListener("online", () => {
-    setOnline(searchBtn);
-    setOnline(poiFinderBtn);
-    setOnline(routeStart);
-    setOnline(routeEnd);
-    setOnline(routeVia);
-  });
-
-  if (!navigator.onLine) {
-    setOffline(searchBtn);
-    setOffline(poiFinderBtn);
-    setOffline(routeStart);
-    setOffline(routeEnd);
-    setOffline(routeVia);
-  }
+  window.addEventListener("offline", setOffline);
+  window.addEventListener("online", setOnline);
+  if (!navigator.onLine) setOffline();
 })();
 
 // console.log("User Agent:", navigator.userAgent);

@@ -37,7 +37,7 @@ const OSM_CONTRIBUTE_CATEGORIES = [
   {
     id: "bicycle_parking",
     name: "Bicycle Parking",
-    icon: "directions_bike",
+    icon: "pedal_bike",
     tags: { amenity: "bicycle_parking" },
   },
   {
@@ -292,7 +292,7 @@ function osmRenderCategories(filter = "") {
   )
     .map(
       (cat) => `
-    <button class="poi-category-btn osm-contribute-btn" data-id="${cat.id}">
+    <button class="osm-contribute-category-btn osm-contribute-btn" data-id="${cat.id}">
       <span class="material-symbols" style="font-size: 20px;">${cat.icon}</span>
       <span>${cat.name}</span>
     </button>`,
@@ -356,11 +356,9 @@ async function osmShowContributePicker(latlng) {
   if (!ok) return;
 
   await Swal.fire({
+    title: "Add to OpenStreetMap",
     html: `
       <div style="text-align: left;">
-        <p style="font-size: var(--font-size-12); color: var(--text-color); margin: 0 0 12px 0; text-align: center;">
-          Add to OpenStreetMap
-        </p>
         <input
           id="osm-contribute-search"
           type="text"
@@ -368,7 +366,7 @@ async function osmShowContributePicker(latlng) {
           class="osm-contribute-search"
           style="width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--background-color); color: var(--text-color); font-size: var(--font-size-14);"
         />
-        <div class="poi-category-grid" id="osm-contribute-grid">
+        <div class="osm-contribute-grid" id="osm-contribute-grid">
           ${osmRenderCategories()}
         </div>
       </div>
