@@ -472,6 +472,8 @@ async function showPoiFinder() {
       if (customInfoBtn) {
         customInfoBtn.addEventListener("click", (e) => {
           e.stopPropagation();
+          const customInput = document.getElementById("poi-custom-query-input");
+          if (customInput) customQueryValue = customInput.value;
           Swal.fire({
             title: "Custom Query",
             html: `<p style="text-align:left;margin:0 0 12px 0">Enter an OSM tag in <code>key=value</code> format. Separate multiple tags with commas to search for several types at once.</p><p style="text-align:left;margin:0 0 12px 0"><strong>Example:</strong> <code>amenity=pharmacy, tourism=hotel</code></p><p style="text-align:left;margin:0"><a href="https://wiki.openstreetmap.org/wiki/Map_features" target="_blank">Browse all possible map features</a></p>`,
