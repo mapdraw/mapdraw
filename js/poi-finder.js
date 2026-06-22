@@ -614,7 +614,8 @@ async function loadCategory(cat) {
     const results = await queryOverpass(osmQuery, bounds, controller.signal, POI_RESULT_LIMIT);
 
     if (controller.signal.aborted) {
-      updateCategoryRowUI(cat.id, false, state.markers.size);
+      if (state.loadingController === controller)
+        updateCategoryRowUI(cat.id, false, state.markers.size);
       return;
     }
 
@@ -655,7 +656,8 @@ async function loadCategory(cat) {
     }
   } catch (err) {
     if (err.name === "AbortError") return;
-    updateCategoryRowUI(cat.id, false, state.markers.size);
+    if (state.loadingController === controller)
+      updateCategoryRowUI(cat.id, false, state.markers.size);
     showCategoryMsg(cat.id, err.message || "Could not load places. Please try again.");
   } finally {
     if (state.loadingController === controller) {
