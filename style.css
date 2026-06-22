@@ -2541,17 +2541,24 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   }
 }
 
+.poi-custom-section {
+  margin-bottom: 36px;
+}
+
 .poi-custom-group {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   overflow: hidden;
-  margin-bottom: 36px;
 }
 
 .poi-custom-group .poi-category-row {
   border: none;
   border-bottom: 1px solid var(--border-color);
   border-radius: 0;
+}
+
+.poi-custom-section .poi-cat-msg {
+  margin-top: 3px;
 }
 
 .poi-custom-input-row {

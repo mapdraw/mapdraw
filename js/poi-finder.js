@@ -413,10 +413,10 @@ async function showPoiFinder() {
         <span id="poi-vis-${cat.id}" class="poi-vis-btn material-symbols${count === 0 ? " poi-vis-hidden" : ""}" data-category="${cat.id}" title="Toggle visibility">${isVisible ? "visibility" : "visibility_off"}</span>
         <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Search for current view">${isLoading ? "autorenew" : "search"}</span>
       </div>`;
-    const content = cat.isCustom
-      ? `<div class="poi-custom-group">${row}<div class="poi-custom-input-row"><textarea id="poi-custom-query-input" class="poi-custom-input" placeholder="e.g. amenity=pharmacy, tourism=hotel" rows="1">${escHtml(customQueryValue)}</textarea></div></div>`
-      : row;
-    return `${content}<div id="poi-msg-${cat.id}" class="poi-cat-msg" style="display:none"></div>`;
+    if (cat.isCustom) {
+      return `<div class="poi-custom-section"><div class="poi-custom-group">${row}<div class="poi-custom-input-row"><textarea id="poi-custom-query-input" class="poi-custom-input" placeholder="e.g. amenity=pharmacy, tourism=hotel" rows="1">${escHtml(customQueryValue)}</textarea></div></div><div id="poi-msg-${cat.id}" class="poi-cat-msg" style="display:none"></div></div>`;
+    }
+    return `${row}<div id="poi-msg-${cat.id}" class="poi-cat-msg" style="display:none"></div>`;
   }).join("");
 
   await Swal.fire({
