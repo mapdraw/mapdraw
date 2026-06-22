@@ -183,7 +183,7 @@ let customLastSearchedQuery = "";
 const POI_CUSTOM_QUERY_KEY = "poiCustomQuery";
 
 // Master layer group registered in the layer control — all category layers are children of this
-const poiMasterLayer = L.layerGroup();
+const poiMasterLayer = L.featureGroup();
 
 // Per-category state: cluster layer, marker Map (dedup+count), raw element Map (persistence), load controller
 const poiState = {};
