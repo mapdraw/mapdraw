@@ -79,7 +79,7 @@
 
 body.glass-mode {
   --icon-color: #f1f5f9;
-  --border-color: rgba(255, 255, 255, 0.22);
+  --border-color: rgba(255, 255, 255, 0.3);
   --link-color: var(--text-color);
   --divider-color: var(--border-color);
   --background-color: transparent;
@@ -88,8 +88,8 @@ body.glass-mode {
   color: var(--text-color);
   --glass-btn-bg: var(--border-color);
   --glass-header-bg: var(--border-color);
-  --glass-bg: rgba(2, 6, 23, 0.48);
-  --glass-blur: blur(16px) saturate(150%);
+  --glass-bg: rgba(10, 15, 40, 0.5);
+  --glass-blur: blur(32px) saturate(200%);
 }
 
 /* Glass panels */
