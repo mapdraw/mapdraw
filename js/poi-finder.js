@@ -258,7 +258,7 @@ function _formatPopupTagValue(tag, rawValue) {
     return `<a href="${escHtml(safeHref)}" target="_blank" rel="noopener">${display}</a>`;
   }
   if (tag === "phone" || tag === "contact:phone")
-    return `<a href="tel:${encodeURI(rawValue)}">${display}</a>`;
+    return `<a href="tel:${encodeURI(rawValue.replace(/\s+/g, ""))}">${display}</a>`;
   if (tag === "email" || tag === "contact:email")
     return `<a href="mailto:${encodeURI(rawValue)}">${display}</a>`;
   return display;
