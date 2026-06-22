@@ -61,6 +61,13 @@ const POI_CATEGORIES = (() => {
       color: colorOutdoor,
       overpassQuery: "tourism=picnic_site",
     },
+    {
+      id: "picnic_table",
+      name: "Picnic Table",
+      icon: "deck",
+      color: colorOutdoor,
+      overpassQuery: "leisure=picnic_table",
+    },
     // Accommodation
     {
       id: "camp_site",
