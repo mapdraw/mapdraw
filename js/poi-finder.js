@@ -600,11 +600,7 @@ async function loadCategory(cat) {
       results.filter((e) => e.type !== "node").length >= POI_RESULT_LIMIT ||
       results.filter((e) => e.type === "node").length >= POI_RESULT_LIMIT
     ) {
-      showCategoryMsg(
-        cat.id,
-        `Showing first ${POI_RESULT_LIMIT.toLocaleString()} results. Zoom in and search again for complete coverage.`,
-        true,
-      );
+      showCategoryMsg(cat.id, `Too many results to show. Zoom in and search again.`, true);
     }
   } catch (err) {
     if (err.name === "AbortError") return;
