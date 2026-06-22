@@ -1351,6 +1351,10 @@ button.strava-button-secondary:not(:disabled) {
   text-decoration: underline;
 }
 
+#strava-domain-copy .copy-icon {
+  vertical-align: middle;
+}
+
 /* DATA EDITOR */
 /*
  * ██████╗  █████╗ ████████╗ █████╗
