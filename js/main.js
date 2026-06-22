@@ -2004,7 +2004,7 @@ document.addEventListener("DOMContentLoaded", initializeMap);
   const setOffline = () => {
     indicator.classList.add("visible");
     toDisable.forEach((el) => {
-      el.disabled = true;
+      if (el) el.disabled = true;
     });
     if (typeof Swal !== "undefined" && Swal.isVisible()) Swal.close();
   };
@@ -2012,7 +2012,7 @@ document.addEventListener("DOMContentLoaded", initializeMap);
   const setOnline = () => {
     indicator.classList.remove("visible");
     toDisable.forEach((el) => {
-      el.disabled = false;
+      if (el) el.disabled = false;
     });
   };
 

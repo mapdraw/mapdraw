@@ -242,11 +242,20 @@ const POI_POPUP_TAGS = [
 function _formatPopupTagValue(tag, rawValue) {
   const display = escHtml(rawValue);
   if (tag === "website" || tag.startsWith("website:") || tag.endsWith(":website")) {
-    const safe =
+    const raw =
       rawValue.startsWith("http://") || rawValue.startsWith("https://")
         ? rawValue
         : `https://${rawValue}`;
-    return `<a href="${encodeURI(safe)}" target="_blank" rel="noopener">${display}</a>`;
+    let safeHref;
+    try {
+      const parsed = new URL(raw);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
+      safeHref = parsed.href;
+    } catch {
+      safeHref = null;
+    }
+    if (!safeHref) return display;
+    return `<a href="${escHtml(safeHref)}" target="_blank" rel="noopener">${display}</a>`;
   }
   if (tag === "phone" || tag === "contact:phone")
     return `<a href="tel:${encodeURI(rawValue)}">${display}</a>`;
@@ -431,7 +440,7 @@ async function showPoiFinder() {
       if (result.isConfirmed) {
         POI_CATEGORIES.forEach((cat) => clearCategory(cat));
       } else {
-        showPoiFinder();
+        await showPoiFinder();
       }
       return false;
     },
@@ -522,7 +531,7 @@ async function loadCategory(cat) {
         q
           .trim()
           .toLowerCase()
-          .replace(/\s*=\s*/, "="),
+          .replace(/\s*=\s*/g, "="),
       )
       .filter(Boolean);
     if (queries.length === 0) {
@@ -561,14 +570,14 @@ async function loadCategory(cat) {
       map.setView(map.getCenter(), POI_MIN_ZOOM);
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
-    showPoiFinder();
+    await showPoiFinder();
     return;
   }
 
   const state = poiState[cat.id];
 
   if (cat.isCustom) {
-    if (customQueryValue !== customLastSearchedQuery && state.rawElements.size > 0) {
+    if (customQueryValue !== customLastSearchedQuery) {
       state.layer.clearLayers();
       state.markers.clear();
       state.rawElements.clear();
@@ -603,7 +612,10 @@ async function loadCategory(cat) {
   try {
     const results = await queryOverpass(osmQuery, bounds, controller.signal, POI_RESULT_LIMIT);
 
-    if (controller.signal.aborted) return;
+    if (controller.signal.aborted) {
+      updateCategoryRowUI(cat.id, false, state.markers.size);
+      return;
+    }
 
     const { toRemove, toAdd } = _computePoiDiff(state.rawElements, results, bounds);
 
@@ -626,7 +638,7 @@ async function loadCategory(cat) {
 
     _savePoiDb();
     updateCategoryRowUI(cat.id, false, state.markers.size);
-    if (state.markers.size === 0) {
+    if (results.length === 0) {
       showCategoryMsg(
         cat.id,
         cat.isCustom
