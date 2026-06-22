@@ -37,7 +37,7 @@ const OSM_CONTRIBUTE_CATEGORIES = [
   {
     id: "bicycle_parking",
     name: "Bicycle Parking",
-    icon: "directions_bike",
+    icon: "pedal_bike",
     tags: { amenity: "bicycle_parking" },
   },
   {

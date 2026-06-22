@@ -15,9 +15,11 @@ const POI_MIN_ZOOM = 12;
 const POI_RESULT_LIMIT = 1000;
 
 const POI_CATEGORIES = (() => {
+  const colorCustom = "#696969";
   const colorOutdoor = "#228B22";
   const colorAccommodation = "#FF8C00";
   const colorAmenities = "#20B2AA";
+  const colorCycling = "#9932CC";
   const colorTransport = "#4169E1";
   const colorFoodShopping = "#FF6347";
   return [
@@ -26,7 +28,7 @@ const POI_CATEGORIES = (() => {
       id: "custom",
       name: "Custom",
       icon: "category",
-      color: "#696969",
+      color: colorCustom,
       overpassQuery: "",
       isCustom: true,
     },
@@ -44,6 +46,20 @@ const POI_CATEGORIES = (() => {
       icon: "landscape",
       color: colorOutdoor,
       overpassQuery: "tourism=viewpoint",
+    },
+    {
+      id: "peak",
+      name: "Peak",
+      icon: "mountain_flag",
+      color: colorOutdoor,
+      overpassQuery: "natural=peak",
+    },
+    {
+      id: "picnic_site",
+      name: "Picnic Site",
+      icon: "deck",
+      color: colorOutdoor,
+      overpassQuery: "tourism=picnic_site",
     },
     // Accommodation
     {
@@ -110,14 +126,22 @@ const POI_CATEGORIES = (() => {
       color: colorAmenities,
       overpassQuery: "amenity=bench",
     },
-    // Transport
+    // Cycling
     {
-      id: "parking",
-      name: "Parking",
-      icon: "local_parking",
-      color: colorTransport,
-      overpassQuery: "amenity=parking",
+      id: "bicycle",
+      name: "Bicycle Shop",
+      icon: "pedal_bike",
+      color: colorCycling,
+      overpassQuery: "shop=bicycle",
     },
+    {
+      id: "bicycle_parking",
+      name: "Bicycle Parking",
+      icon: "pedal_bike",
+      color: colorCycling,
+      overpassQuery: "amenity=bicycle_parking",
+    },
+    // Transport
     {
       id: "station",
       name: "Station",
@@ -138,6 +162,13 @@ const POI_CATEGORIES = (() => {
       icon: "directions_bus",
       color: colorTransport,
       overpassQuery: "highway=bus_stop",
+    },
+    {
+      id: "parking",
+      name: "Parking",
+      icon: "local_parking",
+      color: colorTransport,
+      overpassQuery: "amenity=parking",
     },
     {
       id: "fuel",
