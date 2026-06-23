@@ -765,7 +765,7 @@ function createPOIMarker(element, cat) {
     popupAnchor: [0, -5],
   });
 
-  const marker = L.marker([lat, lon], { icon });
+  const marker = L.marker([lat, lon], { icon, zIndexOffset: 100 });
 
   const name = element.tags?.name || cat.name;
   const tags = element.tags || {};
