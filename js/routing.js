@@ -202,6 +202,7 @@ function initializeRouting() {
     routingControl = {
       _router: router,
       _waypoints: [],
+      _requestId: 0,
 
       getRouter: function () {
         return this._router;
@@ -216,13 +217,16 @@ function initializeRouting() {
           return L.Routing.waypoint(wp);
         });
 
+        // Always increment so any in-flight request is cancelled, even on clear
+        const requestId = ++this._requestId;
+
         // Don't route if waypoints array is empty or has less than 2 points
         if (this._waypoints.length < 2) {
           return;
         }
 
-        // Call the router directly
         this._router.route(this._waypoints, (err, routes) => {
+          if (requestId !== this._requestId) return;
           if (err) {
             this._handleRoutingError(err);
           } else {
@@ -429,13 +433,14 @@ function initializeRouting() {
       profileButtons.forEach((btn) => btn.classList.remove("active"));
       button.classList.add("active");
 
+      const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
+      const config = PROVIDER_CONFIG[currentProvider];
+      if (config) {
+        const apiProfile = config.profiles[button.dataset.profile] || config.profiles["driving"];
+        routingControl.getRouter().options.profile = config.profileFormatter(apiProfile);
+      }
+
       if (startMarker && endMarker) {
-        const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
-        const config = PROVIDER_CONFIG[currentProvider];
-        if (config) {
-          const apiProfile = config.profiles[button.dataset.profile] || config.profiles["driving"];
-          routingControl.getRouter().options.profile = config.profileFormatter(apiProfile);
-        }
         updateRouteWithIntermediateVias();
       }
     });
