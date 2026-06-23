@@ -2606,6 +2606,12 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
     0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.poi-marker-icon.selected {
+  box-shadow:
+    0 0 0 2px var(--color-black),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 .poi-marker-icon .material-symbols {
   font-size: 15px;
   color: white;

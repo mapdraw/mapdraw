@@ -805,6 +805,7 @@ function createPOIMarker(element, cat) {
 
   marker.bindPopup(L.popup({ maxWidth: 150, closeButton: false }).setContent(popupContent));
   marker.on("popupopen", () => {
+    marker.getElement()?.querySelector(".poi-marker-icon")?.classList.add("selected");
     const btn = document.getElementById(`save-poi-marker-${element.type}-${element.id}`);
     if (btn) {
       btn.addEventListener(
@@ -816,6 +817,9 @@ function createPOIMarker(element, cat) {
         { once: true },
       );
     }
+  });
+  marker.on("popupclose", () => {
+    marker.getElement()?.querySelector(".poi-marker-icon")?.classList.remove("selected");
   });
 
   return marker;
