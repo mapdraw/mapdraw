@@ -364,6 +364,8 @@ async function initializeMap() {
   map.getPane("wmsPane").style.zIndex = 250;
 
   const initialView = parseMapHash(window.location.hash);
+  const savedHash = localStorage.getItem("lastHash");
+  const savedView = savedHash ? parseMapHash(savedHash) : null;
   // Prevents circular updates when syncing map view from URL hash
   let isSyncingFromUrl = false;
 
@@ -382,6 +384,9 @@ async function initializeMap() {
         lon: initialView.lon,
       };
     }
+  } else if (savedView) {
+    history.replaceState(null, "", savedHash);
+    map.setView([savedView.lat, savedView.lon], savedView.zoom);
   } else {
     fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=${googleApiKey}`, {
       method: "POST",
@@ -412,6 +417,7 @@ async function initializeMap() {
     const lng = center.lng.toFixed(5);
     const newHash = `#map=${zoom}/${lat}/${lng}`;
     history.replaceState(null, "", newHash);
+    localStorage.setItem("lastHash", newHash);
   };
 
   map.on("moveend", updateUrlHash);
