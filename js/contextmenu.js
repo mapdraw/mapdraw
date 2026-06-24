@@ -25,38 +25,19 @@ function initializeContextMenu(map) {
       map.closePopup();
     };
 
-    const dragHandle = document.createElement("div");
-    dragHandle.style.display = "grid";
-    dragHandle.style.gridTemplateColumns = "1fr auto 1fr";
-    dragHandle.style.alignItems = "center";
-    dragHandle.style.cursor = "move";
-    dragHandle.style.userSelect = "none";
-    dragHandle.style.overflow = "visible";
-    popupContent.appendChild(dragHandle);
+    const coordRow = document.createElement("div");
+    coordRow.style.display = "flex";
+    popupContent.appendChild(coordRow);
 
     const latSpan = document.createElement("span");
     const lngSpan = document.createElement("span");
-    const dragIcon = document.createElement("span");
-    dragIcon.className = "material-symbols";
-    dragIcon.textContent = "drag_pan";
-    dragIcon.style.setProperty("font-size", "var(--icon-size-16)", "important");
-    dragIcon.style.color = "#ffffff";
 
-    const dragPill = document.createElement("div");
-    dragPill.style.backgroundColor = "var(--highlight-color)";
-    dragPill.style.borderRadius = "100px";
-    dragPill.style.padding = "3px 6px";
-    dragPill.style.display = "flex";
-    dragPill.style.alignItems = "center";
-    dragPill.style.justifyContent = "center";
-    dragPill.style.marginTop = "-25px";
-    dragPill.appendChild(dragIcon);
-
+    latSpan.style.flex = "1";
     latSpan.style.textAlign = "center";
+    lngSpan.style.flex = "1";
     lngSpan.style.textAlign = "center";
-    dragHandle.appendChild(latSpan);
-    dragHandle.appendChild(dragPill);
-    dragHandle.appendChild(lngSpan);
+    coordRow.appendChild(latSpan);
+    coordRow.appendChild(lngSpan);
 
     const updateCoords = () => {
       wrappedLatlng = latlng.wrap();
@@ -213,41 +194,6 @@ function initializeContextMenu(map) {
       onMove(move);
     };
 
-    L.DomEvent.on(dragHandle, "mousedown", (startE) => {
-      L.DomEvent.stop(startE);
-      startDrag(startE.clientX, startE.clientY, (move) => {
-        const onMove = (ev) => move(ev.clientX, ev.clientY);
-        const onUp = () => {
-          document.removeEventListener("mousemove", onMove);
-          document.removeEventListener("mouseup", onUp);
-        };
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup", onUp);
-      });
-    });
-
-    L.DomEvent.on(
-      dragHandle,
-      "touchstart",
-      (startE) => {
-        L.DomEvent.stop(startE);
-        const t = startE.touches[0];
-        startDrag(t.clientX, t.clientY, (move) => {
-          const onMove = (ev) => {
-            ev.preventDefault();
-            move(ev.touches[0].clientX, ev.touches[0].clientY);
-          };
-          const onEnd = () => {
-            dragHandle.removeEventListener("touchmove", onMove);
-            dragHandle.removeEventListener("touchend", onEnd);
-          };
-          dragHandle.addEventListener("touchmove", onMove, { passive: false });
-          dragHandle.addEventListener("touchend", onEnd);
-        });
-      },
-      { passive: false },
-    );
-
     // Whole-menu drag: 5px threshold distinguishes drag from click; on mouseup after a drag,
     // a capture-phase click listener fires once to swallow the browser-generated click so
     // buttons under the cursor don't trigger. touchstart is not stopped so taps still work —
@@ -314,7 +260,7 @@ function initializeContextMenu(map) {
       .openOn(map);
 
     const popupEl = popup.getElement();
-    popupEl.style.overflow = "visible"; // allows dragPill and side pills to render outside popup bounds
+    popupEl.style.overflow = "visible"; // allows side pills to render outside popup bounds
 
     const tipContainer = popupEl.querySelector(".leaflet-popup-tip-container");
     tipContainer.style.display = "flex";
@@ -413,8 +359,8 @@ function initializeContextMenu(map) {
       "#elevation-div",
       ".leaflet-control-container",
       ".leaflet-popup-pane",
-      //   ".leaflet-overlay-pane",
-      //   ".leaflet-marker-pane",
+      // ".leaflet-overlay-pane",
+      // ".leaflet-marker-pane",
     ];
 
     // Check if the click originated inside any of the specified UI containers.
