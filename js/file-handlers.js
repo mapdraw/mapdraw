@@ -1224,7 +1224,7 @@ function encodeMapStateToUrl() {
         const ll = layer.getLatLng();
         if (ll) {
           feature.t = "m";
-          feature.c = [+ll.lng.toFixed(5), +ll.lat.toFixed(5)];
+          feature.c = [+ll.lng.toFixed(6), +ll.lat.toFixed(6)];
           if (typeof ll.alt === "number" && ll.alt !== 0) {
             feature.e = Math.round(ll.alt);
           }
@@ -1296,7 +1296,7 @@ function buildShareableUrl() {
 
   // Build URL with map view and data
   const baseUrl = window.location.origin + window.location.pathname;
-  const hashParams = `#map=${zoom}/${center.lat.toFixed(5)}/${center.lng.toFixed(5)}&data=${mapState}`;
+  const hashParams = `#map=${zoom}/${center.lat.toFixed(6)}/${center.lng.toFixed(6)}&data=${mapState}`;
 
   return baseUrl + hashParams;
 }

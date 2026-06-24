@@ -413,8 +413,8 @@ async function initializeMap() {
     if (isSyncingFromUrl) return;
     const center = map.getCenter();
     const zoom = map.getZoom();
-    const lat = center.lat.toFixed(5);
-    const lng = center.lng.toFixed(5);
+    const lat = center.lat.toFixed(6);
+    const lng = center.lng.toFixed(6);
     const newHash = `#map=${zoom}/${lat}/${lng}`;
     history.replaceState(null, "", newHash);
     localStorage.setItem("lastHash", newHash);
@@ -435,8 +435,8 @@ async function initializeMap() {
       const currentZoom = map.getZoom();
       if (
         currentZoom !== newView.zoom ||
-        currentCenter.lat.toFixed(5) !== newView.lat.toFixed(5) ||
-        currentCenter.lng.toFixed(5) !== newView.lon.toFixed(5)
+        currentCenter.lat.toFixed(6) !== newView.lat.toFixed(6) ||
+        currentCenter.lng.toFixed(6) !== newView.lon.toFixed(6)
       ) {
         isSyncingFromUrl = true;
         map.setView([newView.lat, newView.lon], newView.zoom);

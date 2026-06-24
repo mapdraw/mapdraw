@@ -649,7 +649,7 @@ async function osmShowContributions(user) {
           const time = valid
             ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
             : "";
-          const coords = `${parseFloat(n.lat).toFixed(5)}, ${parseFloat(n.lon).toFixed(5)}`;
+          const coords = `${parseFloat(n.lat).toFixed(6)}, ${parseFloat(n.lon).toFixed(6)}`;
           return `
         <div class="osm-contribution-row" data-id="${n.id}">
           <div class="osm-contribution-info">

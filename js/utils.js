@@ -471,7 +471,7 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
       suggestionsEl.innerHTML = "";
       suggestionsEl.style.display = "none";
 
-      callback(latLng, `${latLng.lat.toFixed(5)}, ${latLng.lng.toFixed(5)}`);
+      callback(latLng, `${latLng.lat.toFixed(6)}, ${latLng.lng.toFixed(6)}`);
 
       return;
     }

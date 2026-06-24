@@ -357,7 +357,7 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
  * @returns {Promise<L.LatLng[]|null>} Array of coordinates with elevation or null on error
  */
 async function fetchElevationForPath(latlngs, realDistance) {
-  const cacheKey = JSON.stringify(latlngs.map((p) => [p.lat.toFixed(5), p.lng.toFixed(5)]));
+  const cacheKey = JSON.stringify(latlngs.map((p) => [p.lat.toFixed(6), p.lng.toFixed(6)]));
 
   if (elevationCache.has(cacheKey)) {
     console.log("Returning cached elevation data.");
@@ -505,7 +505,7 @@ async function addElevationToPath() {
   if (!latlngs || latlngs.length === 0) return;
 
   // Get cached API data
-  const cacheKey = JSON.stringify(latlngs.map((p) => [p.lat.toFixed(5), p.lng.toFixed(5)]));
+  const cacheKey = JSON.stringify(latlngs.map((p) => [p.lat.toFixed(6), p.lng.toFixed(6)]));
   const apiData = elevationCache.get(cacheKey);
   if (!apiData || apiData.length === 0) {
     console.warn("No cached API elevation data to add.");

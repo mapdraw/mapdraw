@@ -60,8 +60,8 @@ function initializeContextMenu(map) {
 
     const updateCoords = () => {
       wrappedLatlng = latlng.wrap();
-      latSpan.textContent = wrappedLatlng.lat.toFixed(5);
-      lngSpan.textContent = wrappedLatlng.lng.toFixed(5);
+      latSpan.textContent = wrappedLatlng.lat.toFixed(6);
+      lngSpan.textContent = wrappedLatlng.lng.toFixed(6);
     };
     updateCoords();
 
@@ -92,7 +92,7 @@ function initializeContextMenu(map) {
         {
           text: "Copy Coords",
           onClick: () => {
-            const coordString = `${wrappedLatlng.lat}, ${wrappedLatlng.lng}`;
+            const coordString = `${wrappedLatlng.lat.toFixed(6)}, ${wrappedLatlng.lng.toFixed(6)}`;
             copyToClipboard(coordString)
               .then(() => {
                 map.closePopup();

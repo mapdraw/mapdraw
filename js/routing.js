@@ -534,7 +534,7 @@ function initializeRouting() {
       if (isStart) currentStartLatLng = newLatLng;
       else if (isVia) currentViaLatLng = newLatLng;
       else currentEndLatLng = newLatLng;
-      input.value = `${newLatLng.lat.toFixed(5)}, ${newLatLng.lng.toFixed(5)}`;
+      input.value = `${newLatLng.lat.toFixed(6)}, ${newLatLng.lng.toFixed(6)}`;
       input.style.color = "var(--color-black)";
       if (startMarker && endMarker) {
         updateRouteWithIntermediateVias();
@@ -623,7 +623,7 @@ function initializeRouting() {
    * Updates a routing point (start/via/end) with a new location and optional label.
    */
   const updateRoutingPoint = (latlng, type, label) => {
-    const locationString = label || `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+    const locationString = label || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
 
     if (type === "start") {
       currentStartLatLng = latlng;
@@ -896,7 +896,7 @@ function initializeRouting() {
   map.on("click", (e) => {
     if (penModeActive) {
       const latlng = e.latlng;
-      const locStr = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+      const locStr = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
 
       if (penModeClickCount === 0) {
         currentStartLatLng = latlng;
@@ -958,7 +958,7 @@ function initializeRouting() {
           : routePointSelectionMode === "via"
             ? viaInput
             : endInput;
-      input.value = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+      input.value = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
 
       if (routePointSelectionMode === "start") {
         currentStartLatLng = latlng;

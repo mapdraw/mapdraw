@@ -579,8 +579,8 @@ function showInfoPanel(layer) {
   if (layer instanceof L.Marker) {
     name = name || "Marker";
     const latlng = layer.getLatLng();
-    details = `<span>Lat: ${latlng.lat.toFixed(5)}, Lon: ${latlng.lng.toFixed(
-      5,
+    details = `<span>Lat: ${latlng.lat.toFixed(6)}, Lon: ${latlng.lng.toFixed(
+      6,
     )}<span class="copy-icon material-symbols">content_copy</span>`;
     infoPanelDetails.innerHTML = details;
 
@@ -590,7 +590,7 @@ function showInfoPanel(layer) {
 
     infoPanelDetails.onclick = (e) => {
       L.DomEvent.stop(e); // Prevent event from bubbling up
-      const coordString = `${latlng.lat}, ${latlng.lng}`;
+      const coordString = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
       copyToClipboard(coordString)
         .then(() => {
           Swal.fire({
