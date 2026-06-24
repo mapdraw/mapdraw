@@ -355,7 +355,7 @@ async function initializeMap() {
     zoom: 2,
     zoomControl: false,
     attributionControl: false,
-    doubleClickZoom: false,
+    doubleClickZoom: true,
     worldCopyJump: true,
   });
 
