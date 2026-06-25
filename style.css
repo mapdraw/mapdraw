@@ -376,8 +376,8 @@ select:focus {
 /* Main container for all right-side panels */
 #main-right-container {
   position: absolute;
-  top: calc(max(10px, env(safe-area-inset-top)) + var(--top-right-clearance));
-  right: max(10px, env(safe-area-inset-right));
+  top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
+  right: calc(env(safe-area-inset-right) + 10px);
   width: 340px;
   z-index: 1000;
   display: flex;
@@ -1840,10 +1840,10 @@ button.strava-button-secondary:not(:disabled) {
 
 /* Main popup container */
 .swal2-container {
-  padding-top: max(var(--swal2-container-padding), env(safe-area-inset-top)) !important;
-  padding-bottom: max(var(--swal2-container-padding), env(safe-area-inset-bottom)) !important;
-  padding-left: max(var(--swal2-container-padding), env(safe-area-inset-left)) !important;
-  padding-right: max(var(--swal2-container-padding), env(safe-area-inset-right)) !important;
+  padding-top: calc(var(--swal2-container-padding) + env(safe-area-inset-top)) !important;
+  padding-bottom: calc(var(--swal2-container-padding) + env(safe-area-inset-bottom)) !important;
+  padding-left: calc(var(--swal2-container-padding) + env(safe-area-inset-left)) !important;
+  padding-right: calc(var(--swal2-container-padding) + env(safe-area-inset-right)) !important;
 }
 
 .swal2-popup {
@@ -1851,8 +1851,8 @@ button.strava-button-secondary:not(:disabled) {
   color: var(--text-color) !important;
   border-radius: var(--border-radius) !important;
   max-height: calc(
-    100dvh - max(var(--swal2-container-padding), env(safe-area-inset-top)) -
-      max(var(--swal2-container-padding), env(safe-area-inset-bottom))
+    100dvh - var(--swal2-container-padding) * 2 - env(safe-area-inset-top) -
+      env(safe-area-inset-bottom)
   ) !important;
   display: flex !important;
   flex-direction: column !important;
@@ -2154,7 +2154,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 #custom-layers-panel {
   display: none; /* Hidden by default */
   position: absolute;
-  top: max(10px, env(safe-area-inset-top));
+  top: calc(env(safe-area-inset-top) + 10px);
   left: 51px; /* The toolbar width is ~40px, so 51px provides a 10px gap */
   z-index: 1003; /* Ensure it's above the map but consistent with other panels */
   background-color: var(--background-color);
@@ -2288,8 +2288,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 /* Main ui layout */
 .leaflet-left {
-  left: max(10px, env(safe-area-inset-left));
-  margin-top: max(10px, env(safe-area-inset-top));
+  left: calc(env(safe-area-inset-left) + 10px);
+  margin-top: calc(env(safe-area-inset-top) + 10px);
 }
 /* Prevent bottom-left controls from overlapping toolbar */
 .leaflet-bottom.leaflet-left {
@@ -2394,8 +2394,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 /* Top-right button container */
 #top-right-container {
   position: absolute;
-  top: max(10px, env(safe-area-inset-top));
-  right: max(10px, env(safe-area-inset-right));
+  top: calc(env(safe-area-inset-top) + 10px);
+  right: calc(env(safe-area-inset-right) + 10px);
   z-index: 1001;
   display: flex;
   flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
@@ -3018,8 +3018,8 @@ body.using-touch {
   body:not(.force-desktop-layout) {
     #offline-indicator {
       position: fixed;
-      top: calc(max(10px, env(safe-area-inset-top)) + var(--top-right-clearance));
-      right: max(10px, env(safe-area-inset-right));
+      top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
+      right: calc(env(safe-area-inset-right) + 10px);
       width: 190px;
       max-width: calc(100vw - 81px);
     }
