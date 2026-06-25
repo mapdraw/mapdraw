@@ -57,6 +57,8 @@
   --link-color: var(--highlight-color);
   --locate-color: var(--color-blue);
   --overview-header-height: 32px;
+  --top-right-btn-height: 32px;
+  --top-right-clearance: calc(var(--top-right-btn-height) + 8px);
 }
 
 /* THEMES: GLASS > LIGHT > DARK */
@@ -374,8 +376,8 @@ select:focus {
 /* Main container for all right-side panels */
 #main-right-container {
   position: absolute;
-  top: 50px;
-  right: 10px;
+  top: calc(max(10px, env(safe-area-inset-top)) + var(--top-right-clearance));
+  right: max(10px, env(safe-area-inset-right));
   width: 340px;
   z-index: 1000;
   display: flex;
@@ -1837,11 +1839,21 @@ button.strava-button-secondary:not(:disabled) {
    light or dark theme by using the application's CSS variables. */
 
 /* Main popup container */
+.swal2-container {
+  padding-top: max(var(--swal2-container-padding), env(safe-area-inset-top)) !important;
+  padding-bottom: max(var(--swal2-container-padding), env(safe-area-inset-bottom)) !important;
+  padding-left: max(var(--swal2-container-padding), env(safe-area-inset-left)) !important;
+  padding-right: max(var(--swal2-container-padding), env(safe-area-inset-right)) !important;
+}
+
 .swal2-popup {
   background-color: var(--background-color) !important;
   color: var(--text-color) !important;
   border-radius: var(--border-radius) !important;
-  max-height: calc(100dvh - calc(var(--swal2-container-padding) * 2)) !important;
+  max-height: calc(
+    100dvh - max(var(--swal2-container-padding), env(safe-area-inset-top)) -
+      max(var(--swal2-container-padding), env(safe-area-inset-bottom))
+  ) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
@@ -2142,7 +2154,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 #custom-layers-panel {
   display: none; /* Hidden by default */
   position: absolute;
-  top: 10px;
+  top: max(10px, env(safe-area-inset-top));
   left: 51px; /* The toolbar width is ~40px, so 51px provides a 10px gap */
   z-index: 1003; /* Ensure it's above the map but consistent with other panels */
   background-color: var(--background-color);
@@ -2276,8 +2288,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 /* Main ui layout */
 .leaflet-left {
-  left: 10px;
-  margin-top: 10px;
+  left: max(10px, env(safe-area-inset-left));
+  margin-top: max(10px, env(safe-area-inset-top));
 }
 /* Prevent bottom-left controls from overlapping toolbar */
 .leaflet-bottom.leaflet-left {
@@ -2382,8 +2394,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 /* Top-right button container */
 #top-right-container {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
   z-index: 1001;
   display: flex;
   flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
@@ -2394,7 +2406,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 /* Base button styles */
 .top-right-btn {
-  height: 32px;
+  height: var(--top-right-btn-height);
   background: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
@@ -3006,8 +3018,8 @@ body.using-touch {
   body:not(.force-desktop-layout) {
     #offline-indicator {
       position: fixed;
-      top: 50px;
-      right: 10px;
+      top: calc(max(10px, env(safe-area-inset-top)) + var(--top-right-clearance));
+      right: max(10px, env(safe-area-inset-right));
       width: 190px;
       max-width: calc(100vw - 81px);
     }

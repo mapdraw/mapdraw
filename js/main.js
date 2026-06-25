@@ -1180,6 +1180,20 @@ async function initializeMap() {
     }
   });
 
+  // Auto-enter fullscreen on first tap when running as installed mobile PWA
+  const isInstalledPWA = window.matchMedia("(display-mode: standalone)").matches;
+  if (isInstalledPWA && navigator.maxTouchPoints > 0) {
+    document.addEventListener(
+      "click",
+      () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      },
+      { once: true },
+    );
+  }
+
   document.addEventListener("keydown", (e) => {
     if (e.target.matches("input, textarea")) return;
     if (e.key.toLowerCase() === "f") {
