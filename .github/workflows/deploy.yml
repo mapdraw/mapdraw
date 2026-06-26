@@ -40,19 +40,19 @@ jobs:
       - name: Replace placeholders
         run: |
           # Extract values from config.js
-          APP_NAME_VALUE=$(grep 'const APP_NAME' js/config.js | cut -d '"' -f 2)
+          APP_NAME_PWA_VALUE=$(grep 'const APP_NAME_PWA' js/config.js | cut -d '"' -f 2)
           APP_TITLE_VALUE=$(grep 'const APP_TITLE' js/config.js | cut -d '"' -f 2)
           APP_DESC_VALUE=$(grep 'const APP_DESCRIPTION' js/config.js | cut -d '"' -f 2)
 
           # Escape special characters (& and \) for sed
-          APP_NAME_VALUE_ESCAPED=$(echo "$APP_NAME_VALUE" | sed 's/[&\]/\\&/g')
+          APP_NAME_PWA_VALUE_ESCAPED=$(echo "$APP_NAME_PWA_VALUE" | sed 's/[&\]/\\&/g')
           APP_TITLE_VALUE_ESCAPED=$(echo "$APP_TITLE_VALUE" | sed 's/[&\]/\\&/g')
           APP_DESC_VALUE_ESCAPED=$(echo "$APP_DESC_VALUE" | sed 's/[&\]/\\&/g')
 
           # Replace in HTML and manifest
           sed -i "s|__APP_TITLE__|${APP_TITLE_VALUE_ESCAPED}|g" index.html
           sed -i "s|__APP_DESCRIPTION__|${APP_DESC_VALUE_ESCAPED}|g" index.html
-          sed -i "s|__APP_NAME__|${APP_NAME_VALUE_ESCAPED}|g" manifest.json
+          sed -i "s|__APP_NAME_PWA__|${APP_NAME_PWA_VALUE_ESCAPED}|g" manifest.json
           sed -i "s|__APP_DESCRIPTION__|${APP_DESC_VALUE_ESCAPED}|g" manifest.json
 
       - name: Setup Node.js

@@ -1,6 +1,7 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
 const APP_NAME = "MapDraw.net"; // Used throughout the app as name
+const APP_NAME_PWA = "MapDraw"; // Used in the PWA manifest
 // prettier-ignore
 const APP_TITLE = "MapDraw: Draw on Map, GPS, GPX, KML & GeoJSON Editor"; // Used in the HTML <title> tag
 // prettier-ignore
