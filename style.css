@@ -1841,7 +1841,6 @@ button.strava-button-secondary:not(:disabled) {
 /* Main popup container */
 .swal2-container {
   padding-top: calc(var(--swal2-container-padding) + env(safe-area-inset-top)) !important;
-  padding-bottom: calc(var(--swal2-container-padding) + env(safe-area-inset-bottom)) !important;
   padding-left: calc(var(--swal2-container-padding) + env(safe-area-inset-left)) !important;
   padding-right: calc(var(--swal2-container-padding) + env(safe-area-inset-right)) !important;
 }
@@ -1851,8 +1850,7 @@ button.strava-button-secondary:not(:disabled) {
   color: var(--text-color) !important;
   border-radius: var(--border-radius) !important;
   max-height: calc(
-    100dvh - var(--swal2-container-padding) * 2 - env(safe-area-inset-top) -
-      env(safe-area-inset-bottom)
+    100dvh - var(--swal2-container-padding) * 2 - env(safe-area-inset-top)
   ) !important;
   display: flex !important;
   flex-direction: column !important;
