@@ -1325,9 +1325,23 @@ async function initializeMap() {
 
   // ---- Leaflet.draw patches (end) ----
 
+  // Path
   L.drawLocal.draw.toolbar.buttons.polyline = "Draw path";
-  L.drawLocal.draw.toolbar.buttons.marker = "Place marker";
+  L.drawLocal.draw.handlers.polyline.tooltip.start = "Click to start drawing path";
+  L.drawLocal.draw.handlers.polyline.tooltip.cont = "Click to continue path";
+  L.drawLocal.draw.handlers.polyline.tooltip.end = "Click last point to finish path";
+
+  // Area
   L.drawLocal.draw.toolbar.buttons.polygon = "Draw area";
+  L.drawLocal.draw.handlers.polygon.tooltip.start = "Click to start drawing area";
+  L.drawLocal.draw.handlers.polygon.tooltip.cont = "Click to continue area";
+  L.drawLocal.draw.handlers.polygon.tooltip.end = "Click first point to close area";
+
+  // Marker
+  L.drawLocal.draw.toolbar.buttons.marker = "Place marker";
+  L.drawLocal.draw.handlers.marker.tooltip.start = "Click to place marker";
+
+  // Edit toolbar
   L.drawLocal.edit.toolbar.buttons.edit = "Edit";
   L.drawLocal.edit.toolbar.buttons.remove = "Delete";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No items to edit";
