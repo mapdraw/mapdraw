@@ -1191,11 +1191,9 @@ async function gzipEncode(text) {
     bytes.set(chunk, offset);
     offset += chunk.length;
   }
-  // Convert in chunks to avoid stack overflow on large payloads
-  const CHUNK = 8192;
   let binary = "";
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
