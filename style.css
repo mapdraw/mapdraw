@@ -167,9 +167,38 @@ body.glass-mode .routing-profile-selector .profile-btn.active {
   color: var(--color-white) !important;
   border-color: rgba(255, 255, 255, 0.3) !important;
 }
-body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols,
-body.glass-mode #routing-pen-btn.active .material-symbols {
+body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols {
   color: var(--color-white) !important;
+}
+body.glass-mode #select-start-on-map.active,
+body.glass-mode #select-via-on-map.active,
+body.glass-mode #select-end-on-map.active {
+  background-color: transparent !important;
+}
+body.glass-mode #select-start-on-map.active {
+  border-color: var(--routing-color-start) !important;
+}
+body.glass-mode #select-start-on-map.active .material-symbols {
+  color: var(--routing-color-start) !important;
+}
+body.glass-mode #select-via-on-map.active {
+  border-color: var(--routing-color-via) !important;
+}
+body.glass-mode #select-via-on-map.active .material-symbols {
+  color: var(--routing-color-via) !important;
+}
+body.glass-mode #select-end-on-map.active {
+  border-color: var(--routing-color-end) !important;
+}
+body.glass-mode #select-end-on-map.active .material-symbols {
+  color: var(--routing-color-end) !important;
+}
+body.glass-mode #routing-pen-btn.active {
+  background-color: transparent !important;
+  border-color: var(--highlight-color) !important;
+}
+body.glass-mode #routing-pen-btn.active .material-symbols {
+  color: var(--highlight-color) !important;
 }
 
 /* WMS import button */
@@ -369,8 +398,8 @@ select:focus {
   background-color: var(--background2-color) !important;
   cursor: not-allowed;
 }
-.leaflet-draw-toolbar a.leaflet-disabled .icon {
-  fill: var(--icon-color); /* Use a faded grey for the icon itself */
+.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols {
+  color: var(--highlight-color);
 }
 
 /* Main container for all right-side panels */
@@ -1015,6 +1044,37 @@ select:focus {
   color: var(--color-white);
   border-color: var(--border-color);
 }
+#select-start-on-map.active,
+#select-via-on-map.active,
+#select-end-on-map.active,
+#routing-pen-btn.active {
+  background-color: var(--background-color);
+  color: inherit;
+}
+#select-start-on-map.active {
+  border-color: var(--routing-color-start);
+}
+#select-start-on-map.active .material-symbols {
+  color: var(--routing-color-start);
+}
+#select-via-on-map.active {
+  border-color: var(--routing-color-via);
+}
+#select-via-on-map.active .material-symbols {
+  color: var(--routing-color-via);
+}
+#select-end-on-map.active {
+  border-color: var(--routing-color-end);
+}
+#select-end-on-map.active .material-symbols {
+  color: var(--routing-color-end);
+}
+#routing-pen-btn.active {
+  border-color: var(--highlight-color);
+}
+#routing-pen-btn.active .material-symbols {
+  color: var(--highlight-color);
+}
 
 /* Routing Profile Button Group Styles */
 
@@ -1098,10 +1158,6 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-#routing-pen-btn.active .material-symbols {
-  color: var(--background-color);
 }
 
 #clear-route-btn,
