@@ -1477,6 +1477,13 @@ async function initializeMap() {
     }
   });
 
+  // Leaflet.draw handles Escape for draw tools internally, but not for edit/delete mode.
+  document.addEventListener("keyup", (e) => {
+    if (e.key !== "Escape") return;
+    const editToolbar = drawControl._toolbars[L.EditToolbar.TYPE];
+    if (editToolbar?.enabled()) editToolbar.disable();
+  });
+
   map.on(L.Draw.Event.DELETESTART, () => {
     isDeleteMode = true;
     deselectCurrentItem();
