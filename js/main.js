@@ -190,9 +190,6 @@ async function initializeMap() {
 
   useImperialUnits = localStorage.getItem("useImperialUnits") === "true";
 
-  // Prevent polyline drawing tool from finishing on second tap on touch devices
-  L.Draw.Polyline.prototype._onTouch = L.Util.falseFn;
-
   infoPanel = document.getElementById("info-panel");
   infoPanelName = document.getElementById("info-panel-name");
   infoPanelDetails = document.getElementById("info-panel-details");
@@ -1294,15 +1291,39 @@ async function initializeMap() {
   // Hide elevation panel on load to prevent blocking map interactions on mobile
   document.getElementById("elevation-div").style.visibility = "hidden";
 
-  // Fix Leaflet.draw toolbar on iPad with mouse by forcing click events instead of touchstart
+  // ---- Leaflet.draw patches (start) ----
+
+  // Prevent polyline drawing tool from finishing on second tap on touch devices
+  L.Draw.Polyline.prototype._onTouch = L.Util.falseFn;
+
+  // Fix toolbar on iPad with mouse by forcing click events instead of touchstart
   if (L.Toolbar) {
     L.Toolbar.prototype._detectIOS = () => false;
   }
 
-  // Patch Leaflet.draw use of deprecated _flat method to use isFlat instead
+  // _checkDisabled listens to featureGroup layerremove. In delete mode, _removeLayer moves layers
+  // from featureGroup to _deletedLayers, firing layerremove mid-session and wrongly disabling buttons.
+  // Guard it with enabled() (_activeMode !== null); patch _handlerDeactivated to call it after the
+  // mode ends — save() fires no layerremove so _checkDisabled would never run to fix state otherwise.
+  if (L.EditToolbar) {
+    const origCheckDisabled = L.EditToolbar.prototype._checkDisabled;
+    L.EditToolbar.prototype._checkDisabled = function () {
+      if (this.enabled()) return;
+      origCheckDisabled.call(this);
+    };
+    const origHandlerDeactivated = L.EditToolbar.prototype._handlerDeactivated;
+    L.EditToolbar.prototype._handlerDeactivated = function () {
+      origHandlerDeactivated.call(this);
+      this._checkDisabled();
+    };
+  }
+
+  // Patch deprecated _flat method
   if (L.Polyline && L.LineUtil && L.LineUtil.isFlat) {
     L.Polyline._flat = L.LineUtil.isFlat;
   }
+
+  // ---- Leaflet.draw patches (end) ----
 
   L.drawLocal.draw.toolbar.buttons.polyline = "Draw path";
   L.drawLocal.draw.toolbar.buttons.marker = "Place marker";
@@ -1311,6 +1332,7 @@ async function initializeMap() {
   L.drawLocal.edit.toolbar.buttons.remove = "Delete";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No items to edit";
   L.drawLocal.edit.toolbar.buttons.removeDisabled = "No items to delete";
+
   drawControl = new L.Control.Draw({
     edit: { featureGroup: editableLayers },
     draw: {
