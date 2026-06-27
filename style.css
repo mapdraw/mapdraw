@@ -172,30 +172,19 @@ body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols 
 }
 body.glass-mode #select-start-on-map.active,
 body.glass-mode #select-via-on-map.active,
-body.glass-mode #select-end-on-map.active {
-  background-color: transparent !important;
-}
-body.glass-mode #select-start-on-map.active {
-  border-color: var(--routing-color-start) !important;
+body.glass-mode #select-end-on-map.active,
+body.glass-mode #routing-pen-btn.active {
+  background-color: var(--icon-color) !important;
+  border-color: var(--icon-color) !important;
 }
 body.glass-mode #select-start-on-map.active .material-symbols {
   color: var(--routing-color-start) !important;
 }
-body.glass-mode #select-via-on-map.active {
-  border-color: var(--routing-color-via) !important;
-}
 body.glass-mode #select-via-on-map.active .material-symbols {
   color: var(--routing-color-via) !important;
 }
-body.glass-mode #select-end-on-map.active {
-  border-color: var(--routing-color-end) !important;
-}
 body.glass-mode #select-end-on-map.active .material-symbols {
   color: var(--routing-color-end) !important;
-}
-body.glass-mode #routing-pen-btn.active {
-  background-color: transparent !important;
-  border-color: var(--highlight-color) !important;
 }
 body.glass-mode #routing-pen-btn.active .material-symbols {
   color: var(--highlight-color) !important;
@@ -1048,29 +1037,18 @@ select:focus {
 #select-via-on-map.active,
 #select-end-on-map.active,
 #routing-pen-btn.active {
-  background-color: var(--background-color);
+  background-color: var(--icon-color);
+  border-color: var(--icon-color);
   color: inherit;
-}
-#select-start-on-map.active {
-  border-color: var(--routing-color-start);
 }
 #select-start-on-map.active .material-symbols {
   color: var(--routing-color-start);
 }
-#select-via-on-map.active {
-  border-color: var(--routing-color-via);
-}
 #select-via-on-map.active .material-symbols {
   color: var(--routing-color-via);
 }
-#select-end-on-map.active {
-  border-color: var(--routing-color-end);
-}
 #select-end-on-map.active .material-symbols {
   color: var(--routing-color-end);
-}
-#routing-pen-btn.active {
-  border-color: var(--highlight-color);
 }
 #routing-pen-btn.active .material-symbols {
   color: var(--highlight-color);
