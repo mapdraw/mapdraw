@@ -173,8 +173,6 @@ This project utilizes several open-source libraries, which are included in the r
   - Download URL: <https://registry.npmjs.org/leaflet.markercluster/-/leaflet.markercluster-1.5.3.tgz>
 - **leaflet-routing-machine-3.2.12**
   - Download URL: <https://registry.npmjs.org/leaflet-routing-machine/-/leaflet-routing-machine-3.2.12.tgz>
-- **lz-string-1.5.0**
-  - Download URL: <https://registry.npmjs.org/lz-string/-/lz-string-1.5.0.tgz>
 - **polyline-encoded-0.0.9**
   - Download URL: <https://registry.npmjs.org/polyline-encoded/-/polyline-encoded-0.0.9.tgz>
 - **proj4-2.20.2**

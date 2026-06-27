@@ -459,7 +459,7 @@ async function initializeMap() {
   // Import shared data from URL if present (now that layer groups are ready)
   if (window._pendingShareData) {
     const { data, zoom, lat, lon } = window._pendingShareData;
-    const success = importMapStateFromUrl(data);
+    const success = await importMapStateFromUrl(data);
 
     if (success) {
       console.log("Successfully loaded shared map data from URL");
@@ -995,7 +995,20 @@ async function initializeMap() {
       });
       L.DomEvent.on(container.querySelector("#share-link"), "click", async (e) => {
         L.DomEvent.stop(e);
-        const shareUrl = buildShareableUrl();
+        let shareUrl;
+        try {
+          shareUrl = await buildShareableUrl();
+        } catch {
+          Swal.fire({
+            toast: true,
+            icon: "error",
+            title: "Sharing not supported in this browser",
+            position: "top",
+            showConfirmButton: false,
+            timer: 3000,
+          });
+          return;
+        }
         if (!shareUrl) {
           Swal.fire({
             toast: true,
