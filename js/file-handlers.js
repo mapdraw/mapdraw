@@ -1164,6 +1164,30 @@ function exportKml() {
 // --------------------------------------------------------------------
 
 /**
+ * Collects all chunks from a ReadableStream into a single Uint8Array.
+ *
+ * @param {ReadableStream<Uint8Array>} readable
+ * @returns {Promise<Uint8Array>}
+ */
+async function collectStream(readable) {
+  const chunks = [];
+  const reader = readable.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+
+/**
  * Encodes text using gzip compression and base64url encoding.
  * Uses the native browser CompressionStream API — no external library required.
  * Base64url (RFC 4648) replaces + with -, / with _, and strips = padding,
@@ -1177,20 +1201,7 @@ async function gzipEncode(text) {
   const writer = stream.writable.getWriter();
   writer.write(new TextEncoder().encode(text));
   writer.close();
-  const chunks = [];
-  const reader = stream.readable.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-  const bytes = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
-  }
+  const bytes = await collectStream(stream.readable);
   let binary = "";
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
@@ -1218,20 +1229,7 @@ async function gzipDecode(encoded) {
   // the readable side and are caught by the outer try/catch in importMapStateFromUrl.
   writer.write(bytes).catch(() => {});
   writer.close().catch(() => {});
-  const chunks = [];
-  const reader = stream.readable.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
+  const result = await collectStream(stream.readable);
   return new TextDecoder().decode(result);
 }
 
@@ -1243,7 +1241,7 @@ async function gzipDecode(encoded) {
  *   t:   "m"=marker, "p"=polyline, "a"=polygon (area)
  *   c:   [lng, lat] for markers (6 decimals); Polyline-encoded string for paths (precision 5 = ~1.1m)
  *   n:   name (omitted if empty)
- *   s:   color hex without # (omitted if DEFAULT_COLOR; # restored by normalizeHexColor on import)
+ *   s:   color hex without # (omitted if DEFAULT_COLOR; # restored by parseColor() inside importGeoJsonToMap)
  *   e:   elevation — integer for markers, integer array for paths (omitted if absent or all zeros)
  *   sid: Strava activity ID (omitted if not a Strava import)
  *
@@ -1271,7 +1269,7 @@ function buildCompactObject() {
       const color = layer.feature?.properties?.color;
       const stravaId = layer.feature?.properties?.stravaId;
       if (name) feature.n = name;
-      // Strip # prefix from hex color for URL efficiency (auto-restored by normalizeHexColor on import)
+      // Strip # prefix from hex color for URL efficiency (auto-restored by parseColor() inside importGeoJsonToMap)
       if (color && color !== DEFAULT_COLOR) {
         feature.s = color.startsWith("#") ? color.slice(1) : color;
       }
