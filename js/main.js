@@ -1341,11 +1341,17 @@ async function initializeMap() {
   L.drawLocal.draw.toolbar.buttons.marker = "Place marker";
   L.drawLocal.draw.handlers.marker.tooltip.start = "Click to place marker";
 
-  // Edit toolbar
+  // Edit toolbar buttons
   L.drawLocal.edit.toolbar.buttons.edit = "Edit";
   L.drawLocal.edit.toolbar.buttons.remove = "Delete";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No items to edit";
   L.drawLocal.edit.toolbar.buttons.removeDisabled = "No items to delete";
+
+  // Edit toolbar tooltips
+  L.drawLocal.edit.handlers.edit.tooltip.text =
+    "Drag handles or markers to edit<br>Click cancel to undo";
+  L.drawLocal.edit.handlers.edit.tooltip.subtext = "";
+  L.drawLocal.edit.handlers.remove.tooltip.text = "Click an item to delete<br>Click cancel to undo";
 
   drawControl = new L.Control.Draw({
     edit: { featureGroup: editableLayers },
