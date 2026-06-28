@@ -4,14 +4,15 @@
  * CSS COLOR UTILITIES
  *
  * Provides color parsing and normalization for import/export.
- * Supports all 140 standard CSS color names and hex values.
+ * Supports all 148 CSS color name keywords and hex values.
  * @see https://developer.mozilla.org/en-US/docs/Web/CSS/named-color
  * @see https://www.w3schools.com/tags/ref_colornames.asp
  */
 
 /**
- * All 140 standard CSS color names mapped to their hex values.
- * Names are lowercase for case-insensitive lookup.
+ * All 148 CSS Color Level 4 named color keywords mapped to their hex values.
+ * Sorted alphabetically. Names are lowercase for case-insensitive lookup.
+ * @see https://drafts.csswg.org/css-color-4/#named-colors
  */
 const CSS_COLOR_NAMES = {
   aliceblue: "#F0F8FF",
@@ -39,8 +40,8 @@ const CSS_COLOR_NAMES = {
   darkcyan: "#008B8B",
   darkgoldenrod: "#B8860B",
   darkgray: "#A9A9A9",
-  darkgrey: "#A9A9A9",
   darkgreen: "#006400",
+  darkgrey: "#A9A9A9",
   darkkhaki: "#BDB76B",
   darkmagenta: "#8B008B",
   darkolivegreen: "#556B2F",
@@ -68,9 +69,9 @@ const CSS_COLOR_NAMES = {
   gold: "#FFD700",
   goldenrod: "#DAA520",
   gray: "#808080",
-  grey: "#808080",
   green: "#008000",
   greenyellow: "#ADFF2F",
+  grey: "#808080",
   honeydew: "#F0FFF0",
   hotpink: "#FF69B4",
   indianred: "#CD5C5C",
@@ -86,8 +87,8 @@ const CSS_COLOR_NAMES = {
   lightcyan: "#E0FFFF",
   lightgoldenrodyellow: "#FAFAD2",
   lightgray: "#D3D3D3",
-  lightgrey: "#D3D3D3",
   lightgreen: "#90EE90",
+  lightgrey: "#D3D3D3",
   lightpink: "#FFB6C1",
   lightsalmon: "#FFA07A",
   lightseagreen: "#20B2AA",
