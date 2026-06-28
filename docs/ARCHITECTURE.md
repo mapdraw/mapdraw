@@ -37,32 +37,34 @@ All formats are interoperable - data imported from GeoJSON, GPX, KML, or KMZ can
 
 ## Document Organization
 
-OpenMapEditor is a **Vanilla JavaScript** application with modular organization.
+MapDraw is a **Vanilla JavaScript** application with modular organization.
 
 ### Core Modules
 
-| Script                  | Responsibility                                                                                      |
-| :---------------------- | :-------------------------------------------------------------------------------------------------- |
-| `main.js`               | **Entry Point**. Orchestrates map initialization, global event listeners, and layer management.     |
-| `autosave.js`           | Periodic state persistence to IndexedDB with session restoration.                                   |
-| `config.js`             | App-wide constants, styling defaults, and color palette definitions.                                |
-| `secrets.js`            | API keys for external services (not committed to git, created from template).                       |
-| `utils.js`              | Geometry calculations (distance, area), coordinate parsing, and common helpers.                     |
-| `color-utils.js`        | Color parsing and conversion utilities (148 CSS color name entries, hex normalization, KML format). |
-| `file-handlers.js`      | Complex I/O logic for GeoJSON, GPX, KML, and KMZ import/export.                                     |
-| `ui-handlers.js`        | Manages the Sidebar, Contents tab, color picker, and interactive UI elements.                       |
-| `map-interactions.js`   | Marker dragging, path selection, elevation marker sync, and map interaction handlers.               |
-| `elevation.js`          | Data fetching logic for Google and GeoAdmin (Swiss) elevation APIs with caching.                    |
-| `elevation-profile.js`  | UI rendering of the D3-powered elevation chart with hover synchronization.                          |
-| `routing.js`            | Integration with Mapbox/OSRM routing engines and waypoint management.                               |
-| `strava.js`             | OAuth flow, activity fetching, and GPX stream retrieval from Strava API.                            |
-| `search.js`             | Search modal with geocoding via OSM Nominatim and coordinate parsing.                               |
-| `poi-finder.js`         | Points of Interest discovery via Overpass API with category filtering.                              |
-| `wms-import.js`         | Web Map Service layer management with GetCapabilities parsing.                                      |
-| `contextmenu.js`        | Right-click context menu for coordinate display and routing point assignment.                       |
-| `leaflet-wms-gutter.js` | WMS tile gutter extension to prevent icon clipping at tile boundaries.                              |
-| `sweetalert2-config.js` | Global SweetAlert2 modal configuration and theming.                                                 |
-| `dev-panel.js`          | Hidden developer debugging panel for inspecting global state.                                       |
+| Script                  | Responsibility                                                                                                                                                        |
+| :---------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main.js`               | **Entry Point**. Orchestrates map initialization, global event listeners, and layer management.                                                                       |
+| `autosave.js`           | Periodic state persistence to IndexedDB with session restoration.                                                                                                     |
+| `config.js`             | App-wide constants, styling defaults, and color palette definitions.                                                                                                  |
+| `secrets.js`            | API keys for external services (`osmClientId`, map tile keys, etc.) — not committed to git, created from template.                                                    |
+| `utils.js`              | Geometry calculations (distance, area), coordinate parsing, and common helpers.                                                                                       |
+| `color-utils.js`        | Color parsing and conversion utilities (148 CSS color name entries, hex normalization, KML format).                                                                   |
+| `file-handlers.js`      | Complex I/O logic for GeoJSON, GPX, KML, and KMZ import/export.                                                                                                       |
+| `ui-handlers.js`        | Manages the Sidebar, Contents tab, color picker, and interactive UI elements.                                                                                         |
+| `map-interactions.js`   | Marker dragging, path selection, elevation marker sync, and map interaction handlers.                                                                                 |
+| `elevation.js`          | Data fetching logic for Google and GeoAdmin (Swiss) elevation APIs with caching.                                                                                      |
+| `elevation-profile.js`  | UI rendering of the D3-powered elevation chart with hover synchronization.                                                                                            |
+| `routing.js`            | Integration with Mapbox/OSRM routing engines and waypoint management.                                                                                                 |
+| `strava.js`             | OAuth flow, activity fetching, and GPX stream retrieval from Strava API.                                                                                              |
+| `search.js`             | Search modal with geocoding via OSM Nominatim and coordinate parsing.                                                                                                 |
+| `poi-finder.js`         | Points of Interest discovery via Overpass API with category filtering.                                                                                                |
+| `wms-import.js`         | Web Map Service layer management with GetCapabilities parsing.                                                                                                        |
+| `contextmenu.js`        | Right-click context menu for coordinate display and routing point assignment.                                                                                         |
+| `leaflet-wms-gutter.js` | WMS tile gutter extension to prevent icon clipping at tile boundaries.                                                                                                |
+| `sweetalert2-config.js` | Global SweetAlert2 modal configuration and theming.                                                                                                                   |
+| `data-editor.js`        | Desktop-only GeoJSON editor tab (powered by CodeMirror) for viewing and directly editing all map features; supports apply, reset, find-selected, and copy operations. |
+| `osm.js`                | OpenStreetMap integration: OAuth 2.0 PKCE authentication, POI node contribution, OSM note submission, and contribution management (view/delete past nodes).           |
+| `dev-panel.js`          | Hidden developer debugging panel for inspecting global state.                                                                                                         |
 
 ---
 
@@ -70,7 +72,7 @@ OpenMapEditor is a **Vanilla JavaScript** application with modular organization.
 
 ### Application Flow
 
-1. **Entry Point**: `index.html` loads scripts individually in development. During deployment, the [GitHub Actions workflow](https://github.com/openmapeditor/openmapeditor/blob/main/.github/workflows/deploy.yml) concatenates all scripts between `<!-- START-BUNDLE -->` / `<!-- END-BUNDLE -->` markers and minifies them into a single `js/app.min.js` via Terser.
+1. **Entry Point**: `index.html` loads scripts individually in development. During deployment, the [GitHub Actions workflow](https://github.com/mapdraw/mapdraw/blob/main/.github/workflows/deploy.yml) concatenates all scripts between `<!-- START-BUNDLE -->` / `<!-- END-BUNDLE -->` markers and minifies them into a single `js/app.min.js` via Terser.
 2. **Initialization**: On `DOMContentLoaded`, `js/main.js` calls `initializeMap()`.
 3. **Map Setup**: Leaflet instances, panes, and FeatureGroups are created.
 4. **State Restoration**: Map view and shared features are restored from URL hash or IndexedDB (autosave).
@@ -93,7 +95,7 @@ The application uses **Global Variables** in `main.js` as the single source of t
 
 ### Layer Groups (Leaflet FeatureGroups)
 
-All map features are managed in specific [Leaflet FeatureGroups](https://github.com/openmapeditor/openmapeditor/search?q=L.featureGroup+path:js/main.js) to maintain clear separation:
+All map features are managed in specific [Leaflet FeatureGroups](https://github.com/mapdraw/mapdraw/search?q=L.featureGroup+path:js/main.js) to maintain clear separation:
 
 | Layer Group             | Purpose                                                  | Can Edit Geometry?   |
 | :---------------------- | :------------------------------------------------------- | :------------------- |
@@ -105,13 +107,13 @@ All map features are managed in specific [Leaflet FeatureGroups](https://github.
 
 ### Feature Structure
 
-Every layer (Path, Area, or Marker) has a [`.feature` object](https://github.com/openmapeditor/openmapeditor/search?q=layer.feature+path:js/) following the GeoJSON structure:
+Every layer (Path, Area, or Marker) has a [`.feature` object](https://github.com/mapdraw/mapdraw/search?q=layer.feature+path:js/) following the GeoJSON structure:
 
 ```javascript
 layer.feature = {
   properties: {
     name: "string",           // User-editable, defaults to "Marker"/"Unnamed Path"/"Area"
-    description: "string",    // Optional, preserved in all exports (no edit UI — set via import only)
+    description: "string",    // Optional, preserved in all exports (editable via the Data Editor tab; no dedicated sidebar field)
     color: "#DC143C",       // Hex color value (CSS standard colors or custom)
     stravaId: "123456789",    // Optional, preserved from Strava/import
     totalDistance: 1234.56    // Calculated internally, excluded from standard exports
@@ -125,12 +127,12 @@ layer.feature = {
 
 ### Layer Metadata
 
-Beyond the GeoJSON object, [layers store additional metadata](https://github.com/openmapeditor/openmapeditor/search?q=layer.pathType+path:js/) at runtime:
+Beyond the GeoJSON object, [layers store additional metadata](https://github.com/mapdraw/mapdraw/search?q=layer.pathType+path:js/) at runtime:
 
 ```javascript
 layer.pathType = "drawn" | "gpx" | "kml" | "kmz" | "geojson" | "route" | "strava";
 layer.isManuallyHidden = false; // Visibility override (Eye icon in Contents tab)
-layer.isDeletedFromToolbar = true; // Flag for toolbar synchronization on delete
+layer.isDeletedFromToolbar = false; // Transiently set to true during a toolbar delete operation
 ```
 
 **Note:** `editableLayers` is a separate FeatureGroup that contains the same layers as `drawnItems`. When a layer is drawn, it's added to both groups. This design allows Leaflet.Draw to manage editing while `drawnItems` handles visual rendering and layer control visibility.
@@ -141,27 +143,27 @@ layer.isDeletedFromToolbar = true; // Flag for toolbar synchronization on delete
 
 **Import:** GeoJSON, GPX, KML, KMZ • **Export:** GeoJSON, GPX, KML (KMZ is import-only)
 
-| Property              | GeoJSON                      | GPX                    | KML                         |
-| :-------------------- | :--------------------------- | :--------------------- | :-------------------------- |
-| **Coordinates**       | ✅ Full precision            | ✅ Full precision      | ✅ Full precision           |
-| **Name**              | ✅ `properties.name`         | ✅ `<name>`            | ✅ `<name>`                 |
-| **Description**       | ✅ `properties.description`  | ✅ `<desc>`            | ✅ `<description>`          |
-| **Color**             | ✅ `stroke` / `marker-color` | ✅ `<gpx_style:color>` | ✅ `<color>` / `<styleUrl>` |
-| **StravaId**          | ✅ `properties.stravaId`     | ✅ `<extensions>`      | ✅ `<ExtendedData>`         |
-| **Elevation**         | ✅ Coordinates[2]            | ✅ `<ele>`             | ✅ Coordinates (3rd value)  |
-| **Custom Properties** | ✅ All preserved             | ❌ Not supported       | ⚠️ Via ExtendedData         |
+| Property              | GeoJSON                      | GPX                    | KML                                                                      |
+| :-------------------- | :--------------------------- | :--------------------- | :----------------------------------------------------------------------- |
+| **Coordinates**       | ✅ Full precision            | ✅ Full precision      | ✅ Full precision                                                        |
+| **Name**              | ✅ `properties.name`         | ✅ `<name>`            | ✅ `<name>`                                                              |
+| **Description**       | ✅ `properties.description`  | ✅ `<desc>`            | ✅ `<description>`                                                       |
+| **Color**             | ✅ `stroke` / `marker-color` | ✅ `<gpx_style:color>` | ✅ `<color>` / `<styleUrl>`                                              |
+| **StravaId**          | ✅ `properties.stravaId`     | ✅ `<extensions>`      | ✅ `<ExtendedData>`                                                      |
+| **Elevation**         | ✅ Coordinates[2]            | ✅ `<ele>`             | ✅ Coordinates (3rd value)                                               |
+| **Custom Properties** | ✅ All preserved             | ❌ Not supported       | ❌ Not supported (only `stravaId` is round-tripped via `<ExtendedData>`) |
 
 ---
 
 ## Coordinate Precision
 
-| Context              | Precision      | Format                                         |
-| :------------------- | :------------- | :--------------------------------------------- |
-| **Internal Storage** | Full precision | JavaScript Number (~15 significant digits)     |
-| **GeoJSON Export**   | Full precision | Manually extracted from geometry               |
-| **GPX Export**       | Full precision | From `getLatLng()` coordinates                 |
-| **KML Export**       | Full precision | Serialized from coordinate array               |
-| **URL Sharing**      | 5 decimals     | ~1.1m accuracy, Polyline encoded (Precision 5) |
+| Context              | Precision                                      | Format                                                                                     |
+| :------------------- | :--------------------------------------------- | :----------------------------------------------------------------------------------------- |
+| **Internal Storage** | Full precision                                 | JavaScript Number (~15 significant digits)                                                 |
+| **GeoJSON Export**   | Full precision                                 | Manually extracted from geometry                                                           |
+| **GPX Export**       | Full precision                                 | From `getLatLng()` coordinates                                                             |
+| **KML Export**       | Full precision                                 | Serialized from coordinate array                                                           |
+| **URL Sharing**      | 5 decimals (paths/areas), 6 decimals (markers) | Paths/areas: Polyline encoded (Precision 5, ~1.1m accuracy); markers: `toFixed(6)` lat/lon |
 
 **Elevation Handling:**
 
@@ -185,7 +187,7 @@ The app uses a **hex-based color system** for maximum flexibility and compatibil
 
 ### Color Picker Palette
 
-The UI color picker displays **16 CSS standard colors** defined in `COLOR_PALETTE` in [js/config.js](https://github.com/openmapeditor/openmapeditor/blob/main/js/config.js).
+The UI color picker displays **16 CSS standard colors** defined in `COLOR_PALETTE` in [js/config.js](https://github.com/mapdraw/mapdraw/blob/main/js/config.js).
 
 ### Custom Color Support
 
@@ -197,10 +199,10 @@ Colors outside the 16-color palette are fully supported:
 
 ### Color Utilities
 
-Color parsing and conversion handled by [js/color-utils.js](https://github.com/openmapeditor/openmapeditor/blob/main/js/color-utils.js):
+Color parsing and conversion handled by [js/color-utils.js](https://github.com/mapdraw/mapdraw/blob/main/js/color-utils.js):
 
 - `parseColor()`: Converts CSS color names or hex values to normalized `#RRGGBB` format
-- `normalizeHexColor()`: Handles #RGB, #RRGGBB, #AARRGGBB formats
+- `normalizeHexColor()`: Handles #RGB, #RGBA, #RRGGBB, #AARRGGBB formats
 - `cssToKmlColor()`: Converts CSS hex to KML `AABBGGRR` format (for export)
 - `kmlToCssColor()`: Converts KML `AABBGGRR` to CSS `#RRGGBB` format (for import)
 
@@ -240,10 +242,10 @@ All formats funnel into this single function, which:
 
 **Entry Points:**
 
-- **GeoJSON**: [`importGeoJsonFile(file)`](https://github.com/openmapeditor/openmapeditor/search?q=symbol:importGeoJsonFile+path:js/file-handlers.js)
-- **GPX**: [`importGpxFile(file)`](https://github.com/openmapeditor/openmapeditor/search?q=symbol:importGpxFile+path:js/file-handlers.js)
-- **KML**: [`importKmlFile(file)`](https://github.com/openmapeditor/openmapeditor/search?q=symbol:importKmlFile+path:js/file-handlers.js)
-- **KMZ**: [`importKmzFile(file)`](https://github.com/openmapeditor/openmapeditor/search?q=symbol:importKmzFile+path:js/file-handlers.js)
+- **GeoJSON**: [`importGeoJsonFile(file)`](https://github.com/mapdraw/mapdraw/search?q=symbol:importGeoJsonFile+path:js/file-handlers.js)
+- **GPX**: [`importGpxFile(file)`](https://github.com/mapdraw/mapdraw/search?q=symbol:importGpxFile+path:js/file-handlers.js)
+- **KML**: [`importKmlFile(file)`](https://github.com/mapdraw/mapdraw/search?q=symbol:importKmlFile+path:js/file-handlers.js)
+- **KMZ**: [`importKmzFile(file)`](https://github.com/mapdraw/mapdraw/search?q=symbol:importKmzFile+path:js/file-handlers.js)
 
 1. **Validation**: Filters for supported geometry types (Point, LineString, Polygon).
 2. **Enrichment**: Extracts `stravaId` and `color` from format-specific extensions.
@@ -270,7 +272,11 @@ Strava activities are decoded from the API's `summary_polyline` field using the 
 
 **Mode: "strava"** — Exports only `stravaActivitiesLayer`.
 
-Each mode then serializes to the chosen format: `exportGeoJson()` → .geojson, `convertLayerToGpx()` → .gpx, or `exportKml()` → .kml.
+Format support varies by mode:
+
+- **GeoJSON** (`exportGeoJson()`): Supports all three modes — "all", "single", and "strava".
+- **GPX** (`convertLayerToGpx()`): Single-layer only — serializes one layer to a GPX string; the caller in `main.js` handles the download.
+- **KML** (`exportKml()`): Always exports all layers — no mode argument.
 
 | Output  | Geometry Mapping                                      | Color Format             | Metadata            |
 | :------ | :---------------------------------------------------- | :----------------------- | :------------------ |
@@ -280,14 +286,14 @@ Each mode then serializes to the chosen format: `exportGeoJson()` → .geojson, 
 
 ### GeoJSON Export
 
-[`exportGeoJson`](https://github.com/openmapeditor/openmapeditor/search?q=symbol:exportGeoJson+path:js/file-handlers.js) exports items based on mode ("all", "single", or "strava"):
+[`exportGeoJson`](https://github.com/mapdraw/mapdraw/search?q=symbol:exportGeoJson+path:js/file-handlers.js) exports items based on mode ("all", "single", or "strava"):
 
 - Injects standard GeoJSON styling properties (`stroke`, `marker-color`) for compatibility with external tools (e.g., geojson.io)
 - Excludes internal properties like `totalDistance`
 
 ### GPX Export
 
-[`convertLayerToGpx`](https://github.com/openmapeditor/openmapeditor/search?q=symbol:convertLayerToGpx+path:js/file-handlers.js) converts layers to GPX format:
+[`convertLayerToGpx`](https://github.com/mapdraw/mapdraw/search?q=symbol:convertLayerToGpx+path:js/file-handlers.js) converts layers to GPX format:
 
 - Markers become `<wpt>` (waypoints)
 - Paths become `<trk>` (tracks)
@@ -297,7 +303,7 @@ Each mode then serializes to the chosen format: `exportGeoJson()` → .geojson, 
 
 ### KML Export
 
-[`exportKml`](https://github.com/openmapeditor/openmapeditor/search?q=symbol:exportKml+path:js/file-handlers.js) exports items to KML format:
+[`exportKml`](https://github.com/mapdraw/mapdraw/search?q=symbol:exportKml+path:js/file-handlers.js) exports items to KML format:
 
 - **Single KML File**: All features are exported to a single `.kml` file for maximum compatibility
 - **Google Earth Compatible**: Works seamlessly with Google Earth Web, Google Earth Desktop, and Google My Maps
@@ -313,7 +319,7 @@ Encodes map state into a compressed string parameter (`&data=`).
 1. **Polyline Encoding**: Coordinates compressed (Precision 5) via [polyline-encoded](https://www.npmjs.com/package/polyline-encoded) (`L.PolylineUtil`).
 2. **Minification**: Property names shortened (`t` for type, `c` for coordinates, `n` for name, `s` for style/color, `e` for elevation, `sid` for stravaId).
 3. **Omission**: Default values (e.g., Crimson color) and empty fields are excluded.
-4. **LZ-String**: JSON payload is compressed for URI safety.
+4. **Gzip + base64url**: JSON payload is compressed with the native browser `CompressionStream("gzip")` API and encoded as base64url — no external library required.
 
 **Size Limits**: The app warns at 2,000 characters; Chrome supports URLs up to 2MB.
 
@@ -354,7 +360,7 @@ All errors are handled via **SweetAlert2** modals, providing user-friendly expla
 
 ## Dependencies
 
-For a complete list of external libraries and plugins with versions, see [Plugins & Libraries Used](https://github.com/openmapeditor/openmapeditor#plugins--libraries-used) in the README.
+For a complete list of external libraries and plugins with versions, see [Plugins & Libraries Used](https://github.com/mapdraw/mapdraw#plugins--libraries-used) in the README.
 
 ---
 
@@ -388,7 +394,7 @@ To edit the geometry of an imported item:
 
 ## Known Limitations
 
-- **Multi-Geometries**: Native editing is not supported (automatically exploded into individual Points, LineStrings, and Polygons on import). See [`SUPPORTED_IMPORT_GEOM_TYPES` constant](https://github.com/openmapeditor/openmapeditor/search?q=SUPPORTED_IMPORT_GEOM_TYPES+path:js/file-handlers.js).
+- **Multi-Geometries**: Native editing is not supported (automatically exploded into individual Points, LineStrings, and Polygons on import). See [`SUPPORTED_IMPORT_GEOM_TYPES` constant](https://github.com/mapdraw/mapdraw/search?q=SUPPORTED_IMPORT_GEOM_TYPES+path:js/file-handlers.js).
 - **GPX Polygon Export**: GPX format has no native polygon support. Areas are exported as closed tracks and will import as LineStrings in other applications.
 - **Off-grid Elevation**: The GeoAdmin service is restricted to the Swiss border.
 
@@ -396,4 +402,4 @@ To edit the geometry of an imported item:
 
 ## Summary
 
-OpenMapEditor uses **GeoJSON as the internal truth** with robust translators for GPX and KML. It balances high-precision data preservation with web performance through intelligent sampling, caching, and compression.
+MapDraw uses **GeoJSON as the internal truth** with robust translators for GPX and KML. It balances high-precision data preservation with web performance through intelligent sampling, caching, and compression.
