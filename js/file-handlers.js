@@ -1346,7 +1346,7 @@ async function encodeMapStateToUrl() {
 
 /**
  * Builds a shareable URL containing the current map view and all features.
- * Combines the map position (#map=zoom/lat/lng) with compressed feature data (&data=...).
+ * Combines the map position (#map=zoom/lat/lon) with compressed feature data (&data=...).
  * The data parameter contains all markers, polylines, and polygons encoded using
  * Polyline encoding and gzip+base64url compression.
  *
@@ -1376,7 +1376,7 @@ async function buildShareableUrl() {
  * 3. For each feature, decodes based on type:
  *    - "m" (marker): coordinates used as-is [lng, lat] or [lng, lat, elevation]
  *    - "p" (polyline): Polyline-decoded path (precision 5), elevation applied if present
- *    - "a" (polygon/area): Polyline-decoded path (precision 5), elevation applied if present
+ *    - "a" (polygon/area): Polyline-decoded path (precision 5), elevation applied if present, ring closed by appending first coordinate
  * 4. Reconstructs full GeoJSON Feature objects with properties and elevation
  * 5. Adds the FeatureCollection to the map
  *
