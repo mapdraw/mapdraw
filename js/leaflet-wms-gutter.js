@@ -23,6 +23,7 @@ L.TileLayer.WMS.Gutter = L.TileLayer.WMS.extend({
   },
 
   getTileUrl: function (coords) {
+    if (!this._url) return "";
     var tileBounds = this._tileCoordsToNwSe(coords),
       crs = this._crs,
       nw = crs.project(tileBounds[0]),
