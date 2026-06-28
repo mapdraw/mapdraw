@@ -169,7 +169,7 @@ const CSS_COLOR_NAMES = {
  * Handles various input formats:
  * - #RGB -> #RRGGBB
  * - #RRGGBB -> #RRGGBB
- * - #AARRGGBB -> #RRGGBB (strips alpha prefix, KML/Android style)
+ * - #AARRGGBB -> #RRGGBB (strips alpha prefix, GPX/Android style)
  * - RRGGBB -> #RRGGBB
  *
  * @param {string} raw - Raw color string
