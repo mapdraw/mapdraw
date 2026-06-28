@@ -402,7 +402,7 @@ select:focus {
   flex-direction: column;
   gap: 10px;
   max-width: calc(100vw - 61px);
-  max-height: calc(100dvh - 60px);
+  max-height: calc(100dvh - env(safe-area-inset-top) - 100px);
   overflow: hidden;
   cursor: auto;
 }
