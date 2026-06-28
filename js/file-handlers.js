@@ -1429,15 +1429,15 @@ async function importMapStateFromUrl(encoded) {
           };
         } else if (item.t === "a") {
           const decoded = L.PolylineUtil.decode(item.c, 5);
+          const ring = decoded.map(([lat, lng], idx) => {
+            const coord = [lng, lat];
+            if (item.e && typeof item.e[idx] === "number") coord.push(item.e[idx]);
+            return coord;
+          });
+          if (ring.length > 0) ring.push(ring[0]);
           feature.geometry = {
             type: "Polygon",
-            coordinates: [
-              decoded.map(([lat, lng], idx) => {
-                const coord = [lng, lat];
-                if (item.e && typeof item.e[idx] === "number") coord.push(item.e[idx]);
-                return coord;
-              }),
-            ],
+            coordinates: [ring],
           };
         }
 
