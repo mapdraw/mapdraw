@@ -1,13 +1,13 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
-const APP_NAME = "OpenMapEditor"; // Used throughout the app as name
+const APP_NAME = "MapDraw.net"; // Used throughout the app as name
+const APP_NAME_PWA = "MapDraw"; // Used in the PWA manifest
 // prettier-ignore
-const APP_TITLE = "OpenMapEditor: GPS, GPX, KML, GeoJSON & Strava Editor"; // Used in the HTML <title> tag
+const APP_TITLE = "MapDraw: Draw on Map, GPS, GPX, KML & GeoJSON Editor"; // Used in the HTML <title> tag
 // prettier-ignore
 const APP_DESCRIPTION = "Free online GPX, KML, KMZ & GeoJSON viewer & editor. Draw, view & edit GPS tracks with routing, elevation profiles & Strava integration."; // Used in <meta name="description">
-// prettier-ignore
-const APP_CREDITS_DESCRIPTION = "OpenMapEditor is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, and Strava activity integration."; // Used in credits modal
-const APP_DOMAIN = "www.openmapeditor.com"; // Used for Strava setup instructions
+const APP_DOMAIN = "www.mapdraw.net"; // Used for Strava setup instructions
+const OSM_CREATED_BY = "MapDraw"; // OSM changeset created_by tag
 
 // Core Application Colors
 const DEFAULT_COLOR = "#DC143C"; // Crimson
@@ -49,6 +49,7 @@ const COLOR_PALETTE = [
 ];
 
 let enablePathSimplification = localStorage.getItem("enablePathSimplification") !== "false";
+let lineThickness = parseInt(localStorage.getItem("lineThickness")) || 10;
 
 /**
  * Centralized style configuration for paths and markers.
@@ -56,12 +57,12 @@ let enablePathSimplification = localStorage.getItem("enablePathSimplification") 
 const STYLE_CONFIG = {
   path: {
     default: {
-      weight: 10,
+      weight: lineThickness,
       opacity: 0.75,
       fill: false,
     },
     highlight: {
-      weight: 10,
+      weight: lineThickness,
       opacity: 1,
       fill: false,
       outline: {

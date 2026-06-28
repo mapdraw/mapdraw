@@ -59,6 +59,7 @@ function createMarkerIcon(
     className: "svg-marker-icon",
     iconSize: [size, size],
     iconAnchor: [size / 2, size * 0.9 + anchorOffsetY],
+    popupAnchor: [0, -30],
   });
 }
 
@@ -126,7 +127,7 @@ function deselectCurrentItem() {
   document.getElementById("elevation-div").style.visibility = "hidden";
   isElevationProfileVisible = false;
   updateElevationToggleIconColor();
-  elevationToggleControl.getContainer().title = "No path selected";
+  elevationToggleControl.getContainer().title = "Select a path to show elevation";
   L.DomUtil.addClass(elevationToggleControl.getContainer(), "disabled");
 
   const downloadContainer = downloadControl.getContainer();
@@ -167,7 +168,9 @@ function selectItem(layer) {
   if (newListItem) {
     newListItem.classList.add("selected");
     if (document.getElementById("overview-panel").classList.contains("active")) {
-      newListItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      requestAnimationFrame(() => {
+        newListItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
     }
   }
 

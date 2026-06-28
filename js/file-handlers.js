@@ -1164,41 +1164,96 @@ function exportKml() {
 // --------------------------------------------------------------------
 
 /**
- * Encodes the current map state to a compressed, URL-safe string.
+ * Collects all chunks from a ReadableStream into a single Uint8Array.
  *
- * Uncompressed structure: { v: 1, f: [...features] }
- * Each feature: { t, c, n?, s?, e?, sid? }
- * t: "m"=marker, "p"=polyline, "a"=polygon (area)
- * c: [lng,lat] for markers (5 decimals), polyline-encoded string for paths (precision 5)
- * n: name (omitted if empty)
- * s: style/color hex without # (omitted if DEFAULT_COLOR)
- * e: elevation - integer for markers, array for paths (omitted if absent or all zeros)
- * sid: Strava activity ID (omitted if not a Strava import)
- *
- * Compression strategy:
- * 1. Polyline encoding for coordinate sequences (precision 5 = ~1.1m accuracy, sufficient for GPS tracks)
- * 2. Short property names (t, c, n, s, e, sid)
- * 3. Omit default values (color if DEFAULT_COLOR, name if empty, elevation if not present)
- * 4. Elevation stored as rounded integers only when all points have elevation data
- * 5. Skip elevation if all values are 0 (placeholder data with no variation)
- * 6. LZ-String compression with URI encoding (compresses the JSON structure)
- *
- * The combination of polyline encoding + LZ-String significantly reduces URL length
- * compared to raw coordinates alone. Elevation is only included when present and meaningful.
- *
- * URL Length: "In general, the web platform does not have limits on the length of URLs
- * (although 2^31 is a common limit). Chrome limits URLs to a maximum length of 2MB for
- * practical reasons and to avoid causing denial-of-service problems in inter-process communication."
- * See: https://chromium.googlesource.com/chromium/src/+/HEAD/docs/security/url_display_guidelines/url_display_guidelines.md#URL-Length
- *
- * @returns {string|null} Compressed map state, or null if no data to share
+ * @param {ReadableStream<Uint8Array>} readable
+ * @returns {Promise<Uint8Array>}
  */
-function encodeMapStateToUrl() {
-  const allLayers = getAllExportableLayers();
-
-  if (allLayers.length === 0) {
-    return null;
+async function collectStream(readable) {
+  const chunks = [];
+  const reader = readable.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
   }
+  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+
+/**
+ * Encodes text using gzip compression and base64url encoding.
+ * Uses the native browser CompressionStream API — no external library required.
+ * Base64url (RFC 4648) replaces + with -, / with _, and strips = padding,
+ * making the output safe to use directly in URL hashes without percent-encoding.
+ *
+ * @param {string} text - UTF-8 text to compress
+ * @returns {Promise<string>} base64url-encoded gzip-compressed string
+ */
+async function gzipEncode(text) {
+  const stream = new CompressionStream("gzip");
+  const writer = stream.writable.getWriter();
+  writer.write(new TextEncoder().encode(text));
+  writer.close();
+  const bytes = await collectStream(stream.readable);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+/**
+ * Decodes a gzip+base64url encoded string back to the original text.
+ *
+ * @param {string} encoded - base64url-encoded gzip-compressed string
+ * @returns {Promise<string>} decompressed UTF-8 text
+ */
+async function gzipDecode(encoded) {
+  const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const stream = new DecompressionStream("gzip");
+  const writer = stream.writable.getWriter();
+  // Suppress write-side rejections: errors on corrupt input propagate through
+  // the readable side and are caught by the outer try/catch in importMapStateFromUrl.
+  writer.write(bytes).catch(() => {});
+  writer.close().catch(() => {});
+  const result = await collectStream(stream.readable);
+  return new TextDecoder().decode(result);
+}
+
+/**
+ * Builds the compact, Polyline-encoded representation of all map features.
+ *
+ * Compact schema: { v: 1, f: [...features] }
+ * Each feature: { t, c, n?, s?, e?, sid? }
+ *   t:   "m"=marker, "p"=polyline, "a"=polygon (area)
+ *   c:   [lng, lat] for markers (6 decimals); Polyline-encoded string for paths (precision 5 = ~1.1m)
+ *   n:   name (omitted if empty)
+ *   s:   color hex without # (omitted if DEFAULT_COLOR; # restored by parseColor() inside importGeoJsonToMap)
+ *   e:   elevation — integer for markers, integer array for paths (omitted if absent or all zeros)
+ *   sid: Strava activity ID (omitted if not a Strava import)
+ *
+ * Polyline encoding shrinks coordinate sequences far more than any general compressor can,
+ * making it the dominant factor in URL length reduction. Short property names and omitted
+ * defaults reduce the remaining JSON overhead before gzip is applied.
+ *
+ * @returns {{ v: number, f: Array }|null} Compact object, or null if no exportable layers
+ */
+function buildCompactObject() {
+  const allLayers = getAllExportableLayers();
+  if (allLayers.length === 0) return null;
 
   const features = [];
 
@@ -1214,7 +1269,7 @@ function encodeMapStateToUrl() {
       const color = layer.feature?.properties?.color;
       const stravaId = layer.feature?.properties?.stravaId;
       if (name) feature.n = name;
-      // Strip # prefix from hex color for URL efficiency (auto-restored by normalizeHexColor on import)
+      // Strip # prefix from hex color for URL efficiency (auto-restored by parseColor() inside importGeoJsonToMap)
       if (color && color !== DEFAULT_COLOR) {
         feature.s = color.startsWith("#") ? color.slice(1) : color;
       }
@@ -1224,7 +1279,7 @@ function encodeMapStateToUrl() {
         const ll = layer.getLatLng();
         if (ll) {
           feature.t = "m";
-          feature.c = [+ll.lng.toFixed(5), +ll.lat.toFixed(5)];
+          feature.c = [+ll.lng.toFixed(6), +ll.lat.toFixed(6)];
           if (typeof ll.alt === "number" && ll.alt !== 0) {
             feature.e = Math.round(ll.alt);
           }
@@ -1267,61 +1322,70 @@ function encodeMapStateToUrl() {
     }
   });
 
-  if (features.length === 0) {
-    return null;
-  }
+  if (features.length === 0) return null;
+  return { v: 1, f: features };
+}
 
-  const compact = { v: 1, f: features };
-  const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(compact));
-
-  return compressed;
+/**
+ * Encodes the current map state to a gzip-compressed, base64url-encoded string.
+ * Builds the compact feature representation via buildCompactObject(), serializes to JSON,
+ * then compresses with gzip and encodes as base64url for safe embedding in URL hashes.
+ *
+ * URL Length: "In general, the web platform does not have limits on the length of URLs
+ * (although 2^31 is a common limit). Chrome limits URLs to a maximum length of 2MB for
+ * practical reasons and to avoid causing denial-of-service problems in inter-process communication."
+ * See: https://chromium.googlesource.com/chromium/src/+/HEAD/docs/security/url_display_guidelines/url_display_guidelines.md#URL-Length
+ *
+ * @returns {Promise<string|null>} Encoded map state, or null if no data to share
+ */
+async function encodeMapStateToUrl() {
+  const compact = buildCompactObject();
+  if (!compact) return null;
+  return gzipEncode(JSON.stringify(compact));
 }
 
 /**
  * Builds a shareable URL containing the current map view and all features.
- * Combines the map position (#map=zoom/lat/lng) with compressed feature data (&data=...).
- * The data parameter contains all markers, polylines, and polygons compressed using
- * Polyline encoding and LZ-String compression.
+ * Combines the map position (#map=zoom/lat/lon) with compressed feature data (&data=...).
+ * The data parameter contains all markers, polylines, and polygons encoded using
+ * Polyline encoding and gzip+base64url compression.
  *
- * @returns {string|null} Full shareable URL with hash parameters, or null if no features exist
+ * @returns {Promise<string|null>} Full shareable URL with hash parameters, or null if no features exist
  */
-function buildShareableUrl() {
-  const mapState = encodeMapStateToUrl();
-  if (!mapState) {
-    return null;
-  }
+async function buildShareableUrl() {
+  const mapState = await encodeMapStateToUrl();
+  if (!mapState) return null;
 
   const center = map.getCenter();
   const zoom = map.getZoom();
 
-  // Build URL with map view and data
   const baseUrl = window.location.origin + window.location.pathname;
-  const hashParams = `#map=${zoom}/${center.lat.toFixed(5)}/${center.lng.toFixed(5)}&data=${mapState}`;
+  const hashParams = `#map=${zoom}/${center.lat.toFixed(6)}/${center.lng.toFixed(6)}&data=${mapState}`;
 
   return baseUrl + hashParams;
 }
 
 /**
  * Imports and decompresses map state from a shareable URL parameter.
- * Decompresses the LZ-String encoded data, decodes Polyline-encoded coordinates,
- * converts to GeoJSON format, and adds all features to the map.
+ * Decodes the base64url string, decompresses with gzip, decodes Polyline-encoded
+ * coordinates, converts to GeoJSON format, and adds all features to the map.
  *
  * Process:
- * 1. Decompresses the LZ-String encoded URI component
+ * 1. Decodes base64url and decompresses with gzip
  * 2. Parses the JSON structure (v=version, f=features array)
  * 3. For each feature, decodes based on type:
- * - "m" (marker): Uses coordinates as-is [lng, lat] or [lng, lat, elevation]
- * - "p" (polyline): Decodes Polyline-encoded path using precision 5, adds elevation if present
- * - "a" (polygon/area): Decodes Polyline-encoded path using precision 5, adds elevation if present
+ *    - "m" (marker): coordinates used as-is [lng, lat] or [lng, lat, elevation]
+ *    - "p" (polyline): Polyline-decoded path (precision 5), elevation applied if present
+ *    - "a" (polygon/area): Polyline-decoded path (precision 5), elevation applied if present, ring closed by appending first coordinate
  * 4. Reconstructs full GeoJSON Feature objects with properties and elevation
  * 5. Adds the FeatureCollection to the map
  *
- * @param {string} compressed - LZ-String compressed and URI-encoded map state
- * @returns {boolean} True if import was successful, false if decompression/parsing failed
+ * @param {string} encoded - base64url-encoded gzip-compressed map state
+ * @returns {Promise<boolean>} True if import was successful, false if decompression/parsing failed
  */
-function importMapStateFromUrl(compressed) {
+async function importMapStateFromUrl(encoded) {
   try {
-    const jsonString = LZString.decompressFromEncodedURIComponent(compressed);
+    const jsonString = await gzipDecode(encoded);
     if (!jsonString) throw new Error("Failed to decompress data");
 
     const data = JSON.parse(jsonString);
@@ -1365,15 +1429,15 @@ function importMapStateFromUrl(compressed) {
           };
         } else if (item.t === "a") {
           const decoded = L.PolylineUtil.decode(item.c, 5);
+          const ring = decoded.map(([lat, lng], idx) => {
+            const coord = [lng, lat];
+            if (item.e && typeof item.e[idx] === "number") coord.push(item.e[idx]);
+            return coord;
+          });
+          if (ring.length > 0) ring.push([...ring[0]]);
           feature.geometry = {
             type: "Polygon",
-            coordinates: [
-              decoded.map(([lat, lng], idx) => {
-                const coord = [lng, lat];
-                if (item.e && typeof item.e[idx] === "number") coord.push(item.e[idx]);
-                return coord;
-              }),
-            ],
+            coordinates: [ring],
           };
         }
 

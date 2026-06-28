@@ -17,31 +17,42 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Inject Google Analytics
+        env:
+          GA_ID: ${{ secrets.GA_MEASUREMENT_ID }}
+        run: |
+          [ -n "$GA_ID" ] && sed -i "s/GA_MEASUREMENT_ID/$GA_ID/g" index.html
+
       - name: Create secrets.js
         run: |
           mkdir -p js
           echo "const googleApiKey = \"${{ secrets.GOOGLE_API_KEY }}\";" > js/secrets.js
           echo "const mapboxAccessToken = \"${{ secrets.MAPBOX_ACCESS_TOKEN }}\";" >> js/secrets.js
           echo "const tracestrackApiKey = \"${{ secrets.TRACESTRACK_API_KEY }}\";" >> js/secrets.js
+          echo "const osmClientId = \"${{ secrets.OSM_CLIENT_ID }}\";" >> js/secrets.js
           echo "const stravaClientId = \"${{ secrets.STRAVA_CLIENT_ID }}\";" >> js/secrets.js
           echo "const stravaClientSecret = \"${{ secrets.STRAVA_CLIENT_SECRET }}\";" >> js/secrets.js
+
+      - name: Set production flags
+        run: |
+          sed -i "s/OSM_TEST_MODE = true/OSM_TEST_MODE = false/" js/osm.js
 
       - name: Replace placeholders
         run: |
           # Extract values from config.js
-          APP_NAME_VALUE=$(grep 'const APP_NAME' js/config.js | cut -d '"' -f 2)
+          APP_NAME_PWA_VALUE=$(grep 'const APP_NAME_PWA' js/config.js | cut -d '"' -f 2)
           APP_TITLE_VALUE=$(grep 'const APP_TITLE' js/config.js | cut -d '"' -f 2)
           APP_DESC_VALUE=$(grep 'const APP_DESCRIPTION' js/config.js | cut -d '"' -f 2)
 
           # Escape special characters (& and \) for sed
-          APP_NAME_VALUE_ESCAPED=$(echo "$APP_NAME_VALUE" | sed 's/[&\]/\\&/g')
+          APP_NAME_PWA_VALUE_ESCAPED=$(echo "$APP_NAME_PWA_VALUE" | sed 's/[&\]/\\&/g')
           APP_TITLE_VALUE_ESCAPED=$(echo "$APP_TITLE_VALUE" | sed 's/[&\]/\\&/g')
           APP_DESC_VALUE_ESCAPED=$(echo "$APP_DESC_VALUE" | sed 's/[&\]/\\&/g')
 
           # Replace in HTML and manifest
           sed -i "s|__APP_TITLE__|${APP_TITLE_VALUE_ESCAPED}|g" index.html
           sed -i "s|__APP_DESCRIPTION__|${APP_DESC_VALUE_ESCAPED}|g" index.html
-          sed -i "s|__APP_NAME__|${APP_NAME_VALUE_ESCAPED}|g" manifest.json
+          sed -i "s|__APP_NAME_PWA__|${APP_NAME_PWA_VALUE_ESCAPED}|g" manifest.json
           sed -i "s|__APP_DESCRIPTION__|${APP_DESC_VALUE_ESCAPED}|g" manifest.json
 
       - name: Setup Node.js

@@ -14,6 +14,8 @@ function initializeRouting() {
     currentEndLatLng,
     currentViaLatLng,
     routePointSelectionMode = null,
+    penModeActive = false,
+    penModeClickCount = 0,
     customCursorStart,
     customCursorEnd,
     customCursorVia;
@@ -52,7 +54,7 @@ function initializeRouting() {
     },
   };
 
-  const clearRouteLine = () => {
+  const clearRouteLine = (preserveViaMarkers = false) => {
     if (currentRoutePath) {
       if (globallySelectedItem === currentRoutePath) {
         deselectCurrentItem();
@@ -64,8 +66,10 @@ function initializeRouting() {
       updateOverviewList();
     }
 
-    intermediateViaMarkers.forEach((marker) => map.removeLayer(marker));
-    intermediateViaMarkers = [];
+    if (!preserveViaMarkers) {
+      intermediateViaMarkers.forEach((marker) => map.removeLayer(marker));
+      intermediateViaMarkers = [];
+    }
 
     routingControl.setWaypoints([]);
     document.getElementById("routing-summary-container").style.display = "none";
@@ -135,9 +139,9 @@ function initializeRouting() {
   };
 
   /**
-   * Adds an intermediate via point marker to the route at the specified location.
+   * Creates and registers an intermediate via marker without triggering route recalculation.
    */
-  const addIntermediateViaPoint = (latlng) => {
+  const createIntermediateViaMarker = (latlng) => {
     const newViaMarker = L.marker(latlng, {
       icon: createMarkerIcon(ROUTING_COLOR_VIA, 1),
       draggable: true,
@@ -173,6 +177,14 @@ function initializeRouting() {
 
     newViaMarker.on("dragend", updateRouteWithIntermediateVias);
     intermediateViaMarkers.push(newViaMarker);
+    return newViaMarker;
+  };
+
+  /**
+   * Adds an intermediate via point marker to the route at the specified location.
+   */
+  const addIntermediateViaPoint = (latlng) => {
+    createIntermediateViaMarker(latlng);
     updateRouteWithIntermediateVias();
   };
 
@@ -190,6 +202,7 @@ function initializeRouting() {
     routingControl = {
       _router: router,
       _waypoints: [],
+      _requestId: 0,
 
       getRouter: function () {
         return this._router;
@@ -204,13 +217,16 @@ function initializeRouting() {
           return L.Routing.waypoint(wp);
         });
 
+        // Always increment so any in-flight request is cancelled, even on clear
+        const requestId = ++this._requestId;
+
         // Don't route if waypoints array is empty or has less than 2 points
         if (this._waypoints.length < 2) {
           return;
         }
 
-        // Call the router directly
         this._router.route(this._waypoints, (err, routes) => {
+          if (requestId !== this._requestId) return;
           if (err) {
             this._handleRoutingError(err);
           } else {
@@ -255,7 +271,7 @@ function initializeRouting() {
           const directionsPanel = document.getElementById("directions-panel");
           const directionsList = document.getElementById("directions-list");
           directionsList.innerHTML = "";
-          directionsPanel.style.display = "block";
+          directionsPanel.style.display = "flex";
 
           if (route.instructions && route.instructions.length > 0) {
             route.instructions.forEach((instr) => {
@@ -417,8 +433,15 @@ function initializeRouting() {
       profileButtons.forEach((btn) => btn.classList.remove("active"));
       button.classList.add("active");
 
+      const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
+      const config = PROVIDER_CONFIG[currentProvider];
+      if (config) {
+        const apiProfile = config.profiles[button.dataset.profile] || config.profiles["driving"];
+        routingControl.getRouter().options.profile = config.profileFormatter(apiProfile);
+      }
+
       if (startMarker && endMarker) {
-        calculateNewRoute();
+        updateRouteWithIntermediateVias();
       }
     });
   });
@@ -511,7 +534,7 @@ function initializeRouting() {
       if (isStart) currentStartLatLng = newLatLng;
       else if (isVia) currentViaLatLng = newLatLng;
       else currentEndLatLng = newLatLng;
-      input.value = `${newLatLng.lat.toFixed(5)}, ${newLatLng.lng.toFixed(5)}`;
+      input.value = `${newLatLng.lat.toFixed(6)}, ${newLatLng.lng.toFixed(6)}`;
       input.style.color = "var(--color-black)";
       if (startMarker && endMarker) {
         updateRouteWithIntermediateVias();
@@ -542,6 +565,7 @@ function initializeRouting() {
    * Clears all routing markers, inputs, and route path from the map.
    */
   const clearRouting = () => {
+    if (penModeActive) exitPenMode();
     if (routingControl) {
       routingControl.setWaypoints([]);
     }
@@ -599,7 +623,7 @@ function initializeRouting() {
    * Updates a routing point (start/via/end) with a new location and optional label.
    */
   const updateRoutingPoint = (latlng, type, label) => {
-    const locationString = label || `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+    const locationString = label || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
 
     if (type === "start") {
       currentStartLatLng = latlng;
@@ -703,6 +727,13 @@ function initializeRouting() {
         startMarker = null;
         currentStartLatLng = null;
         startInput.value = "";
+        if (penModeActive) {
+          if (endMarker) map.removeLayer(endMarker);
+          endMarker = null;
+          currentEndLatLng = null;
+          endInput.value = "";
+          exitPenMode();
+        }
         clearRouteLine();
         break;
       case "end":
@@ -710,7 +741,8 @@ function initializeRouting() {
         endMarker = null;
         currentEndLatLng = null;
         endInput.value = "";
-        clearRouteLine();
+        clearRouteLine(penModeActive);
+        if (penModeActive) penModeClickCount = 1;
         break;
       case "via":
         if (viaMarker) map.removeLayer(viaMarker);
@@ -775,6 +807,7 @@ function initializeRouting() {
   }
 
   const enterRoutePointSelectionMode = (mode, e) => {
+    if (penModeActive) exitPenMode();
     exitRoutePointSelectionMode();
     if (!mode) return;
     if (mode === "start" && startMarker) {
@@ -832,7 +865,91 @@ function initializeRouting() {
     enterRoutePointSelectionMode(routePointSelectionMode === "via" ? null : "via", e);
   });
 
+  const penModeBtn = document.getElementById("routing-pen-btn");
+
+  const enterPenMode = () => {
+    exitRoutePointSelectionMode();
+    clearRouting();
+    penModeActive = true;
+    penModeClickCount = 0;
+    penModeBtn.classList.add("active");
+    document.body.classList.add("pen-draw-mode");
+  };
+
+  const exitPenMode = () => {
+    penModeActive = false;
+    penModeClickCount = 0;
+    penModeBtn.classList.remove("active");
+    document.body.classList.remove("pen-draw-mode");
+    document.dispatchEvent(new CustomEvent("penModeExited"));
+  };
+
+  penModeBtn.addEventListener("click", (e) => {
+    L.DomEvent.stop(e);
+    if (penModeActive) {
+      exitPenMode();
+    } else {
+      enterPenMode();
+    }
+  });
+
   map.on("click", (e) => {
+    if (penModeActive) {
+      const latlng = e.latlng;
+      const locStr = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+
+      if (penModeClickCount === 0) {
+        currentStartLatLng = latlng;
+        startInput.value = locStr;
+        startInput.style.color = "var(--color-black)";
+        if (startMarker) {
+          startMarker.setLatLng(latlng);
+        } else {
+          startMarker = L.marker(latlng, {
+            icon: createMarkerIcon(ROUTING_COLOR_START, 1),
+            title: ROUTING_MARKER_HINT,
+            draggable: true,
+          }).addTo(map);
+          addDragHandlersToRoutingMarker(startMarker, "start");
+        }
+        penModeClickCount = 1;
+      } else if (penModeClickCount === 1) {
+        currentEndLatLng = latlng;
+        endInput.value = locStr;
+        endInput.style.color = "var(--color-black)";
+        if (endMarker) {
+          endMarker.setLatLng(latlng);
+        } else {
+          endMarker = L.marker(latlng, {
+            icon: createMarkerIcon(ROUTING_COLOR_END, 1),
+            title: ROUTING_MARKER_HINT,
+            draggable: true,
+          }).addTo(map);
+          addDragHandlersToRoutingMarker(endMarker, "end");
+          endMarker.on("click", (e) => {
+            if (penModeActive && penModeClickCount >= 2) {
+              L.DomEvent.stop(e);
+              exitPenMode();
+            }
+          });
+        }
+        penModeClickCount = 2;
+        updateRouteWithIntermediateVias();
+        shouldFitBounds = false;
+      } else {
+        createIntermediateViaMarker(currentEndLatLng);
+        currentEndLatLng = latlng;
+        endInput.value = locStr;
+        endInput.style.color = "var(--color-black)";
+        endMarker.setLatLng(latlng);
+        penModeClickCount++;
+        updateRouteWithIntermediateVias();
+      }
+
+      updateClearButtonState();
+      return;
+    }
+
     if (routePointSelectionMode) {
       const latlng = e.latlng;
       const input =
@@ -841,7 +958,7 @@ function initializeRouting() {
           : routePointSelectionMode === "via"
             ? viaInput
             : endInput;
-      input.value = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+      input.value = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
 
       if (routePointSelectionMode === "start") {
         currentStartLatLng = latlng;
@@ -942,6 +1059,7 @@ function initializeRouting() {
         text: 'The route was simplified and added to the "Drawn Items" layer.',
         timer: 2500,
         showConfirmButton: false,
+        customClass: { popup: "swal-no-actions" },
       });
     } else {
       Swal.fire({
@@ -950,6 +1068,7 @@ function initializeRouting() {
         text: 'The route has been added to the "Drawn Items" layer.',
         timer: 2500,
         showConfirmButton: false,
+        customClass: { popup: "swal-no-actions" },
       });
     }
   };
@@ -979,4 +1098,7 @@ function initializeRouting() {
   window.app.saveRoute = saveRoute;
   window.app.redisplayCurrentRoute = redisplayCurrentRoute;
   window.app.updateRoutingPoint = updateRoutingPoint;
+  window.app.exitRoutePointSelectionMode = exitRoutePointSelectionMode;
+  window.app.exitPenMode = exitPenMode;
+  window.app.isPenModeActive = () => penModeActive;
 }

@@ -464,7 +464,7 @@ function updateOverviewList() {
                 : "This action cannot be undone.",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonColor: "var(--color-red)",
+            customClass: { confirmButton: "swal-confirm-danger" },
             confirmButtonText: "Yes, clear all",
           }).then((result) => {
             if (result.isConfirmed) {
@@ -579,8 +579,8 @@ function showInfoPanel(layer) {
   if (layer instanceof L.Marker) {
     name = name || "Marker";
     const latlng = layer.getLatLng();
-    details = `<span>Lat: ${latlng.lat.toFixed(5)}, Lon: ${latlng.lng.toFixed(
-      5,
+    details = `<span>Lat: ${latlng.lat.toFixed(6)}, Lon: ${latlng.lng.toFixed(
+      6,
     )}<span class="copy-icon material-symbols">content_copy</span>`;
     infoPanelDetails.innerHTML = details;
 
@@ -590,7 +590,7 @@ function showInfoPanel(layer) {
 
     infoPanelDetails.onclick = (e) => {
       L.DomEvent.stop(e); // Prevent event from bubbling up
-      const coordString = `${latlng.lat}, ${latlng.lng}`;
+      const coordString = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
       copyToClipboard(coordString)
         .then(() => {
           Swal.fire({
@@ -653,10 +653,11 @@ function showInfoPanel(layer) {
       // Check if this is a Strava activity that was imported
       if (layer.feature?.properties?.stravaId) {
         layerTypeName = "Imported Item (Strava Activity)";
+        editHint.innerHTML = "To edit geometry, duplicate activity in <b>Contents</b> tab.";
       } else {
         layerTypeName = "Imported Item";
+        editHint.innerHTML = "To edit geometry, duplicate item in <b>Contents</b> tab.";
       }
-      editHint.innerHTML = "To edit geometry, duplicate item in <b>Contents</b> tab.";
       editHint.style.display = "block";
       break;
     case "route":

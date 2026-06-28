@@ -1,11 +1,11 @@
 <div align="center">
 <img src="img/icon-1024x1024.png" height="100"/>
 
-# OpenMapEditor
+# MapDraw
 
 </div>
 
-OpenMapEditor is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, and Strava activity integration.
+MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, Strava activity integration, and OpenStreetMap contributions.
 
 ---
 
@@ -21,18 +21,20 @@ OpenMapEditor is a simple, powerful web-based editor for creating, viewing, and 
 - **Routing:** Generate routes for driving, biking, or walking. You can then save the generated route as an editable path.
 - **Elevation Profiles:** Instantly visualize the elevation profile for any path.
 - **Strava Integration:** Connect your Strava account to view your activities on the map, download their original high-resolution GPX tracks, or duplicate them for editing.
+- **OpenStreetMap Contributions:** Sign in with your OpenStreetMap account to leave notes or add missing places directly to the map.
 - **Custom WMS Layers:** Import map layers from any WMS-compatible service. Browse available layers, add them to your map as overlays, and reorder them with drag-and-drop. Your WMS layers are saved locally and persist between sessions.
 - **POI Finder:** Search for points of interest (parks, restaurants, viewpoints, etc.) in the current map view using OpenStreetMap data, and save them directly to your map.
 - **Performance Optimized:** Optional path and area simplification (on by default) for smoother performance. When enabled, simplified copies are made when duplicating tracks/activities/areas (originals preserved), and generated routes are simplified when saved. Configurable in settings.
 - **Autosave:** Your work is automatically saved locally in your browser every few seconds and restored when you return, so you never lose your progress.
+- **GeoJSON Editor:** View and edit all map features as raw GeoJSON in a built-in code editor powered by CodeMirror, with syntax highlighting, line numbers, code folding, and live inline error detection. Apply changes directly back to the map.
 
 ---
 
 ## Privacy
 
-OpenMapEditor is built as a local-first application. All processing of your imported geographic data files (GeoJSON, GPX, KML, KMZ) happens **entirely in your web browser**. Your files are never uploaded to or stored on any server.
+MapDraw is built as a local-first application. All processing of your imported geographic data files (GeoJSON, GPX, KML, KMZ) happens **entirely in your web browser**. Your files are never uploaded to or stored on any server.
 
-The application only sends data to external services for specific, optional features that require an API. This communication is limited to the minimum data necessary for the feature to function:
+The application sends data to external services only for specific features, and if configured, collects anonymous analytics data. All communication is limited to the minimum data necessary:
 
 - **Initial Map Centering:** Your approximate location is determined using the Google Geolocation API to center the map on your region on first load.
 - **Routing:** When you request a route, the coordinates of your start, end, and via points are sent to the selected routing provider.
@@ -40,6 +42,8 @@ The application only sends data to external services for specific, optional feat
 - **Search:** Text queries are sent to OpenStreetMap's Nominatim geocoding service to find and display locations on the map.
 - **POI Finder:** Search queries and map bounds are sent to OpenStreetMap's Overpass API to find points of interest in the current map view.
 - **Strava Integration:** Communicates directly with the Strava API after user authorization.
+- **OpenStreetMap Contributions:** Communicates directly with the OpenStreetMap API after user authorization to submit notes and map contributions.
+- **Analytics:** If Google Analytics is configured, anonymous usage data is sent to Google to help understand how the application is used.
 
 ---
 
@@ -50,7 +54,7 @@ This project is self-contained and does not require a package manager (`npm`).
 1.  **Clone the Repository**
 
     ```bash
-    git clone [https://github.com/openmapeditor/openmapeditor](https://github.com/openmapeditor/openmapeditor)
+    git clone [https://github.com/mapdraw/mapdraw](https://github.com/mapdraw/mapdraw)
     ```
 
 2.  **Provide API Keys**
@@ -73,8 +77,6 @@ Deployment to GitHub Pages is handled automatically by the GitHub Action located
 
 **In addition to deploying the site, the workflow also performs critical performance optimizations. It bundles all JavaScript files located between the `<!-- START-BUNDLE -->` and `<!-- END-BUNDLE -->` comments in `index.html` into a single script, minifies it to reduce its size, and updates `index.html` to load the final optimized file (`app.min.js`).**
 
-For the deployment to succeed, you must provide your production API keys as repository secrets. See the **"Configuring API Keys"** section below for details.
-
 ---
 
 ## Configuring API Keys
@@ -89,6 +91,7 @@ To enable features that rely on external services, you must provide your own API
     - `googleApiKey`
     - `mapboxAccessToken`
     - `tracestrackApiKey`
+    - `osmClientId`
     - `stravaClientId` (Optional)
     - `stravaClientSecret` (Optional)
 
@@ -96,15 +99,15 @@ To enable features that rely on external services, you must provide your own API
 
 ### B. For Production Deployment
 
-For the deployment to succeed, you must provide your production API keys as GitHub repository secrets.
-
 1.  In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
 2.  Click **New repository secret** for each key listed below, ensuring the names match the `SNAKE_CASE` format exactly:
     - `GOOGLE_API_KEY`
     - `MAPBOX_ACCESS_TOKEN`
     - `TRACESTRACK_API_KEY`
+    - `OSM_CLIENT_ID`
     - `STRAVA_CLIENT_ID` (Optional)
     - `STRAVA_CLIENT_SECRET` (Optional)
+    - `GA_MEASUREMENT_ID` (Optional — Google Analytics)
 
 ### Important API Notes
 
@@ -113,6 +116,12 @@ For the deployment to succeed, you must provide your production API keys as GitH
 > - **Geolocation API** (for automatic map centering based on user location)
 > - **Maps Elevation API** (for elevation profiles)
 > - **Maps JavaScript API** (required dependency for the Maps Elevation API)
+
+> **OpenStreetMap API Note:** When registering your OAuth 2 application at openstreetmap.org (for testing: master.apis.dev.openstreetmap.org), make sure to set the redirect URI to `https://YOUR_DOMAIN/osm-callback.html`, uncheck **Confidential application**, and enable the following permissions:
+>
+> - Read user preferences (`read_prefs`)
+> - Modify the map (`write_api`)
+> - Modify notes (`write_notes`)
 
 > **GeoAdmin API Note:** The GeoAdmin API is free and does not require an API key. It only works for paths within Switzerland.
 
@@ -125,7 +134,7 @@ For the deployment to succeed, you must provide your production API keys as GitH
 This project is designed to be easily forked and customized. All primary branding can be configured in one place.
 
 1.  **Edit the Configuration File**
-    Open `js/config.js` and change the values of the `APP_NAME`, `APP_TITLE`, `APP_DESCRIPTION`, `APP_CREDITS_DESCRIPTION` and `APP_DOMAIN` variables to match your project.
+    Open `js/config.js` and change the values of the `APP_NAME`, `APP_TITLE`, `APP_DESCRIPTION` and `APP_DOMAIN` variables to match your project.
 
     > The placeholders in `index.html` and `manifest.json` are replaced automatically by the GitHub deployment action. **You do not need to edit these files manually.**
 
@@ -142,6 +151,8 @@ This project is designed to be easily forked and customized. All primary brandin
 
 This project utilizes several open-source libraries, which are included in the repository.
 
+- **codemirror-6.65.7**
+  - Download URL: <https://registry.npmjs.org/codemirror/-/codemirror-6.65.7.tgz>
 - **d3-7.9.0**
   - Download URL: <https://d3js.org/d3.v7.min.js>
 - **flag-icons-7.5.0**
@@ -162,8 +173,6 @@ This project utilizes several open-source libraries, which are included in the r
   - Download URL: <https://registry.npmjs.org/leaflet.markercluster/-/leaflet.markercluster-1.5.3.tgz>
 - **leaflet-routing-machine-3.2.12**
   - Download URL: <https://registry.npmjs.org/leaflet-routing-machine/-/leaflet-routing-machine-3.2.12.tgz>
-- **lz-string-1.5.0**
-  - Download URL: <https://registry.npmjs.org/lz-string/-/lz-string-1.5.0.tgz>
 - **polyline-encoded-0.0.9**
   - Download URL: <https://registry.npmjs.org/polyline-encoded/-/polyline-encoded-0.0.9.tgz>
 - **proj4-2.20.2**

@@ -1,5 +1,20 @@
 /* Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details. */
 
+/*
+ * Section banners: python3 -m pyfiglet -f ansi_shadow <NAME>
+ * Sub-section banners: python3 -m pyfiglet -f small <NAME>
+ */
+
+/* VARS */
+/*
+ * ██╗   ██╗ █████╗ ██████╗ ███████╗
+ * ██║   ██║██╔══██╗██╔══██╗██╔════╝
+ * ██║   ██║███████║██████╔╝███████╗
+ * ╚██╗ ██╔╝██╔══██║██╔══██╗╚════██║
+ *  ╚████╔╝ ██║  ██║██║  ██║███████║
+ *   ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝
+ */
+
 :root {
   --color-black: #000000;
   --color-white: #ffffff;
@@ -37,7 +52,236 @@
   --icon-size-30: 30px;
   --icon-size-50: 50px;
 
-  /* Light Theme Variables */
+  --highlight-color: var(--color-blue);
+  /* SweetAlert links use --highlight-color directly, not --link-color */
+  --link-color: var(--highlight-color);
+  --locate-color: var(--color-blue);
+  --overview-header-height: 32px;
+  --top-right-btn-height: 32px;
+  --top-right-clearance: calc(var(--top-right-btn-height) + 8px);
+}
+
+/* THEMES: GLASS > LIGHT > DARK */
+/*
+ *  ████████╗██╗  ██╗███████╗███╗   ███╗███████╗███████╗
+ *  ╚══██╔══╝██║  ██║██╔════╝████╗ ████║██╔════╝██╔════╝
+ *     ██║   ███████║█████╗  ██╔████╔██║█████╗  ███████╗
+ *     ██║   ██╔══██║██╔══╝  ██║╚██╔╝██║██╔══╝  ╚════██║
+ *     ██║   ██║  ██║███████╗██║ ╚═╝ ██║███████╗███████║
+ *     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚══════╝╚══════╝
+ */
+
+/* GLASS (default) */
+/*
+ *  ___ _      _   ___ ___
+ * / __| |    /_\ / __/ __|
+ *| (_ | |__ / _ \\__ \__ \
+ * \___|____/_/ \_\___/___/
+ */
+
+body.glass-mode {
+  --icon-color: #f1f5f9;
+  --border-color: rgba(255, 255, 255, 0.3);
+  --link-color: var(--text-color);
+  --divider-color: var(--border-color);
+  --background-color: transparent;
+  --background2-color: rgba(255, 255, 255, 0.06);
+  --text-color: #f1f5f9;
+  color: var(--text-color);
+  --glass-btn-bg: var(--border-color);
+  --glass-header-bg: var(--border-color);
+  --glass-bg: rgba(10, 15, 40, 0.5);
+  --glass-blur: blur(32px) saturate(200%);
+}
+
+/* Glass panels */
+body.glass-mode #info-panel,
+body.glass-mode #custom-layers-panel,
+body.glass-mode .top-right-btn,
+body.glass-mode .leaflet-draw-actions,
+body.glass-mode .download-submenu {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Left toolbar: pill-shaped glass.
+   backdrop-filter lives on ::before so the parent is not a backdrop root —
+   child .leaflet-draw-actions and .download-submenu can then blur the map. */
+body.glass-mode .leaflet-top.leaflet-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ::before already draws the border; cancel the duplicate to avoid a double-border shine */
+body.glass-mode #map > div.leaflet-control-container > div.leaflet-top.leaflet-left {
+  border: none;
+}
+
+/* Elevation panel: top border only */
+body.glass-mode #elevation-div {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--border-color) !important;
+}
+
+/* Context menu popup */
+body.glass-mode .leaflet-popup-content-wrapper {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Name field focus */
+body.glass-mode #info-panel-name:focus {
+  color: var(--color-white) !important;
+}
+
+/* Data editor action buttons */
+body.glass-mode #data-editor-restore,
+body.glass-mode #data-editor-apply,
+body.glass-mode #data-editor-copy,
+body.glass-mode #data-editor-copy-clean,
+body.glass-mode #data-editor-find {
+  background-color: var(--glass-btn-bg) !important;
+  color: var(--color-white) !important;
+}
+
+/* Active button states */
+body.glass-mode #clear-route-btn:not(:disabled),
+body.glass-mode #save-route-btn:not(:disabled),
+body.glass-mode .panel-input-group button.active,
+body.glass-mode .routing-profile-selector .profile-btn.active {
+  background-color: var(--glass-btn-bg) !important;
+  color: var(--color-white) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols {
+  color: var(--color-white) !important;
+}
+body.glass-mode #select-start-on-map.active,
+body.glass-mode #select-via-on-map.active,
+body.glass-mode #select-end-on-map.active,
+body.glass-mode #routing-pen-btn.active {
+  background-color: var(--icon-color) !important;
+  border-color: var(--icon-color) !important;
+}
+body.glass-mode #select-start-on-map.active .material-symbols {
+  color: var(--routing-color-start) !important;
+}
+body.glass-mode #select-via-on-map.active .material-symbols {
+  color: var(--routing-color-via) !important;
+}
+body.glass-mode #select-end-on-map.active .material-symbols {
+  color: var(--routing-color-end) !important;
+}
+body.glass-mode #routing-pen-btn.active .material-symbols {
+  color: var(--highlight-color) !important;
+}
+
+/* WMS import button */
+body.glass-mode .wms-import-button {
+  background-color: var(--glass-btn-bg) !important;
+  color: var(--color-white) !important;
+}
+
+/* Strava export buttons */
+body.glass-mode button.strava-button-secondary:not(:disabled) {
+  background-color: var(--glass-btn-bg) !important;
+  color: var(--color-white) !important;
+}
+
+/* Search result popup button */
+body.glass-mode .leaflet-popup-content-wrapper button,
+body.glass-mode .leaflet-popup-content-wrapper button:hover {
+  background-color: var(--glass-btn-bg) !important;
+  color: var(--color-white) !important;
+}
+
+/* Disabled toolbar buttons: faded */
+body.glass-mode .leaflet-bar a.leaflet-disabled,
+body.glass-mode .leaflet-draw-toolbar a.leaflet-disabled,
+body.glass-mode .leaflet-control-custom a.leaflet-disabled,
+body.glass-mode .leaflet-control-custom.disabled > a {
+  opacity: 0.25 !important;
+  background-color: transparent !important;
+}
+
+/* Toolbar submenus: transparent inner items so container glass shows through */
+body.glass-mode .leaflet-draw-actions a,
+body.glass-mode .leaflet-draw-actions a:hover,
+body.glass-mode .download-submenu button {
+  background-color: transparent !important;
+}
+body.glass-mode .download-submenu button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Tab container: no outer border, tab-buttons and tab-content provide the frame */
+body.glass-mode #tab-container {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+/* On mobile the tab container reaches the screen edge — no rounded bottom corners */
+@media (max-width: 768px) {
+  body.glass-mode:not(.force-desktop-layout) #tab-container {
+    border-radius: 0;
+  }
+}
+
+/* Credits bar gets glass on real desktop and forced-desktop; skipped on native mobile where the credits link is not shown */
+@media (min-width: 769px) {
+  body.glass-mode #bottom-left-credits {
+    background: var(--glass-bg) !important;
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color) !important;
+  }
+}
+body.glass-mode.force-desktop-layout #bottom-left-credits {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Glass mode: links show underline instead of relying on color to stand out */
+body.glass-mode #strava-panel a,
+body.glass-mode #settings-panel a,
+body.glass-mode #credits-link,
+body.glass-mode .osm-user-links a,
+body.glass-mode .osm-username,
+body.glass-mode .osm-auth-btn,
+body.glass-mode .leaflet-popup-content a {
+  color: var(--link-color) !important;
+  text-decoration: underline;
+}
+
+/* LIGHT */
+/*
+ *  _    ___ ___ _  _ _____
+ * | |  |_ _/ __| || |_   _|
+ * | |__ | | (_ | __ | | |
+ * |____|___\___|_||_| |_|
+ */
+
+body.light-mode {
   --icon-color: var(--color-black);
   --border-color: #757575;
   --divider-color: var(--border-color);
@@ -45,13 +289,18 @@
   --background2-color: #bdbdbd;
   --text-color: var(--color-black);
   color: var(--color-black);
-  --highlight-color: var(--color-blue);
-  --locate-color: var(--color-blue);
-  --overview-header-height: 32px;
 }
 
-body.dark-mode {
-  /* Dark Theme Variables */
+/* DARK */
+/*
+ *  ___   _   ___ _  __
+ * |   \ /_\ | _ \ |/ /
+ * | |) / _ \|   / ' <
+ * |___/_/ \_\_|_\_|\_\
+ */
+
+body.dark-mode,
+body.glass-mode .swal2-container /* in glass mode, SweetAlert uses the same style as dark mode */ {
   --icon-color: var(--color-white);
   --border-color: #bdbdbd;
   --divider-color: var(--border-color);
@@ -61,12 +310,26 @@ body.dark-mode {
   color: var(--color-white);
 }
 
+/* BASE */
+/*
+ * ██████╗  █████╗ ███████╗███████╗
+ * ██╔══██╗██╔══██╗██╔════╝██╔════╝
+ * ██████╔╝███████║███████╗█████╗
+ * ██╔══██╗██╔══██║╚════██║██╔══╝
+ * ██████╔╝██║  ██║███████║███████╗
+ * ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝
+ */
+
 * {
   margin: 0;
   padding: 0;
   font-family: "Roboto", sans-serif !important;
   /* Forcefully remove blue highlight of button on mobile */
   -webkit-tap-highlight-color: transparent !important;
+}
+
+a {
+  color: var(--highlight-color);
 }
 
 /* Also remove the focus outline, which can appear as a blue ring */
@@ -96,6 +359,10 @@ select:focus {
   background: var(--color-neutral-grey);
 }
 
+.grayscale-tiles {
+  filter: grayscale(100%);
+}
+
 /* Unified icon styling */
 
 /* 1. Center all icons in their button containers using flexbox */
@@ -120,9 +387,144 @@ select:focus {
   background-color: var(--background2-color) !important;
   cursor: not-allowed;
 }
-.leaflet-draw-toolbar a.leaflet-disabled .icon {
-  fill: var(--icon-color); /* Use a faded grey for the icon itself */
+.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols {
+  color: var(--highlight-color);
 }
+
+/* Main container for all right-side panels */
+#main-right-container {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
+  right: calc(env(safe-area-inset-right) + 10px);
+  width: 340px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: calc(100vw - 61px);
+  max-height: calc(100dvh - 60px);
+  overflow: hidden;
+  cursor: auto;
+}
+
+#main-right-container.hidden {
+  display: none;
+}
+
+.leaflet-marker-shadow {
+  display: none !important;
+}
+
+/* Forcefully removes dotted line style ONLY during editing */
+.map-is-editing path.leaflet-interactive {
+  stroke-dasharray: none !important;
+}
+
+/* Round editing handles (vertex dots shown when editing shapes) */
+.leaflet-editing-icon,
+.leaflet-middle-icon {
+  border-radius: 50%;
+}
+
+#sheet-handle {
+  /* Hide sheet-handle on desktop */
+  display: none;
+}
+
+/* SEARCH */
+/*
+ * ███████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗
+ * ██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝██║  ██║
+ * ███████╗█████╗  ███████║██████╔╝██║     ███████║
+ * ╚════██║██╔══╝  ██╔══██║██╔══██╗██║     ██╔══██║
+ * ███████║███████╗██║  ██║██║  ██║╚██████╗██║  ██║
+ * ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+ */
+
+/* Autocomplete suggestion item styles (used inside search modal) */
+.autocomplete-suggestion-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color);
+}
+
+.autocomplete-suggestion-item:hover,
+.autocomplete-suggestion-item.active {
+  background-color: var(--highlight-color) !important;
+}
+
+/* Search Modal Styles */
+/* Modal container customization */
+.search-modal {
+  font-family: inherit !important;
+}
+
+#search-modal-input:focus {
+  outline: none !important;
+  border-color: var(--border-color) !important;
+  box-shadow: none !important;
+}
+
+/* Suggestions dropdown inside modal */
+.search-modal-suggestions {
+  display: none;
+  position: relative;
+  padding: 0;
+  background-color: var(--background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: var(--border-radius);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Make input connect visually with suggestions when open */
+.search-modal-container:has(.search-modal-suggestions[style*="display: block"])
+  #search-modal-input {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.search-modal-suggestions[style*="display: block"] {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  margin-top: 0 !important;
+  border-top: none !important;
+}
+
+/* Suggestion items inside the search modal */
+.search-modal-suggestions .autocomplete-suggestion-item {
+  padding: 12px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--divider-color);
+  text-align: left;
+}
+
+.search-modal-suggestions .autocomplete-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.search-modal-suggestions .autocomplete-suggestion-item:hover,
+.search-modal-suggestions .autocomplete-suggestion-item.active {
+  background-color: var(--highlight-color) !important;
+}
+
+/* INFO */
+/*
+ * ██╗███╗   ██╗███████╗ ██████╗
+ * ██║████╗  ██║██╔════╝██╔═══██╗
+ * ██║██╔██╗ ██║█████╗  ██║   ██║
+ * ██║██║╚██╗██║██╔══╝  ██║   ██║
+ * ██║██║ ╚████║██║     ╚██████╔╝
+ * ╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝
+ */
 
 /* Info panel for selected items */
 #info-panel {
@@ -131,13 +533,14 @@ select:focus {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   text-align: center;
-  width: 100%; /* Take full width of parent */
+  width: 100%;
   min-height: 90px;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 10px;
   box-sizing: border-box;
+  flex-shrink: 0; /* Never compress info panel; tab container absorbs remaining space */
 }
 
 #info-panel-name {
@@ -145,7 +548,7 @@ select:focus {
   font-size: var(--font-size-14);
   font-weight: bold;
   text-align: center;
-  width: 250px;
+  width: 270px;
   max-width: 100%;
   margin-bottom: 5px;
   background-color: var(--background-color);
@@ -161,7 +564,7 @@ select:focus {
 
 #info-panel-name:focus {
   outline: none;
-  border: none;
+  border: 2px solid var(--highlight-color);
   background-color: var(--highlight-color);
   color: var(--background-color);
 }
@@ -219,7 +622,8 @@ select:focus {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: none;
+  border: 2px solid var(--text-color);
+  box-sizing: border-box;
   cursor: pointer;
   transition: transform 0.1s ease-in-out;
   position: absolute;
@@ -241,14 +645,22 @@ select:focus {
   text-align: center;
 }
 
-a#info-panel-strava-link {
-  color: var(--strava-color) !important;
-  text-decoration: none !important;
+#info-panel-strava-link {
+  display: none; /* Hidden by default */
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--strava-color);
   font-size: var(--font-size-12);
+  font-weight: bold;
+  margin-top: 5px;
+  padding: 4px 8px;
+  border-radius: var(--border-radius);
+  transition: background-color 0.2s ease-in-out;
 }
 
-a#info-panel-strava-link:hover {
-  text-decoration: underline !important;
+#info-panel-strava-link:hover {
+  text-decoration: underline;
 }
 
 /* Color Picker Styles */
@@ -283,6 +695,127 @@ a#info-panel-strava-link:hover {
   border: 2px solid var(--text-color);
 }
 
+/* TABS */
+/*
+ * ████████╗ █████╗ ██████╗ ███████╗
+ * ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝
+ *    ██║   ███████║██████╔╝███████╗
+ *    ██║   ██╔══██║██╔══██╗╚════██║
+ *    ██║   ██║  ██║██████╔╝███████║
+ *    ╚═╝   ╚═╝  ╚═╝╚═════╝ ╚══════╝
+ */
+
+/* Tab System Styles */
+#tab-container {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* allow flex to shrink below content size */
+  overflow: hidden;
+}
+
+#tab-buttons {
+  display: flex;
+  width: 100%;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 8px 5px; /* Reduced padding slightly to help with spacing */
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--background2-color);
+  border-right: none;
+  outline: none;
+  color: var(--text-color);
+  min-width: 0;
+  display: flex; /* Use flexbox for alignment */
+  justify-content: center;
+  align-items: center;
+  height: 35px;
+}
+
+.tab-button.active {
+  border-bottom-color: var(--background-color);
+}
+
+#tab-btn-overview {
+  border-radius: var(--border-radius) 0 0 0;
+  border-right: none;
+}
+
+#tab-btn-routing {
+  border-radius: 0;
+  border-right: none;
+}
+
+#tab-btn-strava {
+  flex: 0 0 60px; /* Don't grow, fixed width */
+  border-radius: 0;
+  border-right: none;
+}
+
+#tab-btn-data {
+  flex: 0 0 40px;
+  padding: 8px;
+  border-radius: 0;
+}
+
+/* Settings icon button has fixed size */
+#tab-btn-settings {
+  flex: 0 0 40px; /* Don't grow, fixed width */
+  padding: 8px;
+  border-radius: 0 var(--border-radius) 0 0;
+  border-right: 1px solid var(--border-color);
+}
+
+.tab-button.active {
+  background-color: var(--background-color);
+}
+
+#tab-btn-heart {
+  display: none; /* Hidden by default on desktop */
+}
+
+#tab-content {
+  background-color: transparent;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tab-panel {
+  display: none; /* Hidden by default */
+}
+
+.tab-panel.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* OVERVIEW */
+/*
+ *  ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
+ * ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
+ * ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
+ * ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
+ * ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
+ *  ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
+ */
+
 /* Overview panel styles */
 #overview-panel {
   width: 100%;
@@ -306,8 +839,8 @@ a#info-panel-strava-link:hover {
   padding: 0;
   margin: 0;
   overflow-y: auto;
-  flex-grow: 1;
-  max-height: calc(100dvh - 400px);
+  flex: 1;
+  min-height: 0;
 }
 .overview-list-item {
   display: flex;
@@ -383,9 +916,9 @@ a#info-panel-strava-link:hover {
   border-bottom: 1px solid var(--divider-color);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  position: sticky;
+  /* position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 10; */
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -408,76 +941,19 @@ a#info-panel-strava-link:hover {
   border-bottom: none;
 }
 
-/* Custom Layers Panel Styles */
-.layer-icon {
-  vertical-align: middle;
-  margin-right: 0;
-  padding: 0 !important;
-}
+/* ROUTING */
+/*
+ * ██████╗  ██████╗ ██╗   ██╗████████╗██╗███╗   ██╗ ██████╗
+ * ██╔══██╗██╔═══██╗██║   ██║╚══██╔══╝██║████╗  ██║██╔════╝
+ * ██████╔╝██║   ██║██║   ██║   ██║   ██║██╔██╗ ██║██║  ███╗
+ * ██╔══██╗██║   ██║██║   ██║   ██║   ██║██║╚██╗██║██║   ██║
+ * ██║  ██║╚██████╔╝╚██████╔╝   ██║   ██║██║ ╚████║╚██████╔╝
+ * ╚═╝  ╚═╝ ╚═════╝  ╚═════╝    ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝
+ */
 
-.material-symbols.layer-icon {
-  font-size: var(--icon-size-16) !important;
-}
-
-#custom-layers-panel {
-  display: none; /* Hidden by default */
-  position: absolute;
-  top: 10px;
-  left: 51px; /* The toolbar width is ~40px, so 51px provides a 10px gap */
-  z-index: 1003; /* Ensure it's above the map but consistent with other panels */
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  max-height: calc(100dvh - 60px);
-  overflow-y: auto;
-  width: 200px;
-}
-
-/* Style the form content that we will move into the panel */
-#custom-layers-panel .leaflet-control-layers-form {
-  padding: 8px;
-  background-color: transparent;
-  border-radius: var(--border-radius);
-}
-#custom-layers-panel .leaflet-control-layers-separator {
-  height: 1px;
-  background-color: var(--border-color);
-  border-top: none;
-  margin: 5px 0;
-}
-#custom-layers-panel label div {
-  display: flex;
-  align-items: center;
-  height: 25px;
-}
-#custom-layers-panel span {
-  padding-left: 5px;
-}
-.leaflet-control-layers-selector {
-  margin-top: 0;
-  position: relative;
-  top: 0;
-}
-
-/* WMS custom layer truncation */
-#custom-layers-panel .wms-custom-layer .layer-name-text {
-  width: 150px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  vertical-align: middle;
-}
-#custom-layers-panel .wms-custom-layer .layer-name-container {
-  display: inline-flex;
-  align-items: center;
-}
-
-/* Remove default Leaflet control styling from the content inside our panel */
-#custom-layers-panel .leaflet-control-layers {
-  border: none !important;
-  box-shadow: none !important;
-  background-color: transparent !important;
+/* Hide routing machine's default itinerary */
+.leaflet-routing-container {
+  display: none;
 }
 
 /* Routing Panel Styles */
@@ -489,11 +965,22 @@ a#info-panel-strava-link:hover {
   border: none;
   border-radius: 0 0 var(--border-radius) var(--border-radius);
   padding: 0;
+  overflow-y: hidden; /* directions list scrolls independently; panel itself must not scroll */
 }
 
 #routing-panel-content {
   padding: 10px;
   padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#routing-panel-content > .panel-input-group,
+#routing-summary-container {
+  flex-shrink: 0;
 }
 
 .panel-input-group {
@@ -526,6 +1013,7 @@ a#info-panel-strava-link:hover {
   box-sizing: border-box;
   background-color: var(--background-color);
   color: var(--text-color);
+  font-size: var(--font-size-14);
 }
 
 .panel-input-group button {
@@ -544,6 +1032,26 @@ a#info-panel-strava-link:hover {
   background-color: var(--text-color);
   color: var(--color-white);
   border-color: var(--border-color);
+}
+#select-start-on-map.active,
+#select-via-on-map.active,
+#select-end-on-map.active,
+#routing-pen-btn.active {
+  background-color: var(--icon-color);
+  border-color: var(--icon-color);
+  color: inherit;
+}
+#select-start-on-map.active .material-symbols {
+  color: var(--routing-color-start);
+}
+#select-via-on-map.active .material-symbols {
+  color: var(--routing-color-via);
+}
+#select-end-on-map.active .material-symbols {
+  color: var(--routing-color-end);
+}
+#routing-pen-btn.active .material-symbols {
+  color: var(--highlight-color);
 }
 
 /* Routing Profile Button Group Styles */
@@ -617,6 +1125,19 @@ a#info-panel-strava-link:hover {
   box-sizing: border-box;
 }
 
+#routing-pen-btn {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  margin-left: 5px;
+  padding: 5px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 #clear-route-btn,
 #save-route-btn {
   flex: 1;
@@ -676,6 +1197,103 @@ a#info-panel-strava-link:hover {
   margin-left: 5px;
 }
 
+/* Directions Panel Styles */
+#directions-panel {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden; /* To contain the rounded corners */
+  display: none; /* Hidden by default, shown when a route is found */
+  flex-direction: column; /* Applied when JS sets display: flex */
+}
+
+#directions-panel:not(.collapsed) {
+  flex: 1;
+  min-height: 0;
+}
+
+#directions-panel-header {
+  padding: 0 12px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+  background-color: var(--background-color);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--font-size-12);
+  border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+#directions-panel.collapsed #directions-panel-header {
+  border-bottom: none;
+}
+
+.directions-panel-header-arrow.material-symbols {
+  font-size: var(--icon-size-20) !important;
+  margin-right: 5px;
+}
+
+/* Default state (collapsed): arrow points down */
+#directions-panel.collapsed .directions-panel-header-arrow::before {
+  content: "keyboard_arrow_down";
+}
+
+/* Expanded state: arrow points up */
+#directions-panel:not(.collapsed) .directions-panel-header-arrow::before {
+  content: "keyboard_arrow_up";
+}
+
+#directions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background-color: var(--background-color);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+#directions-panel.collapsed #directions-list {
+  display: none;
+}
+
+.direction-item {
+  padding: 8px 12px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-12);
+  border-bottom: 1px solid var(--divider-color);
+  box-sizing: border-box;
+}
+
+.direction-item:last-child {
+  border-bottom: none;
+}
+
+.routing-panel-icon {
+  width: 16px;
+  height: 16px;
+  display: flex !important;
+  margin: auto;
+  justify-content: center;
+  align-items: center;
+}
+
+/* STRAVA */
+/*
+ * ███████╗████████╗██████╗  █████╗ ██╗   ██╗ █████╗
+ * ██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║   ██║██╔══██╗
+ * ███████╗   ██║   ██████╔╝███████║██║   ██║███████║
+ * ╚════██║   ██║   ██╔══██╗██╔══██║╚██╗ ██╔╝██╔══██║
+ * ███████║   ██║   ██║  ██║██║  ██║ ╚████╔╝ ██║  ██║
+ * ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝
+ */
+
 /* Strava Panel Style */
 #strava-panel {
   border: none;
@@ -716,258 +1334,238 @@ a#info-panel-strava-link:hover {
   width: auto;
 }
 
-#info-panel-strava-link {
-  display: none; /* Hidden by default */
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  color: var(--strava-color);
-  font-size: var(--font-size-12);
-  font-weight: bold;
-  margin-top: 5px;
-  padding: 4px 8px;
-  border-radius: var(--border-radius);
-  transition: background-color 0.2s ease-in-out;
-}
-
-/* Autocomplete suggestion item styles (used inside search modal) */
-.autocomplete-suggestion-item {
-  padding: 8px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-color);
-}
-
-.autocomplete-suggestion-item:hover,
-.autocomplete-suggestion-item.active {
-  background-color: var(--highlight-color) !important;
-}
-
-/* Search Modal Styles */
-/* Modal container customization */
-.search-modal {
-  font-family: inherit !important;
-}
-
-#search-modal-input:focus {
-  outline: none !important;
-  border-color: var(--border-color) !important;
-  box-shadow: none !important;
-}
-
-#search-modal-input[data-offline="true"] {
-  background-color: var(--color-red) !important;
-  color: white !important;
-  border-color: var(--color-red) !important;
-}
-
-#search-modal-input[data-offline="true"]::placeholder {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-/* Suggestions dropdown inside modal */
-.search-modal-suggestions {
-  display: none;
-  position: relative;
-  padding: 0;
-  background-color: var(--background-color);
-  border: 1px solid var(--divider-color);
-  border-radius: var(--border-radius);
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-/* Make input connect visually with suggestions when open */
-.search-modal-container:has(.search-modal-suggestions[style*="display: block"])
-  #search-modal-input {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-.search-modal-suggestions[style*="display: block"] {
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  margin-top: 0 !important;
-  border-top: none !important;
-}
-
-/* Suggestion items inherit from existing styles */
-.search-modal-suggestions .autocomplete-suggestion-item {
-  padding: 12px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-color);
-  border-bottom: 1px solid var(--divider-color);
-  text-align: left;
-}
-
-.search-modal-suggestions .autocomplete-suggestion-item:last-child {
-  border-bottom: none;
-}
-
-.search-modal-suggestions .autocomplete-suggestion-item:hover,
-.search-modal-suggestions .autocomplete-suggestion-item.active {
-  background-color: var(--highlight-color) !important;
-}
-
-/* Directions Panel Styles */
-#directions-panel {
-  margin-top: 10px;
-  margin-bottom: 10px;
+/* Button styles */
+.strava-button-primary,
+.strava-button-secondary {
   border: 1px solid var(--border-color);
+  padding: 6px 12px;
   border-radius: var(--border-radius);
-  overflow: hidden; /* To contain the rounded corners */
-  display: none; /* Hidden by default, shown when a route is found */
-}
-
-#directions-panel-header {
-  padding: 0 12px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  font-weight: normal;
-  background-color: var(--background-color);
   cursor: pointer;
-  user-select: none;
-  font-size: var(--font-size-12);
-  border-bottom: 1px solid var(--border-color);
-  box-sizing: border-box;
-}
-
-#directions-panel.collapsed #directions-panel-header {
-  border-bottom: none;
-}
-
-.directions-panel-header-arrow.material-symbols {
-  font-size: var(--icon-size-20) !important;
-  margin-right: 5px;
-}
-
-/* Default state (collapsed): arrow points down */
-#directions-panel.collapsed .directions-panel-header-arrow::before {
-  content: "keyboard_arrow_down";
-}
-
-/* Expanded state: arrow points up */
-#directions-panel:not(.collapsed) .directions-panel-header-arrow::before {
-  content: "keyboard_arrow_up";
-}
-
-#directions-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  overflow-y: auto;
-  max-height: 125px;
-  background-color: var(--background-color);
-}
-
-#directions-panel.collapsed #directions-list {
-  display: none;
-}
-
-.direction-item {
-  padding: 8px 12px;
-  min-height: 30px;
-  display: flex;
-  align-items: center;
-  font-size: var(--font-size-12);
-  border-bottom: 1px solid var(--divider-color);
-  box-sizing: border-box;
-}
-
-.direction-item:last-child {
-  border-bottom: none;
-}
-
-/* Tab System Styles */
-#tab-container {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-#tab-buttons {
-  display: flex;
-  width: 100%;
-}
-
-.tab-button {
-  flex: 1;
-  padding: 8px 5px; /* Reduced padding slightly to help with spacing */
+  transition: all 0.2s ease-in-out;
   font-size: var(--font-size-14);
-  font-weight: bold;
-  cursor: pointer;
-  border: 1px solid var(--border-color);
-  background-color: var(--background2-color);
-  border-right: none;
-  outline: none;
-  color: var(--text-color);
-  min-width: 0;
-  display: flex; /* Use flexbox for alignment */
-  justify-content: center;
+  height: 30px;
+  box-sizing: border-box;
+  display: flex;
   align-items: center;
-  height: 35px;
+  justify-content: center;
 }
 
-.tab-button.active {
-  /* color: var(--text-color); */
-  border-bottom-color: var(--background-color);
+/* Primary button style (Strava Orange) */
+.strava-button-primary {
+  background-color: var(--strava-color);
+  color: white;
+  border: none;
+  font-weight: bold;
 }
 
-#tab-btn-overview {
-  border-radius: var(--border-radius) 0 0 0;
-  border-right: none;
-}
-
-/* Routing button is now in the middle */
-#tab-btn-routing {
-  border-radius: 0;
-  border-right: none;
-}
-
-#tab-btn-strava {
-  flex: 0 0 60px; /* Don't grow, fixed width */
-  border-radius: 0;
-  border-right: none;
-}
-
-/* Settings icon button has fixed size */
-#tab-btn-settings {
-  flex: 0 0 40px; /* Don't grow, fixed width */
-  padding: 8px;
-  border-radius: 0 var(--border-radius) 0 0;
-  border-right: 1px solid var(--border-color);
-}
-
-.tab-button.active {
+/* Secondary button style (Theme-Aware) */
+.strava-button-secondary {
   background-color: var(--background-color);
+  color: var(--text-color);
 }
 
-#tab-btn-heart {
-  display: none; /* Hidden by default on desktop */
+/* Disabled state for secondary buttons */
+.strava-button-secondary:disabled {
+  cursor: not-allowed;
 }
 
-#tab-content {
-  background-color: transparent;
-  padding: 0;
-  border: 1px solid var(--border-color);
-  border-top: none;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
+/* Active state for secondary buttons to match routing buttons */
+button.strava-button-secondary:not(:disabled) {
+  font-weight: bold;
+  background-color: var(--text-color);
+  color: var(--background-color);
+  border: none;
 }
 
-.tab-panel {
-  display: none; /* Hidden by default */
+/* Link styles */
+#strava-panel a {
+  color: var(--link-color);
+  text-decoration: none;
 }
 
-.tab-panel.active {
-  display: flex; /* Use flex for both panels */
+#strava-panel a:hover {
+  text-decoration: underline;
+}
+
+#strava-domain-copy .copy-icon {
+  vertical-align: middle;
+}
+
+/* DATA EDITOR */
+/*
+ * ██████╗  █████╗ ████████╗ █████╗
+ * ██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗
+ * ██║  ██║███████║   ██║   ███████║
+ * ██║  ██║██╔══██║   ██║   ██╔══██║
+ * ██████╔╝██║  ██║   ██║   ██║  ██║
+ * ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
+ *
+ * ███████╗██████╗ ██╗████████╗ ██████╗ ██████╗
+ * ██╔════╝██╔══██╗██║╚══██╔══╝██╔═══██╗██╔══██╗
+ * █████╗  ██║  ██║██║   ██║   ██║   ██║██████╔╝
+ * ██╔══╝  ██║  ██║██║   ██║   ██║   ██║██╔══██╗
+ * ███████╗██████╔╝██║   ██║   ╚██████╔╝██║  ██║
+ * ╚══════╝╚═════╝ ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
+ */
+
+/* Data Editor Panel */
+
+/* Stretch the right sidebar to the viewport bottom when editor tab is open */
+#main-right-container:has(#data-editor-panel.active) {
+  height: calc(100vh - 60px);
+}
+
+#main-right-container:has(#data-editor-panel.active) #tab-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
   flex-direction: column;
 }
+
+#main-right-container:has(#data-editor-panel.active) #tab-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#data-editor-panel {
+  padding: 8px 0;
+  gap: 8px;
+  background-color: var(--background-color);
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  min-height: 0;
+  flex: 1;
+}
+
+#data-editor-notice {
+  font-size: var(--font-size-12);
+  color: var(--text-color);
+  opacity: 0.6;
+  padding: 0 10px;
+}
+
+#data-editor-panel .CodeMirror {
+  flex: 1;
+  height: 0; /* flex controls height */
+  min-height: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+#data-editor-panel .CodeMirror,
+#data-editor-panel .CodeMirror * {
+  font-family: monospace !important;
+}
+
+#data-editor-panel .CodeMirror-gutters {
+  border-right-color: var(--border-color);
+}
+
+.CodeMirror-lint-tooltip {
+  z-index: 5000;
+  font-family: monospace !important;
+}
+
+#data-editor-panel .CodeMirror-linenumber {
+  color: #999;
+  font-size: 75%;
+  padding: 0 1px 0 5px;
+}
+
+#data-editor-panel .CodeMirror-cursor {
+  border-left-color: var(--text-color);
+}
+
+#data-editor-panel .CodeMirror-activeline-background {
+  background: rgba(128, 128, 128, 0.08);
+}
+
+#data-editor-panel .CodeMirror-selected {
+  background: rgba(128, 128, 128, 0.2);
+}
+
+#data-editor-panel .CodeMirror-foldmarker {
+  color: var(--text-color);
+  opacity: 0.5;
+}
+
+#data-editor-error {
+  font-size: var(--font-size-12);
+  color: var(--color-red);
+  display: none;
+  overflow-wrap: break-word;
+  padding: 0 10px;
+}
+
+#data-editor-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 0 10px;
+}
+
+#data-editor-restore,
+#data-editor-apply,
+#data-editor-copy,
+#data-editor-copy-clean,
+#data-editor-find {
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  padding: 6px;
+  background-color: var(--text-color);
+  color: var(--background-color);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+#data-editor-restore,
+#data-editor-apply,
+#data-editor-copy-clean {
+  flex: 1;
+}
+
+#data-editor-copy {
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#data-editor-find {
+  flex: 1;
+}
+
+#data-editor-copy .material-symbols {
+  color: inherit;
+}
+
+@keyframes cm-find-fade {
+  0% {
+    background-color: rgba(255, 200, 0, 0.4);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+#data-editor-panel .cm-find-highlight {
+  animation: cm-find-fade 3s ease-out forwards;
+}
+
+/* SETTINGS */
+/*
+ * ███████╗███████╗████████╗████████╗██╗███╗   ██╗ ██████╗ ███████╗
+ * ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██║████╗  ██║██╔════╝ ██╔════╝
+ * ███████╗█████╗     ██║      ██║   ██║██╔██╗ ██║██║  ███╗███████╗
+ * ╚════██║██╔══╝     ██║      ██║   ██║██║╚██╗██║██║   ██║╚════██║
+ * ███████║███████╗   ██║      ██║   ██║██║ ╚████║╚██████╔╝███████║
+ * ╚══════╝╚══════╝   ╚═╝      ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+ */
 
 /* Settings Panel Style */
 #settings-panel {
@@ -978,20 +1576,324 @@ a#info-panel-strava-link:hover {
   gap: 10px;
 }
 
+#settings-panel .settings-control-item {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-14);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: auto;
+}
+
+/* Make routing and elevation provider select boxes the same width */
+#settings-panel select {
+  width: 130px;
+  /* Styles to match other dropdowns */
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  height: 30px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* Only apply pointer cursor to labels in items that contain a checkbox */
+#settings-panel .settings-control-item:has(input[type="checkbox"]) label {
+  cursor: pointer;
+  user-select: none; /* Prevent text selection on click */
+}
+#settings-panel .settings-control-item input[type="checkbox"] {
+  vertical-align: middle;
+  margin-right: 8px;
+  transform: scale(1.2);
+}
+
+.settings-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-slider {
+  width: 90px;
+  cursor: pointer;
+  accent-color: var(--highlight-color);
+}
+
+.settings-slider-value {
+  min-width: 20px;
+  text-align: right;
+  font-size: var(--font-size-14);
+}
+
+/* Shared styles for all panel info icons */
+#strava-info-icon,
+.settings-info-icon {
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+/* Styles for the info icon in the settings panel */
+.settings-info-icon {
+  font-size: var(--icon-size-16);
+  font-weight: bold;
+  color: var(--text-color);
+  line-height: 1;
+}
+
+/* Link styles */
+#settings-panel a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+#settings-panel a:hover {
+  text-decoration: underline;
+}
+
+/* OSM Settings */
+#settings-panel .osm-profile-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.osm-profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.osm-user-links {
+  display: flex;
+  gap: 12px;
+}
+
+.osm-username,
+.osm-user-links a {
+  font-size: var(--font-size-14);
+  color: var(--link-color);
+}
+
+.osm-username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.osm-separator {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 2px 0 0;
+}
+
+.osm-auth-btn {
+  font-size: var(--font-size-14);
+  color: var(--link-color);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.osm-auth-btn:hover {
+  text-decoration: underline;
+}
+
+.osm-contribute-search::placeholder {
+  color: var(--text-color);
+  opacity: 1;
+}
+
+.osm-contribute-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.osm-contribute-category-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--background-color);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: var(--font-size-14);
+}
+
+.osm-contribution-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+.osm-contribution-row:last-child {
+  border-bottom: none;
+}
+.osm-contribution-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.osm-contribution-info strong,
+.osm-contribution-info span,
+.osm-contribution-info small {
+  font-size: var(--font-size-14);
+}
+.osm-contribution-info span,
+.osm-contribution-info small {
+  color: var(--text-color);
+}
+.osm-contribution-meta {
+  display: flex;
+  gap: 12px;
+}
+.osm-contribution-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.osm-delete-btn {
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--color-red);
+}
+
+/* Style for credits link in settings panel */
+.credits-link {
+  font-size: var(--font-size-14);
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.credits-link:hover {
+  text-decoration: underline;
+}
+
+/* ELEVATION */
+/*
+ * ███████╗██╗     ███████╗██╗   ██╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+ * ██╔════╝██║     ██╔════╝██║   ██║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
+ * █████╗  ██║     █████╗  ██║   ██║███████║   ██║   ██║██║   ██║██╔██╗ ██║
+ * ██╔══╝  ██║     ██╔══╝  ╚██╗ ██╔╝██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
+ * ███████╗███████╗███████╗ ╚████╔╝ ██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
+ * ╚══════╝╚══════╝╚══════╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+ */
+
+/* Elevation Profile Styles */
+#elevation-div {
+  bottom: 0px;
+  height: 250px;
+  left: 0px;
+  position: absolute;
+  text-align: center;
+  visibility: hidden;
+  width: 100%;
+  z-index: 1000;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--background-color);
+}
+
+/* Collapse the elevation panel's height when it's hidden via its inline style.
+   This removes the element from the layout flow, which is crucial for preventing
+   it from capturing touch events on mobile when invisible. */
+#elevation-div[style*="visibility: hidden"] {
+  height: 0;
+}
+
+/* Styles for d3 elevation chart */
+.altitude-area {
+  fill: var(--color-red);
+  fill-opacity: 0.5;
+  /* stroke: var(--color-red); */
+  stroke: none;
+  stroke-width: 1.5;
+}
+
+.axis path,
+.axis line {
+  stroke: var(--text-color);
+  stroke-width: 1;
+}
+
+.axis text {
+  fill: var(--text-color);
+  font-size: var(--font-size-10);
+}
+
+.elevation-hover-tooltip-path {
+  fill: var(--background-color);
+  stroke: var(--text-color);
+  stroke-width: 1px;
+}
+
+.elevation-hover-tooltip-text {
+  fill: var(--text-color);
+  font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
+  font-size: var(--font-size-10);
+  /* Prevent text from being selected on drag */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.material-symbols.elevation-action-icon {
+  cursor: pointer;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
+}
+
+/* SWEETALERT */
+/*
+ * ███████╗██╗    ██╗███████╗███████╗████████╗ █████╗ ██╗     ███████╗██████╗ ████████╗
+ * ██╔════╝██║    ██║██╔════╝██╔════╝╚══██╔══╝██╔══██╗██║     ██╔════╝██╔══██╗╚══██╔══╝
+ * ███████╗██║ █╗ ██║█████╗  █████╗     ██║   ███████║██║     █████╗  ██████╔╝   ██║
+ * ╚════██║██║███╗██║██╔══╝  ██╔══╝     ██║   ██╔══██║██║     ██╔══╝  ██╔══██╗   ██║
+ * ███████║╚███╔███╔╝███████╗███████╗   ██║   ██║  ██║███████╗███████╗██║  ██║   ██║
+ * ╚══════╝ ╚══╝╚══╝ ╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝
+ */
+
 /* Themed Sweetalert2 Styles */
 /* This block styles all SweetAlert2 popups to respect the selected
    light or dark theme by using the application's CSS variables. */
 
 /* Main popup container */
+.swal2-container {
+  padding-top: calc(var(--swal2-container-padding) + env(safe-area-inset-top)) !important;
+  padding-left: calc(var(--swal2-container-padding) + env(safe-area-inset-left)) !important;
+  padding-right: calc(var(--swal2-container-padding) + env(safe-area-inset-right)) !important;
+}
+
 .swal2-popup {
   background-color: var(--background-color) !important;
   color: var(--text-color) !important;
   border-radius: var(--border-radius) !important;
-  max-height: calc(100dvh - calc(var(--swal2-container-padding) * 2)) !important;
+  max-height: calc(
+    100dvh - var(--swal2-container-padding) * 2 - env(safe-area-inset-top)
+  ) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
   padding-bottom: 0 !important;
+}
+
+.swal-no-actions {
+  padding-bottom: 10px !important;
 }
 
 /* Title text */
@@ -1004,6 +1906,29 @@ a#info-panel-strava-link:hover {
   color: var(--text-color) !important;
   overflow-y: auto !important;
   flex: 1 1 auto !important;
+}
+
+.swal2-html-container a {
+  color: var(--highlight-color);
+  text-decoration: none;
+}
+.swal2-html-container a:hover {
+  text-decoration: underline;
+}
+
+.attribution-toast {
+  padding-top: 0;
+  width: fit-content !important;
+  background-color: var(--color-blue) !important;
+  color: var(--color-white) !important;
+}
+
+.attribution-toast .swal2-html-container {
+  color: var(--color-white) !important;
+}
+.attribution-toast .swal2-html-container a {
+  color: var(--color-white);
+  text-decoration: underline;
 }
 
 /* Center text in toast notifications */
@@ -1038,16 +1963,22 @@ a#info-panel-strava-link:hover {
   color: var(--background-color) !important;
 }
 
-/* Default cancel button style - red background */
+/* Default cancel button style */
 .swal2-cancel {
-  background-color: var(--color-red) !important;
-  color: var(--color-white) !important;
+  background-color: var(--background2-color) !important;
+  color: var(--text-color) !important;
 }
 
 /* Default deny button style */
 .swal2-deny {
   background-color: var(--background2-color) !important;
   color: var(--text-color) !important;
+}
+
+/* Danger confirm button for destructive actions */
+.swal-confirm-danger {
+  background-color: var(--color-red) !important;
+  color: var(--color-white) !important;
 }
 
 /* Disabled state for all buttons */
@@ -1178,14 +2109,152 @@ a#info-panel-strava-link:hover {
   color: var(--highlight-color);
 }
 
-/* Leaflet control overrides */
+/* POPUPS */
+/*
+ * ██████╗  ██████╗ ██████╗ ██╗   ██╗██████╗ ███████╗
+ * ██╔══██╗██╔═══██╗██╔══██╗██║   ██║██╔══██╗██╔════╝
+ * ██████╔╝██║   ██║██████╔╝██║   ██║██████╔╝███████╗
+ * ██╔═══╝ ██║   ██║██╔═══╝ ██║   ██║██╔═══╝ ╚════██║
+ * ██║     ╚██████╔╝██║     ╚██████╔╝██║     ███████║
+ * ╚═╝      ╚═════╝ ╚═╝      ╚═════╝ ╚═╝     ╚══════╝
+ */
+
 .leaflet-popup-content {
   font-size: var(--font-size-12) !important;
+  margin: 10px !important;
+}
+.leaflet-popup-content a {
+  color: var(--highlight-color);
+  text-decoration: none;
+}
+body:not(.glass-mode) .leaflet-popup-content a:hover {
+  text-decoration: underline;
 }
 
 .leaflet-popup-content-wrapper {
   border-radius: var(--border-radius) !important;
 }
+
+.context-menu-popup .leaflet-popup-content {
+  margin: 5px 1px !important;
+}
+
+/* Search result popup */
+.leaflet-popup-content-wrapper {
+  box-shadow: none;
+  background: none;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color) !important;
+}
+.leaflet-popup-tip-container {
+  display: none;
+}
+.leaflet-container a.leaflet-popup-close-button,
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: var(--text-color);
+}
+.leaflet-popup-content-wrapper button,
+.leaflet-popup-content-wrapper button:hover {
+  border: none !important;
+  font-weight: bold !important;
+  background-color: var(--text-color) !important;
+  color: var(--background-color) !important;
+}
+
+/* LAYERS */
+/*
+ * ██╗      █████╗ ██╗   ██╗███████╗██████╗ ███████╗
+ * ██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗██╔════╝
+ * ██║     ███████║ ╚████╔╝ █████╗  ██████╔╝███████╗
+ * ██║     ██╔══██║  ╚██╔╝  ██╔══╝  ██╔══██╗╚════██║
+ * ███████╗██║  ██║   ██║   ███████╗██║  ██║███████║
+ * ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
+ */
+
+/* Custom Layers Panel Styles */
+.layer-icon {
+  vertical-align: middle;
+  margin-right: 0;
+  padding: 0 !important;
+}
+
+.material-symbols.layer-icon {
+  font-size: var(--icon-size-16) !important;
+}
+
+#custom-layers-panel {
+  display: none; /* Hidden by default */
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: 51px; /* The toolbar width is ~40px, so 51px provides a 10px gap */
+  z-index: 1003; /* Ensure it's above the map but consistent with other panels */
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  max-height: calc(100dvh - 60px);
+  overflow-y: auto;
+  width: 200px;
+  user-select: none;
+}
+
+/* Form content inside the panel */
+#custom-layers-panel .leaflet-control-layers-form {
+  padding: 6px;
+  background-color: transparent;
+  border-radius: var(--border-radius);
+}
+#custom-layers-panel .leaflet-control-layers-separator {
+  height: 1px;
+  background-color: var(--border-color);
+  border-top: none;
+  margin: 3px 0;
+}
+#custom-layers-panel label div {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+#custom-layers-panel span {
+  padding-left: 5px;
+  font-size: var(--font-size-12);
+}
+.leaflet-control-layers-selector {
+  margin-top: 0;
+  position: relative;
+  top: 0;
+}
+
+/* WMS custom layer truncation */
+#custom-layers-panel .wms-custom-layer .layer-name-text {
+  width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+}
+#custom-layers-panel .wms-custom-layer .layer-name-container {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Remove default Leaflet control styling from the content inside our panel */
+#custom-layers-panel .leaflet-control-layers {
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* TOOLBAR */
+/*
+ * ████████╗ ██████╗  ██████╗ ██╗     ██████╗  █████╗ ██████╗
+ * ╚══██╔══╝██╔═══██╗██╔═══██╗██║     ██╔══██╗██╔══██╗██╔══██╗
+ *    ██║   ██║   ██║██║   ██║██║     ██████╔╝███████║██████╔╝
+ *    ██║   ██║   ██║██║   ██║██║     ██╔══██╗██╔══██║██╔══██╗
+ *    ██║   ╚██████╔╝╚██████╔╝███████╗██████╔╝██║  ██║██║  ██║
+ *    ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+ */
 
 .leaflet-touch .leaflet-control-layers-toggle {
   background-position: center center;
@@ -1193,71 +2262,6 @@ a#info-panel-strava-link:hover {
   height: 30px;
   width: 30px;
   z-index: 4000;
-}
-
-/* Elevation Profile Styles */
-#elevation-div {
-  bottom: 0px;
-  height: 250px;
-  left: 0px;
-  position: absolute;
-  text-align: center;
-  visibility: hidden;
-  width: 100%;
-  z-index: 1000;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--background-color);
-}
-
-/* Collapse the elevation panel's height when it's hidden via its inline style.
-   This removes the element from the layout flow, which is crucial for preventing
-   it from capturing touch events on mobile when invisible. */
-#elevation-div[style*="visibility: hidden"] {
-  height: 0;
-}
-
-/* Styles for d3 elevation chart */
-.altitude-area {
-  fill: var(--color-red);
-  fill-opacity: 0.5;
-  /* stroke: var(--color-red); */
-  stroke: none;
-  stroke-width: 1.5;
-}
-
-.axis path,
-.axis line {
-  stroke: var(--text-color);
-  stroke-width: 1;
-}
-
-.axis text {
-  fill: var(--text-color);
-  font-size: var(--font-size-10);
-}
-
-.elevation-hover-tooltip-path {
-  fill: var(--background-color);
-  stroke: var(--text-color);
-  stroke-width: 1px;
-}
-
-.elevation-hover-tooltip-text {
-  fill: var(--text-color);
-  font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
-  font-size: var(--font-size-10);
-  /* Prevent text from being selected on drag */
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-.material-symbols.elevation-action-icon {
-  cursor: pointer;
-  vertical-align: middle;
-  position: relative;
-  top: -2px;
 }
 
 /* Style for the download submenu */
@@ -1316,137 +2320,12 @@ a#info-panel-strava-link:hover {
 
 /* Main ui layout */
 .leaflet-left {
-  left: 10px;
-  margin-top: 10px;
+  left: calc(env(safe-area-inset-left) + 10px);
+  margin-top: calc(env(safe-area-inset-top) + 10px);
 }
 /* Prevent bottom-left controls from overlapping toolbar */
 .leaflet-bottom.leaflet-left {
   z-index: 500;
-}
-.leaflet-right .leaflet-control {
-  border: 1px solid var(--border-color) !important;
-  margin-right: 10px !important;
-  margin-top: 10px !important;
-}
-
-/* Top-right button container */
-#top-right-container {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1001;
-  display: flex;
-  flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
-  gap: 10px; /* Easily adjustable */
-}
-
-/* Base button styles */
-.top-right-btn {
-  height: 32px;
-  background: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  font-size: var(--font-size-14);
-  color: var(--text-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Individual button widths */
-#poi-finder-btn {
-  padding: 0 12px;
-}
-
-#search-btn {
-  width: 32px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#sidebar-toggle-btn {
-  width: 32px;
-}
-
-#fullscreen-btn {
-  width: 32px;
-}
-
-/* Sidebar toggle icon states */
-#sidebar-toggle-btn .icon-chevron-left {
-  display: none;
-}
-
-#sidebar-toggle-btn.panels-hidden .icon-chevron-left {
-  display: inline-block;
-}
-
-#sidebar-toggle-btn.panels-hidden .icon-chevron-right {
-  display: none;
-}
-
-/* Fullscreen toggle icon states */
-#fullscreen-btn .icon-fullscreen-exit {
-  display: none;
-}
-
-#fullscreen-btn.fullscreen-active .icon-fullscreen-exit {
-  display: inline-block;
-}
-
-#fullscreen-btn.fullscreen-active .icon-fullscreen-enter {
-  display: none;
-}
-
-/* Offline state styling */
-#poi-finder-btn.offline {
-  background: red !important;
-  color: white !important;
-  border-color: red !important;
-  cursor: not-allowed !important;
-}
-
-#search-btn.offline {
-  cursor: not-allowed !important;
-}
-
-#search-btn .icon-search-offline {
-  display: none;
-}
-
-#search-btn.offline .icon-search-online {
-  display: none;
-}
-
-#search-btn.offline .icon-search-offline {
-  display: inline-block;
-}
-
-/* Search result popup */
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  box-shadow: none;
-  background: none;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color) !important;
-}
-.leaflet-container a.leaflet-popup-close-button,
-.leaflet-container a.leaflet-popup-close-button:hover {
-  color: var(--text-color);
-}
-.leaflet-popup-content-wrapper button,
-.leaflet-popup-content-wrapper button:hover {
-  border: none !important;
-  font-weight: bold !important;
-  background-color: var(--text-color) !important;
-  color: var(--background-color) !important;
 }
 
 /* Toolbar styles */
@@ -1492,55 +2371,6 @@ a#info-panel-strava-link:hover {
   color: var(--text-color);
 }
 
-/* Bottom Left Credits Container */
-#bottom-left-credits {
-  position: fixed;
-  bottom: 0;
-  left: 10px;
-  z-index: 500; /* Below toolbar */
-  background: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius) var(--border-radius) 0 0;
-  border-bottom: none;
-  overflow: hidden;
-  padding: 0px 10px;
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-#bottom-left-credits a {
-  color: var(--highlight-color);
-  text-decoration: none;
-}
-#bottom-left-credits a:hover {
-  color: var(--highlight-color);
-  text-decoration: underline;
-}
-
-.material-symbols.credits-heart-icon {
-  font-size: var(--icon-size-16) !important;
-  color: var(--color-red) !important;
-  vertical-align: middle !important;
-}
-
-/* PWA Install Button Style */
-#install-pwa-link {
-  background-color: var(--color-blue);
-  color: var(--color-white) !important;
-  padding: 0px 10px;
-  text-decoration: none !important;
-  margin-left: 5px;
-}
-
-/* Adjust container padding when install button is visible */
-#bottom-left-credits:has(#install-pwa-link:not([style*="display: none"])) {
-  padding-right: 0;
-}
-
-.leaflet-marker-shadow {
-  display: none !important;
-}
-
 /* Style for disabled custom buttons */
 .leaflet-control-custom.disabled > a {
   background-color: var(--background2-color);
@@ -1566,112 +2396,61 @@ a#info-panel-strava-link:hover {
 .locate-active .icon-locate {
   fill: var(--color-white) !important;
 }
-
-/* Hide routing machine's default itinerary */
-.leaflet-routing-container {
-  display: none;
+.locate-active .material-symbols {
+  color: var(--color-white) !important;
 }
 
-/* Settings Control Item Styles are now inside the settings panel */
-#settings-panel .settings-control-item {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-14);
+/* Distance labels shown while drawing polylines */
+.distance-label {
+  pointer-events: none;
+  font-size: var(--font-size-12);
+  font-weight: bold;
+  color: white;
+  text-shadow:
+    -1px -1px 0 black,
+    1px -1px 0 black,
+    -1px 1px 0 black,
+    1px 1px 0 black;
+}
+
+/* TOP RIGHT */
+/*
+ * ████████╗ ██████╗ ██████╗     ██████╗ ██╗ ██████╗ ██╗  ██╗████████╗
+ * ╚══██╔══╝██╔═══██╗██╔══██╗    ██╔══██╗██║██╔════╝ ██║  ██║╚══██╔══╝
+ *    ██║   ██║   ██║██████╔╝    ██████╔╝██║██║  ███╗███████║   ██║
+ *    ██║   ██║   ██║██╔═══╝     ██╔══██╗██║██║   ██║██╔══██║   ██║
+ *    ██║   ╚██████╔╝██║         ██║  ██║██║╚██████╔╝██║  ██║   ██║
+ *    ╚═╝    ╚═════╝ ╚═╝         ╚═╝  ╚═╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝
+ */
+
+/* Top-right button container */
+#top-right-container {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 10px);
+  right: calc(env(safe-area-inset-right) + 10px);
+  z-index: 1001;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: auto;
+  flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
+  gap: 5px;
+  max-width: calc(100vw - 61px);
+  overflow: hidden;
 }
 
-/* Make routing and elevation provider select boxes the same width */
-#settings-panel select {
-  width: 130px;
-  /* Styles to match other dropdowns */
-  background-color: var(--background-color);
-  color: var(--text-color);
+/* Base button styles */
+.top-right-btn {
+  height: var(--top-right-btn-height);
+  background: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
-  height: 30px;
-  padding: 6px;
-  box-sizing: border-box;
-}
-
-/* Only apply pointer cursor to labels in items that contain a checkbox */
-#settings-panel .settings-control-item:has(input[type="checkbox"]) label {
   cursor: pointer;
-  user-select: none; /* Prevent text selection on click */
-}
-#settings-panel .settings-control-item input {
-  vertical-align: middle;
-  margin-right: 8px;
-  transform: scale(1.2);
-}
-
-/* Shared styles for all panel info icons */
-#strava-info-icon,
-.settings-info-icon {
-  cursor: pointer;
-  margin-left: 5px;
-}
-
-/* Styles for the info icon in the settings panel */
-.settings-info-icon {
-  font-size: var(--icon-size-16);
-  font-weight: bold;
+  font-size: var(--font-size-14);
   color: var(--text-color);
-  line-height: 1;
-}
-
-/* Hide the default browser cursor and use our custom one during selection mode */
-body.route-point-select-mode,
-body.route-point-select-mode * {
-  cursor: none !important;
-}
-
-/* Custom Cursor Styles */
-.custom-cursor {
-  position: absolute;
-  display: none;
-  pointer-events: none; /* Make it unclickable */
-  z-index: 2000; /* Ensure it's on top */
-  width: 50px; /* Match the icon's font-size */
-  height: 50px; /* Match the icon's font-size */
-  /* Anchor the cursor so the bottom-center of the icon is at the mouse pointer */
-  /* Uses 0.9 multiplier to match marker iconAnchor positioning */
-  transform: translate(-25px, calc(-50px * 0.9));
-}
-#custom-cursor-start .material-symbols {
-  color: var(--routing-color-start);
-}
-#custom-cursor-end .material-symbols {
-  color: var(--routing-color-end);
-}
-#custom-cursor-via .material-symbols {
-  color: var(--routing-color-via);
-}
-/* Change cursor to 'all-scroll' when hovering over draggable markers */
-.leaflet-marker-draggable {
-  cursor: all-scroll !important;
-}
-
-/* Forcefully removes dotted line style ONLY during editing */
-.map-is-editing path.leaflet-interactive {
-  stroke-dasharray: none !important;
-}
-
-/* Main container for all right-side panels (MODIFIED) */
-#main-right-container {
-  position: absolute;
-  top: 50px;
-  right: 10px;
-  width: 320px;
-  z-index: 1000;
   display: flex;
-  flex-direction: column;
-  gap: 10px; /* Space between panels */
-  max-width: calc(100vw - 61px);
-  cursor: auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .icon-chevron-left,
@@ -1680,9 +2459,340 @@ body.route-point-select-mode * {
   fill: var(--icon-color);
 }
 
-#main-right-container.hidden {
+/* Individual button widths */
+#poi-finder-btn {
+  position: relative;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+#poi-finder-btn.poi-has-results::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-blue);
+}
+
+/* POI Finder Modal Styles */
+.poi-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.poi-category-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--background-color);
+}
+
+.poi-cat-msg {
+  padding: 8px 10px;
+  border-radius: var(--border-radius);
+  background: var(--color-red);
+  color: var(--color-white);
+  font-size: var(--font-size-14);
+  line-height: 20px;
+  text-align: left;
+}
+
+.poi-cat-msg.poi-cat-msg--info {
+  background: var(--color-yellow);
+  color: var(--color-black);
+}
+
+.poi-cat-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.poi-cat-name {
+  flex: 1;
+  font-size: var(--font-size-14);
+  color: var(--text-color);
+  text-align: left;
+}
+
+.poi-cat-status {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--font-size-14);
+  color: var(--text-color-secondary);
+}
+
+.poi-cat-status:empty {
   display: none;
 }
+
+.poi-vis-btn {
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.poi-vis-btn:hover {
+  color: var(--text-color);
+}
+
+.poi-vis-btn.poi-vis-hidden {
+  display: none;
+}
+
+.poi-load-btn {
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.poi-load-btn:hover {
+  color: var(--text-color);
+}
+
+.poi-load-btn.poi-load-busy {
+  animation: poi-spin 1s linear infinite;
+  pointer-events: none;
+  color: var(--text-color);
+}
+
+.poi-clear-btn {
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  user-select: none;
+  line-height: 1;
+}
+
+.poi-clear-btn:hover {
+  color: var(--text-color);
+}
+
+@keyframes poi-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.poi-custom-section {
+  margin-bottom: 36px;
+}
+
+.poi-custom-group {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.poi-custom-group .poi-category-row {
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0;
+}
+
+.poi-custom-section .poi-cat-msg {
+  margin-top: 3px;
+}
+
+.poi-custom-input-row {
+  padding: 8px 10px;
+}
+
+.poi-custom-input {
+  display: block;
+  width: 100%;
+  border: none;
+  padding: 0;
+  background: none;
+  color: var(--text-color);
+  font-family: monospace !important;
+  font-size: var(--font-size-14);
+  line-height: 1.4;
+  outline: none;
+  box-sizing: border-box;
+  resize: none;
+  field-sizing: content;
+}
+
+.poi-custom-input::placeholder {
+  color: #696969;
+}
+
+.poi-marker {
+  background: none !important;
+  border: none !important;
+}
+
+.poi-marker-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 0 2px var(--color-white),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.poi-marker-icon.selected {
+  box-shadow:
+    0 0 0 2px var(--color-black),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.poi-marker-icon .material-symbols {
+  font-size: 15px;
+  color: white;
+}
+
+#search-btn {
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#sidebar-toggle-btn {
+  width: 32px;
+}
+
+#fullscreen-btn {
+  width: 32px;
+}
+
+/* Sidebar toggle icon states */
+#sidebar-toggle-btn .icon-chevron-left {
+  display: none;
+}
+
+#sidebar-toggle-btn.panels-hidden .icon-chevron-left {
+  display: inline-block;
+}
+
+#sidebar-toggle-btn.panels-hidden .icon-chevron-right {
+  display: none;
+}
+
+/* Fullscreen toggle icon states */
+#fullscreen-btn .icon-fullscreen-exit {
+  display: none;
+}
+
+#fullscreen-btn.fullscreen-active .icon-fullscreen-exit {
+  display: inline-block;
+}
+
+#fullscreen-btn.fullscreen-active .icon-fullscreen-enter {
+  display: none;
+}
+
+/* Offline indicator */
+#offline-indicator {
+  display: none;
+  background: var(--color-red);
+  color: var(--color-white);
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  padding: 0 10px;
+  width: 105px;
+  height: 32px;
+  border-radius: var(--border-radius);
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+#offline-indicator .material-symbols {
+  color: inherit;
+}
+
+#offline-indicator.visible {
+  display: flex;
+}
+
+/* CREDITS */
+/*
+ *  ██████╗██████╗ ███████╗██████╗ ██╗████████╗███████╗
+ * ██╔════╝██╔══██╗██╔════╝██╔══██╗██║╚══██╔══╝██╔════╝
+ * ██║     ██████╔╝█████╗  ██║  ██║██║   ██║   ███████╗
+ * ██║     ██╔══██╗██╔══╝  ██║  ██║██║   ██║   ╚════██║
+ * ╚██████╗██║  ██║███████╗██████╔╝██║   ██║   ███████║
+ *  ╚═════╝╚═╝  ╚═╝╚══════╝╚═════╝ ╚═╝   ╚═╝   ╚══════╝
+ */
+
+/* Bottom Left Credits Container */
+#bottom-left-credits {
+  position: fixed;
+  bottom: 0;
+  left: 10px;
+  z-index: 500; /* Below toolbar */
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  border-bottom: none;
+  overflow: hidden;
+  padding: 0px 10px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+#bottom-left-credits a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+#bottom-left-credits a:hover {
+  color: var(--link-color);
+  text-decoration: underline;
+}
+
+.material-symbols.credits-heart-icon {
+  font-size: var(--icon-size-16) !important;
+  color: var(--color-red) !important;
+  vertical-align: middle !important;
+}
+
+/* PWA Install Button Style */
+#install-pwa-link {
+  background-color: var(--color-blue);
+  color: var(--color-white) !important;
+  padding: 0px 10px;
+  text-decoration: none !important;
+  margin-left: 5px;
+}
+
+/* Adjust container padding when install button is visible */
+#bottom-left-credits:has(#install-pwa-link:not([style*="display: none"])) {
+  padding-right: 0;
+}
+
+/* SCALE */
+/*
+ * ███████╗ ██████╗ █████╗ ██╗     ███████╗
+ * ██╔════╝██╔════╝██╔══██╗██║     ██╔════╝
+ * ███████╗██║     ███████║██║     █████╗
+ * ╚════██║██║     ██╔══██║██║     ██╔══╝
+ * ███████║╚██████╗██║  ██║███████╗███████╗
+ * ╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝
+ */
 
 .leaflet-control-scale {
   margin-left: 0 !important;
@@ -1716,103 +2826,124 @@ body.route-point-select-mode * {
   border-bottom: 1px solid var(--border-color);
 } */
 
-.leaflet-editing-icon,
-.leaflet-middle-icon {
-  border-radius: 50%;
-}
-
 /* Hide the scale control and bottom credits when the elevation chart is visible */
 body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
 body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
   display: none !important;
 }
 
-/* Strava Panel Button Styles */
-/* Base styles to match routing panel controls */
-.strava-button-primary,
-.strava-button-secondary {
-  border: 1px solid var(--border-color);
-  padding: 6px 12px;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  font-size: var(--font-size-14);
-  height: 30px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* CURSORS */
+/*
+ *  ██████╗██╗   ██╗██████╗ ███████╗ ██████╗ ██████╗ ███████╗
+ * ██╔════╝██║   ██║██╔══██╗██╔════╝██╔═══██╗██╔══██╗██╔════╝
+ * ██║     ██║   ██║██████╔╝███████╗██║   ██║██████╔╝███████╗
+ * ██║     ██║   ██║██╔══██╗╚════██║██║   ██║██╔══██╗╚════██║
+ * ╚██████╗╚██████╔╝██║  ██║███████║╚██████╔╝██║  ██║███████║
+ *  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
+ */
+
+/* Custom Cursor Styles */
+.custom-cursor {
+  position: absolute;
+  display: none;
+  pointer-events: none; /* Make it unclickable */
+  z-index: 2000; /* Ensure it's on top */
+  width: 50px; /* Match the icon's font-size */
+  height: 50px; /* Match the icon's font-size */
+  /* Anchor the cursor so the bottom-center of the icon is at the mouse pointer */
+  /* Uses 0.9 multiplier to match marker iconAnchor positioning */
+  transform: translate(-25px, calc(-50px * 0.9));
+}
+#custom-cursor-start .material-symbols {
+  color: var(--routing-color-start);
+}
+#custom-cursor-end .material-symbols {
+  color: var(--routing-color-end);
+}
+#custom-cursor-via .material-symbols {
+  color: var(--routing-color-via);
+}
+/* Crosshair cursor during pen draw mode */
+body.pen-draw-mode .leaflet-container,
+body.pen-draw-mode .leaflet-container * {
+  cursor: crosshair !important;
 }
 
-/* Primary button style (Strava Orange) */
-.strava-button-primary {
-  background-color: var(--strava-color);
-  color: white;
-  border: none;
-  font-weight: bold;
+/* Change cursor to 'all-scroll' when hovering over draggable markers */
+.leaflet-marker-draggable {
+  cursor: all-scroll !important;
 }
 
-/* Secondary button style (Theme-Aware) */
-.strava-button-secondary {
-  background-color: var(--background-color);
-  color: var(--text-color);
+/* Hide the default browser cursor and use our custom one during selection mode */
+body.route-point-select-mode,
+body.route-point-select-mode * {
+  cursor: none !important;
 }
 
-/* Disabled state for secondary buttons */
-.strava-button-secondary:disabled {
-  cursor: not-allowed;
+/* Forcefully sets the cursor to a crosshair for the marker icon
+   whenever any drawing tool is active (class added via main.js L.Draw.Event.DRAWSTART) */
+body.leaflet-is-drawing .leaflet-marker-icon {
+  cursor: crosshair !important;
 }
 
-/* Active state for secondary buttons to match routing buttons */
-button.strava-button-secondary:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
+/* Styles for touch input */
+body.using-touch {
+  /* This line resets the cursor, overriding 'cursor: none'. */
+  cursor: auto !important;
+
+  /* Hide the routing marker cursors on touch devices without mouse */
+  .custom-cursor {
+    display: none !important;
+  }
+
+  /* Hide the leaflet draw tooltips on touch devices without mouse */
+  .leaflet-draw-tooltip {
+    display: none !important;
+  }
 }
 
-/* Fix for Privacy Policy Link Style */
-/* This ensures links in these specific panels have no default underline */
-#strava-panel a,
-#strava-api-link,
-#settings-panel a {
-  text-decoration: none;
-}
+/* FONTS */
+/*
+ * ███████╗ ██████╗ ███╗   ██╗████████╗███████╗
+ * ██╔════╝██╔═══██╗████╗  ██║╚══██╔══╝██╔════╝
+ * █████╗  ██║   ██║██╔██╗ ██║   ██║   ███████╗
+ * ██╔══╝  ██║   ██║██║╚██╗██║   ██║   ╚════██║
+ * ██║     ╚██████╔╝██║ ╚████║   ██║   ███████║
+ * ╚═╝      ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝
+ */
 
-/* This adds the underline only when the user hovers over them */
-#strava-panel a:hover,
-#strava-api-link:hover,
-#settings-panel a:hover {
-  text-decoration: underline;
-}
-
-/* Style for credits link in settings panel */
-.credits-link {
-  font-size: var(--font-size-14);
-  color: var(--highlight-color) !important;
-  text-decoration: none;
-}
-
-.credits-link:hover {
-  text-decoration: underline;
-}
-
-/* Roboto Font Styles Start */
 @font-face {
   font-family: "Roboto";
   font-style: normal;
   font-weight: 100 900;
   src: url(/fonts/Roboto-VariableFont_wdth,wght.woff2) format("woff2");
 }
-/* Roboto Font Styles End */
 
-/* Material Symbols Styles Start */
 /* Instructions for self hosting: https://developers.google.com/fonts/docs/material_symbols#self-hosting_the_font */
 /* Downloaded font here: https://github.com/google/material-design-icons/tree/master/variablefont */
+/*
+  Current icon subset — update this list when adding new icons, then regenerate the font.
+  Paste it as-is into the URL below (replacing ICONS):
+  add,add_circle,autorenew,cabin,camping,cancel,category,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,mountain_flag,my_location,outdoor_grill,park,pedal_bike,playground,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
+
+  To verify the list is complete, run in DevTools console (copies to clipboard):
+  copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))
+  Note: trigger all UI states first; some icons (e.g. POI categories) only appear after interaction.
+
+  To regenerate the font file:
+  1. Add any new icon names to the list above.
+  2. Open this URL with the list above replacing ICONS:
+  https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL,wght,GRAD,opsz@0..1,200..400,0,24&icon_names=ICONS&display=block
+  The page returns CSS — copy the woff2 URL from the src: url(...) line and download it.
+  3. Verify: python3 -c "from fontTools.ttLib import TTFont; f=TTFont('font.woff2'); print(len(f.getBestCmap()), 'glyphs')"
+  Should print ~100 glyphs (icons + ligature characters). If it errors the file is invalid.
+  4. Rename the downloaded file to MaterialSymbolsOutlined-subset.woff2 and add it to /fonts/.
+*/
 @font-face {
   font-family: "Material Symbols Outlined";
   font-style: normal;
-  src: url(/fonts/MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].woff2) format("woff2");
+  /* Original full font: src: url(/fonts/MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].woff2) format("woff2"); */
+  src: url(/fonts/MaterialSymbolsOutlined-subset.woff2) format("woff2");
 }
 
 .material-symbols {
@@ -1861,87 +2992,15 @@ button.strava-button-secondary:not(:disabled) {
     "opsz" 24 !important;
 }
 
-/* Forcefully sets the cursor to a crosshair for the marker icon
-   whenever any drawing tool is active (class added via main.js L.Draw.Event.DRAWSTART) */
-body.leaflet-is-drawing .leaflet-marker-icon {
-  cursor: crosshair !important;
-}
-
-/* Distance labels shown while drawing polylines */
-.distance-label {
-  pointer-events: none;
-  font-size: var(--font-size-12);
-  font-weight: bold;
-  color: white;
-  text-shadow:
-    -1px -1px 0 black,
-    1px -1px 0 black,
-    -1px 1px 0 black,
-    1px 1px 0 black;
-}
-
-.locate-active .material-symbols {
-  color: var(--color-white) !important;
-}
-
-.routing-panel-icon {
-  width: 16px;
-  height: 16px;
-  display: block;
-  margin: auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Material Symbols Styles End */
-
-#sheet-handle {
-  /* Hide sheet-handle on desktop */
-  display: none;
-}
-
-/* Styles for mouse input */
-/* body:not(.using-touch) {
-} */
-
-/* Styles for touch input */
-body.using-touch {
-  /* This line resets the cursor, overriding 'cursor: none'. */
-  cursor: auto !important;
-
-  /* Hide the routing marker cursors on touch devices without mouse */
-  .custom-cursor {
-    display: none !important;
-  }
-
-  /* Hide the leaflet draw tooltips on touch devices without mouse */
-  .leaflet-draw-tooltip {
-    display: none !important;
-  }
-}
-
-/* POI Finder Modal Styles */
-.poi-category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.poi-category-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  background: var(--background-color);
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: var(--font-size-14);
-}
-
-/* Mobile Specific Styles Start */
+/* MOBILE */
+/*
+ * ███╗   ███╗ ██████╗ ██████╗ ██╗██╗     ███████╗
+ * ████╗ ████║██╔═══██╗██╔══██╗██║██║     ██╔════╝
+ * ██╔████╔██║██║   ██║██████╔╝██║██║     █████╗
+ * ██║╚██╔╝██║██║   ██║██╔══██╗██║██║     ██╔══╝
+ * ██║ ╚═╝ ██║╚██████╔╝██████╔╝██║███████╗███████╗
+ * ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚══════╝╚══════╝
+ */
 
 /* Applies styles for devices with a coarse pointer (e.g., a finger on a touchscreen). */
 @media (pointer: coarse) {
@@ -1957,7 +3016,11 @@ body.using-touch {
 @media (max-width: 768px) {
   :root {
     --sheet-handle-height: 40px; /* sheet-handle haight plus its vertical margin */
-    --mobile-main-right-container-visible-height: 260px;
+    --swal2-html-container-padding: 16px 13px 5px;
+    --mobile-main-right-container-visible-height: min(
+      260px,
+      calc(100dvh - env(safe-area-inset-top) - 370px)
+    );
     --mobile-main-right-container-top: calc(
       100vh - var(--mobile-main-right-container-visible-height)
     ); /* Fallback */
@@ -1981,8 +3044,21 @@ body.using-touch {
     display: none !important;
   }
 
+  /* Hide the info panel while the routing pen mode is active */
+  body:not(.force-desktop-layout).pen-draw-mode #info-panel {
+    display: none !important;
+  }
+
   /* Ignore following styles if desktop layout is forced */
   body:not(.force-desktop-layout) {
+    #offline-indicator {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
+      right: calc(env(safe-area-inset-right) + 10px);
+      width: 190px;
+      max-width: calc(100vw - 81px);
+    }
+
     /* Move the scale up on mobile */
     .leaflet-bottom .leaflet-control-scale {
       position: absolute;
@@ -2039,6 +3115,7 @@ body.using-touch {
       bottom: 0;
       transition: top 0.3s ease-in-out;
       /* border-top: 1px solid var(--border-color); */
+      overflow: visible; /* #info-panel is absolutely positioned above this container (bottom: 100%), so hidden would clip it */
     }
 
     #main-right-container.hidden {
@@ -2053,7 +3130,7 @@ body.using-touch {
       width: 100px;
       height: 30px;
       margin: 5px auto 5px auto;
-      background-color: var(--highlight-color);
+      background-color: var(--color-blue);
       /* border: 1px solid var(--border-color); */
       border-radius: 15px;
       -webkit-tap-highlight-color: transparent;
@@ -2110,36 +3187,42 @@ body.using-touch {
       min-height: 0;
     }
 
-    /* Scrolling fix */
     #tab-content {
-      flex-grow: 1;
-      display: flex;
-      overflow: hidden;
       border-left: none;
       border-right: none;
       border-bottom: none;
     }
 
     .tab-panel.active {
-      flex-grow: 1;
       border-radius: 0 !important;
     }
 
-    /* For the Contents tab, add padding directly to the list */
-    #overview-panel-list {
-      max-height: none;
+    .tab-panel.active:not(#overview-panel) {
       padding-bottom: 20px;
       box-sizing: border-box;
     }
 
-    /* For all OTHER tabs, make the whole panel scrollable and add ONLY bottom padding */
-    .tab-panel.active:not(#overview-panel) {
-      overflow-y: auto;
-      padding-bottom: 20px; /* Only add the buffer at the bottom */
-      box-sizing: border-box;
+    #overview-panel-list {
+      padding-bottom: 20px;
+    }
+
+    #routing-panel {
+      overflow-y: auto; /* whole panel scrolls on mobile */
+    }
+
+    #routing-panel-content {
+      display: block;
+      flex: none;
+      overflow: visible;
+    }
+
+    #directions-panel {
+      flex: none;
     }
 
     #directions-list {
+      flex: none;
+      overflow-y: visible;
       max-height: none;
     }
 
@@ -2158,6 +3241,10 @@ body.using-touch {
 
     #tab-btn-settings {
       border-right: none;
+    }
+
+    #tab-btn-data {
+      display: none !important;
     }
 
     #tab-content,
@@ -2210,4 +3297,3 @@ body.using-touch {
     /* Mobile Bottom Sheet Styles End */
   }
 }
-/* Mobile Specific Styles End */

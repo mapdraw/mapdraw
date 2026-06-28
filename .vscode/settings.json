@@ -1,26 +1,26 @@
 {
-    "[css]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[html]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[javascript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[json]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[jsonc]": {
-        "editor.defaultFormatter": "vscode.json-language-features"
-    },
-    "editor.codeLens": false,
-    "editor.formatOnSave": false,
-    "editor.minimap.enabled": false,
-    "git.openRepositoryInParentFolders": "never",
-    "html.format.wrapLineLength": 0,
-    "liveServer.settings.donotShowInfoMsg": true,
-    "prettier.printWidth": 100,
-    "workbench.editor.enablePreview": false,
-    "workbench.startupEditor": "none"
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "editor.codeLens": false,
+  "editor.formatOnSave": false,
+  "editor.minimap.enabled": false,
+  "git.openRepositoryInParentFolders": "never",
+  "html.format.wrapLineLength": 0,
+  "liveServer.settings.donotShowInfoMsg": true,
+  "prettier.printWidth": 100,
+  "workbench.editor.enablePreview": false,
+  "workbench.startupEditor": "none"
 }

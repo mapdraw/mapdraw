@@ -29,6 +29,21 @@
   .credits-header a:hover {
     text-decoration: underline;
   }
+  .feature-highlights {
+    text-align: center;
+    margin: 5px 0 10px 0;
+  }
+  .feature-highlights ul {
+    padding-left: 0;
+    margin: 0;
+    list-style-type: none;
+    display: inline-block;
+  }
+  .feature-highlights li {
+    margin-bottom: 6px;
+    font-size: var(--font-size-14);
+    text-align: center;
+  }
   .support-section {
     margin: 15px 0;
     text-align: center;
@@ -45,7 +60,7 @@
     font-size: var(--font-size-14);
     font-weight: bold;
     color: var(--color-white) !important;
-    background-color: var(--highlight-color);
+    background-color: var(--color-blue);
     border-radius: 8px;
     text-decoration: none !important;
   }
@@ -85,15 +100,30 @@
 <div class="credits-container">
   <img
     src="/img/icon-1024x1024.png"
-    alt="OpenMapEditor Logo"
+    alt="MapDraw Logo"
     style="width: 150px; height: auto; display: block; margin: 0px auto 10px"
   />
   <div class="credits-header">
     <h3 id="credits-app-name"></h3>
-    <p style="margin: 0 0 10px 0">Version __BUILD_TIMESTAMP__</p>
+    <div class="feature-highlights">
+      <ul>
+        <li>✏️ Draw, edit & style paths, areas, and markers</li>
+        <li>📂 Import & export GeoJSON, GPX, KML, KMZ</li>
+        <li>🔒 Your files never leave your browser</li>
+        <li>🧭 Routing for driving, biking, and walking</li>
+        <li>📈 Elevation profiles for any path</li>
+        <li>🔍 Find nearby points of interest</li>
+        <li>📍 Contribute to OpenStreetMap</li>
+        <li>🔗 Share maps via URL</li>
+        <li>🏃 Strava activity integration</li>
+        <li>🗺️ Import custom WMS map layers</li>
+        <li>📝 Built-in GeoJSON code editor</li>
+        <li>⭐ Free and open source</li>
+      </ul>
+    </div>
     <div class="support-section">
       <a
-        href="https://donate.stripe.com/7sY4gy8bmc8egk61fr7ss00"
+        href="https://donate.stripe.com/bJe8wO3V68W2fg2bU57ss01"
         target="_blank"
         rel="noopener noreferrer"
         class="support-button"
@@ -119,50 +149,27 @@
         >
       </a>
     </div>
-    <p id="credits-app-description"></p>
     <p style="margin-top: 10px">
-      <a href="mailto:openmapeditor@gmail.com">openmapeditor@gmail.com</a><br />
-      <a href="https://github.com/openmapeditor/openmapeditor" target="_blank">GitHub</a><br />
+      <a href="mailto:mapdrawdev@gmail.com">mapdrawdev@gmail.com</a><br />
+      <a href="https://github.com/mapdraw/mapdraw" target="_blank">GitHub</a><br />
       <a href="/privacy.html" target="_blank">Privacy Policy</a>
     </p>
-  </div>
-
-  <div class="credits-section">
-    <h4>Local-First</h4>
-    <div style="display: inline-block; max-width: 450px">
-      <p style="font-size: var(--font-size-14); margin-top: 0; margin-bottom: 10px">
-        Your files are processed entirely on your local machine and are never uploaded to a server.
-        The application sends minimal data to external services:
-      </p>
-      <ul
-        style="
-          padding-left: 0;
-          margin-top: 0;
-          margin-bottom: 0;
-          list-style-position: inside;
-          list-style-type: none;
-        "
-      >
-        <li><strong>Initial Map Centering:</strong> Approximate location.</li>
-        <li><strong>Routing:</strong> Start, end, and via point coordinates.</li>
-        <li><strong>Elevation Profiles:</strong> Path coordinates (when not in file).</li>
-        <li><strong>Search:</strong> Text queries.</li>
-        <li><strong>POI Finder:</strong> Search queries and map bounds.</li>
-        <li><strong>Strava:</strong> Authorization and activity requests.</li>
-      </ul>
-    </div>
+    <p style="margin: 10px 0 0 0">Version __BUILD_TIMESTAMP__</p>
   </div>
 
   <div class="credits-section">
     <h4>Data & Technology Attributions</h4>
     <ul style="padding-left: 0; list-style-type: none">
-      <li>Powered by <a href="https://leafletjs.com" target="_blank">Leaflet</a></li>
+      <li>
+        Powered by <a href="https://leafletjs.com" target="_blank">Leaflet</a> and
+        <a href="https://github.com/mapdraw/mapdraw#plugins--libraries-used" target="_blank"
+          >other open source libraries</a
+        >
+      </li>
       <li class="attribution-subheader">Base Maps</li>
       <li>
         OpenStreetMap: &copy;
-        <a href="https://www.openstreetmap.org/copyright" target="_blank"
-          >OpenStreetMap contributors</a
-        >
+        <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
       </li>
       <li>Esri World Imagery: &copy; <a href="https://www.esri.com" target="_blank">Esri</a></li>
       <li>CyclOSM: &copy; <a href="https://www.cyclosm.org/" target="_blank">CyclOSM</a></li>
@@ -177,13 +184,18 @@
       <li>
         Swisstopo: &copy; <a href="https://www.swisstopo.admin.ch/" target="_blank">swisstopo</a>
       </li>
+      <li class="attribution-subheader">Overlays</li>
+      <li>
+        Waymarked Trails: &copy;
+        <a href="https://waymarkedtrails.org" target="_blank">Waymarked Trails</a>
+      </li>
       <li class="attribution-subheader">Icons & Fonts</li>
       <li>
-        Icons (Material Symbols) provided by
+        Icons (Material Symbols) by
         <a href="https://fonts.google.com/icons" target="_blank">Google Fonts</a>
       </li>
       <li>
-        Font (Roboto) provided by
+        Font (Roboto) by
         <a href="https://fonts.google.com/specimen/Roboto" target="_blank">Google Fonts</a>
       </li>
     </ul>

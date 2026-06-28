@@ -1,11 +1,11 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
-// Apply saved theme on load (dark mode if explicitly saved, otherwise light is default)
+// Apply saved theme on load — glass is default for new users
 (function () {
-  const savedTheme = localStorage.getItem("theme");
-  if (savedTheme === "dark") {
-    document.body.classList.add("dark-mode");
-  }
+  const theme = localStorage.getItem("theme") ?? "glass";
+  if (theme === "dark") document.body.classList.add("dark-mode");
+  else if (theme === "light") document.body.classList.add("light-mode");
+  else document.body.classList.add("glass-mode");
 })();
 
 // Apply saved layout preference on load
@@ -103,8 +103,10 @@ function updateAllDynamicUnitDisplays() {
 
 /**
  * Fetches the credits content from an HTML file and displays it in a SweetAlert modal.
+ * @param {boolean} [isWelcome=false] - If true, shows as a first-visit welcome popup with
+ *   a "Let's Go!" button. If false, shows as the standard credits popup with a "Close" button.
  */
-async function showCreditsPopup() {
+async function showCreditsPopup(isWelcome = false) {
   try {
     const response = await fetch("/credits.html");
     if (!response.ok) {
@@ -115,20 +117,35 @@ async function showCreditsPopup() {
     const swalContent = document.createElement("div");
     swalContent.innerHTML = creditsHtmlContent;
 
-    swalContent.querySelector("#credits-app-name").textContent = APP_NAME;
-    swalContent.querySelector("#credits-app-description").textContent = APP_CREDITS_DESCRIPTION;
+    const appNameEl = swalContent.querySelector("#credits-app-name");
+    if (isWelcome) {
+      appNameEl.innerHTML = `Welcome to ${APP_NAME}`;
+    } else {
+      appNameEl.textContent = APP_NAME;
+    }
 
-    Swal.fire({
+    return Swal.fire({
       html: swalContent,
-      confirmButtonText: "Close",
+      confirmButtonText: isWelcome ? "Let's Go!" : "Close",
     });
   } catch (error) {
     console.error("Could not load credits.html:", error);
-    Swal.fire({
+    return Swal.fire({
       title: "Error",
       text: "Could not load the credits information.",
     });
   }
+}
+
+function showAttributionToast() {
+  Swal.fire({
+    toast: true,
+    position: "top",
+    html: 'Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="color:inherit">OpenStreetMap</a>',
+    showConfirmButton: false,
+    timer: 5000,
+    customClass: { popup: "attribution-toast" },
+  });
 }
 
 /**
@@ -172,9 +189,6 @@ async function initializeMap() {
   if (creditsLink) creditsLink.prepend(APP_NAME + " ");
 
   useImperialUnits = localStorage.getItem("useImperialUnits") === "true";
-
-  // Prevent polyline drawing tool from finishing on second tap on touch devices
-  L.Draw.Polyline.prototype._onTouch = L.Util.falseFn;
 
   infoPanel = document.getElementById("info-panel");
   infoPanelName = document.getElementById("info-panel-name");
@@ -268,6 +282,9 @@ async function initializeMap() {
 <p style="text-align: left">
   <strong>Adding Extra Via Points: </strong>You can add extra stops by <strong>long-pressing or right-clicking</strong> anywhere on the route line.
 </p>
+<p style="text-align: left; margin: 18px 0 0 0">
+  <strong>Draw Mode:</strong> Use the <span class="material-symbols" style="font-size: 1em; vertical-align: middle">draw</span> button to trace a route step by step. First click sets the start, second sets the end, and each click after that extends the route. <strong>To finish, click the last marker, press Escape, or click the button again.</strong>
+</p>
 `,
           confirmButtonText: "Got it!",
         });
@@ -277,25 +294,36 @@ async function initializeMap() {
 
   const layerDisplayNames = {
     OpenStreetMap: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap',
+    OsmGrayscale: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap Gray',
     EsriWorldImagery: '<span class="material-symbols layer-icon">globe</span> Esri World Imagery',
     CyclOSM: '<span class="material-symbols layer-icon">globe</span> CyclOSM',
     TracestrackTopo: '<span class="material-symbols layer-icon">globe</span> Tracestrack Topo',
     TopPlusOpen: '<span class="fi fi-de fis"></span> TopPlusOpen',
     Swisstopo: '<span class="fi fi-ch fis"></span> Swisstopo',
-    Empty: '<span class="material-symbols layer-icon">cancel</span> No Base Layer',
+    Empty: '<span class="material-symbols layer-icon">cancel</span> No Base Map',
     DrawnItems: '<span class="material-symbols layer-icon">edit</span> Drawn Items',
     ImportedFiles: '<span class="material-symbols layer-icon">folder_open</span> Imported Files',
     StravaActivities:
       '<span class="material-symbols layer-icon">directions_run</span> Strava Activities',
     FoundPlaces: '<span class="material-symbols layer-icon">location_on</span> Found Places',
+    WaymarkedTrailsHiking:
+      '<span class="material-symbols layer-icon">directions_walk</span> Waymarked Trails Hiking',
+    WaymarkedTrailsCycling:
+      '<span class="material-symbols layer-icon">directions_bike</span> Waymarked Trails Cycling',
   };
 
   const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
   });
 
+  const osmGrayscaleLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    className: "grayscale-tiles",
+  });
+
   const baseMaps = {
     OpenStreetMap: osmLayer,
+    OsmGrayscale: osmGrayscaleLayer,
     EsriWorldImagery: L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { maxZoom: 19 },
@@ -324,7 +352,7 @@ async function initializeMap() {
     zoom: 2,
     zoomControl: false,
     attributionControl: false,
-    doubleClickZoom: false,
+    doubleClickZoom: true,
     worldCopyJump: true,
   });
 
@@ -333,6 +361,8 @@ async function initializeMap() {
   map.getPane("wmsPane").style.zIndex = 250;
 
   const initialView = parseMapHash(window.location.hash);
+  const savedHash = localStorage.getItem("lastHash");
+  const savedView = savedHash ? parseMapHash(savedHash) : null;
   // Prevents circular updates when syncing map view from URL hash
   let isSyncingFromUrl = false;
 
@@ -351,6 +381,9 @@ async function initializeMap() {
         lon: initialView.lon,
       };
     }
+  } else if (savedView) {
+    history.replaceState(null, "", savedHash);
+    map.setView([savedView.lat, savedView.lon], savedView.zoom);
   } else {
     fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=${googleApiKey}`, {
       method: "POST",
@@ -377,10 +410,11 @@ async function initializeMap() {
     if (isSyncingFromUrl) return;
     const center = map.getCenter();
     const zoom = map.getZoom();
-    const lat = center.lat.toFixed(5);
-    const lng = center.lng.toFixed(5);
+    const lat = center.lat.toFixed(6);
+    const lng = center.lng.toFixed(6);
     const newHash = `#map=${zoom}/${lat}/${lng}`;
     history.replaceState(null, "", newHash);
+    localStorage.setItem("lastHash", newHash);
   };
 
   map.on("moveend", updateUrlHash);
@@ -398,8 +432,8 @@ async function initializeMap() {
       const currentZoom = map.getZoom();
       if (
         currentZoom !== newView.zoom ||
-        currentCenter.lat.toFixed(5) !== newView.lat.toFixed(5) ||
-        currentCenter.lng.toFixed(5) !== newView.lon.toFixed(5)
+        currentCenter.lat.toFixed(6) !== newView.lat.toFixed(6) ||
+        currentCenter.lng.toFixed(6) !== newView.lon.toFixed(6)
       ) {
         isSyncingFromUrl = true;
         map.setView([newView.lat, newView.lon], newView.zoom);
@@ -420,10 +454,12 @@ async function initializeMap() {
   // Initialize POI finder first so we can add it to layer control
   initPoiFinder();
 
+  let restoredData = false;
+
   // Import shared data from URL if present (now that layer groups are ready)
   if (window._pendingShareData) {
     const { data, zoom, lat, lon } = window._pendingShareData;
-    const success = importMapStateFromUrl(data);
+    const success = await importMapStateFromUrl(data);
 
     if (success) {
       console.log("Successfully loaded shared map data from URL");
@@ -451,17 +487,38 @@ async function initializeMap() {
     delete window._pendingShareData;
   } else {
     // No share URL — restore previous session from IndexedDB
-    await restoreAutosave();
+    restoredData = await restoreAutosave();
   }
 
   // Start periodic autosave (every 5s, writes only on change)
   startAutosave();
 
+  // Show welcome popup once for new visitors (bare domain, never shown before)
+  // Delay attribution toast if restore toast is already showing (matches restoreAutosave's 3000ms timer)
+  const attributionDelay = restoredData ? 3500 : 0;
+  if (!initialView && !localStorage.getItem("hasSeenWelcome")) {
+    localStorage.setItem("hasSeenWelcome", "true");
+    showCreditsPopup(true).then(() => showAttributionToast());
+  } else {
+    setTimeout(showAttributionToast, attributionDelay);
+  }
+
   const allOverlayMaps = {
     DrawnItems: drawnItems,
     ImportedFiles: importedItems,
     StravaActivities: stravaActivitiesLayer,
-    FoundPlaces: poiSearchResults,
+    FoundPlaces: poiMasterLayer,
+    WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      zIndex: 200,
+    }),
+    WaymarkedTrailsCycling: L.tileLayer(
+      "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        zIndex: 200,
+      },
+    ),
   };
 
   const swissBounds = L.latLngBounds([
@@ -522,19 +579,31 @@ async function initializeMap() {
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
 
-  const userContentNames = ["DrawnItems", "ImportedFiles", "StravaActivities", "FoundPlaces"]; // Always on top
+  const tileOverlayNames = ["WaymarkedTrailsHiking", "WaymarkedTrailsCycling"];
+
+  const userContentNames = ["DrawnItems", "ImportedFiles", "StravaActivities", "FoundPlaces"];
+
+  const renderOverlayCheckboxes = (names) => {
+    for (const name of names) {
+      if (allOverlayMaps[name]) {
+        const layer = allOverlayMaps[name];
+        const layerId = L.Util.stamp(layer);
+        const isChecked = map.hasLayer(layer) ? 'checked="checked"' : "";
+        const displayName = layerDisplayNames[name] || name;
+        formContent += `<label data-layer-name="${name}"><div><input type="checkbox" class="leaflet-control-layers-selector" ${isChecked} data-layer-id="${layerId}" data-layer-name="${name}"><span> ${displayName}</span></div></label>`;
+      }
+    }
+  };
+
+  formContent += '<div class="leaflet-control-layers-user-content">';
+  renderOverlayCheckboxes(tileOverlayNames);
+  formContent += "</div>";
+
+  formContent += '<div class="leaflet-control-layers-separator"></div>';
 
   // User content layers (not sortable, always on top)
   formContent += '<div class="leaflet-control-layers-user-content">';
-  for (const name of userContentNames) {
-    if (allOverlayMaps[name]) {
-      const layer = allOverlayMaps[name];
-      const layerId = L.Util.stamp(layer);
-      const isChecked = map.hasLayer(layer) ? 'checked="checked"' : "";
-      const displayName = layerDisplayNames[name] || name;
-      formContent += `<label data-layer-name="${name}"><div><input type="checkbox" class="leaflet-control-layers-selector" ${isChecked} data-layer-id="${layerId}" data-layer-name="${name}"><span> ${displayName}</span></div></label>`;
-    }
-  }
+  renderOverlayCheckboxes(userContentNames);
   formContent += "</div>";
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
@@ -545,7 +614,7 @@ async function initializeMap() {
 
   // Add Import Maps button for custom WMS layers
   formContent += `
-    <div style="padding: 8px 10px;">
+    <div style="padding: 4px 0px 0;">
       <button
         id="wms-import-btn"
         class="wms-import-button"
@@ -691,6 +760,9 @@ async function initializeMap() {
     }
   };
 
+  // Restore saved POI results now that the layer control and ensurePoiLayerVisible are ready
+  if (window._restorePoiFromDb) _restorePoiFromDb();
+
   // Function to save overlay order to localStorage
   function saveOverlayOrder() {
     const overlayLabels = overlaysList.querySelectorAll("label");
@@ -834,7 +906,7 @@ async function initializeMap() {
         "leaflet-bar leaflet-control leaflet-control-custom",
       );
       container.id = "elevation-button";
-      container.title = "No path selected";
+      container.title = "Select a path to show elevation";
       container.innerHTML = '<a href="#" role="button"></a>';
       L.DomEvent.on(container, "click", (ev) => {
         L.DomEvent.stop(ev);
@@ -870,8 +942,8 @@ async function initializeMap() {
       container.innerHTML =
         '<a href="#" role="button"></a>' +
         '<div class="download-submenu">' +
-        '<button id="download-gpx-single" disabled title="Download selected item as GPX">GPX (Selected Item)</button>' +
-        '<button id="download-geojson-single" disabled title="Download selected item as GeoJSON">GeoJSON (Selected Item)</button>' +
+        '<button id="download-gpx-single" disabled title="Select an item to download as GPX">GPX (Selected Item)</button>' +
+        '<button id="download-geojson-single" disabled title="Select an item to download as GeoJSON">GeoJSON (Selected Item)</button>' +
         '<button id="download-geojson" title="Download everything as GeoJSON">GeoJSON (Everything)</button>' +
         '<button id="download-kml" title="Download everything as KML">KML (Everything)</button>' +
         '<button id="share-link" title="Copy share link for everything">Copy Share Link (Everything)</button>' +
@@ -923,7 +995,20 @@ async function initializeMap() {
       });
       L.DomEvent.on(container.querySelector("#share-link"), "click", async (e) => {
         L.DomEvent.stop(e);
-        const shareUrl = buildShareableUrl();
+        let shareUrl;
+        try {
+          shareUrl = await buildShareableUrl();
+        } catch {
+          Swal.fire({
+            toast: true,
+            icon: "error",
+            title: "Sharing not supported in this browser",
+            position: "top",
+            showConfirmButton: false,
+            timer: 3000,
+          });
+          return;
+        }
         if (!shareUrl) {
           Swal.fire({
             toast: true,
@@ -1105,6 +1190,20 @@ async function initializeMap() {
     }
   });
 
+  // Auto-enter fullscreen on first tap when running as installed mobile PWA
+  const isInstalledPWA = window.matchMedia("(display-mode: standalone)").matches;
+  if (isInstalledPWA && navigator.maxTouchPoints > 0) {
+    document.addEventListener(
+      "click",
+      () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      },
+      { once: true },
+    );
+  }
+
   document.addEventListener("keydown", (e) => {
     if (e.target.matches("input, textarea")) return;
     if (e.key.toLowerCase() === "f") {
@@ -1114,6 +1213,10 @@ async function initializeMap() {
     if ((e.key === "Delete" || e.key === "Backspace") && globallySelectedItem) {
       e.preventDefault();
       deleteLayerImmediately(globallySelectedItem);
+    }
+    if (e.key === "Escape") {
+      if (window.app.exitRoutePointSelectionMode) window.app.exitRoutePointSelectionMode();
+      if (window.app.exitPenMode) window.app.exitPenMode();
     }
   });
 
@@ -1136,14 +1239,7 @@ async function initializeMap() {
   if (poiFinderBtn) {
     poiFinderBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      const hasResults = poiSearchResults && poiSearchResults.getLayers().length > 0;
-      if (hasResults) {
-        // Clear existing results
-        clearPOIResults();
-      } else {
-        // Show POI finder modal
-        showPoiFinder();
-      }
+      showPoiFinder();
     });
   }
 
@@ -1163,7 +1259,7 @@ async function initializeMap() {
 
     const popupContent = document.createElement("div");
     popupContent.style.textAlign = "center";
-    popupContent.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">${label}</div>`;
+    popupContent.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">${escHtml(label)}</div>`;
 
     const saveButton = document.createElement("button");
     saveButton.textContent = "Save to Map";
@@ -1172,7 +1268,8 @@ async function initializeMap() {
     popupContent.appendChild(saveButton);
 
     L.DomEvent.on(saveButton, "click", () => {
-      createAndSaveMarker(locationLatLng, label);
+      const plainLabel = label.replace(/<[^>]*>/g, "").trim();
+      createAndSaveMarker(locationLatLng, plainLabel);
 
       // Clean up the temporary marker and input
       if (temporarySearchMarker) {
@@ -1183,7 +1280,7 @@ async function initializeMap() {
     });
 
     temporarySearchMarker
-      .bindPopup(popupContent, { offset: L.point(0, -35), maxWidth: 150 })
+      .bindPopup(popupContent, { maxWidth: 150, closeButton: false })
       .openPopup();
 
     temporarySearchMarker.on("popupclose", () => {
@@ -1196,6 +1293,9 @@ async function initializeMap() {
     map.flyTo(locationLatLng, map.getZoom() < 16 ? 16 : map.getZoom());
   };
 
+  // Exposed for use in osm.js contributions panel
+  window.showSearchMarker = onSearchResult;
+
   // Attach search modal to search button
   attachSearchModalToInput(searchBtn, "Search Location", onSearchResult);
 
@@ -1204,23 +1304,68 @@ async function initializeMap() {
   // Hide elevation panel on load to prevent blocking map interactions on mobile
   document.getElementById("elevation-div").style.visibility = "hidden";
 
-  // Fix Leaflet.draw toolbar on iPad with mouse by forcing click events instead of touchstart
+  // ---- Leaflet.draw patches (start) ----
+
+  // Prevent polyline drawing tool from finishing on second tap on touch devices
+  L.Draw.Polyline.prototype._onTouch = L.Util.falseFn;
+
+  // Fix toolbar on iPad with mouse by forcing click events instead of touchstart
   if (L.Toolbar) {
     L.Toolbar.prototype._detectIOS = () => false;
   }
 
-  // Patch Leaflet.draw use of deprecated _flat method to use isFlat instead
+  // _checkDisabled listens to featureGroup layerremove. In delete mode, _removeLayer moves layers
+  // from featureGroup to _deletedLayers, firing layerremove mid-session and wrongly disabling buttons.
+  // Guard it with enabled() (_activeMode !== null); patch _handlerDeactivated to call it after the
+  // mode ends — save() fires no layerremove so _checkDisabled would never run to fix state otherwise.
+  if (L.EditToolbar) {
+    const origCheckDisabled = L.EditToolbar.prototype._checkDisabled;
+    L.EditToolbar.prototype._checkDisabled = function () {
+      if (this.enabled()) return;
+      origCheckDisabled.call(this);
+    };
+    const origHandlerDeactivated = L.EditToolbar.prototype._handlerDeactivated;
+    L.EditToolbar.prototype._handlerDeactivated = function () {
+      origHandlerDeactivated.call(this);
+      this._checkDisabled();
+    };
+  }
+
+  // Patch deprecated _flat method
   if (L.Polyline && L.LineUtil && L.LineUtil.isFlat) {
     L.Polyline._flat = L.LineUtil.isFlat;
   }
 
+  // ---- Leaflet.draw patches (end) ----
+
+  // Path
   L.drawLocal.draw.toolbar.buttons.polyline = "Draw path";
-  L.drawLocal.draw.toolbar.buttons.marker = "Place marker";
+  L.drawLocal.draw.handlers.polyline.tooltip.start = "Click to start drawing path";
+  L.drawLocal.draw.handlers.polyline.tooltip.cont = "Click to continue path";
+  L.drawLocal.draw.handlers.polyline.tooltip.end = "Click last point to finish path";
+
+  // Area
   L.drawLocal.draw.toolbar.buttons.polygon = "Draw area";
+  L.drawLocal.draw.handlers.polygon.tooltip.start = "Click to start drawing area";
+  L.drawLocal.draw.handlers.polygon.tooltip.cont = "Click to continue area";
+  L.drawLocal.draw.handlers.polygon.tooltip.end = "Click first point to close area";
+
+  // Marker
+  L.drawLocal.draw.toolbar.buttons.marker = "Place marker";
+  L.drawLocal.draw.handlers.marker.tooltip.start = "Click to place marker";
+
+  // Edit toolbar buttons
   L.drawLocal.edit.toolbar.buttons.edit = "Edit";
   L.drawLocal.edit.toolbar.buttons.remove = "Delete";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No items to edit";
   L.drawLocal.edit.toolbar.buttons.removeDisabled = "No items to delete";
+
+  // Edit toolbar tooltips
+  L.drawLocal.edit.handlers.edit.tooltip.text =
+    "Drag handles or markers to edit<br>Click cancel to undo";
+  L.drawLocal.edit.handlers.edit.tooltip.subtext = "";
+  L.drawLocal.edit.handlers.remove.tooltip.text = "Click an item to delete<br>Click cancel to undo";
+
   drawControl = new L.Control.Draw({
     edit: { featureGroup: editableLayers },
     draw: {
@@ -1387,6 +1532,13 @@ async function initializeMap() {
     }
   });
 
+  // Leaflet.draw handles Escape for draw tools internally, but not for edit/delete mode.
+  document.addEventListener("keyup", (e) => {
+    if (e.key !== "Escape") return;
+    const editToolbar = drawControl._toolbars[L.EditToolbar.TYPE];
+    if (editToolbar?.enabled()) editToolbar.disable();
+  });
+
   map.on(L.Draw.Event.DELETESTART, () => {
     isDeleteMode = true;
     deselectCurrentItem();
@@ -1450,6 +1602,8 @@ async function initializeMap() {
   initializeContextMenu(map);
   const settingsPanel = document.getElementById("settings-panel");
   if (settingsPanel) {
+    initializeOSM(settingsPanel);
+
     const simplificationContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const labelGroup = L.DomUtil.create("div", "", simplificationContainer);
     labelGroup.style.display = "flex";
@@ -1504,20 +1658,26 @@ async function initializeMap() {
 
     const themeToggleContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const themeLabel = L.DomUtil.create("label", "", themeToggleContainer);
-    themeLabel.htmlFor = "theme-toggle";
-    themeLabel.innerText = "Dark Mode";
-    const themeCheckbox = L.DomUtil.create("input", "", themeToggleContainer);
-    themeCheckbox.type = "checkbox";
-    themeCheckbox.id = "theme-toggle";
-    themeCheckbox.checked = document.body.classList.contains("dark-mode");
-    L.DomEvent.on(themeCheckbox, "change", (e) => {
-      if (e.target.checked) {
-        document.body.classList.add("dark-mode");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.body.classList.remove("dark-mode");
-        localStorage.setItem("theme", "light");
-      }
+    themeLabel.innerText = "Theme";
+    const themeSelect = L.DomUtil.create("select", "", themeToggleContainer);
+    themeSelect.id = "theme-select";
+    const currentTheme = localStorage.getItem("theme") ?? "glass";
+    [
+      ["glass", "Glass"],
+      ["light", "Light"],
+      ["dark", "Dark"],
+    ].forEach(([value, label]) => {
+      const option = L.DomUtil.create("option", "", themeSelect);
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === currentTheme;
+    });
+    L.DomEvent.on(themeSelect, "change", (e) => {
+      document.body.classList.remove("dark-mode", "light-mode", "glass-mode");
+      if (e.target.value === "dark") document.body.classList.add("dark-mode");
+      else if (e.target.value === "light") document.body.classList.add("light-mode");
+      else document.body.classList.add("glass-mode");
+      localStorage.setItem("theme", e.target.value);
     });
     L.DomEvent.on(themeToggleContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
 
@@ -1583,6 +1743,49 @@ async function initializeMap() {
         document.body.classList.remove("force-desktop-layout");
       }
     });
+
+    const lineThicknessContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
+    const lineThicknessLabel = L.DomUtil.create("label", "", lineThicknessContainer);
+    lineThicknessLabel.htmlFor = "line-thickness-slider";
+    lineThicknessLabel.innerText = "Line Thickness";
+    const lineThicknessRight = L.DomUtil.create(
+      "div",
+      "settings-slider-group",
+      lineThicknessContainer,
+    );
+    const lineThicknessValue = L.DomUtil.create(
+      "span",
+      "settings-slider-value",
+      lineThicknessRight,
+    );
+    lineThicknessValue.innerText = lineThickness;
+    const lineThicknessSlider = L.DomUtil.create("input", "settings-slider", lineThicknessRight);
+    lineThicknessSlider.type = "range";
+    lineThicknessSlider.id = "line-thickness-slider";
+    lineThicknessSlider.min = 2;
+    lineThicknessSlider.max = 20;
+    lineThicknessSlider.step = 2;
+    lineThicknessSlider.value = lineThickness;
+    L.DomEvent.on(lineThicknessSlider, "input", (e) => {
+      lineThickness = parseInt(e.target.value);
+      lineThicknessValue.innerText = lineThickness;
+      STYLE_CONFIG.path.default.weight = lineThickness;
+      STYLE_CONFIG.path.highlight.weight = lineThickness;
+      localStorage.setItem("lineThickness", lineThickness);
+      [drawnItems, importedItems, stravaActivitiesLayer].forEach((group) => {
+        group.eachLayer((layer) => {
+          if (layer instanceof L.Polyline || layer instanceof L.GeoJSON) {
+            layer.setStyle({ weight: lineThickness });
+          }
+        });
+      });
+      if (selectedPathOutline) {
+        selectedPathOutline.setStyle({
+          weight: lineThickness + STYLE_CONFIG.path.highlight.outline.weightOffset,
+        });
+      }
+    });
+    L.DomEvent.on(lineThicknessContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
 
     const routingProviderContainer = L.DomUtil.create(
       "div",
@@ -1671,17 +1874,6 @@ async function initializeMap() {
       L.DomEvent.stopPropagation,
     );
 
-    const privacyPolicyContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
-    const privacyPolicyLabel = L.DomUtil.create("label", "", privacyPolicyContainer);
-    privacyPolicyLabel.innerText = "Legal";
-    privacyPolicyLabel.style.color = "var(--text-color)";
-    const privacyPolicyLink = L.DomUtil.create("a", "", privacyPolicyContainer);
-    privacyPolicyLink.href = "/privacy.html";
-    privacyPolicyLink.target = "_blank";
-    privacyPolicyLink.innerText = "View Privacy Policy";
-    privacyPolicyLink.style.fontSize = "var(--font-size-14)";
-    privacyPolicyLink.style.color = "var(--highlight-color)";
-
     const aboutContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const aboutLabel = L.DomUtil.create("label", "", aboutContainer);
     aboutLabel.innerText = "About";
@@ -1696,6 +1888,17 @@ async function initializeMap() {
       showCreditsPopup();
     });
 
+    const privacyPolicyContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
+    const privacyPolicyLabel = L.DomUtil.create("label", "", privacyPolicyContainer);
+    privacyPolicyLabel.innerText = "Legal";
+    privacyPolicyLabel.style.color = "var(--text-color)";
+    const privacyPolicyLink = L.DomUtil.create("a", "", privacyPolicyContainer);
+    privacyPolicyLink.href = "/privacy.html";
+    privacyPolicyLink.target = "_blank";
+    privacyPolicyLink.innerText = "View Privacy Policy";
+    privacyPolicyLink.style.fontSize = "var(--font-size-14)";
+    privacyPolicyLink.style.color = "var(--link-color)";
+
     const devPanelContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const devPanelLabel = L.DomUtil.create("label", "", devPanelContainer);
     devPanelLabel.innerText = "Developer";
@@ -1704,7 +1907,7 @@ async function initializeMap() {
     devPanelLink.href = "#";
     devPanelLink.innerText = "Open Developer Panel";
     devPanelLink.style.fontSize = "var(--font-size-14)";
-    devPanelLink.style.color = "var(--highlight-color)";
+    devPanelLink.style.color = "var(--link-color)";
 
     L.DomEvent.on(devPanelLink, "click", (e) => {
       L.DomEvent.stop(e);
@@ -1743,6 +1946,9 @@ async function initializeMap() {
     subtree: true,
     characterData: true,
   });
+
+  document.addEventListener("penModeExited", () => adjustInfoPanelNameHeight(infoPanelName));
+
   let deferredPrompt;
 
   window.addEventListener("beforeinstallprompt", (e) => {
@@ -1868,58 +2074,33 @@ document.addEventListener("DOMContentLoaded", initializeMap);
 
 // Offline indicator
 (function () {
-  const searchBtn = document.getElementById("search-btn");
-  const poiFinderBtn = document.getElementById("poi-finder-btn");
-  const routeStart = document.getElementById("route-start");
-  const routeEnd = document.getElementById("route-end");
-  const routeVia = document.getElementById("route-via");
+  const indicator = document.getElementById("offline-indicator");
+  const toDisable = [
+    document.getElementById("search-btn"),
+    document.getElementById("poi-finder-btn"),
+    document.getElementById("route-start"),
+    document.getElementById("route-end"),
+    document.getElementById("route-via"),
+  ];
 
-  const setOffline = (element) => {
-    element.disabled = true;
-    element.classList.add("offline");
-    if (element.id === "poi-finder-btn") {
-      element.textContent = "OFFLINE";
-    }
+  const setOffline = () => {
+    indicator.classList.add("visible");
+    toDisable.forEach((el) => {
+      if (el) el.disabled = true;
+    });
+    if (typeof Swal !== "undefined" && Swal.isVisible()) Swal.close();
   };
 
-  const setOnline = (element) => {
-    element.disabled = false;
-    element.classList.remove("offline");
-    if (element.id === "poi-finder-btn") {
-      // Update button text based on current state instead of always setting to "Find Places"
-      if (window.updatePOIFinderButton) {
-        window.updatePOIFinderButton();
-      }
-    }
+  const setOnline = () => {
+    indicator.classList.remove("visible");
+    toDisable.forEach((el) => {
+      if (el) el.disabled = false;
+    });
   };
 
-  window.addEventListener("offline", () => {
-    setOffline(searchBtn);
-    setOffline(poiFinderBtn);
-    setOffline(routeStart);
-    setOffline(routeEnd);
-    setOffline(routeVia);
-    // Close any open search modal
-    if (typeof Swal !== "undefined" && Swal.isVisible()) {
-      Swal.close();
-    }
-  });
-
-  window.addEventListener("online", () => {
-    setOnline(searchBtn);
-    setOnline(poiFinderBtn);
-    setOnline(routeStart);
-    setOnline(routeEnd);
-    setOnline(routeVia);
-  });
-
-  if (!navigator.onLine) {
-    setOffline(searchBtn);
-    setOffline(poiFinderBtn);
-    setOffline(routeStart);
-    setOffline(routeEnd);
-    setOffline(routeVia);
-  }
+  window.addEventListener("offline", setOffline);
+  window.addEventListener("online", setOnline);
+  if (!navigator.onLine) setOffline();
 })();
 
 // console.log("User Agent:", navigator.userAgent);

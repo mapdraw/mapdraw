@@ -2,8 +2,19 @@
 <!-- Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details. -->
 <html lang="en">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "GA_MEASUREMENT_ID");
+    </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>__APP_TITLE__</title>
     <meta name="description" content="__APP_DESCRIPTION__" />
 
@@ -11,6 +22,20 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
 
     <link rel="manifest" href="/manifest.json" />
+
+    <link rel="stylesheet" href="/codemirror-6.65.7/lib/codemirror.css" />
+    <link rel="stylesheet" href="/codemirror-6.65.7/addon/fold/foldgutter.css" />
+    <link rel="stylesheet" href="/codemirror-6.65.7/theme/eclipse.css" />
+    <link rel="stylesheet" href="/codemirror-6.65.7/theme/dracula.css" />
+    <script src="/codemirror-6.65.7/lib/codemirror.js"></script>
+    <script src="/codemirror-6.65.7/mode/javascript/javascript.js"></script>
+    <script src="/codemirror-6.65.7/addon/edit/matchbrackets.js"></script>
+    <script src="/codemirror-6.65.7/addon/fold/foldcode.js"></script>
+    <script src="/codemirror-6.65.7/addon/fold/foldgutter.js"></script>
+    <script src="/codemirror-6.65.7/addon/fold/brace-fold.js"></script>
+    <script src="/codemirror-6.65.7/addon/selection/active-line.js"></script>
+    <link rel="stylesheet" href="/codemirror-6.65.7/addon/lint/lint.css" />
+    <script src="/codemirror-6.65.7/addon/lint/lint.js"></script>
 
     <script src="/d3-7.9.0/d3.v7.min.js"></script>
 
@@ -38,8 +63,6 @@
 
     <link rel="stylesheet" href="/leaflet-routing-machine-3.2.12/leaflet-routing-machine.css" />
     <script src="/leaflet-routing-machine-3.2.12/leaflet-routing-machine.min.js"></script>
-
-    <script src="/lz-string-1.5.0/lz-string.min.js"></script>
 
     <script src="/polyline-encoded-0.0.9/Polyline.encoded.js"></script>
 
@@ -69,9 +92,11 @@
         </button>
         <button id="poi-finder-btn" class="top-right-btn" title="Find Places">Find Places</button>
         <button id="search-btn" class="top-right-btn" title="Search for addresses and coordinates">
-          <span class="icon-search-online material-symbols">search</span>
-          <span class="icon-search-offline material-symbols">sentiment_dissatisfied</span>
+          <span class="material-symbols">search</span>
         </button>
+        <div id="offline-indicator">
+          <span class="material-symbols">sentiment_dissatisfied</span>OFFLINE
+        </div>
       </div>
 
       <div id="main-right-container">
@@ -83,7 +108,7 @@
           <textarea id="info-panel-name" rows="1"></textarea>
           <p id="info-panel-details"></p>
           <p id="info-panel-edit-hint" style="display: none"></p>
-          <a id="info-panel-strava-link" target="_blank" rel="noopener noreferrer"></a>
+          <a id="info-panel-strava-link" href="" target="_blank" rel="noopener noreferrer"></a>
           <div id="info-panel-style-row">
             <div id="info-panel-color-swatch" title="Change color"></div>
             <span id="info-panel-layer-name"></span>
@@ -104,6 +129,14 @@
               Strava
             </button>
             <button
+              id="tab-btn-data"
+              class="tab-button"
+              data-target="data-editor-panel"
+              title="GeoJSON Editor"
+            >
+              <span class="material-symbols">data_object</span>
+            </button>
+            <button
               id="tab-btn-settings"
               class="tab-button"
               data-target="settings-panel"
@@ -111,8 +144,8 @@
             >
               <span class="material-symbols material-symbols-fill">settings</span>
             </button>
-            <button id="tab-btn-heart" class="js-show-credits" title="View Credits">
-              <span class="material-symbols material-symbols-fill">favorite</span>
+            <button id="tab-btn-heart" class="js-show-credits" title="About">
+              <span class="material-symbols">info</span>
             </button>
           </div>
 
@@ -126,9 +159,7 @@
                 <div class="panel-input-group">
                   <input type="text" id="route-start" placeholder="Start" autocomplete="off" />
                   <button id="select-start-on-map" title="Select start point on map">
-                    <span
-                      class="material-symbols material-symbols-fill routing-panel-icon"
-                      style="color: var(--routing-color-start)"
+                    <span class="material-symbols material-symbols-fill routing-panel-icon"
                       >location_on</span
                     >
                   </button>
@@ -152,9 +183,7 @@
                     autocomplete="off"
                   />
                   <button id="select-via-on-map" title="Select via point on map">
-                    <span
-                      class="material-symbols material-symbols-fill routing-panel-icon"
-                      style="color: var(--routing-color-via)"
+                    <span class="material-symbols material-symbols-fill routing-panel-icon"
                       >location_on</span
                     >
                   </button>
@@ -173,9 +202,7 @@
                 <div class="panel-input-group">
                   <input type="text" id="route-end" placeholder="End" autocomplete="off" />
                   <button id="select-end-on-map" title="Select end point on map">
-                    <span
-                      class="material-symbols material-symbols-fill routing-panel-icon"
-                      style="color: var(--routing-color-end)"
+                    <span class="material-symbols material-symbols-fill routing-panel-icon"
                       >location_on</span
                     >
                   </button>
@@ -203,6 +230,12 @@
                       <span class="material-symbols">directions_walk</span>
                     </button>
                   </div>
+                  <button
+                    id="routing-pen-btn"
+                    title="Draw route step by step: first click sets start, second sets end, each next click extends the route"
+                  >
+                    <span class="material-symbols routing-panel-icon">draw</span>
+                  </button>
                   <button id="save-route-btn" title="Save current route to the map">Save</button>
                   <button id="clear-route-btn" title="Clear the current route and all points">
                     Clear
@@ -231,6 +264,32 @@
                 <p style="padding: 15px; text-align: center">
                   Connect with Strava to see your activities on the map.
                 </p>
+              </div>
+            </div>
+            <div id="data-editor-panel" class="tab-panel">
+              <div id="data-editor-notice">Excludes Strava activities and unsaved routes.</div>
+              <textarea
+                id="data-editor-textarea"
+                spellcheck="false"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+              ></textarea>
+              <div id="data-editor-error" role="alert"></div>
+              <div id="data-editor-actions">
+                <button id="data-editor-restore" title="Discard edits and reset to map">
+                  Reset
+                </button>
+                <button id="data-editor-apply" title="Apply to map">Apply</button>
+                <button id="data-editor-find" title="Jump to selected feature">
+                  Go to Selected
+                </button>
+                <button id="data-editor-copy" title="Copy GeoJSON to clipboard">
+                  <span class="material-symbols">content_copy</span>
+                </button>
+                <button id="data-editor-copy-clean" title="Copy GeoJSON without properties">
+                  Copy Clean
+                </button>
               </div>
             </div>
             <div id="settings-panel" class="tab-panel"></div>
@@ -278,12 +337,14 @@
     <script src="/js/autosave.js"></script>
     <script src="/js/routing.js"></script>
     <script src="/js/strava.js"></script>
+    <script src="/js/osm.js"></script>
     <script src="/js/contextmenu.js"></script>
     <script src="/js/leaflet-wms-gutter.js"></script>
     <script src="/js/wms-import.js"></script>
     <script src="/js/search.js"></script>
     <script src="/js/poi-finder.js"></script>
     <script src="/js/dev-panel.js"></script>
+    <script src="/js/data-editor.js"></script>
     <script src="/js/main.js"></script>
     <!-- END-BUNDLE -->
   </body>

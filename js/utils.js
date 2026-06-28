@@ -1,5 +1,14 @@
 // Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
 
+function escHtml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /**
  * Ensures the Google Maps API is loaded only once. Returns a promise that resolves
  * when the API is ready, handling concurrent load requests gracefully.
@@ -462,7 +471,7 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
       suggestionsEl.innerHTML = "";
       suggestionsEl.style.display = "none";
 
-      callback(latLng, `${latLng.lat.toFixed(5)}, ${latLng.lng.toFixed(5)}`);
+      callback(latLng, `${latLng.lat.toFixed(6)}, ${latLng.lng.toFixed(6)}`);
 
       return;
     }
@@ -596,6 +605,15 @@ function createAndSaveMarker(lat, lon, name) {
   const newMarker = L.marker(latLng, {
     icon: createMarkerIcon(DEFAULT_COLOR, STYLE_CONFIG.marker.default.opacity),
   });
+
+  // DEBUG: red dot at exact latlng to verify marker alignment
+  // L.circleMarker(latLng, {
+  //   radius: 4,
+  //   color: "red",
+  //   fillColor: "red",
+  //   fillOpacity: 1,
+  //   weight: 0,
+  // }).addTo(map);
 
   newMarker.pathType = "drawn";
   newMarker.feature = {
