@@ -1434,7 +1434,7 @@ async function importMapStateFromUrl(encoded) {
             if (item.e && typeof item.e[idx] === "number") coord.push(item.e[idx]);
             return coord;
           });
-          if (ring.length > 0) ring.push(ring[0]);
+          if (ring.length > 0) ring.push([...ring[0]]);
           feature.geometry = {
             type: "Polygon",
             coordinates: [ring],
