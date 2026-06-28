@@ -387,7 +387,11 @@ select:focus {
   background-color: var(--background2-color) !important;
   cursor: not-allowed;
 }
-.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols {
+/* Highlight icon in active draw tools and open toolbar panels */
+.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols,
+#layers-button.active .material-symbols,
+#download-button.active .material-symbols,
+#import-button.active .material-symbols {
   color: var(--highlight-color);
 }
 

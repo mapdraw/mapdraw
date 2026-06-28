@@ -564,6 +564,16 @@ async function initializeMap() {
 
   new LayersToggleControl().addTo(map);
 
+  // Sync layers-button active highlight with panel visibility
+  new MutationObserver(() => {
+    const panel = document.getElementById("custom-layers-panel");
+    const btn = document.getElementById("layers-button");
+    if (panel && btn) btn.classList.toggle("active", panel.style.display === "block");
+  }).observe(document.getElementById("custom-layers-panel"), {
+    attributes: true,
+    attributeFilter: ["style"],
+  });
+
   const customPanel = document.getElementById("custom-layers-panel");
   let formContent = '<form class="leaflet-control-layers-form">';
 
@@ -973,6 +983,11 @@ async function initializeMap() {
         const isVisible = subMenu.style.display === "block";
         subMenu.style.display = isVisible ? "none" : "block";
       });
+
+      // Sync download-button active highlight with submenu visibility
+      new MutationObserver(() => {
+        container.classList.toggle("active", subMenu.style.display === "block");
+      }).observe(subMenu, { attributes: true, attributeFilter: ["style"] });
 
       L.DomEvent.on(container.querySelector("#download-gpx-single"), "click", (e) => {
         L.DomEvent.stop(e);
@@ -1425,9 +1440,14 @@ async function initializeMap() {
       L.DomEvent.on(link, "click", (e) => {
         L.DomEvent.stop(e);
         input.click();
+        container.classList.add("active");
+        window.addEventListener("focus", () => container.classList.remove("active"), {
+          once: true,
+        });
       });
 
       L.DomEvent.on(input, "change", (e) => {
+        container.classList.remove("active");
         const file = e.target.files[0];
         if (!file) return;
         const fileNameLower = file.name.toLowerCase();
