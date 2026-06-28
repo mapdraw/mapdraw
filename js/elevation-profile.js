@@ -212,7 +212,13 @@ function redrawChartData() {
     .y0(height)
     .y1((d) => y(d.elevation));
 
+  const lineGenerator = d3
+    .line()
+    .x((d) => x(d.distance))
+    .y((d) => y(d.elevation));
+
   chartGroup.select(".altitude-area").datum(currentRawData).attr("d", areaGenerator);
+  chartGroup.select(".altitude-line").datum(currentRawData).attr("d", lineGenerator);
   const distanceFormatter = (meters) => formatDistance(meters);
   const elevationFormatter = (meters) => {
     const feet = meters * 3.28084;
@@ -295,6 +301,7 @@ function createElevationChart(targetDivId, isImperial) {
   y = d3.scaleLinear();
 
   chartGroup.append("path").attr("class", "altitude-area");
+  chartGroup.append("path").attr("class", "altitude-line");
 
   verticalLine = chartGroup
     .append("line")
@@ -438,6 +445,7 @@ function clearElevationProfile() {
   }
 
   chartGroup.select(".altitude-area").attr("d", null);
+  chartGroup.select(".altitude-line").attr("d", null);
 
   if (verticalLine) verticalLine.style("display", "none");
   if (chartGroup) chartGroup.select(".elevation-hover-tooltip-group").style("display", "none");

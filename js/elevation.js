@@ -391,7 +391,7 @@ function updateElevationToggleIconColor() {
       .querySelector(".material-symbols");
     if (materialSymbolsIcon) {
       materialSymbolsIcon.style.color = isElevationProfileVisible
-        ? "var(--color-red)"
+        ? "var(--highlight-color)"
         : "var(--icon-color)";
     }
   }

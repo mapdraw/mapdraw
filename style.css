@@ -1820,17 +1820,21 @@ button.strava-button-secondary:not(:disabled) {
 
 /* Styles for d3 elevation chart */
 .altitude-area {
-  fill: var(--color-red);
+  fill: var(--highlight-color);
   fill-opacity: 0.5;
-  /* stroke: var(--color-red); */
   stroke: none;
-  stroke-width: 1.5;
+}
+
+.altitude-line {
+  fill: none;
+  stroke: var(--highlight-color);
+  stroke-width: 1px;
 }
 
 .axis path,
 .axis line {
   stroke: var(--text-color);
-  stroke-width: 1;
+  stroke-width: 1px;
 }
 
 .axis text {

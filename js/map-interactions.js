@@ -13,7 +13,7 @@ window.mapInteractions.showElevationMarker = function (latlng) {
   const markerStyle = {
     color: "var(--color-white)",
     weight: 2,
-    fillColor: "var(--color-red)",
+    fillColor: "var(--highlight-color)",
     fillOpacity: 1,
     radius: 6,
   };
