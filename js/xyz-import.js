@@ -52,7 +52,8 @@ const XyzImport = (function () {
       </div>
     `;
 
-    overlaysSection.appendChild(label);
+    // Prepend so newly imported layers appear at top; restoreOverlayOrder() corrects order on reload.
+    overlaysSection.prepend(label);
 
     // Auto-enable the layer on import if requested
     if (autoEnable) {
