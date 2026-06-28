@@ -1,12 +1,28 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
+/**
+ * XYZ Tile Layer Import Module
+ *
+ * Provides functionality to import custom XYZ/TMS tile layers into the map.
+ * Layers are persisted to localStorage and restored on page load.
+ */
+
 const XyzImport = (function () {
   let customXyzLayers = {};
   let layerIdCounter = 0;
   const STORAGE_KEY = "xyzCustomLayers";
 
-  function addToLayersControl(layerId, name, layer, map, autoEnable) {
-    const overlaysList = document.getElementById("overlays-sortable-list");
+  /**
+   * @param {string} layerId - Unique layer ID
+   * @param {string} displayName - Display name for the layer
+   * @param {L.TileLayer} xyzLayer - Leaflet tile layer instance
+   * @param {L.Map} map - Leaflet map instance
+   * @param {boolean} autoEnable - Whether to auto-enable the layer (default: true)
+   */
+  function addToLayersControl(layerId, displayName, xyzLayer, map, autoEnable = true) {
+    const customPanel = document.getElementById("custom-layers-panel");
+    if (!customPanel) return;
+    const overlaysList = customPanel.querySelector(".leaflet-control-layers-overlays");
     if (!overlaysList) return;
 
     const label = document.createElement("label");
@@ -23,9 +39,7 @@ const XyzImport = (function () {
           ${checkedAttr}
         />
         <span class="layer-name-container" style="padding-left: 0;">
-          <span class="layer-name-text" title="${name}">
-            <span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${name}
-          </span>
+          <span class="layer-name-text" title="${displayName}"><span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${displayName}</span>
           <span
             class="material-symbols material-symbols-fill layer-icon layer-remove-icon"
             data-layer-id="${layerId}"
@@ -39,53 +53,94 @@ const XyzImport = (function () {
     overlaysList.appendChild(label);
 
     if (autoEnable) {
-      map.addLayer(layer);
+      map.addLayer(xyzLayer);
       customXyzLayers[layerId].addedToMap = true;
     }
 
-    if (typeof window.reapplyOverlayZIndex === "function") window.reapplyOverlayZIndex();
-    if (typeof window.saveOverlayOrder === "function") window.saveOverlayOrder();
+    if (typeof window.reapplyOverlayZIndex === "function") {
+      window.reapplyOverlayZIndex();
+    }
+    if (typeof window.saveOverlayOrder === "function") {
+      window.saveOverlayOrder();
+    }
 
     label.querySelector("input").addEventListener("change", (e) => {
       if (e.target.checked) {
-        map.addLayer(layer);
+        map.addLayer(xyzLayer);
         customXyzLayers[layerId].addedToMap = true;
-        if (typeof window.reapplyOverlayZIndex === "function") window.reapplyOverlayZIndex();
+        if (typeof window.reapplyOverlayZIndex === "function") {
+          window.reapplyOverlayZIndex();
+        }
       } else {
-        map.removeLayer(layer);
+        map.removeLayer(xyzLayer);
         customXyzLayers[layerId].addedToMap = false;
       }
       saveLayersToStorage();
     });
 
-    label.querySelector(".layer-remove-icon").addEventListener("click", (e) => {
+    const removeIcon = label.querySelector(".layer-remove-icon");
+    removeIcon.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (customXyzLayers[layerId]?.addedToMap) map.removeLayer(layer);
-      label.remove();
-      delete customXyzLayers[layerId];
-      saveLayersToStorage();
-      if (typeof window.saveOverlayOrder === "function") window.saveOverlayOrder();
+      removeXyzLayer(layerId, map);
     });
   }
 
+  /**
+   * @param {string} layerId - ID of the layer to remove
+   * @param {L.Map} map - Leaflet map instance
+   */
+  function removeXyzLayer(layerId, map) {
+    const layerData = customXyzLayers[layerId];
+    if (layerData && layerData.addedToMap) {
+      map.removeLayer(layerData.layer);
+    }
+
+    const customPanel = document.getElementById("custom-layers-panel");
+    if (customPanel) {
+      const label = customPanel.querySelector(`label[data-layer-id="${layerId}"]`);
+      if (label) {
+        label.remove();
+      }
+    }
+
+    delete customXyzLayers[layerId];
+    saveLayersToStorage();
+    if (typeof window.saveOverlayOrder === "function") {
+      window.saveOverlayOrder();
+    }
+  }
+
+  /**
+   * @param {string} name - Display name for the layer
+   * @param {string} url - XYZ tile URL template
+   * @param {L.Map} map - Leaflet map instance
+   * @param {boolean} autoEnable - Whether to auto-enable the layer (default: true)
+   */
   function addXyzLayer(name, url, map, autoEnable = true) {
-    const layerId = `xyz-${++layerIdCounter}`;
-    const layer = L.tileLayer(url, { maxZoom: 19, pane: "customLayersPane" });
-    customXyzLayers[layerId] = { id: layerId, layer, name, url, addedToMap: false };
-    addToLayersControl(layerId, name, layer, map, autoEnable);
+    const layerId = `xyz-custom-${layerIdCounter++}`;
+    const xyzLayer = L.tileLayer(url, { maxZoom: 19, pane: "customLayersPane" });
+    customXyzLayers[layerId] = {
+      id: layerId,
+      layer: xyzLayer,
+      name: name,
+      url: url,
+      addedToMap: false,
+    };
+    addToLayersControl(layerId, name, xyzLayer, map, autoEnable);
     saveLayersToStorage();
   }
 
   function saveLayersToStorage() {
-    const data = Object.values(customXyzLayers).map((l) => ({
-      name: l.name,
-      url: l.url,
-      addedToMap: l.addedToMap,
+    const layersToSave = Object.values(customXyzLayers).map((layerData) => ({
+      id: layerData.id,
+      name: layerData.name,
+      url: layerData.url,
+      addedToMap: layerData.addedToMap,
     }));
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(layersToSave));
     } catch (e) {
-      console.warn("Failed to save XYZ layers:", e);
+      console.warn("Failed to save XYZ layers to localStorage:", e);
     }
   }
 
@@ -93,20 +148,27 @@ const XyzImport = (function () {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return;
-      JSON.parse(saved).forEach((data) => {
-        const layerId = `xyz-${++layerIdCounter}`;
-        const layer = L.tileLayer(data.url, { maxZoom: 19, pane: "customLayersPane" });
-        customXyzLayers[layerId] = {
-          id: layerId,
-          layer,
-          name: data.name,
-          url: data.url,
-          addedToMap: false,
+
+      const layersData = JSON.parse(saved);
+      layersData.forEach((layerData) => {
+        const xyzLayer = L.tileLayer(layerData.url, { maxZoom: 19, pane: "customLayersPane" });
+        customXyzLayers[layerData.id] = {
+          id: layerData.id,
+          layer: xyzLayer,
+          name: layerData.name,
+          url: layerData.url,
+          addedToMap: layerData.addedToMap,
         };
-        addToLayersControl(layerId, data.name, layer, map, data.addedToMap);
+        addToLayersControl(layerData.id, layerData.name, xyzLayer, map, layerData.addedToMap);
+
+        // Update layerIdCounter to avoid ID conflicts
+        const idNum = parseInt(layerData.id.replace("xyz-custom-", ""), 10);
+        if (!isNaN(idNum) && idNum >= layerIdCounter) {
+          layerIdCounter = idNum + 1;
+        }
       });
     } catch (e) {
-      console.warn("Failed to load XYZ layers:", e);
+      console.warn("Failed to load XYZ layers from localStorage:", e);
     }
   }
 
@@ -175,6 +237,13 @@ const XyzImport = (function () {
 
     if (result.isConfirmed && result.value) {
       addXyzLayer(result.value.name, result.value.url, map);
+      Swal.fire({
+        toast: true,
+        icon: "success",
+        title: "Tile layer imported",
+        timer: 3000,
+        showConfirmButton: false,
+      });
     }
   }
 
@@ -184,3 +253,5 @@ const XyzImport = (function () {
     getCustomXyzLayers: () => customXyzLayers,
   };
 })();
+
+window.XyzImport = XyzImport;

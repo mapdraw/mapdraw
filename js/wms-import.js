@@ -384,10 +384,11 @@ const WmsImport = (function () {
     if (result.isConfirmed && result.value) {
       addWmsOverlays(result.value, wmsUrl, map);
       Swal.fire({
-        title: "Layers Imported",
-        text: `Successfully added ${result.value.length} layer(s) to the map. Toggle them in the Layers panel.`,
+        toast: true,
+        icon: "success",
+        title: `${result.value.length} WMS layer${result.value.length !== 1 ? "s" : ""} imported`,
         timer: 3000,
-        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   }

@@ -718,7 +718,7 @@ async function initializeMap() {
 
   // Function to reapply z-index to all overlay layers based on DOM order
   function reapplyOverlayZIndex() {
-    // Bring WMS layers to front in order
+    // Bring custom overlay layers to front in order
     const overlayLabels = Array.from(overlaysList.querySelectorAll("label"));
 
     // Reverse the order because bringToFront() makes the last called layer appear on top
@@ -786,7 +786,7 @@ async function initializeMap() {
     localStorage.setItem("overlayLayerOrder", JSON.stringify(order));
   }
 
-  // Expose reapplyOverlayZIndex and saveOverlayOrder globally for WmsImport module
+  // Expose reapplyOverlayZIndex and saveOverlayOrder globally for WmsImport and XyzImport modules
   window.reapplyOverlayZIndex = reapplyOverlayZIndex;
   window.saveOverlayOrder = saveOverlayOrder;
 
