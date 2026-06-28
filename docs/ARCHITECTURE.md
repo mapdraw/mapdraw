@@ -48,14 +48,14 @@ MapDraw is a **Vanilla JavaScript** application with modular organization.
 | `config.js`             | App-wide constants, styling defaults, and color palette definitions.                                                                                                  |
 | `secrets.js`            | API keys for external services (`osmClientId`, map tile keys, etc.) — not committed to git, created from template.                                                    |
 | `utils.js`              | Geometry calculations (distance, area), coordinate parsing, and common helpers.                                                                                       |
-| `color-utils.js`        | Color parsing and conversion utilities (148 CSS color name entries, hex normalization, KML format).                                                                   |
+| `color-utils.js`        | Color parsing and conversion utilities (all 148 CSS Color Level 4 named color keywords, hex normalization, KML format).                                               |
 | `file-handlers.js`      | Complex I/O logic for GeoJSON, GPX, KML, and KMZ import/export.                                                                                                       |
 | `ui-handlers.js`        | Manages the Sidebar, Contents tab, color picker, and interactive UI elements.                                                                                         |
 | `map-interactions.js`   | Marker dragging, path selection, elevation marker sync, and map interaction handlers.                                                                                 |
 | `elevation.js`          | Data fetching logic for Google and GeoAdmin (Swiss) elevation APIs with caching.                                                                                      |
 | `elevation-profile.js`  | UI rendering of the D3-powered elevation chart with hover synchronization.                                                                                            |
 | `routing.js`            | Integration with Mapbox/OSRM routing engines and waypoint management.                                                                                                 |
-| `strava.js`             | OAuth flow, activity fetching, and GPX stream retrieval from Strava API.                                                                                              |
+| `strava.js`             | OAuth flow, activity fetching (coordinates decoded from `summary_polyline`), and GPX download trigger for individual activities.                                      |
 | `search.js`             | Search modal with geocoding via OSM Nominatim and coordinate parsing.                                                                                                 |
 | `poi-finder.js`         | Points of Interest discovery via Overpass API with category filtering.                                                                                                |
 | `wms-import.js`         | Web Map Service layer management with GetCapabilities parsing.                                                                                                        |
@@ -112,9 +112,9 @@ Every layer (Path, Area, or Marker) has a [`.feature` object](https://github.com
 ```javascript
 layer.feature = {
   properties: {
-    name: "string",           // User-editable, defaults to "Marker"/"Unnamed Path"/"Area"
+    name: "string",           // User-editable; displayed as "Marker" / "Path" / "Area" when empty
     description: "string",    // Optional, preserved in all exports (editable via the Data Editor tab; no dedicated sidebar field)
-    color: "#DC143C",       // Hex color value (CSS standard colors or custom)
+    color: "#DC143C",         // Hex color value (CSS standard colors or custom)
     stravaId: "123456789",    // Optional, preserved from Strava/import
     totalDistance: 1234.56    // Calculated internally, excluded from standard exports
   },
@@ -143,15 +143,15 @@ layer.isDeletedFromToolbar = false; // Transiently set to true during a toolbar 
 
 **Import:** GeoJSON, GPX, KML, KMZ • **Export:** GeoJSON, GPX, KML (KMZ is import-only)
 
-| Property              | GeoJSON                      | GPX                    | KML                                                                      |
-| :-------------------- | :--------------------------- | :--------------------- | :----------------------------------------------------------------------- |
-| **Coordinates**       | ✅ Full precision            | ✅ Full precision      | ✅ Full precision                                                        |
-| **Name**              | ✅ `properties.name`         | ✅ `<name>`            | ✅ `<name>`                                                              |
-| **Description**       | ✅ `properties.description`  | ✅ `<desc>`            | ✅ `<description>`                                                       |
-| **Color**             | ✅ `stroke` / `marker-color` | ✅ `<gpx_style:color>` | ✅ `<color>` / `<styleUrl>`                                              |
-| **StravaId**          | ✅ `properties.stravaId`     | ✅ `<extensions>`      | ✅ `<ExtendedData>`                                                      |
-| **Elevation**         | ✅ Coordinates[2]            | ✅ `<ele>`             | ✅ Coordinates (3rd value)                                               |
-| **Custom Properties** | ✅ All preserved             | ❌ Not supported       | ❌ Not supported (only `stravaId` is round-tripped via `<ExtendedData>`) |
+| Property              | GeoJSON                      | GPX                                | KML                                                                      |
+| :-------------------- | :--------------------------- | :--------------------------------- | :----------------------------------------------------------------------- |
+| **Coordinates**       | ✅ Full precision            | ✅ Full precision                  | ✅ Full precision                                                        |
+| **Name**              | ✅ `properties.name`         | ✅ `<name>`                        | ✅ `<name>`                                                              |
+| **Description**       | ✅ `properties.description`  | ✅ `<desc>`                        | ✅ `<description>`                                                       |
+| **Color**             | ✅ `stroke` / `marker-color` | ✅ `<gpx_style:color>` / `<color>` | ✅ `<color>` / `<styleUrl>`                                              |
+| **StravaId**          | ✅ `properties.stravaId`     | ✅ `<extensions>`                  | ✅ `<ExtendedData>`                                                      |
+| **Elevation**         | ✅ Coordinates[2]            | ✅ `<ele>`                         | ✅ Coordinates (3rd value)                                               |
+| **Custom Properties** | ✅ All preserved             | ❌ Not supported                   | ❌ Not supported (only `stravaId` is round-tripped via `<ExtendedData>`) |
 
 ---
 
@@ -181,7 +181,7 @@ layer.isDeletedFromToolbar = false; // Transiently set to true during a toolbar 
 The app uses a **hex-based color system** for maximum flexibility and compatibility:
 
 - **Internal Storage**: Colors stored as hex values (e.g., `"#DC143C"`) in `feature.properties.color`
-- **Import Support**: Accepts all 148 CSS color name entries (140 standard + alternate spellings like gray/grey) plus any custom hex value
+- **Import Support**: Accepts all 148 CSS Color Level 4 named color keywords plus any custom hex value
 - **Export**: Outputs hex values in format-native properties (e.g., `stroke`, `marker-color`, `<color>`)
 - **Default Color**: `#DC143C` (Crimson) when color cannot be parsed
 
@@ -278,18 +278,18 @@ Format support varies by mode:
 - **GPX** (`convertLayerToGpx()`): Single-layer only — serializes one layer to a GPX string; the caller in `main.js` handles the download.
 - **KML** (`exportKml()`): Always exports all layers — no mode argument.
 
-| Output  | Geometry Mapping                                      | Color Format             | Metadata            |
-| :------ | :---------------------------------------------------- | :----------------------- | :------------------ |
-| GeoJSON | Point, LineString, Polygon                            | `stroke`, `marker-color` | Standard properties |
-| GPX     | Point → `<wpt>`, Line → `<trk>`, Polygon → closed trk | `<gpx_style:color>`      | `<extensions>`      |
-| KML     | Point, LineString, Polygon                            | `AABBGGRR` in `<Style>`  | `<ExtendedData>`    |
+| Output  | Geometry Mapping                                      | Color Format                                    | Metadata            |
+| :------ | :---------------------------------------------------- | :---------------------------------------------- | :------------------ |
+| GeoJSON | Point, LineString, Polygon                            | `stroke`, `marker-color`                        | Standard properties |
+| GPX     | Point → `<wpt>`, Line → `<trk>`, Polygon → closed trk | tracks: `<gpx_style:color>`; markers: `<color>` | `<extensions>`      |
+| KML     | Point, LineString, Polygon                            | `AABBGGRR` in `<Style>`                         | `<ExtendedData>`    |
 
 ### GeoJSON Export
 
 [`exportGeoJson`](https://github.com/mapdraw/mapdraw/search?q=symbol:exportGeoJson+path:js/file-handlers.js) exports items based on mode ("all", "single", or "strava"):
 
 - Injects standard GeoJSON styling properties (`stroke`, `marker-color`) for compatibility with external tools (e.g., geojson.io)
-- Excludes internal properties like `totalDistance`
+- Excludes internal properties: `color`, `totalDistance`, `stroke-width`, `stroke-opacity`, `fill`, `fill-color`, `fill-opacity`
 
 ### GPX Export
 
@@ -298,7 +298,7 @@ Format support varies by mode:
 - Markers become `<wpt>` (waypoints)
 - Paths become `<trk>` (tracks)
 - Areas (Polygons) become closed `<trk>` tracks (GPX has no native polygon support)
-- Colors stored in `<gpx_style:color>` extension (6-character hex without # prefix)
+- Tracks/polygons: color in `<gpx_style:color>` (6-character hex, no `#`); markers: color in `<color>` (`#FF` + 6-character hex)
 - `stravaId` stored in `<extensions>` block
 
 ### KML Export
@@ -337,7 +337,7 @@ The application implements an **Elevation Cache** (`Map` object in `elevation.js
 
 ### Geometry Optimization
 
-- **Path Simplification**: During duplication, tracks are optimized using the Douglas-Peucker algorithm (`simplify.js`) with a `0.00015` degree tolerance (~15m).
+- **Path Simplification**: During duplication and route saving, paths are optimized using the Douglas-Peucker algorithm (`simplify.js`) with a `0.00015` degree tolerance (~15m).
 - **Lazy Rendering**: Elevation profiles are only rendered when the profile panel is toggled visible.
 
 ---
