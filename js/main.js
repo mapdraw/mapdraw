@@ -608,19 +608,25 @@ async function initializeMap() {
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
 
-  // WMS overlay layers (sortable) — populated dynamically by WmsImport
+  // Custom overlay layers (sortable) — populated dynamically by WmsImport and XyzImport
   formContent += '<div class="leaflet-control-layers-overlays" id="overlays-sortable-list">';
   formContent += "</div>";
 
-  // Add Import Maps button for custom WMS layers
   formContent += `
-    <div style="padding: 4px 0px 0;">
+    <div style="padding: 4px 0px 0; display: flex; gap: 6px;">
+      <button
+        id="xyz-import-btn"
+        class="layer-import-button"
+        style="flex: 1; padding: 4px 6px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-13); font-weight: bold; line-height: 1.25;"
+      >
+        Import<br>Tile Layer
+      </button>
       <button
         id="wms-import-btn"
-        class="wms-import-button"
-        style="width: 100%; padding: 8px 12px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-14); font-weight: bold; white-space: nowrap;"
+        class="layer-import-button"
+        style="flex: 1; padding: 4px 6px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-13); font-weight: bold; line-height: 1.25;"
       >
-        Import WMS Layers
+        Import<br>WMS Layers
       </button>
     </div>
   `;
@@ -629,25 +635,31 @@ async function initializeMap() {
 
   customPanel.innerHTML = formContent;
 
-  // Add event listener for Import WMS Layers button
   const wmsImportBtn = document.getElementById("wms-import-btn");
   if (wmsImportBtn) {
     wmsImportBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (typeof WmsImport !== "undefined") {
-        WmsImport.showWmsImportDialog(map);
-      }
+      if (typeof WmsImport !== "undefined") WmsImport.showWmsImportDialog(map);
     });
   }
 
-  // Load saved WMS layers from localStorage
+  const xyzImportBtn = document.getElementById("xyz-import-btn");
+  if (xyzImportBtn) {
+    xyzImportBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof XyzImport !== "undefined") XyzImport.showXyzImportDialog(map);
+    });
+  }
+
+  // Load saved custom tile layers from localStorage
   if (typeof WmsImport !== "undefined") {
-    // Seed default layers on first-ever load (fresh cache), or load saved layers
     const seeded = WmsImport.seedDefaultLayers && WmsImport.seedDefaultLayers(map);
-    if (!seeded && WmsImport.loadLayersFromStorage) {
-      WmsImport.loadLayersFromStorage(map);
-    }
+    if (!seeded && WmsImport.loadLayersFromStorage) WmsImport.loadLayersFromStorage(map);
+  }
+  if (typeof XyzImport !== "undefined" && XyzImport.loadLayersFromStorage) {
+    XyzImport.loadLayersFromStorage(map);
   }
 
   // Function to restore saved overlay order from localStorage
@@ -709,16 +721,16 @@ async function initializeMap() {
 
     // Reverse the order because bringToFront() makes the last called layer appear on top
     // We want the first item in the list to be on bottom, last item on top
+    const allCustomLayers = {
+      ...(typeof WmsImport !== "undefined" ? WmsImport.getCustomWmsLayers() : {}),
+      ...(typeof XyzImport !== "undefined" ? XyzImport.getCustomXyzLayers() : {}),
+    };
+
     overlayLabels.reverse().forEach((label) => {
       const layerId = label.getAttribute("data-layer-id");
 
-      if (
-        layerId &&
-        typeof WmsImport !== "undefined" &&
-        typeof WmsImport.getCustomWmsLayers === "function"
-      ) {
-        const customWmsLayers = WmsImport.getCustomWmsLayers();
-        const layerData = customWmsLayers[layerId];
+      if (layerId) {
+        const layerData = allCustomLayers[layerId];
         if (
           layerData &&
           layerData.addedToMap &&

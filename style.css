@@ -190,8 +190,8 @@ body.glass-mode #routing-pen-btn.active .material-symbols {
   color: var(--highlight-color) !important;
 }
 
-/* WMS import button */
-body.glass-mode .wms-import-button {
+/* Layer import buttons */
+body.glass-mode .layer-import-button {
   background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
