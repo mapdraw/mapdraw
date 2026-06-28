@@ -16,7 +16,7 @@ const WmsImport = (function () {
    */
   async function showWmsImportDialog(map) {
     const result = await Swal.fire({
-      title: "Import WMS Layers",
+      title: "Add WMS Layers",
       html: `
         <div style="text-align: left;">
           <input
@@ -264,7 +264,7 @@ const WmsImport = (function () {
       .join("");
 
     const result = await Swal.fire({
-      title: "Select Layers to Import",
+      title: "Select Layers to Add",
       html: `
         <div style="text-align: left; display: flex; flex-direction: column; height: 100%; min-height: 0;">
           <div id="wms-search-header" style="flex-shrink: 0; background-color: var(--background-color); z-index: 10; padding-bottom: 0px;">
@@ -285,7 +285,7 @@ const WmsImport = (function () {
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: "Import Selected",
+      confirmButtonText: "Add Selected",
       cancelButtonText: "Cancel",
       customClass: {
         popup: "wms-layer-selection-popup",
@@ -386,7 +386,7 @@ const WmsImport = (function () {
       Swal.fire({
         toast: true,
         icon: "success",
-        title: `${result.value.length} WMS layer${result.value.length !== 1 ? "s" : ""} imported`,
+        title: `${result.value.length} WMS layer${result.value.length !== 1 ? "s" : ""} added`,
         timer: 3000,
         showConfirmButton: false,
       });

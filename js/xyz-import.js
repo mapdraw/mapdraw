@@ -218,7 +218,7 @@ const XyzImport = (function () {
    */
   async function showXyzImportDialog(map) {
     const result = await Swal.fire({
-      title: "Import Tile Layer",
+      title: "Add Tile Layer",
       html: `
         <div style="text-align: left;">
           <input
@@ -294,7 +294,7 @@ const XyzImport = (function () {
       Swal.fire({
         toast: true,
         icon: "success",
-        title: "Tile layer imported",
+        title: "Tile layer added",
         timer: 3000,
         showConfirmButton: false,
       });

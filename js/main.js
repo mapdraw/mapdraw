@@ -631,14 +631,14 @@ async function initializeMap() {
         class="layer-import-button"
         style="flex: 1; padding: 4px 6px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-13); font-weight: bold; line-height: 1.25;"
       >
-        Import<br>Tile Layer
+        Add Tile Layer
       </button>
       <button
         id="wms-import-btn"
         class="layer-import-button"
         style="flex: 1; padding: 4px 6px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-13); font-weight: bold; line-height: 1.25;"
       >
-        Import<br>WMS Layers
+        Add WMS Layers
       </button>
     </div>
   `;
