@@ -450,6 +450,7 @@ const WmsImport = (function () {
     label.className = "custom-layer";
     label.setAttribute("data-layer-id", layerId);
     const checkedAttr = autoEnable ? 'checked="checked"' : "";
+    const safeName = escHtml(displayName);
     label.innerHTML = `
       <div>
         <input
@@ -460,7 +461,7 @@ const WmsImport = (function () {
           ${checkedAttr}
         />
         <span class="layer-name-container" style="padding-left: 0;">
-          <span class="layer-name-text" title="${displayName}"><span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${displayName}</span>
+          <span class="layer-name-text" title="${safeName}"><span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${safeName}</span>
           <span
             class="material-symbols material-symbols-fill layer-icon layer-remove-icon"
             data-layer-id="${layerId}"
@@ -572,12 +573,19 @@ const WmsImport = (function () {
    * @param {L.Map} map - Leaflet map instance
    */
   function loadLayersFromStorage(map) {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
 
-      const layersData = JSON.parse(saved);
-      layersData.forEach((layerData) => {
+    let layersData;
+    try {
+      layersData = JSON.parse(saved);
+    } catch (e) {
+      console.warn("Failed to load WMS layers from localStorage:", e);
+      return;
+    }
+
+    layersData.forEach((layerData) => {
+      try {
         // Create WMS tile layer with gutter support to prevent icon cutoff
         const wmsLayer = L.tileLayer.wms.gutter(layerData.wmsUrl, {
           layers: layerData.wmsLayerName,
@@ -606,10 +614,10 @@ const WmsImport = (function () {
         if (!isNaN(idNum) && idNum >= layerIdCounter) {
           layerIdCounter = idNum + 1;
         }
-      });
-    } catch (e) {
-      console.warn("Failed to load WMS layers from localStorage:", e);
-    }
+      } catch (e) {
+        console.warn("Failed to restore WMS layer:", layerData?.id, e);
+      }
+    });
   }
 
   /**
