@@ -2194,7 +2194,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border-radius: var(--border-radius);
   max-height: calc(100dvh - 60px);
   overflow-y: auto;
-  width: 200px;
+  width: 300px;
+  max-width: calc(100vw - 51px - 10px);
   user-select: none;
 }
 
@@ -2225,18 +2226,19 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   top: 0;
 }
 
-/* Custom layer truncation */
+/* Custom layer truncation — flex-based so it adapts to any panel width */
+#custom-layers-panel .custom-layer .layer-name-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
 #custom-layers-panel .custom-layer .layer-name-text {
-  width: 150px;
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: inline-block;
-  vertical-align: middle;
-}
-#custom-layers-panel .custom-layer .layer-name-container {
-  display: inline-flex;
-  align-items: center;
 }
 
 /* Remove default Leaflet control styling from the content inside our panel */
@@ -3097,6 +3099,11 @@ body.using-touch {
     /* Hide the Via input group on mobile */
     #routing-via-group {
       display: none;
+    }
+
+    #custom-layers-panel {
+      right: 10px;
+      width: auto;
     }
 
     /* Mobile Bottom Sheet Styles Start */
