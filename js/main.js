@@ -356,9 +356,11 @@ async function initializeMap() {
     worldCopyJump: true,
   });
 
-  // Create a dedicated pane for WMS layers
-  map.createPane("wmsPane");
-  map.getPane("wmsPane").style.zIndex = 250;
+  // Create dedicated panes for custom overlay layers
+  map.createPane("customLayersPane");
+  map.getPane("customLayersPane").style.zIndex = 250;
+  map.createPane("waymarkedTrailsPane");
+  map.getPane("waymarkedTrailsPane").style.zIndex = 300;
 
   const initialView = parseMapHash(window.location.hash);
   const savedHash = localStorage.getItem("lastHash");
@@ -510,13 +512,13 @@ async function initializeMap() {
     FoundPlaces: poiMasterLayer,
     WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      zIndex: 200,
+      pane: "waymarkedTrailsPane",
     }),
     WaymarkedTrailsCycling: L.tileLayer(
       "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
       {
         maxZoom: 19,
-        zIndex: 200,
+        pane: "waymarkedTrailsPane",
       },
     ),
   };

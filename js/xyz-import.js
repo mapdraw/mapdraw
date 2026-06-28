@@ -10,7 +10,7 @@ const XyzImport = (function () {
     if (!overlaysList) return;
 
     const label = document.createElement("label");
-    label.className = "wms-custom-layer";
+    label.className = "custom-layer";
     label.setAttribute("data-layer-id", layerId);
     const checkedAttr = autoEnable ? 'checked="checked"' : "";
     label.innerHTML = `
@@ -27,7 +27,7 @@ const XyzImport = (function () {
             <span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${name}
           </span>
           <span
-            class="material-symbols material-symbols-fill layer-icon wms-remove-icon"
+            class="material-symbols material-symbols-fill layer-icon layer-remove-icon"
             data-layer-id="${layerId}"
             title="Remove this layer"
             style="cursor: pointer;"
@@ -58,7 +58,7 @@ const XyzImport = (function () {
       saveLayersToStorage();
     });
 
-    label.querySelector(".wms-remove-icon").addEventListener("click", (e) => {
+    label.querySelector(".layer-remove-icon").addEventListener("click", (e) => {
       e.stopPropagation();
       if (customXyzLayers[layerId]?.addedToMap) map.removeLayer(layer);
       label.remove();
@@ -70,7 +70,7 @@ const XyzImport = (function () {
 
   function addXyzLayer(name, url, map, autoEnable = true) {
     const layerId = `xyz-${++layerIdCounter}`;
-    const layer = L.tileLayer(url, { maxZoom: 19, pane: "wmsPane" });
+    const layer = L.tileLayer(url, { maxZoom: 19, pane: "customLayersPane" });
     customXyzLayers[layerId] = { id: layerId, layer, name, url, addedToMap: false };
     addToLayersControl(layerId, name, layer, map, autoEnable);
     saveLayersToStorage();
@@ -95,7 +95,7 @@ const XyzImport = (function () {
       if (!saved) return;
       JSON.parse(saved).forEach((data) => {
         const layerId = `xyz-${++layerIdCounter}`;
-        const layer = L.tileLayer(data.url, { maxZoom: 19, pane: "wmsPane" });
+        const layer = L.tileLayer(data.url, { maxZoom: 19, pane: "customLayersPane" });
         customXyzLayers[layerId] = {
           id: layerId,
           layer,

@@ -2225,8 +2225,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   top: 0;
 }
 
-/* WMS custom layer truncation */
-#custom-layers-panel .wms-custom-layer .layer-name-text {
+/* Custom layer truncation */
+#custom-layers-panel .custom-layer .layer-name-text {
   width: 150px;
   white-space: nowrap;
   overflow: hidden;
@@ -2234,7 +2234,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   display: inline-block;
   vertical-align: middle;
 }
-#custom-layers-panel .wms-custom-layer .layer-name-container {
+#custom-layers-panel .custom-layer .layer-name-container {
   display: inline-flex;
   align-items: center;
 }

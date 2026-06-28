@@ -407,7 +407,7 @@ const WmsImport = (function () {
         layers: layer.name,
         format: "image/png",
         transparent: true,
-        pane: "wmsPane",
+        pane: "customLayersPane",
         tileSize: 512,
         gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
       });
@@ -446,7 +446,7 @@ const WmsImport = (function () {
     if (!overlaysSection) return;
 
     const label = document.createElement("label");
-    label.className = "wms-custom-layer";
+    label.className = "custom-layer";
     label.setAttribute("data-layer-id", layerId);
     const checkedAttr = autoEnable ? 'checked="checked"' : "";
     label.innerHTML = `
@@ -461,7 +461,7 @@ const WmsImport = (function () {
         <span class="layer-name-container" style="padding-left: 0;">
           <span class="layer-name-text" title="${displayName}"><span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${displayName}</span>
           <span
-            class="material-symbols material-symbols-fill layer-icon wms-remove-icon"
+            class="material-symbols material-symbols-fill layer-icon layer-remove-icon"
             data-layer-id="${layerId}"
             title="Remove this layer"
             style="cursor: pointer;"
@@ -507,7 +507,7 @@ const WmsImport = (function () {
     });
 
     // Add event listener for remove icon
-    const removeIcon = label.querySelector(".wms-remove-icon");
+    const removeIcon = label.querySelector(".layer-remove-icon");
     removeIcon.addEventListener("click", (e) => {
       e.stopPropagation();
       removeWmsLayer(layerId, map);
@@ -582,7 +582,7 @@ const WmsImport = (function () {
           layers: layerData.wmsLayerName,
           format: "image/png",
           transparent: true,
-          pane: "wmsPane",
+          pane: "customLayersPane",
           tileSize: 512,
           gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
         });
