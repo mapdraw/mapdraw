@@ -1828,7 +1828,7 @@ button.strava-button-secondary:not(:disabled) {
 .altitude-line {
   fill: none;
   stroke: var(--highlight-color);
-  stroke-width: 1px;
+  stroke-width: 2px;
 }
 
 .axis path,
