@@ -122,7 +122,7 @@ const WmsImport = (function () {
               </ul>
             </div>
           </div>
-          <p style="margin-top: 12px; color: var(--color-red)">Error: ${error.message}</p>
+          <p style="margin-top: 12px; color: var(--color-red)">Error: ${escHtml(error.message)}</p>
         `,
         confirmButtonText: "OK",
         allowOutsideClick: true,
@@ -226,20 +226,20 @@ const WmsImport = (function () {
         const opacityStyle = alreadyImported ? "opacity: 0.6;" : "";
 
         return `
-        <label class="wms-layer-item" data-layer-index="${index}" data-layer-title="${layer.title.toLowerCase()}" data-layer-abstract="${(
-          layer.abstract || ""
-        ).toLowerCase()}" style="display: flex; align-items: start; margin-bottom: 12px; text-align: left; ${cursorStyle} ${opacityStyle}">
+        <label class="wms-layer-item" data-layer-index="${index}" data-layer-title="${escHtml(layer.title.toLowerCase())}" data-layer-abstract="${escHtml(
+          (layer.abstract || "").toLowerCase(),
+        )}" style="display: flex; align-items: start; margin-bottom: 12px; text-align: left; ${cursorStyle} ${opacityStyle}">
           <input
             type="checkbox"
             id="wms-layer-${index}"
-            value="${layer.name}"
+            value="${escHtml(layer.name)}"
             ${disabledAttr}
             style="margin-right: 10px; margin-top: 4px; cursor: pointer;"
           />
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 500; display: flex; align-items: flex-start; gap: 6px;">
               <span style="flex: 1; min-width: 0;">
-                ${layer.title}
+                ${escHtml(layer.title)}
                 ${
                   alreadyImported
                     ? ' <span style="color: var(--color-red); font-size: var(--font-size-12); font-weight: 400;">(Already imported)</span>'
@@ -254,7 +254,7 @@ const WmsImport = (function () {
             </div>
             ${
               layer.abstract
-                ? `<div class="wms-layer-description" id="wms-description-${index}" style="display: none; font-size: var(--font-size-12); color: var(--text-color); margin-top: 4px; line-height: 1.4;">${layer.abstract}</div>`
+                ? `<div class="wms-layer-description" id="wms-description-${index}" style="display: none; font-size: var(--font-size-12); color: var(--text-color); margin-top: 4px; line-height: 1.4;">${escHtml(layer.abstract)}</div>`
                 : ""
             }
           </div>
