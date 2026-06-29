@@ -607,15 +607,15 @@ async function initializeMap() {
     }
   };
 
+  // User content layers (not sortable, always on top)
   formContent += '<div class="leaflet-control-layers-user-content">';
-  renderOverlayCheckboxes(tileOverlayNames);
+  renderOverlayCheckboxes(userContentNames);
   formContent += "</div>";
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
 
-  // User content layers (not sortable, always on top)
   formContent += '<div class="leaflet-control-layers-user-content">';
-  renderOverlayCheckboxes(userContentNames);
+  renderOverlayCheckboxes(tileOverlayNames);
   formContent += "</div>";
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
