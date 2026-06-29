@@ -117,7 +117,7 @@ function calculateSwissHikingTime(points) {
  * Adapted from map.geo.admin.ch
  * @see https://github.com/geoadmin/web-mapviewer/blob/develop/packages/geoadmin-elevation-profile/src/utils.ts
  * @param {number} minutes - Total minutes
- * @returns {string} Formatted time (e.g., '20h 30min', '55min', or '-')
+ * @returns {string} Formatted time (e.g., '20h 30min', '55 min', or '-')
  */
 function formatHikingTime(minutes) {
   if (!minutes || isNaN(minutes)) {
@@ -132,7 +132,7 @@ function formatHikingTime(minutes) {
       result += ` ${minutes}min`;
     }
   } else {
-    result += `${minutes}min`;
+    result += `${minutes} min`;
   }
   return result;
 }
