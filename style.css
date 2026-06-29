@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details. */
+/* Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details. */
 
 /*
  * Section banners: python3 -m pyfiglet -f ansi_shadow <NAME>
@@ -190,8 +190,8 @@ body.glass-mode #routing-pen-btn.active .material-symbols {
   color: var(--highlight-color) !important;
 }
 
-/* WMS import button */
-body.glass-mode .wms-import-button {
+/* Layer import buttons */
+body.glass-mode .layer-import-button {
   background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
@@ -387,7 +387,11 @@ select:focus {
   background-color: var(--background2-color) !important;
   cursor: not-allowed;
 }
-.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols {
+/* Highlight icon in active draw tools and open toolbar panels */
+.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols,
+#layers-button.active .material-symbols,
+#download-button.active .material-symbols,
+#import-button.active .material-symbols {
   color: var(--highlight-color);
 }
 
@@ -1816,17 +1820,21 @@ button.strava-button-secondary:not(:disabled) {
 
 /* Styles for d3 elevation chart */
 .altitude-area {
-  fill: var(--color-red);
+  fill: var(--highlight-color);
   fill-opacity: 0.5;
-  /* stroke: var(--color-red); */
   stroke: none;
-  stroke-width: 1.5;
+}
+
+.altitude-line {
+  fill: none;
+  stroke: var(--highlight-color);
+  stroke-width: 2px;
 }
 
 .axis path,
 .axis line {
   stroke: var(--text-color);
-  stroke-width: 1;
+  stroke-width: 1px;
 }
 
 .axis text {
@@ -2194,7 +2202,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border-radius: var(--border-radius);
   max-height: calc(100dvh - 60px);
   overflow-y: auto;
-  width: 200px;
+  width: 300px;
+  max-width: calc(100vw - 51px - 10px);
   user-select: none;
 }
 
@@ -2225,18 +2234,26 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   top: 0;
 }
 
-/* WMS custom layer truncation */
-#custom-layers-panel .wms-custom-layer .layer-name-text {
-  width: 150px;
+/* Layer name truncation — flex-based so it adapts to any panel width */
+#custom-layers-panel label:not(.custom-layer) span:not(.fi):not(.material-symbols) {
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: inline-block;
-  vertical-align: middle;
 }
-#custom-layers-panel .wms-custom-layer .layer-name-container {
-  display: inline-flex;
+#custom-layers-panel .custom-layer .layer-name-container {
+  display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+#custom-layers-panel .custom-layer .layer-name-text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Remove default Leaflet control styling from the content inside our panel */
@@ -3097,6 +3114,11 @@ body.using-touch {
     /* Hide the Via input group on mobile */
     #routing-via-group {
       display: none;
+    }
+
+    #custom-layers-panel {
+      right: 10px;
+      width: auto;
     }
 
     /* Mobile Bottom Sheet Styles Start */

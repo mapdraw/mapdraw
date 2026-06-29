@@ -190,6 +190,6 @@ This project utilizes several open-source libraries, which are included in the r
 
 ## License
 
-Copyright (C) 2025 Aron Sommer.
+Copyright (C) 2026 Aron Sommer.
 
 This project is licensed under the GNU Affero General Public License v3.0. See the [LICENSE](LICENSE) file for full details.

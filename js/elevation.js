@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 const elevationCache = new Map();
 
@@ -391,7 +391,7 @@ function updateElevationToggleIconColor() {
       .querySelector(".material-symbols");
     if (materialSymbolsIcon) {
       materialSymbolsIcon.style.color = isElevationProfileVisible
-        ? "var(--color-red)"
+        ? "var(--highlight-color)"
         : "var(--icon-color)";
     }
   }

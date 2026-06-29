@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 /**
  * WMS Import Module
@@ -16,7 +16,7 @@ const WmsImport = (function () {
    */
   async function showWmsImportDialog(map) {
     const result = await Swal.fire({
-      title: "Import WMS Layers",
+      title: "Add WMS Layers",
       html: `
         <div style="text-align: left;">
           <input
@@ -122,7 +122,7 @@ const WmsImport = (function () {
               </ul>
             </div>
           </div>
-          <p style="margin-top: 12px; color: var(--color-red)">Error: ${error.message}</p>
+          <p style="margin-top: 12px; color: var(--color-red)">Error: ${escHtml(error.message)}</p>
         `,
         confirmButtonText: "OK",
         allowOutsideClick: true,
@@ -226,20 +226,20 @@ const WmsImport = (function () {
         const opacityStyle = alreadyImported ? "opacity: 0.6;" : "";
 
         return `
-        <label class="wms-layer-item" data-layer-index="${index}" data-layer-title="${layer.title.toLowerCase()}" data-layer-abstract="${(
-          layer.abstract || ""
-        ).toLowerCase()}" style="display: flex; align-items: start; margin-bottom: 12px; text-align: left; ${cursorStyle} ${opacityStyle}">
+        <label class="wms-layer-item" data-layer-index="${index}" data-layer-title="${escHtml(layer.title.toLowerCase())}" data-layer-abstract="${escHtml(
+          (layer.abstract || "").toLowerCase(),
+        )}" style="display: flex; align-items: start; margin-bottom: 12px; text-align: left; ${cursorStyle} ${opacityStyle}">
           <input
             type="checkbox"
             id="wms-layer-${index}"
-            value="${layer.name}"
+            value="${escHtml(layer.name)}"
             ${disabledAttr}
             style="margin-right: 10px; margin-top: 4px; cursor: pointer;"
           />
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 500; display: flex; align-items: flex-start; gap: 6px;">
               <span style="flex: 1; min-width: 0;">
-                ${layer.title}
+                ${escHtml(layer.title)}
                 ${
                   alreadyImported
                     ? ' <span style="color: var(--color-red); font-size: var(--font-size-12); font-weight: 400;">(Already imported)</span>'
@@ -254,7 +254,7 @@ const WmsImport = (function () {
             </div>
             ${
               layer.abstract
-                ? `<div class="wms-layer-description" id="wms-description-${index}" style="display: none; font-size: var(--font-size-12); color: var(--text-color); margin-top: 4px; line-height: 1.4;">${layer.abstract}</div>`
+                ? `<div class="wms-layer-description" id="wms-description-${index}" style="display: none; font-size: var(--font-size-12); color: var(--text-color); margin-top: 4px; line-height: 1.4;">${escHtml(layer.abstract)}</div>`
                 : ""
             }
           </div>
@@ -264,7 +264,7 @@ const WmsImport = (function () {
       .join("");
 
     const result = await Swal.fire({
-      title: "Select Layers to Import",
+      title: "Select Layers to Add",
       html: `
         <div style="text-align: left; display: flex; flex-direction: column; height: 100%; min-height: 0;">
           <div id="wms-search-header" style="flex-shrink: 0; background-color: var(--background-color); z-index: 10; padding-bottom: 0px;">
@@ -285,7 +285,7 @@ const WmsImport = (function () {
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: "Import Selected",
+      confirmButtonText: "Add Selected",
       cancelButtonText: "Cancel",
       customClass: {
         popup: "wms-layer-selection-popup",
@@ -384,10 +384,11 @@ const WmsImport = (function () {
     if (result.isConfirmed && result.value) {
       addWmsOverlays(result.value, wmsUrl, map);
       Swal.fire({
-        title: "Layers Imported",
-        text: `Successfully added ${result.value.length} layer(s) to the map. Toggle them in the Layers panel.`,
+        toast: true,
+        icon: "success",
+        title: `${result.value.length} WMS layer${result.value.length !== 1 ? "s" : ""} added`,
         timer: 3000,
-        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   }
@@ -397,6 +398,7 @@ const WmsImport = (function () {
    * @param {Array} selectedLayers - Array of selected layer objects
    * @param {string} wmsUrl - Base WMS URL
    * @param {L.Map} map - Leaflet map instance
+   * @param {boolean} [autoEnable=true] - Whether to auto-enable the layers (default: true)
    */
   function addWmsOverlays(selectedLayers, wmsUrl, map, autoEnable = true) {
     selectedLayers.forEach((layer) => {
@@ -407,7 +409,7 @@ const WmsImport = (function () {
         layers: layer.name,
         format: "image/png",
         transparent: true,
-        pane: "wmsPane",
+        pane: "customLayersPane",
         tileSize: 512,
         gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
       });
@@ -446,9 +448,10 @@ const WmsImport = (function () {
     if (!overlaysSection) return;
 
     const label = document.createElement("label");
-    label.className = "wms-custom-layer";
+    label.className = "custom-layer";
     label.setAttribute("data-layer-id", layerId);
     const checkedAttr = autoEnable ? 'checked="checked"' : "";
+    const safeName = escHtml(displayName);
     label.innerHTML = `
       <div>
         <input
@@ -459,9 +462,9 @@ const WmsImport = (function () {
           ${checkedAttr}
         />
         <span class="layer-name-container" style="padding-left: 0;">
-          <span class="layer-name-text" title="${displayName}"><span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${displayName}</span>
+          <span class="layer-name-text" title="${safeName}"><span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${safeName}</span>
           <span
-            class="material-symbols material-symbols-fill layer-icon wms-remove-icon"
+            class="material-symbols material-symbols-fill layer-icon layer-remove-icon"
             data-layer-id="${layerId}"
             title="Remove this layer"
             style="cursor: pointer;"
@@ -470,7 +473,8 @@ const WmsImport = (function () {
       </div>
     `;
 
-    overlaysSection.appendChild(label);
+    // Prepend so newly imported layers appear at top; restoreOverlayOrder() corrects order on reload.
+    overlaysSection.prepend(label);
 
     // Auto-enable the layer on import if requested
     if (autoEnable) {
@@ -507,7 +511,7 @@ const WmsImport = (function () {
     });
 
     // Add event listener for remove icon
-    const removeIcon = label.querySelector(".wms-remove-icon");
+    const removeIcon = label.querySelector(".layer-remove-icon");
     removeIcon.addEventListener("click", (e) => {
       e.stopPropagation();
       removeWmsLayer(layerId, map);
@@ -571,18 +575,27 @@ const WmsImport = (function () {
    * @param {L.Map} map - Leaflet map instance
    */
   function loadLayersFromStorage(map) {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
 
-      const layersData = JSON.parse(saved);
-      layersData.forEach((layerData) => {
+    let layersData;
+    try {
+      layersData = JSON.parse(saved);
+    } catch (e) {
+      console.warn("Failed to load WMS layers from localStorage:", e);
+      return;
+    }
+
+    if (!Array.isArray(layersData)) return;
+
+    layersData.forEach((layerData) => {
+      try {
         // Create WMS tile layer with gutter support to prevent icon cutoff
         const wmsLayer = L.tileLayer.wms.gutter(layerData.wmsUrl, {
           layers: layerData.wmsLayerName,
           format: "image/png",
           transparent: true,
-          pane: "wmsPane",
+          pane: "customLayersPane",
           tileSize: 512,
           gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
         });
@@ -605,15 +618,16 @@ const WmsImport = (function () {
         if (!isNaN(idNum) && idNum >= layerIdCounter) {
           layerIdCounter = idNum + 1;
         }
-      });
-    } catch (e) {
-      console.warn("Failed to load WMS layers from localStorage:", e);
-    }
+      } catch (e) {
+        console.warn("Failed to restore WMS layer:", layerData?.id, e);
+      }
+    });
   }
 
   /**
    * Seeds default WMS layers on first-ever load (no localStorage key yet)
    * @param {L.Map} map - Leaflet map instance
+   * @returns {boolean} True if layers were seeded, false otherwise
    */
   function seedDefaultLayers(map) {
     // Only seed if localStorage key doesn't exist at all (truly fresh start)

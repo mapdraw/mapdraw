@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // Apply saved theme on load — glass is default for new users
 (function () {
@@ -356,9 +356,11 @@ async function initializeMap() {
     worldCopyJump: true,
   });
 
-  // Create a dedicated pane for WMS layers
-  map.createPane("wmsPane");
-  map.getPane("wmsPane").style.zIndex = 250;
+  // Create dedicated panes for overlay layers
+  map.createPane("customLayersPane");
+  map.getPane("customLayersPane").style.zIndex = 250;
+  map.createPane("waymarkedTrailsPane");
+  map.getPane("waymarkedTrailsPane").style.zIndex = 300;
 
   const initialView = parseMapHash(window.location.hash);
   const savedHash = localStorage.getItem("lastHash");
@@ -510,13 +512,13 @@ async function initializeMap() {
     FoundPlaces: poiMasterLayer,
     WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      zIndex: 200,
+      pane: "waymarkedTrailsPane",
     }),
     WaymarkedTrailsCycling: L.tileLayer(
       "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
       {
         maxZoom: 19,
-        zIndex: 200,
+        pane: "waymarkedTrailsPane",
       },
     ),
   };
@@ -562,6 +564,16 @@ async function initializeMap() {
 
   new LayersToggleControl().addTo(map);
 
+  // Sync layers-button active highlight with panel visibility
+  new MutationObserver(() => {
+    const panel = document.getElementById("custom-layers-panel");
+    const btn = document.getElementById("layers-button");
+    if (panel && btn) btn.classList.toggle("active", panel.style.display === "block");
+  }).observe(document.getElementById("custom-layers-panel"), {
+    attributes: true,
+    attributeFilter: ["style"],
+  });
+
   const customPanel = document.getElementById("custom-layers-panel");
   let formContent = '<form class="leaflet-control-layers-form">';
 
@@ -595,12 +607,6 @@ async function initializeMap() {
     }
   };
 
-  formContent += '<div class="leaflet-control-layers-user-content">';
-  renderOverlayCheckboxes(tileOverlayNames);
-  formContent += "</div>";
-
-  formContent += '<div class="leaflet-control-layers-separator"></div>';
-
   // User content layers (not sortable, always on top)
   formContent += '<div class="leaflet-control-layers-user-content">';
   renderOverlayCheckboxes(userContentNames);
@@ -608,19 +614,31 @@ async function initializeMap() {
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
 
-  // WMS overlay layers (sortable) — populated dynamically by WmsImport
+  formContent += '<div class="leaflet-control-layers-user-content">';
+  renderOverlayCheckboxes(tileOverlayNames);
+  formContent += "</div>";
+
+  formContent += '<div class="leaflet-control-layers-separator"></div>';
+
+  // Custom overlay layers (sortable) — populated dynamically by WmsImport and XyzImport
   formContent += '<div class="leaflet-control-layers-overlays" id="overlays-sortable-list">';
   formContent += "</div>";
 
-  // Add Import Maps button for custom WMS layers
   formContent += `
-    <div style="padding: 4px 0px 0;">
+    <div style="padding: 4px 0px 0; display: flex; gap: 6px;">
+      <button
+        id="xyz-import-btn"
+        class="layer-import-button"
+        style="flex: 1; padding: 4px 6px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-13); font-weight: bold; line-height: 1.25;"
+      >
+        Add Tile Layer
+      </button>
       <button
         id="wms-import-btn"
-        class="wms-import-button"
-        style="width: 100%; padding: 8px 12px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-14); font-weight: bold; white-space: nowrap;"
+        class="layer-import-button"
+        style="flex: 1; padding: 4px 6px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-13); font-weight: bold; line-height: 1.25;"
       >
-        Import WMS Layers
+        Add WMS Layers
       </button>
     </div>
   `;
@@ -629,25 +647,31 @@ async function initializeMap() {
 
   customPanel.innerHTML = formContent;
 
-  // Add event listener for Import WMS Layers button
   const wmsImportBtn = document.getElementById("wms-import-btn");
   if (wmsImportBtn) {
     wmsImportBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (typeof WmsImport !== "undefined") {
-        WmsImport.showWmsImportDialog(map);
-      }
+      if (typeof WmsImport !== "undefined") WmsImport.showWmsImportDialog(map);
     });
   }
 
-  // Load saved WMS layers from localStorage
+  const xyzImportBtn = document.getElementById("xyz-import-btn");
+  if (xyzImportBtn) {
+    xyzImportBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof XyzImport !== "undefined") XyzImport.showXyzImportDialog(map);
+    });
+  }
+
+  // Load saved custom tile layers from localStorage
   if (typeof WmsImport !== "undefined") {
-    // Seed default layers on first-ever load (fresh cache), or load saved layers
     const seeded = WmsImport.seedDefaultLayers && WmsImport.seedDefaultLayers(map);
-    if (!seeded && WmsImport.loadLayersFromStorage) {
-      WmsImport.loadLayersFromStorage(map);
-    }
+    if (!seeded && WmsImport.loadLayersFromStorage) WmsImport.loadLayersFromStorage(map);
+  }
+  if (typeof XyzImport !== "undefined" && XyzImport.loadLayersFromStorage) {
+    XyzImport.loadLayersFromStorage(map);
   }
 
   // Function to restore saved overlay order from localStorage
@@ -704,21 +728,21 @@ async function initializeMap() {
 
   // Function to reapply z-index to all overlay layers based on DOM order
   function reapplyOverlayZIndex() {
-    // Bring WMS layers to front in order
+    // Bring custom overlay layers to front in order
     const overlayLabels = Array.from(overlaysList.querySelectorAll("label"));
 
     // Reverse the order because bringToFront() makes the last called layer appear on top
-    // We want the first item in the list to be on bottom, last item on top
+    // We want the first item in the list to be on top, last item on bottom
+    const allCustomLayers = {
+      ...(typeof WmsImport !== "undefined" ? WmsImport.getCustomWmsLayers() : {}),
+      ...(typeof XyzImport !== "undefined" ? XyzImport.getCustomXyzLayers() : {}),
+    };
+
     overlayLabels.reverse().forEach((label) => {
       const layerId = label.getAttribute("data-layer-id");
 
-      if (
-        layerId &&
-        typeof WmsImport !== "undefined" &&
-        typeof WmsImport.getCustomWmsLayers === "function"
-      ) {
-        const customWmsLayers = WmsImport.getCustomWmsLayers();
-        const layerData = customWmsLayers[layerId];
+      if (layerId) {
+        const layerData = allCustomLayers[layerId];
         if (
           layerData &&
           layerData.addedToMap &&
@@ -772,7 +796,7 @@ async function initializeMap() {
     localStorage.setItem("overlayLayerOrder", JSON.stringify(order));
   }
 
-  // Expose reapplyOverlayZIndex and saveOverlayOrder globally for WmsImport module
+  // Expose reapplyOverlayZIndex and saveOverlayOrder globally for WmsImport and XyzImport modules
   window.reapplyOverlayZIndex = reapplyOverlayZIndex;
   window.saveOverlayOrder = saveOverlayOrder;
 
@@ -959,6 +983,11 @@ async function initializeMap() {
         const isVisible = subMenu.style.display === "block";
         subMenu.style.display = isVisible ? "none" : "block";
       });
+
+      // Sync download-button active highlight with submenu visibility
+      new MutationObserver(() => {
+        container.classList.toggle("active", subMenu.style.display === "block");
+      }).observe(subMenu, { attributes: true, attributeFilter: ["style"] });
 
       L.DomEvent.on(container.querySelector("#download-gpx-single"), "click", (e) => {
         L.DomEvent.stop(e);
@@ -1411,9 +1440,14 @@ async function initializeMap() {
       L.DomEvent.on(link, "click", (e) => {
         L.DomEvent.stop(e);
         input.click();
+        container.classList.add("active");
+        window.addEventListener("focus", () => container.classList.remove("active"), {
+          once: true,
+        });
       });
 
       L.DomEvent.on(input, "change", (e) => {
+        container.classList.remove("active");
         const file = e.target.files[0];
         if (!file) return;
         const fileNameLower = file.name.toLowerCase();

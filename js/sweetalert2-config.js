@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // Animation configuration
 const USE_CUSTOM_ANIMATION = false; // Set to false to use the default fade-from-top animation
