@@ -2234,7 +2234,14 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   top: 0;
 }
 
-/* Custom layer truncation — flex-based so it adapts to any panel width */
+/* Layer name truncation — flex-based so it adapts to any panel width */
+#custom-layers-panel label:not(.custom-layer) span:not(.fi):not(.material-symbols) {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 #custom-layers-panel .custom-layer .layer-name-container {
   display: flex;
   align-items: center;
