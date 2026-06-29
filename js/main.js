@@ -356,7 +356,7 @@ async function initializeMap() {
     worldCopyJump: true,
   });
 
-  // Create dedicated panes for custom overlay layers
+  // Create dedicated panes for overlay layers
   map.createPane("customLayersPane");
   map.getPane("customLayersPane").style.zIndex = 250;
   map.createPane("waymarkedTrailsPane");
@@ -732,7 +732,7 @@ async function initializeMap() {
     const overlayLabels = Array.from(overlaysList.querySelectorAll("label"));
 
     // Reverse the order because bringToFront() makes the last called layer appear on top
-    // We want the first item in the list to be on bottom, last item on top
+    // We want the first item in the list to be on top, last item on bottom
     const allCustomLayers = {
       ...(typeof WmsImport !== "undefined" ? WmsImport.getCustomWmsLayers() : {}),
       ...(typeof XyzImport !== "undefined" ? XyzImport.getCustomXyzLayers() : {}),

@@ -398,6 +398,7 @@ const WmsImport = (function () {
    * @param {Array} selectedLayers - Array of selected layer objects
    * @param {string} wmsUrl - Base WMS URL
    * @param {L.Map} map - Leaflet map instance
+   * @param {boolean} [autoEnable=true] - Whether to auto-enable the layers (default: true)
    */
   function addWmsOverlays(selectedLayers, wmsUrl, map, autoEnable = true) {
     selectedLayers.forEach((layer) => {
@@ -624,6 +625,7 @@ const WmsImport = (function () {
   /**
    * Seeds default WMS layers on first-ever load (no localStorage key yet)
    * @param {L.Map} map - Leaflet map instance
+   * @returns {boolean} True if layers were seeded, false otherwise
    */
   function seedDefaultLayers(map) {
     // Only seed if localStorage key doesn't exist at all (truly fresh start)

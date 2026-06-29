@@ -281,7 +281,7 @@ const XyzImport = (function () {
         if (!name || !url) return false;
         if (Object.values(customXyzLayers).some((l) => l.url === url)) {
           const errorEl = document.getElementById("xyz-error-msg");
-          errorEl.textContent = "Error: This tile URL is already imported.";
+          errorEl.textContent = "Error: This tile URL is already added.";
           errorEl.style.display = "block";
           return false;
         }
