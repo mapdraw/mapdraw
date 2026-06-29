@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // Apply saved theme on load — glass is default for new users
 (function () {

@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // D3 Elevation Chart Module
 // This module contains all logic for our custom D3 elevation chart.
