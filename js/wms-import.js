@@ -586,6 +586,8 @@ const WmsImport = (function () {
       return;
     }
 
+    if (!Array.isArray(layersData)) return;
+
     layersData.forEach((layerData) => {
       try {
         // Create WMS tile layer with gutter support to prevent icon cutoff

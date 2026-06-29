@@ -184,6 +184,8 @@ const XyzImport = (function () {
       return;
     }
 
+    if (!Array.isArray(layersData)) return;
+
     layersData.forEach((layerData) => {
       try {
         // Create XYZ tile layer
