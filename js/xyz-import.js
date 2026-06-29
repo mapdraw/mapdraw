@@ -281,6 +281,18 @@ const XyzImport = (function () {
         const name = document.getElementById("xyz-name-input").value.trim();
         const url = document.getElementById("xyz-url-input").value.trim();
         if (!name || !url) return false;
+
+        const hasZ = url.includes("{z}");
+        const hasX = url.includes("{x}");
+        const hasY = url.includes("{y}") || url.includes("{-y}");
+
+        if (!hasZ || !hasX || !hasY) {
+          const errorEl = document.getElementById("xyz-error-msg");
+          errorEl.textContent = "Error: URL must contain {z}, {x}, and {y} (or {-y}) placeholders.";
+          errorEl.style.display = "block";
+          return false;
+        }
+
         if (Object.values(customXyzLayers).some((l) => l.url === url)) {
           const errorEl = document.getElementById("xyz-error-msg");
           errorEl.textContent = "Error: This tile URL is already added.";
