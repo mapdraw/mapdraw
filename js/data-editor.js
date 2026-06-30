@@ -282,7 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
         Swal.fire({
           toast: true,
           icon: "success",
-          title: stripProperties ? "Clean GeoJSON Copied!" : "GeoJSON Copied!",
+          title: stripProperties ? "Clean GeoJSON Copied!" : "Raw GeoJSON Copied!",
           showConfirmButton: false,
           timer: 1500,
         }),

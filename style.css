@@ -1517,6 +1517,7 @@ button.strava-button-secondary:not(:disabled) {
 #data-editor-copy,
 #data-editor-copy-clean,
 #data-editor-find {
+  flex: 1;
   font-size: var(--font-size-14);
   font-weight: bold;
   padding: 6px;
@@ -1525,27 +1526,6 @@ button.strava-button-secondary:not(:disabled) {
   border: none;
   border-radius: var(--border-radius);
   cursor: pointer;
-}
-
-#data-editor-restore,
-#data-editor-apply,
-#data-editor-copy-clean {
-  flex: 1;
-}
-
-#data-editor-copy {
-  flex: 0 0 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#data-editor-find {
-  flex: 1;
-}
-
-#data-editor-copy .material-symbols {
-  color: inherit;
 }
 
 @keyframes cm-find-fade {
