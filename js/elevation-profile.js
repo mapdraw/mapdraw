@@ -17,7 +17,7 @@ let verticalLine, hoverOverlay;
 
 // Responsive & Margin constants
 const BREAKPOINT_NARROW = 768; // 768px matches your style.css
-const MARGIN_BOTTOM_NARROW = 60;
+const MARGIN_BOTTOM_NARROW = 65;
 const MARGIN_BOTTOM_WIDE = 30;
 const SUMMARY_PADDING_BOTTOM = 10; // Space between summary text and chart
 const MIN_TOP_MARGIN = 10; // Minimum top margin even if text is empty

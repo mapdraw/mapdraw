@@ -3131,7 +3131,7 @@ body.using-touch {
       cursor: pointer;
       width: 100px;
       height: 30px;
-      margin: 5px auto 5px auto;
+      margin: 0px auto 10px auto;
       background-color: var(--color-blue);
       /* border: 1px solid var(--border-color); */
       border-radius: 15px;
@@ -3165,7 +3165,7 @@ body.using-touch {
 
     #info-panel {
       position: absolute;
-      bottom: 100%; /* Position its bottom edge at the top of its parent */
+      bottom: calc(100% + 5px);
       left: 50px;
       right: 50px;
       width: auto; /* Allow left/right properties to set the width */
