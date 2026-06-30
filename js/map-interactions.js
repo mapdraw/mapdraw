@@ -153,7 +153,14 @@ function deselectCurrentItem() {
 function selectItem(layer) {
   if (isDeleteMode || isEditMode) return;
   if (globallySelectedItem && globallySelectedItem !== layer) {
+    const keepElevation =
+      isElevationProfileVisible &&
+      globallySelectedItem instanceof L.Polyline &&
+      !(globallySelectedItem instanceof L.Polygon) &&
+      layer instanceof L.Polyline &&
+      !(layer instanceof L.Polygon);
     deselectCurrentItem();
+    if (keepElevation) isElevationProfileVisible = true;
   }
   globallySelectedItem = layer;
 
@@ -244,8 +251,6 @@ function selectItem(layer) {
     // Only enable elevation for polylines, not polygons
     if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
       selectedElevationPath = layer;
-      window.elevationProfile.clearElevationProfile();
-      addElevationProfileForLayer(layer);
       if (elevationToggleControl) {
         elevationToggleControl.getContainer().title = "Toggle elevation profile";
         L.DomUtil.removeClass(elevationToggleControl.getContainer(), "disabled");
@@ -255,6 +260,8 @@ function selectItem(layer) {
         elevationDiv.style.visibility = "visible";
         isElevationProfileVisible = true;
       }
+      window.elevationProfile.clearElevationProfile();
+      addElevationProfileForLayer(layer);
     }
   } else if (layer instanceof L.Marker) {
     const { outline } = STYLE_CONFIG.marker.highlight;
