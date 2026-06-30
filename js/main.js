@@ -1933,6 +1933,7 @@ async function initializeMap() {
     privacyPolicyLink.style.color = "var(--link-color)";
 
     const devPanelContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
+    devPanelContainer.id = "settings-dev-panel";
     const devPanelLabel = L.DomUtil.create("label", "", devPanelContainer);
     devPanelLabel.innerText = "Developer";
     devPanelLabel.style.color = "var(--text-color)";

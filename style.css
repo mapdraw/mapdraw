@@ -3249,6 +3249,10 @@ body.using-touch {
       display: none !important;
     }
 
+    #settings-dev-panel {
+      display: none;
+    }
+
     #tab-content,
     #overview-panel {
       border-radius: 0 !important;
