@@ -112,7 +112,7 @@ function initializeContextMenu(map) {
     popupContent.appendChild(
       createMenuRow([
         {
-          text: "Route from",
+          text: "Route Start",
           onClick: () => {
             if (window.app && typeof window.app.updateRoutingPoint === "function") {
               window.app.updateRoutingPoint(wrappedLatlng, "start");
@@ -121,7 +121,7 @@ function initializeContextMenu(map) {
           },
         },
         {
-          text: "Route to",
+          text: "Route End",
           onClick: () => {
             if (window.app && typeof window.app.updateRoutingPoint === "function") {
               window.app.updateRoutingPoint(wrappedLatlng, "end");
