@@ -2781,6 +2781,27 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   padding-right: 0;
 }
 
+#map-attribution {
+  position: absolute;
+  bottom: env(safe-area-inset-bottom, 0px);
+  right: env(safe-area-inset-right, 0px);
+  z-index: 1000;
+  font-size: 10px;
+  padding: 2.5px 5px;
+  background: none;
+  color: #000;
+  pointer-events: auto;
+  text-shadow:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+}
+
+#map-attribution a {
+  color: #000;
+}
+
 /* SCALE */
 /*
  * ███████╗ ██████╗ █████╗ ██╗     ███████╗
@@ -3083,6 +3104,13 @@ body.using-touch {
     }
     #bottom-left-credits:has(#install-pwa-link:not([style*="display: none"])) {
       padding-left: 0;
+    }
+
+    /* Keep attribution above the bottom sheet on mobile */
+    #map-attribution {
+      top: calc(var(--mobile-main-right-container-top) + 25px);
+      bottom: auto;
+      transition: top 0.3s ease-in-out;
     }
 
     #elevation-div {

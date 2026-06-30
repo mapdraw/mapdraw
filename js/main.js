@@ -355,6 +355,8 @@ async function initializeMap() {
     worldCopyJump: true,
   });
 
+  initMapAttribution();
+
   // Create dedicated panes for overlay layers
   map.createPane("customLayersPane");
   map.getPane("customLayersPane").style.zIndex = 250;
@@ -861,6 +863,7 @@ async function initializeMap() {
         for (const name in baseMaps) {
           if (L.Util.stamp(baseMaps[name]) === selectedLayerId) {
             map.addLayer(baseMaps[name]);
+            setBasemapAttribution(name);
           }
         }
         // Reapply overlay layer z-index after base layer change
@@ -872,11 +875,13 @@ async function initializeMap() {
             if (e.target.checked) {
               map.addLayer(layer);
               onOverlayToggle({ type: "overlayadd", layer: layer });
+              addOverlayAttribution(name);
               // Reapply z-index to ensure layer respects list order
               reapplyOverlayZIndex();
             } else {
               map.removeLayer(layer);
               onOverlayToggle({ type: "overlayremove", layer: layer });
+              removeOverlayAttribution(name);
             }
             break;
           }
