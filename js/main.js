@@ -176,7 +176,7 @@ async function initializeMap() {
   if (
     typeof googleApiKey === "undefined" ||
     typeof mapboxAccessToken === "undefined" ||
-    typeof tracestrackApiKey === "undefined"
+    typeof osmClientId === "undefined"
   ) {
     Swal.fire({
       title: "Configuration Error",
@@ -295,9 +295,9 @@ async function initializeMap() {
   const layerDisplayNames = {
     OpenStreetMap: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap',
     OsmGrayscale: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap Gray',
-    EsriWorldImagery: '<span class="material-symbols layer-icon">globe</span> Esri World Imagery',
     CyclOSM: '<span class="material-symbols layer-icon">globe</span> CyclOSM',
-    TracestrackTopo: '<span class="material-symbols layer-icon">globe</span> Tracestrack Topo',
+    OpenTopoMap: '<span class="material-symbols layer-icon">globe</span> OpenTopoMap',
+    EsriWorldImagery: '<span class="material-symbols layer-icon">globe</span> Esri World Imagery',
     TopPlusOpen: '<span class="fi fi-de fis"></span> TopPlusOpen',
     Swisstopo: '<span class="fi fi-ch fis"></span> Swisstopo',
     Empty: '<span class="material-symbols layer-icon">cancel</span> No Base Map',
@@ -324,15 +324,14 @@ async function initializeMap() {
   const baseMaps = {
     OpenStreetMap: osmLayer,
     OsmGrayscale: osmGrayscaleLayer,
-    EsriWorldImagery: L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 19 },
-    ),
     CyclOSM: L.tileLayer("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", {
       maxZoom: 19,
     }),
-    TracestrackTopo: L.tileLayer(
-      `https://tile.tracestrack.com/topo__/{z}/{x}/{y}.webp?key=${tracestrackApiKey}`,
+    OpenTopoMap: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      maxZoom: 17,
+    }),
+    EsriWorldImagery: L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { maxZoom: 19 },
     ),
     TopPlusOpen: L.tileLayer(

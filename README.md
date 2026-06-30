@@ -90,7 +90,6 @@ To enable features that rely on external services, you must provide your own API
 3.  Open the new `js/secrets.js` and fill in your actual API keys using the following `camelCase` variable names:
     - `googleApiKey`
     - `mapboxAccessToken`
-    - `tracestrackApiKey`
     - `osmClientId`
     - `stravaClientId` (Optional)
     - `stravaClientSecret` (Optional)
@@ -103,7 +102,6 @@ To enable features that rely on external services, you must provide your own API
 2.  Click **New repository secret** for each key listed below, ensuring the names match the `SNAKE_CASE` format exactly:
     - `GOOGLE_API_KEY`
     - `MAPBOX_ACCESS_TOKEN`
-    - `TRACESTRACK_API_KEY`
     - `OSM_CLIENT_ID`
     - `STRAVA_CLIENT_ID` (Optional)
     - `STRAVA_CLIENT_SECRET` (Optional)

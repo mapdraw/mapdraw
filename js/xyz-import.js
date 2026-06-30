@@ -239,8 +239,9 @@ const XyzImport = (function () {
           />
           <p style="margin-top: 12px;">Examples:</p>
           <ul style="margin: 4px 0; padding-left: 20px; text-align: left;">
-            <li class="xyz-example-url" data-url="https://tile.opentopomap.org/{z}/{x}/{y}.png" data-name="OpenTopoMap" style="cursor: pointer;">https://tile.opentopomap.org/{z}/{x}/{y}.png</li>
-            <li class="xyz-example-url" data-url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png" data-name="Humanitarian OSM" style="cursor: pointer; margin-top: 4px;">https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png</li>
+            <li class="xyz-example-url" data-url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png" data-name="Humanitarian OSM" style="cursor: pointer;">https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png</li>
+            <li class="xyz-example-url" data-url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png" data-name="CARTO Positron" style="cursor: pointer; margin-top: 4px;">https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png</li>
+            <li class="xyz-example-url" data-url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png" data-name="CARTO Dark Matter" style="cursor: pointer; margin-top: 4px;">https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png</li>
           </ul>
           <p style="margin-top: 6px;">Use <strong>{z}</strong>, <strong>{x}</strong>, <strong>{y}</strong> placeholders for XYZ tiles. For TMS layers with a flipped Y axis, use <strong>{-y}</strong> instead of <strong>{y}</strong>.</p>
           <p id="xyz-error-msg" style="color: var(--color-red); margin-top: 6px; display: none;"></p>
