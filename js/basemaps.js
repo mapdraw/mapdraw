@@ -55,7 +55,14 @@ const BASEMAP_CONFIG = [
     icon: '<span class="fi fi-de fis"></span>',
     url: "https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png",
     tileOptions: { maxZoom: 18 },
-    attribution: { name: "dl-de/by-2-0", url: "https://www.govdata.de/dl-de/by-2-0" },
+    attribution: {
+      name: "BKG",
+      url: "https://www.bkg.bund.de/",
+      parts: [
+        { name: "BKG", url: "https://www.bkg.bund.de/" },
+        { name: "dl-de/by-2-0", url: "https://www.govdata.de/dl-de/by-2-0" },
+      ],
+    },
   },
   {
     key: "Swisstopo",

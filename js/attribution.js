@@ -1,7 +1,10 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 function makeAttrHTML(attr) {
-  return `<span style="white-space: nowrap">© <a href="${attr.url}" target="_blank" rel="noopener noreferrer">${attr.name}</a></span>`;
+  const links = (attr.parts ?? [attr]).map(
+    (p) => `<a href="${p.url}" target="_blank" rel="noopener noreferrer">${p.name}</a>`,
+  );
+  return `<span style="white-space: nowrap">© ${links.join(" ")}</span>`;
 }
 
 const basemapAttributions = Object.fromEntries(
