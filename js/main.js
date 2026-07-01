@@ -138,6 +138,7 @@ async function showCreditsPopup(isWelcome = false) {
 }
 
 function showAttributionToast() {
+  if (window.innerWidth > 768 || document.body.classList.contains("force-desktop-layout")) return;
   Swal.fire({
     toast: true,
     position: "top",
