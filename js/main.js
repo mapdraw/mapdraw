@@ -132,7 +132,10 @@ async function showCreditsPopup(isWelcome = false) {
         seen.add(item.attribution.url);
         const li = document.createElement("li");
         const label = item.creditLabel || item.label;
-        li.innerHTML = `${label}: &copy; <a href="${item.attribution.url}" target="_blank" rel="noopener noreferrer">${item.attribution.name}</a>`;
+        const links = (item.attribution.parts ?? [item.attribution])
+          .map((p) => `<a href="${p.url}" target="_blank" rel="noopener noreferrer">${p.name}</a>`)
+          .join(" ");
+        li.innerHTML = `${label}: &copy; ${links}`;
         frag.appendChild(li);
       });
       placeholder.replaceWith(frag);
@@ -511,21 +514,6 @@ async function initializeMap() {
       },
     ),
   };
-
-  const swissBounds = L.latLngBounds([
-    [45.8179, 5.956],
-    [47.8085, 10.4923],
-  ]);
-
-  map.on("baselayerchange", function (e) {
-    setBasemapAttribution(e.name);
-    if (e.name && e.name.includes("Swisstopo")) {
-      const currentBounds = map.getBounds();
-      if (!swissBounds.contains(currentBounds)) {
-        // map.fitBounds(swissBounds);
-      }
-    }
-  });
 
   const LayersToggleControl = L.Control.extend({
     options: { position: "topleft" },
