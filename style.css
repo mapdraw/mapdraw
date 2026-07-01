@@ -2783,23 +2783,23 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 #map-attribution {
   position: absolute;
-  bottom: env(safe-area-inset-bottom, 0px);
-  right: env(safe-area-inset-right, 0px);
+  bottom: 0px;
+  right: 0px;
   z-index: 1000;
   font-size: 10px;
   padding: 2.5px 5px;
   background: none;
-  color: #000;
+  color: var(--color-black);
   pointer-events: auto;
-  /* text-shadow:
-    -1px -1px 0 #fff,
-    1px -1px 0 #fff,
-    -1px 1px 0 #fff,
-    1px 1px 0 #fff; */
+  text-shadow:
+    -1px -1px 0 var(--color-white),
+    1px -1px 0 var(--color-white),
+    -1px 1px 0 var(--color-white),
+    1px 1px 0 var(--color-white);
 }
 
 #map-attribution a {
-  color: #000;
+  color: var(--color-black);
   text-decoration: none;
 }
 
@@ -2845,9 +2845,10 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border-bottom: 1px solid var(--border-color);
 } */
 
-/* Hide the scale control and bottom credits when the elevation chart is visible */
+/* Hide the scale control, bottom credits, and attribution when the elevation chart is visible */
 body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
-body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
+body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits,
+body:has(#elevation-div[style*="visibility: visible"]) #map-attribution {
   display: none !important;
 }
 
@@ -3107,11 +3108,8 @@ body.using-touch {
       padding-left: 0;
     }
 
-    /* Keep attribution above the bottom sheet on mobile */
     #map-attribution {
-      top: calc(var(--mobile-main-right-container-top) + 15px);
-      bottom: auto;
-      transition: top 0.3s ease-in-out;
+      display: none;
     }
 
     #elevation-div {
