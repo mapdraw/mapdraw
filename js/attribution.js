@@ -1,41 +1,41 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
-const basemapAttributions = {
-  OpenStreetMap:
-    '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
-  OsmGrayscale:
-    '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
-  CyclOSM:
-    '© <a href="https://www.cyclosm.org/" target="_blank" rel="noopener noreferrer">CyclOSM</a>',
-  OpenTopoMap:
-    '© <a href="https://opentopomap.org/" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>',
-  EsriWorldImagery:
-    '© <a href="https://www.esri.com" target="_blank" rel="noopener noreferrer">Esri</a>',
-  TopPlusOpen:
-    '© <a href="https://www.govdata.de/dl-de/by-2-0" target="_blank" rel="noopener noreferrer">dl-de/by-2-0</a>',
-  Swisstopo:
-    '© <a href="https://www.swisstopo.admin.ch/" target="_blank" rel="noopener noreferrer">swisstopo</a>',
-  Empty: "",
-};
+function makeAttrHTML(attr) {
+  return `© <a href="${attr.url}" target="_blank" rel="noopener noreferrer">${attr.name}</a>`;
+}
 
-const overlayAttributions = {
-  WaymarkedTrailsHiking:
-    '© <a href="https://waymarkedtrails.org" target="_blank" rel="noopener noreferrer">Waymarked Trails</a>',
-  WaymarkedTrailsCycling:
-    '© <a href="https://waymarkedtrails.org" target="_blank" rel="noopener noreferrer">Waymarked Trails</a>',
-};
+const basemapAttributions = Object.fromEntries(
+  BASEMAP_CONFIG.filter((b) => b.attribution).map((b) => [
+    b.key,
+    (b.mapAttributions ?? [b.attribution]).map(makeAttrHTML).join(" "),
+  ]),
+);
+
+const overlayAttributions = Object.fromEntries(
+  OVERLAY_CONFIG.filter((o) => o.attribution).map((o) => [o.key, makeAttrHTML(o.attribution)]),
+);
 
 let currentBasemapKey = "OpenStreetMap";
 const activeOverlayKeys = new Set();
 
 function updateMapAttribution() {
   const parts = [];
-  const base = basemapAttributions[currentBasemapKey];
-  if (base) parts.push(base);
-  for (const key of activeOverlayKeys) {
-    const attr = overlayAttributions[key];
-    if (attr && !parts.includes(attr)) parts.push(attr);
+  const seenUrls = new Set();
+
+  const base = BASEMAP_CONFIG.find((b) => b.key === currentBasemapKey);
+  if (base?.attribution) {
+    (base.mapAttributions ?? [base.attribution]).forEach((a) => seenUrls.add(a.url));
+    parts.push(basemapAttributions[currentBasemapKey]);
   }
+
+  for (const key of activeOverlayKeys) {
+    const overlay = OVERLAY_CONFIG.find((o) => o.key === key);
+    if (overlay?.attribution && !seenUrls.has(overlay.attribution.url)) {
+      seenUrls.add(overlay.attribution.url);
+      parts.push(overlayAttributions[key]);
+    }
+  }
+
   document.getElementById("map-attribution").innerHTML = parts.join(" ");
 }
 

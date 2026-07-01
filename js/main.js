@@ -124,6 +124,29 @@ async function showCreditsPopup(isWelcome = false) {
       appNameEl.textContent = APP_NAME;
     }
 
+    const populateAttributionList = (placeholder, config) => {
+      const seen = new Set();
+      const frag = document.createDocumentFragment();
+      config.forEach((item) => {
+        if (!item.attribution || seen.has(item.attribution.url)) return;
+        seen.add(item.attribution.url);
+        const li = document.createElement("li");
+        const label = item.creditLabel || item.label;
+        li.innerHTML = `${label}: &copy; <a href="${item.attribution.url}" target="_blank" rel="noopener noreferrer">${item.attribution.name}</a>`;
+        frag.appendChild(li);
+      });
+      placeholder.replaceWith(frag);
+    };
+
+    populateAttributionList(
+      swalContent.querySelector("#basemap-credits-placeholder"),
+      BASEMAP_CONFIG,
+    );
+    populateAttributionList(
+      swalContent.querySelector("#overlay-credits-placeholder"),
+      OVERLAY_CONFIG,
+    );
+
     return Swal.fire({
       html: swalContent,
       confirmButtonText: isWelcome ? "Let's Go!" : "Close",
@@ -294,58 +317,22 @@ async function initializeMap() {
   }
 
   const layerDisplayNames = {
-    OpenStreetMap: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap',
-    OsmGrayscale: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap Gray',
-    CyclOSM: '<span class="material-symbols layer-icon">globe</span> CyclOSM',
-    OpenTopoMap: '<span class="material-symbols layer-icon">globe</span> OpenTopoMap',
-    EsriWorldImagery: '<span class="material-symbols layer-icon">globe</span> Esri World Imagery',
-    TopPlusOpen: '<span class="fi fi-de fis"></span> TopPlusOpen',
-    Swisstopo: '<span class="fi fi-ch fis"></span> Swisstopo',
-    Empty: '<span class="material-symbols layer-icon">cancel</span> No Base Map',
+    ...Object.fromEntries(BASEMAP_CONFIG.map((b) => [b.key, `${b.icon} ${b.label}`])),
+    ...Object.fromEntries(OVERLAY_CONFIG.map((o) => [o.key, `${o.icon} ${o.label}`])),
     DrawnItems: '<span class="material-symbols layer-icon">edit</span> Drawn Items',
     ImportedFiles: '<span class="material-symbols layer-icon">folder_open</span> Imported Files',
     StravaActivities:
       '<span class="material-symbols layer-icon">directions_run</span> Strava Activities',
     FoundPlaces: '<span class="material-symbols layer-icon">location_on</span> Found Places',
-    WaymarkedTrailsHiking:
-      '<span class="material-symbols layer-icon">directions_walk</span> Waymarked Trails Hiking',
-    WaymarkedTrailsCycling:
-      '<span class="material-symbols layer-icon">directions_bike</span> Waymarked Trails Cycling',
   };
 
-  const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-  });
-
-  const osmGrayscaleLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    className: "grayscale-tiles",
-  });
-
-  const baseMaps = {
-    OpenStreetMap: osmLayer,
-    OsmGrayscale: osmGrayscaleLayer,
-    CyclOSM: L.tileLayer("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", {
-      maxZoom: 19,
+  const baseMaps = Object.fromEntries(
+    BASEMAP_CONFIG.map((b) => {
+      if (!b.url) return [b.key, L.layerGroup()];
+      if (b.wms) return [b.key, L.tileLayer.wms(b.url, b.tileOptions)];
+      return [b.key, L.tileLayer(b.url, b.tileOptions)];
     }),
-    OpenTopoMap: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-      maxZoom: 17,
-    }),
-    EsriWorldImagery: L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 19 },
-    ),
-    TopPlusOpen: L.tileLayer(
-      "https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png",
-      { maxZoom: 18 },
-    ),
-    Swisstopo: L.tileLayer.wms("https://wms.geo.admin.ch/", {
-      layers: "ch.swisstopo.pixelkarte-farbe",
-      format: "image/jpeg",
-      maxZoom: 18,
-    }),
-    Empty: L.layerGroup(), // Empty layer group for no basemap
-  };
+  );
 
   map = L.map("map", {
     center: [0, 0],
@@ -448,7 +435,7 @@ async function initializeMap() {
 
   window.addEventListener("hashchange", handleHashChange, false);
 
-  osmLayer.addTo(map);
+  baseMaps.OpenStreetMap.addTo(map);
 
   drawnItems = new L.FeatureGroup().addTo(map);
   importedItems = new L.FeatureGroup().addTo(map);
@@ -531,6 +518,7 @@ async function initializeMap() {
   ]);
 
   map.on("baselayerchange", function (e) {
+    setBasemapAttribution(e.name);
     if (e.name && e.name.includes("Swisstopo")) {
       const currentBounds = map.getBounds();
       if (!swissBounds.contains(currentBounds)) {
