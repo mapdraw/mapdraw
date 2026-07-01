@@ -125,6 +125,7 @@ async function showCreditsPopup(isWelcome = false) {
     }
 
     const populateAttributionList = (placeholder, config) => {
+      if (!placeholder) return;
       const seen = new Set();
       const frag = document.createDocumentFragment();
       config.forEach((item) => {
@@ -438,7 +439,7 @@ async function initializeMap() {
 
   window.addEventListener("hashchange", handleHashChange, false);
 
-  baseMaps.OpenStreetMap.addTo(map);
+  baseMaps[BASEMAP_CONFIG[0].key].addTo(map);
 
   drawnItems = new L.FeatureGroup().addTo(map);
   importedItems = new L.FeatureGroup().addTo(map);

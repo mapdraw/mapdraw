@@ -18,7 +18,7 @@ const overlayAttributions = Object.fromEntries(
   OVERLAY_CONFIG.filter((o) => o.attribution).map((o) => [o.key, makeAttrHTML(o.attribution)]),
 );
 
-let currentBasemapKey = "OpenStreetMap";
+let currentBasemapKey = BASEMAP_CONFIG[0].key;
 const activeOverlayKeys = new Set();
 
 function updateMapAttribution() {
