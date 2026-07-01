@@ -2791,15 +2791,16 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   background: none;
   color: #000;
   pointer-events: auto;
-  text-shadow:
+  /* text-shadow:
     -1px -1px 0 #fff,
     1px -1px 0 #fff,
     -1px 1px 0 #fff,
-    1px 1px 0 #fff;
+    1px 1px 0 #fff; */
 }
 
 #map-attribution a {
   color: #000;
+  text-decoration: none;
 }
 
 /* SCALE */
@@ -3108,7 +3109,7 @@ body.using-touch {
 
     /* Keep attribution above the bottom sheet on mobile */
     #map-attribution {
-      top: calc(var(--mobile-main-right-container-top) + 25px);
+      top: calc(var(--mobile-main-right-container-top) + 15px);
       bottom: auto;
       transition: top 0.3s ease-in-out;
     }
@@ -3159,7 +3160,7 @@ body.using-touch {
       cursor: pointer;
       width: 100px;
       height: 30px;
-      margin: 5px auto 5px auto;
+      margin: 0px auto 10px auto;
       background-color: var(--color-blue);
       /* border: 1px solid var(--border-color); */
       border-radius: 15px;
@@ -3193,7 +3194,7 @@ body.using-touch {
 
     #info-panel {
       position: absolute;
-      bottom: 100%; /* Position its bottom edge at the top of its parent */
+      bottom: calc(100% + 5px);
       left: 50px;
       right: 50px;
       width: auto; /* Allow left/right properties to set the width */
