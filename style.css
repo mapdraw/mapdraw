@@ -2783,13 +2783,19 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 #map-attribution {
   position: absolute;
-  bottom: 0px;
-  right: 0px;
-  z-index: 1000;
+  bottom: env(safe-area-inset-bottom, 0px);
+  right: env(safe-area-inset-right, 0px);
+  z-index: 499; /* Below #bottom-left-credits (500) */
   font-size: 10px;
   padding: 2.5px 5px;
   background: none;
   color: var(--color-black);
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  column-gap: 5px;
+  max-width: calc(100vw - 200px);
+  line-height: 1.6;
   pointer-events: auto;
   text-shadow:
     -1px -1px 0 var(--color-white),

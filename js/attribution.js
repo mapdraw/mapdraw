@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 function makeAttrHTML(attr) {
-  return `© <a href="${attr.url}" target="_blank" rel="noopener noreferrer">${attr.name}</a>`;
+  return `<span style="white-space: nowrap">© <a href="${attr.url}" target="_blank" rel="noopener noreferrer">${attr.name}</a></span>`;
 }
 
 const basemapAttributions = Object.fromEntries(
   BASEMAP_CONFIG.filter((b) => b.attribution).map((b) => [
     b.key,
-    (b.mapAttributions ?? [b.attribution]).map(makeAttrHTML).join(" "),
+    (b.mapAttributions ?? [b.attribution]).map(makeAttrHTML).join(""),
   ]),
 );
 
@@ -36,7 +36,7 @@ function updateMapAttribution() {
     }
   }
 
-  document.getElementById("map-attribution").innerHTML = parts.join(" ");
+  document.getElementById("map-attribution").innerHTML = parts.join("");
 }
 
 function initMapAttribution() {
