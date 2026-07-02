@@ -369,7 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Tab is desktop-only — fall back to Contents if viewport shrinks to mobile while active
-  window.matchMedia("(max-width: 768px)").addEventListener("change", (e) => {
+  window.matchMedia(`(max-width: ${BREAKPOINT_MOBILE}px)`).addEventListener("change", (e) => {
     if (e.matches && panel.classList.contains("active")) {
       document.getElementById("tab-btn-overview").click();
     }

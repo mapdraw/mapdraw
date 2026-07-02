@@ -781,7 +781,7 @@ select:focus {
   background-color: var(--background-color);
 }
 
-#tab-btn-heart {
+#tab-btn-credits {
   display: none; /* Hidden by default on desktop */
 }
 
@@ -2781,6 +2781,41 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   padding-right: 0;
 }
 
+#map-attribution {
+  position: absolute;
+  bottom: env(safe-area-inset-bottom, 0px);
+  right: env(safe-area-inset-right, 0px);
+  z-index: 499; /* Below #bottom-left-credits (500) */
+  font-size: 10px;
+  padding: 2.5px 5px;
+  background: none;
+  color: var(--color-black);
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  column-gap: 5px;
+  max-width: calc(100vw - 200px);
+  line-height: 1.6;
+  pointer-events: auto;
+  text-shadow:
+    -1px -1px 0 var(--color-white),
+    1px -1px 0 var(--color-white),
+    -1px 1px 0 var(--color-white),
+    1px 1px 0 var(--color-white);
+}
+
+#map-attribution a {
+  color: var(--color-black);
+  text-decoration: none;
+}
+
+/* Hide bottom credits, attribution, and the scale control when the elevation chart is visible */
+body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits,
+body:has(#elevation-div[style*="visibility: visible"]) #map-attribution,
+body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale {
+  display: none !important;
+}
+
 /* SCALE */
 /*
  * ███████╗ ██████╗ █████╗ ██╗     ███████╗
@@ -2822,12 +2857,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
 } */
-
-/* Hide the scale control and bottom credits when the elevation chart is visible */
-body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
-body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
-  display: none !important;
-}
 
 /* CURSORS */
 /*
@@ -3085,6 +3114,10 @@ body.using-touch {
       padding-left: 0;
     }
 
+    #map-attribution {
+      display: none;
+    }
+
     #elevation-div {
       z-index: 500; /* Make sure elevation div is behind main right container on mobiles */
       bottom: calc(var(--mobile-elevation-summary-padding-bottom) - var(--sheet-handle-height));
@@ -3281,7 +3314,7 @@ body.using-touch {
       content: "keyboard_arrow_up";
     }
 
-    #tab-btn-heart {
+    #tab-btn-credits {
       display: flex;
       flex: 0 0 40px;
       padding: 8px;
@@ -3297,7 +3330,7 @@ body.using-touch {
       align-items: center;
       height: 35px;
     }
-    #tab-btn-heart .material-symbols {
+    #tab-btn-credits .material-symbols {
       color: var(--text-color);
     }
     /* Mobile Bottom Sheet Styles End */

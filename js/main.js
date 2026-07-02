@@ -124,6 +124,30 @@ async function showCreditsPopup(isWelcome = false) {
       appNameEl.textContent = APP_NAME;
     }
 
+    const populateAttributionList = (placeholder, config) => {
+      if (!placeholder) return;
+      const seen = new Set();
+      const frag = document.createDocumentFragment();
+      config.forEach((item) => {
+        if (!item.attribution || seen.has(item.attribution.url)) return;
+        seen.add(item.attribution.url);
+        const li = document.createElement("li");
+        const label = item.creditLabel || item.label;
+        li.innerHTML = `${label}: &copy; ${attrLinksHTML(item.attribution)}`;
+        frag.appendChild(li);
+      });
+      placeholder.replaceWith(frag);
+    };
+
+    populateAttributionList(
+      swalContent.querySelector("#basemap-credits-placeholder"),
+      BASEMAP_CONFIG,
+    );
+    populateAttributionList(
+      swalContent.querySelector("#overlay-credits-placeholder"),
+      OVERLAY_CONFIG,
+    );
+
     return Swal.fire({
       html: swalContent,
       confirmButtonText: isWelcome ? "Let's Go!" : "Close",
@@ -138,10 +162,17 @@ async function showCreditsPopup(isWelcome = false) {
 }
 
 function showAttributionToast() {
+  if (
+    window.innerWidth > BREAKPOINT_MOBILE ||
+    document.body.classList.contains("force-desktop-layout")
+  )
+    return;
+  const attribution = basemapAttributions[BASEMAP_CONFIG[0].key];
+  if (!attribution) return;
   Swal.fire({
     toast: true,
     position: "top",
-    html: 'Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="color:inherit">OpenStreetMap</a>',
+    html: `Map data ${attribution}`,
     showConfirmButton: false,
     timer: 5000,
     customClass: { popup: "attribution-toast" },
@@ -293,58 +324,22 @@ async function initializeMap() {
   }
 
   const layerDisplayNames = {
-    OpenStreetMap: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap',
-    OsmGrayscale: '<span class="material-symbols layer-icon">globe</span> OpenStreetMap Gray',
-    CyclOSM: '<span class="material-symbols layer-icon">globe</span> CyclOSM',
-    OpenTopoMap: '<span class="material-symbols layer-icon">globe</span> OpenTopoMap',
-    EsriWorldImagery: '<span class="material-symbols layer-icon">globe</span> Esri World Imagery',
-    TopPlusOpen: '<span class="fi fi-de fis"></span> TopPlusOpen',
-    Swisstopo: '<span class="fi fi-ch fis"></span> Swisstopo',
-    Empty: '<span class="material-symbols layer-icon">cancel</span> No Base Map',
+    ...Object.fromEntries(BASEMAP_CONFIG.map((b) => [b.key, `${b.icon} ${b.label}`])),
+    ...Object.fromEntries(OVERLAY_CONFIG.map((o) => [o.key, `${o.icon} ${o.label}`])),
     DrawnItems: '<span class="material-symbols layer-icon">edit</span> Drawn Items',
     ImportedFiles: '<span class="material-symbols layer-icon">folder_open</span> Imported Files',
     StravaActivities:
       '<span class="material-symbols layer-icon">directions_run</span> Strava Activities',
     FoundPlaces: '<span class="material-symbols layer-icon">location_on</span> Found Places',
-    WaymarkedTrailsHiking:
-      '<span class="material-symbols layer-icon">directions_walk</span> Waymarked Trails Hiking',
-    WaymarkedTrailsCycling:
-      '<span class="material-symbols layer-icon">directions_bike</span> Waymarked Trails Cycling',
   };
 
-  const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-  });
-
-  const osmGrayscaleLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    className: "grayscale-tiles",
-  });
-
-  const baseMaps = {
-    OpenStreetMap: osmLayer,
-    OsmGrayscale: osmGrayscaleLayer,
-    CyclOSM: L.tileLayer("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", {
-      maxZoom: 19,
+  const baseMaps = Object.fromEntries(
+    BASEMAP_CONFIG.map((b) => {
+      if (!b.url) return [b.key, L.layerGroup()];
+      if (b.wms) return [b.key, L.tileLayer.wms(b.url, b.tileOptions)];
+      return [b.key, L.tileLayer(b.url, b.tileOptions)];
     }),
-    OpenTopoMap: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-      maxZoom: 17,
-    }),
-    EsriWorldImagery: L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 19 },
-    ),
-    TopPlusOpen: L.tileLayer(
-      "https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png",
-      { maxZoom: 18 },
-    ),
-    Swisstopo: L.tileLayer.wms("https://wms.geo.admin.ch/", {
-      layers: "ch.swisstopo.pixelkarte-farbe",
-      format: "image/jpeg",
-      maxZoom: 18,
-    }),
-    Empty: L.layerGroup(), // Empty layer group for no basemap
-  };
+  );
 
   map = L.map("map", {
     center: [0, 0],
@@ -354,6 +349,8 @@ async function initializeMap() {
     doubleClickZoom: true,
     worldCopyJump: true,
   });
+
+  initMapAttribution();
 
   // Create dedicated panes for overlay layers
   map.createPane("customLayersPane");
@@ -445,7 +442,7 @@ async function initializeMap() {
 
   window.addEventListener("hashchange", handleHashChange, false);
 
-  osmLayer.addTo(map);
+  baseMaps[BASEMAP_CONFIG[0].key].addTo(map);
 
   drawnItems = new L.FeatureGroup().addTo(map);
   importedItems = new L.FeatureGroup().addTo(map);
@@ -509,32 +506,8 @@ async function initializeMap() {
     ImportedFiles: importedItems,
     StravaActivities: stravaActivitiesLayer,
     FoundPlaces: poiMasterLayer,
-    WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      pane: "waymarkedTrailsPane",
-    }),
-    WaymarkedTrailsCycling: L.tileLayer(
-      "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
-      {
-        maxZoom: 19,
-        pane: "waymarkedTrailsPane",
-      },
-    ),
+    ...Object.fromEntries(OVERLAY_CONFIG.map((o) => [o.key, L.tileLayer(o.url, o.tileOptions)])),
   };
-
-  const swissBounds = L.latLngBounds([
-    [45.8179, 5.956],
-    [47.8085, 10.4923],
-  ]);
-
-  map.on("baselayerchange", function (e) {
-    if (e.name && e.name.includes("Swisstopo")) {
-      const currentBounds = map.getBounds();
-      if (!swissBounds.contains(currentBounds)) {
-        // map.fitBounds(swissBounds);
-      }
-    }
-  });
 
   const LayersToggleControl = L.Control.extend({
     options: { position: "topleft" },
@@ -590,7 +563,7 @@ async function initializeMap() {
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
 
-  const tileOverlayNames = ["WaymarkedTrailsHiking", "WaymarkedTrailsCycling"];
+  const tileOverlayNames = OVERLAY_CONFIG.map((o) => o.key);
 
   const userContentNames = ["DrawnItems", "ImportedFiles", "StravaActivities", "FoundPlaces"];
 
@@ -861,6 +834,7 @@ async function initializeMap() {
         for (const name in baseMaps) {
           if (L.Util.stamp(baseMaps[name]) === selectedLayerId) {
             map.addLayer(baseMaps[name]);
+            setBasemapAttribution(name);
           }
         }
         // Reapply overlay layer z-index after base layer change
@@ -872,11 +846,13 @@ async function initializeMap() {
             if (e.target.checked) {
               map.addLayer(layer);
               onOverlayToggle({ type: "overlayadd", layer: layer });
+              addOverlayAttribution(name);
               // Reapply z-index to ensure layer respects list order
               reapplyOverlayZIndex();
             } else {
               map.removeLayer(layer);
               onOverlayToggle({ type: "overlayremove", layer: layer });
+              removeOverlayAttribution(name);
             }
             break;
           }
@@ -1960,14 +1936,6 @@ async function initializeMap() {
       showCreditsPopup();
     }
   });
-  const heartButton = document.getElementById("tab-btn-heart");
-  if (heartButton) {
-    heartButton.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      showCreditsPopup();
-    });
-  }
 
   const infoPanelObserver = new MutationObserver(() => {
     if (infoPanelName) {
@@ -2076,6 +2044,7 @@ async function initializeMap() {
     document.getElementById("top-right-container"),
     document.getElementById("custom-layers-panel"),
     document.getElementById("elevation-div"),
+    document.getElementById("bottom-left-credits"),
     // Also include the container for all of Leaflet's default controls
     ...document.querySelectorAll(".leaflet-control-container"),
   ];
