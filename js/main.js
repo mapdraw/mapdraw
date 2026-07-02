@@ -166,10 +166,12 @@ async function showCreditsPopup(isWelcome = false) {
 
 function showAttributionToast() {
   if (window.innerWidth > 768 || document.body.classList.contains("force-desktop-layout")) return;
+  const attribution = basemapAttributions[BASEMAP_CONFIG[0].key];
+  if (!attribution) return;
   Swal.fire({
     toast: true,
     position: "top",
-    html: 'Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="color:inherit">OpenStreetMap</a>',
+    html: `Map data ${attribution}`,
     showConfirmButton: false,
     timer: 5000,
     customClass: { popup: "attribution-toast" },
