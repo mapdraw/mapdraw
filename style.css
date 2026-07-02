@@ -2809,6 +2809,13 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   text-decoration: none;
 }
 
+/* Hide bottom credits, attribution, and the scale control when the elevation chart is visible */
+body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits,
+body:has(#elevation-div[style*="visibility: visible"]) #map-attribution,
+body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale {
+  display: none !important;
+}
+
 /* SCALE */
 /*
  * ███████╗ ██████╗ █████╗ ██╗     ███████╗
@@ -2850,13 +2857,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
 } */
-
-/* Hide the scale control, bottom credits, and attribution when the elevation chart is visible */
-body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
-body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits,
-body:has(#elevation-div[style*="visibility: visible"]) #map-attribution {
-  display: none !important;
-}
 
 /* CURSORS */
 /*
