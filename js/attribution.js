@@ -1,10 +1,13 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
+function attrLinksHTML(attr) {
+  return (attr.parts ?? [attr])
+    .map((p) => `<a href="${p.url}" target="_blank" rel="noopener noreferrer">${p.name}</a>`)
+    .join(" ");
+}
+
 function makeAttrHTML(attr) {
-  const links = (attr.parts ?? [attr]).map(
-    (p) => `<a href="${p.url}" target="_blank" rel="noopener noreferrer">${p.name}</a>`,
-  );
-  return `<span style="white-space: nowrap">© ${links.join(" ")}</span>`;
+  return `<span style="white-space: nowrap">© ${attrLinksHTML(attr)}</span>`;
 }
 
 const basemapAttributions = Object.fromEntries(
@@ -27,7 +30,9 @@ function updateMapAttribution() {
 
   const base = BASEMAP_CONFIG.find((b) => b.key === currentBasemapKey);
   if (base?.attribution) {
-    (base.mapAttributions ?? [base.attribution]).forEach((a) => seenUrls.add(a.url));
+    (base.mapAttributions ?? [base.attribution]).forEach((a) =>
+      (a.parts ?? [a]).forEach((p) => seenUrls.add(p.url)),
+    );
     parts.push(basemapAttributions[currentBasemapKey]);
   }
 
@@ -46,6 +51,8 @@ function initMapAttribution() {
   const el = document.createElement("div");
   el.id = "map-attribution";
   document.getElementById("map").appendChild(el);
+  L.DomEvent.disableClickPropagation(el);
+  L.DomEvent.disableScrollPropagation(el);
   updateMapAttribution();
 }
 

@@ -94,6 +94,7 @@ const OVERLAY_CONFIG = [
   {
     key: "WaymarkedTrailsCycling",
     label: "Waymarked Trails Cycling",
+    creditLabel: "Waymarked Trails",
     icon: '<span class="material-symbols layer-icon">directions_bike</span>',
     url: "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
     tileOptions: { maxZoom: 19, pane: "waymarkedTrailsPane" },

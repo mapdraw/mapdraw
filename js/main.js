@@ -133,10 +133,7 @@ async function showCreditsPopup(isWelcome = false) {
         seen.add(item.attribution.url);
         const li = document.createElement("li");
         const label = item.creditLabel || item.label;
-        const links = (item.attribution.parts ?? [item.attribution])
-          .map((p) => `<a href="${p.url}" target="_blank" rel="noopener noreferrer">${p.name}</a>`)
-          .join(" ");
-        li.innerHTML = `${label}: &copy; ${links}`;
+        li.innerHTML = `${label}: &copy; ${attrLinksHTML(item.attribution)}`;
         frag.appendChild(li);
       });
       placeholder.replaceWith(frag);
