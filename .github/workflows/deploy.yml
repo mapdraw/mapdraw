@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Inject Google Analytics
         env:
@@ -59,7 +59,7 @@ jobs:
           sed -i "s|__APP_DESCRIPTION__|${APP_DESC_VALUE_ESCAPED}|g" manifest.json
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "20"
 
@@ -87,7 +87,7 @@ jobs:
           echo "Injected build timestamp: $BUILD_TIMESTAMP"
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: "."
 
