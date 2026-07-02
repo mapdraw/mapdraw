@@ -503,17 +503,7 @@ async function initializeMap() {
     ImportedFiles: importedItems,
     StravaActivities: stravaActivitiesLayer,
     FoundPlaces: poiMasterLayer,
-    WaymarkedTrailsHiking: L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      pane: "waymarkedTrailsPane",
-    }),
-    WaymarkedTrailsCycling: L.tileLayer(
-      "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
-      {
-        maxZoom: 19,
-        pane: "waymarkedTrailsPane",
-      },
-    ),
+    ...Object.fromEntries(OVERLAY_CONFIG.map((o) => [o.key, L.tileLayer(o.url, o.tileOptions)])),
   };
 
   const LayersToggleControl = L.Control.extend({
@@ -570,7 +560,7 @@ async function initializeMap() {
 
   formContent += '<div class="leaflet-control-layers-separator"></div>';
 
-  const tileOverlayNames = ["WaymarkedTrailsHiking", "WaymarkedTrailsCycling"];
+  const tileOverlayNames = OVERLAY_CONFIG.map((o) => o.key);
 
   const userContentNames = ["DrawnItems", "ImportedFiles", "StravaActivities", "FoundPlaces"];
 

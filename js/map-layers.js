@@ -87,12 +87,16 @@ const OVERLAY_CONFIG = [
     label: "Waymarked Trails Hiking",
     creditLabel: "Waymarked Trails",
     icon: '<span class="material-symbols layer-icon">directions_walk</span>',
+    url: "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png",
+    tileOptions: { maxZoom: 19, pane: "waymarkedTrailsPane" },
     attribution: { name: "Waymarked Trails", url: "https://waymarkedtrails.org" },
   },
   {
     key: "WaymarkedTrailsCycling",
     label: "Waymarked Trails Cycling",
     icon: '<span class="material-symbols layer-icon">directions_bike</span>',
+    url: "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
+    tileOptions: { maxZoom: 19, pane: "waymarkedTrailsPane" },
     attribution: { name: "Waymarked Trails", url: "https://waymarkedtrails.org" },
   },
 ];
