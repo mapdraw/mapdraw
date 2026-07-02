@@ -781,7 +781,7 @@ select:focus {
   background-color: var(--background-color);
 }
 
-#tab-btn-heart {
+#tab-btn-credits {
   display: none; /* Hidden by default on desktop */
 }
 
@@ -3314,7 +3314,7 @@ body.using-touch {
       content: "keyboard_arrow_up";
     }
 
-    #tab-btn-heart {
+    #tab-btn-credits {
       display: flex;
       flex: 0 0 40px;
       padding: 8px;
@@ -3330,7 +3330,7 @@ body.using-touch {
       align-items: center;
       height: 35px;
     }
-    #tab-btn-heart .material-symbols {
+    #tab-btn-credits .material-symbols {
       color: var(--text-color);
     }
     /* Mobile Bottom Sheet Styles End */

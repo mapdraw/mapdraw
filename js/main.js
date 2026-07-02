@@ -1932,14 +1932,6 @@ async function initializeMap() {
       showCreditsPopup();
     }
   });
-  const heartButton = document.getElementById("tab-btn-heart");
-  if (heartButton) {
-    heartButton.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      showCreditsPopup();
-    });
-  }
 
   const infoPanelObserver = new MutationObserver(() => {
     if (infoPanelName) {
