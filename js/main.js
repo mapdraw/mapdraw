@@ -2040,6 +2040,7 @@ async function initializeMap() {
     document.getElementById("top-right-container"),
     document.getElementById("custom-layers-panel"),
     document.getElementById("elevation-div"),
+    document.getElementById("bottom-left-credits"),
     // Also include the container for all of Leaflet's default controls
     ...document.querySelectorAll(".leaflet-control-container"),
   ];
