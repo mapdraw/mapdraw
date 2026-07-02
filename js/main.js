@@ -162,7 +162,11 @@ async function showCreditsPopup(isWelcome = false) {
 }
 
 function showAttributionToast() {
-  if (window.innerWidth > 768 || document.body.classList.contains("force-desktop-layout")) return;
+  if (
+    window.innerWidth > BREAKPOINT_MOBILE ||
+    document.body.classList.contains("force-desktop-layout")
+  )
+    return;
   const attribution = basemapAttributions[BASEMAP_CONFIG[0].key];
   if (!attribution) return;
   Swal.fire({

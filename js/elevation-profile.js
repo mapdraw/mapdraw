@@ -16,7 +16,6 @@ let currentRawData = [];
 let verticalLine, hoverOverlay;
 
 // Responsive & Margin constants
-const BREAKPOINT_NARROW = 768; // 768px matches your style.css
 const MARGIN_BOTTOM_NARROW = 65;
 const MARGIN_BOTTOM_WIDE = 30;
 const SUMMARY_PADDING_BOTTOM = 10; // Space between summary text and chart
@@ -142,7 +141,7 @@ function formatHikingTime(minutes) {
  * @param {number} containerWidth - The current width of the target div
  */
 function updateBottomMargin(containerWidth) {
-  const isNarrow = containerWidth < BREAKPOINT_NARROW;
+  const isNarrow = containerWidth < BREAKPOINT_MOBILE;
   margin.bottom = isNarrow ? MARGIN_BOTTOM_NARROW : MARGIN_BOTTOM_WIDE;
 }
 

@@ -9,6 +9,8 @@ const APP_DESCRIPTION = "Free online GPX, KML, KMZ & GeoJSON viewer & editor. Dr
 const APP_DOMAIN = "www.mapdraw.net"; // Used for Strava setup instructions
 const OSM_CREATED_BY = "MapDraw"; // OSM changeset created_by tag
 
+const BREAKPOINT_MOBILE = 768; // Mobile breakpoint; matches style.css's @media (max-width: 768px)
+
 // Core Application Colors
 const DEFAULT_COLOR = "#DC143C"; // Crimson
 const ROUTE_COLOR = "#FFD700"; // Gold
