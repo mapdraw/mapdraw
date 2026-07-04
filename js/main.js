@@ -1402,6 +1402,25 @@ async function initializeMap() {
   });
   map.addControl(drawControl);
 
+  // Every toolbar button's click is hardwired by leaflet-draw to call
+  // handler.enable(), with no way to toggle it back off by clicking the
+  // same button again. Swap that one listener for a toggle version, using
+  // the exact (button, event, fn, context) leaflet-draw itself bound it
+  // with, so every draw/edit/delete tool can be toggled off the same way
+  // rectangle-select already can. Always "click", never "touchstart" -
+  // the _detectIOS patch above forces that regardless of device.
+  [L.DrawToolbar.TYPE, L.EditToolbar.TYPE].forEach((toolbarType) => {
+    Object.values(drawControl._toolbars[toolbarType]._modes).forEach(({ handler, button }) => {
+      L.DomEvent.off(button, "click", handler.enable, handler);
+      L.DomEvent.on(
+        button,
+        "click",
+        () => (handler.enabled() ? handler.disable() : handler.enable()),
+        handler,
+      );
+    });
+  });
+
   const ImportControl = L.Control.extend({
     options: { position: "topleft" },
     onAdd: function (map) {
