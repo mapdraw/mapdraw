@@ -2392,6 +2392,17 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 #rectangle-select-button.active .material-symbols {
   color: var(--highlight-color);
 }
+/* Its actions list lives inside a .leaflet-bar control (unlike leaflet-draw's
+   own toolbars, where the actions list is a sibling of .leaflet-bar), so it
+   also picks up the global .leaflet-bar rules that fix button width to 26px
+   and strip all borders - undo both to match leaflet-draw's own toolbar. */
+#rectangle-select-button .leaflet-draw-actions a {
+  width: auto;
+  border-left: 1px solid var(--border-color) !important;
+}
+#rectangle-select-button .leaflet-draw-actions li:first-child a {
+  border-left: none !important;
+}
 .rectangle-select-cursor {
   cursor: crosshair;
 }
