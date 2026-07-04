@@ -26,6 +26,7 @@
   const markerOutlines = new Map(); // layer -> outline marker (mirrors selectedMarkerOutline)
 
   const DRAG_THRESHOLD_PX = 6;
+  const NO_SELECTION_HINT = "Select items first";
   const preventTouchScroll = (e) => L.DomEvent.preventDefault(e);
 
   function getHighlightColor() {
@@ -215,7 +216,15 @@
     deleteAction.classList.toggle("leaflet-disabled", !hasSelection);
     copyAction.classList.toggle("leaflet-disabled", !hasSelection);
     if (hasSelection) {
-      visibilityAction.textContent = anySelectedVisible() ? "Hide" : "Show";
+      const showing = anySelectedVisible();
+      visibilityAction.textContent = showing ? "Hide" : "Show";
+      visibilityAction.title = showing ? "Hide selected items" : "Show selected items";
+      deleteAction.title = "Delete selected items";
+      copyAction.title = "Duplicate selected items";
+    } else {
+      visibilityAction.title = NO_SELECTION_HINT;
+      deleteAction.title = NO_SELECTION_HINT;
+      copyAction.title = NO_SELECTION_HINT;
     }
   }
 
@@ -462,17 +471,14 @@
         const visibilityLi = L.DomUtil.create("li", "", actionsList);
         visibilityAction = L.DomUtil.create("a", "leaflet-disabled", visibilityLi);
         visibilityAction.href = "#";
-        visibilityAction.title = "Show/hide selected items";
         visibilityAction.textContent = "Hide";
         const deleteLi = L.DomUtil.create("li", "", actionsList);
         deleteAction = L.DomUtil.create("a", "leaflet-disabled", deleteLi);
         deleteAction.href = "#";
-        deleteAction.title = "Delete selected items";
         deleteAction.textContent = "Delete";
         const copyLi = L.DomUtil.create("li", "", actionsList);
         copyAction = L.DomUtil.create("a", "leaflet-disabled", copyLi);
         copyAction.href = "#";
-        copyAction.title = "Duplicate selected items";
         copyAction.textContent = "Duplicate";
         const doneLi = L.DomUtil.create("li", "", actionsList);
         doneAction = L.DomUtil.create("a", "", doneLi);
