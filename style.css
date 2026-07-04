@@ -2953,10 +2953,8 @@ body.using-touch {
   }
 }
 
-/* Hide the leaflet draw tooltip while hovering any toolbar action button
-   (Finish/Cancel, rectangle-select's Hide/Delete/Duplicate/Done, etc.) -
-   its own title attribute is enough there. */
-body:has(.leaflet-draw-actions a:hover) .leaflet-draw-tooltip {
+/* Hide the leaflet draw tooltips while hovering topleft buttons */
+body:has(.leaflet-top.leaflet-left a:hover) .leaflet-draw-tooltip {
   display: none !important;
 }
 
