@@ -16,6 +16,7 @@
   let tempRectangle = null;
   let button = null;
   let actionsList = null;
+  let selectTooltip = null;
   let visibilityAction = null;
   let deleteAction = null;
   let copyAction = null;
@@ -27,6 +28,8 @@
 
   const DRAG_THRESHOLD_PX = 6;
   const NO_SELECTION_HINT = "Select items first";
+  const DRAG_TOOLTIP_START = "Click and drag to select items";
+  const DRAG_TOOLTIP_END = "Release mouse to finish selecting";
   const preventTouchScroll = (e) => L.DomEvent.preventDefault(e);
 
   function getHighlightColor() {
@@ -366,6 +369,8 @@
     document.addEventListener("touchstart", preventTouchScroll, { passive: false });
     actionsList.style.display = "block";
     updateActionButtonsState();
+    selectTooltip = new L.Draw.Tooltip(map);
+    selectTooltip.updateContent({ text: DRAG_TOOLTIP_START });
   }
 
   function exitSelectMode() {
@@ -383,6 +388,8 @@
     }
     isDragging = false;
     clearSelection();
+    selectTooltip.dispose();
+    selectTooltip = null;
   }
 
   // --- Drag handling: mirrors L.Draw.SimpleShape (leaflet-draw-1.0.4) so touch works ---
@@ -402,7 +409,10 @@
   }
 
   function onMouseMove(e) {
+    if (!isActive) return;
+    selectTooltip.updatePosition(e.latlng);
     if (!isDragging) return;
+    selectTooltip.updateContent({ text: DRAG_TOOLTIP_END });
     const bounds = L.latLngBounds(dragStartLatLng, e.latlng);
     if (!tempRectangle) {
       tempRectangle = L.rectangle(bounds, {
@@ -420,6 +430,7 @@
   function onMouseUp(e) {
     isDragging = false;
     L.DomEvent.off(document, "mouseup", onMouseUp).off(document, "touchend", onMouseUp);
+    selectTooltip.updateContent({ text: DRAG_TOOLTIP_START });
 
     if (!tempRectangle) {
       clearSelection();
