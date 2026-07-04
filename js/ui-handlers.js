@@ -8,6 +8,185 @@
 const collapsedCategories = new Set();
 
 /**
+ * Toggles a layer's manual visibility flag and shows/hides it on the map accordingly,
+ * respecting whether its parent category group is currently visible.
+ * @param {L.Layer} layerToToggle - The layer to toggle
+ */
+function toggleLayerVisibility(layerToToggle) {
+  if (!layerToToggle) return;
+
+  // Toggle the manual hidden state
+  layerToToggle.isManuallyHidden = !layerToToggle.isManuallyHidden;
+
+  if (layerToToggle.isManuallyHidden) {
+    // Hide the layer and its potential outline
+    map.removeLayer(layerToToggle);
+    if (layerToToggle === globallySelectedItem) {
+      if (selectedPathOutline) map.removeLayer(selectedPathOutline);
+      if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);
+    }
+  } else {
+    // Show the layer (if its parent group is on the map)
+    // Check if any of its parent groups are on the map
+    let isParentVisible = false;
+    [drawnItems, stravaActivitiesLayer, importedItems].forEach((group) => {
+      if (group.hasLayer(layerToToggle) && map.hasLayer(group)) {
+        isParentVisible = true;
+      } else {
+        // Also check inside GeoJSON groups for imported items
+        group.eachLayer((child) => {
+          if (child instanceof L.GeoJSON && child.hasLayer(layerToToggle) && map.hasLayer(group)) {
+            isParentVisible = true;
+          }
+        });
+      }
+    });
+
+    // Special case for route (it's not in a group)
+    // But it's now visually part of "Drawn Items" (layerGroup DrawnItems)
+    if (layerToToggle === currentRoutePath) {
+      isParentVisible = map.hasLayer(drawnItems);
+    }
+
+    if (isParentVisible) {
+      map.addLayer(layerToToggle);
+      if (layerToToggle === globallySelectedItem) {
+        if (selectedPathOutline) selectedPathOutline.addTo(map).bringToBack();
+        if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
+      }
+    }
+  }
+
+  if (window.app && typeof window.app.notifyRectangleSelectionVisibilityChange === "function") {
+    window.app.notifyRectangleSelectionVisibilityChange(layerToToggle);
+  }
+}
+
+/**
+ * Duplicates a layer (marker, polygon, or polyline) as an independent drawn item,
+ * selects the new copy, and returns it.
+ * @param {L.Layer} layerToDuplicate - The layer to duplicate
+ * @returns {L.Layer|undefined} The newly created layer, or undefined if it couldn't be duplicated
+ */
+function duplicateLayer(layerToDuplicate) {
+  if (!layerToDuplicate) return undefined;
+
+  if (window.app && typeof window.app.removeFromRectangleSelection === "function") {
+    window.app.removeFromRectangleSelection(layerToDuplicate);
+  }
+
+  let newLayer;
+  const newFeature = JSON.parse(JSON.stringify(layerToDuplicate.feature || { properties: {} }));
+  newFeature.properties.name =
+    (newFeature.properties.name || (layerToDuplicate instanceof L.Marker ? "Marker" : "Path")) +
+    " (Copy)";
+  const color = newFeature.properties.color || DEFAULT_COLOR;
+
+  // Create the appropriate layer type (marker, polygon, or polyline)
+  if (layerToDuplicate instanceof L.Marker) {
+    newLayer = L.marker(layerToDuplicate.getLatLng(), {
+      icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
+    });
+  } else if (layerToDuplicate instanceof L.Polygon) {
+    // Handle polygon (must check before Polyline since Polygon extends Polyline)
+    const originalCoords = layerToDuplicate
+      .getLatLngs()[0]
+      .map((latlng) =>
+        latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
+      );
+
+    let coordsToUse = originalCoords;
+    let simplificationHappened = false;
+
+    // Apply simplification if enabled
+    if (enablePathSimplification) {
+      const simplifiedResult = simplifyPath(originalCoords, "Polygon", pathSimplificationConfig);
+
+      // Check if the polygon was actually simplified
+      if (simplifiedResult.simplified) {
+        coordsToUse = simplifiedResult.coords;
+        simplificationHappened = true;
+      }
+    }
+
+    // Show a notification if simplification occurred
+    if (simplificationHappened) {
+      Swal.fire({
+        toast: true,
+        icon: "info",
+        title: "Area Optimized",
+        text: "The duplicated area was simplified for better performance.",
+        showConfirmButton: false,
+        timer: 3000,
+      });
+    }
+
+    newLayer = L.polygon(
+      coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
+      { ...STYLE_CONFIG.path.default, color: color },
+    );
+  } else if (layerToDuplicate instanceof L.Polyline) {
+    const originalCoords = layerToDuplicate
+      .getLatLngs()
+      .map((latlng) =>
+        latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
+      );
+
+    let coordsToUse = originalCoords;
+    let simplificationHappened = false;
+
+    if (enablePathSimplification) {
+      const simplifiedResult = simplifyPath(originalCoords, "LineString", pathSimplificationConfig);
+
+      // Check if the path was actually simplified
+      if (simplifiedResult.simplified) {
+        coordsToUse = simplifiedResult.coords;
+        simplificationHappened = true;
+      }
+    }
+
+    // Show a notification if simplification occurred
+    if (simplificationHappened) {
+      Swal.fire({
+        toast: true,
+        icon: "info",
+        title: "Path Optimized",
+        text: "The duplicated path was simplified for better performance.",
+        showConfirmButton: false,
+        timer: 3000,
+      });
+    }
+
+    newLayer = L.polyline(
+      coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
+      { ...STYLE_CONFIG.path.default, color: color },
+    );
+    newFeature.properties.totalDistance = calculatePathDistance(newLayer);
+  }
+
+  if (newLayer) {
+    // Keep only essential properties (name, color) - discard all source-specific metadata
+    // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths
+    const cleanProperties = {
+      name: newFeature.properties.name,
+      color: newFeature.properties.color || DEFAULT_COLOR,
+    };
+    newLayer.feature = { properties: cleanProperties };
+    newLayer.pathType = "drawn";
+    newLayer.on("click", (ev) => {
+      L.DomEvent.stopPropagation(ev);
+      selectItem(newLayer);
+    });
+    drawnItems.addLayer(newLayer);
+    editableLayers.addLayer(newLayer);
+    updateOverviewList();
+    updateDrawControlStates();
+    selectItem(newLayer);
+  }
+  return newLayer;
+}
+
+/**
  * Helper function to create a single list item for the overview panel.
  * This encapsulates the logic for creating the item's text, buttons, and event listeners.
  * @param {L.Layer} layer - The layer to create the list item for
@@ -43,51 +222,7 @@ function createOverviewListItem(layer) {
       (currentRoutePath && L.Util.stamp(currentRoutePath) === layerId ? currentRoutePath : null);
     if (!layerToToggle) return;
 
-    // Toggle the manual hidden state
-    layerToToggle.isManuallyHidden = !layerToToggle.isManuallyHidden;
-
-    if (layerToToggle.isManuallyHidden) {
-      // Hide the layer and its potential outline
-      map.removeLayer(layerToToggle);
-      if (layerToToggle === globallySelectedItem) {
-        if (selectedPathOutline) map.removeLayer(selectedPathOutline);
-        if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);
-      }
-    } else {
-      // Show the layer (if its parent group is on the map)
-      // Check if any of its parent groups are on the map
-      let isParentVisible = false;
-      [drawnItems, stravaActivitiesLayer, importedItems].forEach((group) => {
-        if (group.hasLayer(layerToToggle) && map.hasLayer(group)) {
-          isParentVisible = true;
-        } else {
-          // Also check inside GeoJSON groups for imported items
-          group.eachLayer((child) => {
-            if (
-              child instanceof L.GeoJSON &&
-              child.hasLayer(layerToToggle) &&
-              map.hasLayer(group)
-            ) {
-              isParentVisible = true;
-            }
-          });
-        }
-      });
-
-      // Special case for route (it's not in a group)
-      // But it's now visually part of "Drawn Items" (layerGroup DrawnItems)
-      if (layerToToggle === currentRoutePath) {
-        isParentVisible = map.hasLayer(drawnItems);
-      }
-
-      if (isParentVisible) {
-        map.addLayer(layerToToggle);
-        if (layerToToggle === globallySelectedItem) {
-          if (selectedPathOutline) selectedPathOutline.addTo(map).bringToBack();
-          if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
-        }
-      }
-    }
+    toggleLayerVisibility(layerToToggle);
     // Icon state reflects ONLY the manual override, not effective visibility
     setIcon(!layerToToggle.isManuallyHidden);
   });
@@ -104,129 +239,7 @@ function createOverviewListItem(layer) {
         editableLayers.getLayer(layerId) ||
         stravaActivitiesLayer.getLayer(layerId) ||
         importedItems.getLayer(layerId);
-      if (!layerToDuplicate) return;
-      let newLayer;
-      const newFeature = JSON.parse(JSON.stringify(layerToDuplicate.feature || { properties: {} }));
-      newFeature.properties.name =
-        (newFeature.properties.name || (layerToDuplicate instanceof L.Marker ? "Marker" : "Path")) +
-        " (Copy)";
-      const color = newFeature.properties.color || DEFAULT_COLOR;
-
-      // Create the appropriate layer type (marker, polygon, or polyline)
-      if (layerToDuplicate instanceof L.Marker) {
-        newLayer = L.marker(layerToDuplicate.getLatLng(), {
-          icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
-        });
-      } else if (layerToDuplicate instanceof L.Polygon) {
-        // Handle polygon (must check before Polyline since Polygon extends Polyline)
-        const originalCoords = layerToDuplicate
-          .getLatLngs()[0]
-          .map((latlng) =>
-            latlng.alt !== undefined
-              ? [latlng.lng, latlng.lat, latlng.alt]
-              : [latlng.lng, latlng.lat],
-          );
-
-        let coordsToUse = originalCoords;
-        let simplificationHappened = false;
-
-        // Apply simplification if enabled
-        if (enablePathSimplification) {
-          const simplifiedResult = simplifyPath(
-            originalCoords,
-            "Polygon",
-            pathSimplificationConfig,
-          );
-
-          // Check if the polygon was actually simplified
-          if (simplifiedResult.simplified) {
-            coordsToUse = simplifiedResult.coords;
-            simplificationHappened = true;
-          }
-        }
-
-        // Show a notification if simplification occurred
-        if (simplificationHappened) {
-          Swal.fire({
-            toast: true,
-            icon: "info",
-            title: "Area Optimized",
-            text: "The duplicated area was simplified for better performance.",
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-          });
-        }
-
-        newLayer = L.polygon(
-          coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
-          { ...STYLE_CONFIG.path.default, color: color },
-        );
-      } else if (layerToDuplicate instanceof L.Polyline) {
-        const originalCoords = layerToDuplicate
-          .getLatLngs()
-          .map((latlng) =>
-            latlng.alt !== undefined
-              ? [latlng.lng, latlng.lat, latlng.alt]
-              : [latlng.lng, latlng.lat],
-          );
-
-        let coordsToUse = originalCoords;
-        let simplificationHappened = false;
-
-        if (enablePathSimplification) {
-          const simplifiedResult = simplifyPath(
-            originalCoords,
-            "LineString",
-            pathSimplificationConfig,
-          );
-
-          // Check if the path was actually simplified
-          if (simplifiedResult.simplified) {
-            coordsToUse = simplifiedResult.coords;
-            simplificationHappened = true;
-          }
-        }
-
-        // Show a notification if simplification occurred
-        if (simplificationHappened) {
-          Swal.fire({
-            toast: true,
-            icon: "info",
-            title: "Path Optimized",
-            text: "The duplicated path was simplified for better performance.",
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-          });
-        }
-
-        newLayer = L.polyline(
-          coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
-          { ...STYLE_CONFIG.path.default, color: color },
-        );
-        newFeature.properties.totalDistance = calculatePathDistance(newLayer);
-      }
-
-      if (newLayer) {
-        // Keep only essential properties (name, color) - discard all source-specific metadata
-        // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths
-        const cleanProperties = {
-          name: newFeature.properties.name,
-          color: newFeature.properties.color || DEFAULT_COLOR,
-        };
-        newLayer.feature = { properties: cleanProperties };
-        newLayer.pathType = "drawn";
-        newLayer.on("click", (ev) => {
-          L.DomEvent.stopPropagation(ev);
-          selectItem(newLayer);
-        });
-        drawnItems.addLayer(newLayer);
-        editableLayers.addLayer(newLayer);
-        updateOverviewList();
-        updateDrawControlStates();
-        selectItem(newLayer);
-      }
+      duplicateLayer(layerToDuplicate);
     });
   }
 

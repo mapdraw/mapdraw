@@ -908,6 +908,9 @@ select:focus {
 .overview-list-item.selected {
   background-color: var(--highlight-color);
 }
+.overview-list-item.rectangle-selected {
+  background-color: var(--highlight-color);
+}
 
 /* Styles for Overview Panel Group Headers */
 .overview-list-header {
@@ -2352,7 +2355,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border-radius: 50px 50px 0 0 !important;
 }
 .leaflet-left > .leaflet-bar:last-child a,
-#map > div.leaflet-control-container > div.leaflet-top.leaflet-left > div:nth-child(6) {
+#map > div.leaflet-control-container > div.leaflet-top.leaflet-left > div:nth-child(7) {
   border-radius: 0 0 50px 50px !important;
 }
 
@@ -2367,6 +2370,12 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   background-color: var(--background-color);
   color: var(--text-color);
 }
+.leaflet-draw-actions a.leaflet-disabled,
+.leaflet-draw-actions a.leaflet-disabled:hover {
+  color: var(--text-color);
+  background-color: var(--background2-color);
+  cursor: not-allowed;
+}
 
 /* Style for disabled custom buttons */
 .leaflet-control-custom.disabled > a {
@@ -2377,6 +2386,14 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 .leaflet-control-custom.disabled .icon {
   fill: var(--icon-color) !important;
+}
+
+/* Rectangle select tool (marquee multi-select) */
+#rectangle-select-button.active .material-symbols {
+  color: var(--highlight-color);
+}
+.rectangle-select-cursor {
+  cursor: crosshair;
 }
 
 /* Border around the toolbar */
@@ -2950,7 +2967,7 @@ body.using-touch {
 /*
   Current icon subset — update this list when adding new icons, then regenerate the font.
   Paste it as-is into the URL below (replacing ICONS):
-  add,add_circle,autorenew,cabin,camping,cancel,category,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,mountain_flag,my_location,outdoor_grill,park,pedal_bike,playground,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
+  add,add_circle,autorenew,cabin,camping,cancel,category,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,ink_selection,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,mountain_flag,my_location,outdoor_grill,park,pedal_bike,playground,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
 
   To verify the list is complete, run in DevTools console (copies to clipboard):
   copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))
@@ -3045,7 +3062,7 @@ body.using-touch {
     --swal2-html-container-padding: 16px 13px 5px;
     --mobile-main-right-container-visible-height: min(
       260px,
-      calc(100dvh - env(safe-area-inset-top) - 370px)
+      calc(100dvh - env(safe-area-inset-top) - 400px)
     );
     --mobile-main-right-container-top: calc(
       100vh - var(--mobile-main-right-container-visible-height)

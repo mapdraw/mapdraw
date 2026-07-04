@@ -293,6 +293,26 @@ function selectItem(layer) {
 }
 
 /**
+ * Enables or disables a custom toolbar button (by element id), updating its
+ * "disabled" class and tooltip to match.
+ * @param {string} elementId - The id of the button's container element.
+ * @param {boolean} enabled - Whether the button should be enabled.
+ * @param {string} enabledTitle - Tooltip to show while enabled.
+ * @param {string} disabledTitle - Tooltip to show while disabled.
+ */
+function setButtonAvailability(elementId, enabled, enabledTitle, disabledTitle) {
+  const container = document.getElementById(elementId);
+  if (!container) return;
+  if (enabled) {
+    L.DomUtil.removeClass(container, "disabled");
+    container.title = enabledTitle;
+  } else {
+    L.DomUtil.addClass(container, "disabled");
+    container.title = disabledTitle;
+  }
+}
+
+/**
  * Updates the state of edit/delete controls and layer toggles based on available layers
  * and current edit/delete mode status.
  */
@@ -309,16 +329,18 @@ function updateDrawControlStates() {
     importedItems.getLayers().length > 0 ||
     currentRoutePath !== null;
 
-  const downloadButtonContainer = document.getElementById("download-button");
-  if (downloadButtonContainer) {
-    if (hasLayers) {
-      L.DomUtil.removeClass(downloadButtonContainer, "disabled");
-      downloadButtonContainer.title = "Download or share";
-    } else {
-      L.DomUtil.addClass(downloadButtonContainer, "disabled");
-      downloadButtonContainer.title = "No items to download or share";
-    }
-  }
+  setButtonAvailability(
+    "download-button",
+    hasLayers,
+    "Download or share",
+    "No items to download or share",
+  );
+  setButtonAvailability(
+    "rectangle-select-button",
+    hasLayers && !isEditMode && !isDeleteMode,
+    "Select multiple items (drag a rectangle on the map)",
+    hasLayers ? "Finish the current tool first" : "No items to select",
+  );
 
   const hasEditableLayers = editableLayers.getLayers().length > 0;
 
@@ -367,6 +389,10 @@ function deleteLayerImmediately(layer) {
 
   if (globallySelectedItem === layer) {
     deselectCurrentItem();
+  }
+
+  if (window.app && typeof window.app.removeFromRectangleSelection === "function") {
+    window.app.removeFromRectangleSelection(layer);
   }
 
   [drawnItems, importedItems, stravaActivitiesLayer].forEach((group) => {

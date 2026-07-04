@@ -795,6 +795,10 @@ async function initializeMap() {
       }
     }
 
+    if (window.app && typeof window.app.refreshRectangleSelectionGroupMembers === "function") {
+      window.app.refreshRectangleSelectionGroupMembers(e.layer);
+    }
+
     if (typeof e.layer.eachLayer !== "function") {
       return;
     }
@@ -1164,6 +1168,10 @@ async function initializeMap() {
   });
 
   L.control.zoom({ position: "topleft" }).addTo(map);
+
+  if (window.app && typeof window.app.initRectangleSelect === "function") {
+    window.app.initRectangleSelect(map);
+  }
 
   // Top-right button container
   // Fullscreen button
