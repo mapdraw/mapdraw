@@ -2403,9 +2403,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 #rectangle-select-button .leaflet-draw-actions li:first-child a {
   border-left: none !important;
 }
-.rectangle-select-cursor {
-  cursor: crosshair;
-}
 
 /* Border around the toolbar */
 #map > div.leaflet-control-container > div.leaflet-top.leaflet-left {

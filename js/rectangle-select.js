@@ -23,8 +23,6 @@
   let doneAction = null;
 
   const selectedLayers = new Set();
-  const pathOutlines = new Map(); // layer -> outline copy (mirrors selectedPathOutline)
-  const markerOutlines = new Map(); // layer -> outline marker (mirrors selectedMarkerOutline)
 
   const DRAG_THRESHOLD_PX = 6;
   const NO_SELECTION_HINT = "Select items first";
@@ -131,46 +129,14 @@
     });
   }
 
-  // --- Highlight: reuses the same outline technique as selectItem/deselectCurrentItem ---
+  // --- Highlight: recolors the item itself, no separate outline layer ---
 
   function applyHighlight(layer) {
     const highlightColor = getHighlightColor();
     if (layer instanceof L.Marker) {
-      if (!markerOutlines.has(layer)) {
-        const outlineMarker = L.marker(layer.getLatLng(), {
-          icon: createMarkerIcon(highlightColor, 1, STYLE_CONFIG.marker.baseSize, 0, true),
-          zIndexOffset: 1001,
-          interactive: false,
-        });
-        if (!layer.isManuallyHidden && map.hasLayer(layer)) outlineMarker.addTo(map);
-        markerOutlines.set(layer, outlineMarker);
-      }
       layer.setIcon(createMarkerIcon(highlightColor, STYLE_CONFIG.marker.highlight.opacity));
       layer.setZIndexOffset(1000);
       return;
-    }
-
-    if (!pathOutlines.has(layer)) {
-      const outline = STYLE_CONFIG.path.highlight.outline;
-      const outlineLayer =
-        layer instanceof L.Polygon
-          ? L.polygon(layer.getLatLngs()[0], {
-              color: highlightColor,
-              weight: STYLE_CONFIG.path.highlight.weight + outline.weightOffset,
-              opacity: STYLE_CONFIG.path.highlight.opacity,
-              interactive: false,
-              fill: true,
-              fillColor: highlightColor,
-              fillOpacity: outline.fillOpacity,
-            })
-          : L.polyline(layer.getLatLngs(), {
-              color: highlightColor,
-              weight: STYLE_CONFIG.path.highlight.weight + outline.weightOffset,
-              opacity: STYLE_CONFIG.path.highlight.opacity,
-              interactive: false,
-            });
-      if (!layer.isManuallyHidden && map.hasLayer(layer)) outlineLayer.addTo(map).bringToFront();
-      pathOutlines.set(layer, outlineLayer);
     }
     layer.setStyle({ ...STYLE_CONFIG.path.highlight, color: highlightColor });
     layer.bringToFront();
@@ -179,19 +145,9 @@
   function clearHighlight(layer) {
     const color = layer.feature?.properties?.color || DEFAULT_COLOR;
     if (layer instanceof L.Marker) {
-      const outlineMarker = markerOutlines.get(layer);
-      if (outlineMarker) {
-        map.removeLayer(outlineMarker);
-        markerOutlines.delete(layer);
-      }
       layer.setIcon(createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity));
       layer.setZIndexOffset(0);
       return;
-    }
-    const outlineLayer = pathOutlines.get(layer);
-    if (outlineLayer) {
-      map.removeLayer(outlineLayer);
-      pathOutlines.delete(layer);
     }
     layer.setStyle({ ...STYLE_CONFIG.path.default, color: color });
   }
@@ -251,7 +207,7 @@
   // Called whenever a layer we're tracking gets deleted or duplicated through a
   // different path (e.g. the overview panel's own row buttons). Rather than try
   // to keep partial selection state in sync, just exit the tool entirely - the
-  // simplest option that can't leave a stale outline or a half-active tool behind.
+  // simplest option that can't leave a half-active tool behind.
   function removeFromSelection(layer) {
     if (selectedLayers.has(layer)) exitSelectMode();
   }
@@ -259,28 +215,10 @@
   // Called whenever any layer's visibility changes through any path (our own
   // bulk action, or the overview panel's own row button). Unlike delete/duplicate,
   // visibility doesn't change a layer's identity, so we keep the tool and
-  // selection active - but we do keep our own outline's visibility in sync with
-  // the real layer's, so hiding an item hides its highlight too instead of
-  // leaving a ghost outline behind, and refresh the Hide/Show label/disabled
-  // state so it can't go stale relative to what actually happened.
+  // selection active - just refresh the Hide/Show label/disabled state so it
+  // can't go stale relative to what actually happened.
   function refreshIfTracked(layer) {
     if (!selectedLayers.has(layer)) return;
-    const outline = layer instanceof L.Marker ? markerOutlines.get(layer) : pathOutlines.get(layer);
-    if (outline) {
-      // Group-level show/hide (category header, layers panel) adds/removes every
-      // member regardless of its own isManuallyHidden flag, so map.hasLayer(layer)
-      // alone isn't enough - an item the user hid individually must stay hidden
-      // even if its whole group gets shown again. Match how the app's existing
-      // single-select outline already handles this in window.onOverlayToggle.
-      const shouldShow = !layer.isManuallyHidden && map.hasLayer(layer);
-      const isShown = map.hasLayer(outline);
-      if (shouldShow && !isShown) {
-        outline.addTo(map);
-        if (!(layer instanceof L.Marker)) outline.bringToFront();
-      } else if (!shouldShow && isShown) {
-        map.removeLayer(outline);
-      }
-    }
     updateActionButtonsState();
   }
 
@@ -365,7 +303,7 @@
     isActive = true;
     button.classList.add("active");
     map.dragging.disable();
-    map.getContainer().classList.add("rectangle-select-cursor");
+    map.getContainer().classList.add("leaflet-crosshair");
     document.addEventListener("touchstart", preventTouchScroll, { passive: false });
     actionsList.style.display = "block";
     updateActionButtonsState();
@@ -378,7 +316,7 @@
     isActive = false;
     button.classList.remove("active");
     map.dragging.enable();
-    map.getContainer().classList.remove("rectangle-select-cursor");
+    map.getContainer().classList.remove("leaflet-crosshair");
     document.removeEventListener("touchstart", preventTouchScroll);
     actionsList.style.display = "none";
     L.DomEvent.off(document, "mouseup", onMouseUp).off(document, "touchend", onMouseUp);
@@ -557,4 +495,5 @@
   window.app.removeFromRectangleSelection = removeFromSelection;
   window.app.notifyRectangleSelectionVisibilityChange = refreshIfTracked;
   window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
+  window.app.isRectangleSelectActive = () => isActive;
 })();
