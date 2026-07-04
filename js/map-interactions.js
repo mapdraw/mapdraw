@@ -337,9 +337,9 @@ function updateDrawControlStates() {
   );
   setButtonAvailability(
     "rectangle-select-button",
-    hasLayers && !isEditMode && !isDeleteMode,
-    "Select multiple items (drag a rectangle on the map)",
-    hasLayers ? "Finish the current tool first" : "No items to select",
+    hasLayers,
+    "Drag to select multiple items",
+    "No items to select",
   );
 
   const hasEditableLayers = editableLayers.getLayers().length > 0;

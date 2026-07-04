@@ -411,7 +411,6 @@
           "leaflet-bar leaflet-control leaflet-control-custom",
         );
         container.id = "rectangle-select-button";
-        container.title = "Select multiple items (drag a rectangle on the map)";
         container.style.position = "relative";
         container.innerHTML =
           '<a href="#" role="button"><span class="material-symbols">ink_selection</span></a>';
@@ -440,6 +439,11 @@
           if (isActive) {
             exitSelectMode();
           } else {
+            // Cancel any active draw/edit/delete tool first, same as clicking
+            // between draw tools does, so this switches straight into select
+            // mode instead of being blocked until the other tool is finished.
+            drawControl._toolbars[L.DrawToolbar.TYPE].disable();
+            drawControl._toolbars[L.EditToolbar.TYPE].disable();
             enterSelectMode();
           }
         });
