@@ -2384,7 +2384,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border-radius: 0;
 }
 .leaflet-draw-actions a,
-.leaflet-draw-actions a:hover {
+.leaflet-draw-actions a:hover,
+.leaflet-draw-actions a:focus {
   display: block;
   width: 100%;
   box-sizing: border-box;
