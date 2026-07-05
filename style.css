@@ -363,38 +363,6 @@ select:focus {
   filter: grayscale(100%);
 }
 
-/* Unified icon styling */
-
-/* 1. Center all icons in their button containers using flexbox */
-.leaflet-control-custom a,
-.leaflet-control-locate a,
-.leaflet-control-layers-toggle,
-.leaflet-control-zoom a,
-.leaflet-draw-toolbar a,
-.tab-button /* Also apply to tab buttons */ {
-  display: flex !important;
-  justify-content: center;
-  align-items: center;
-}
-
-/* 2. Remove default background image from leaflet.draw icons */
-.leaflet-draw-toolbar a {
-  background-image: none !important;
-}
-
-/* Clear style for disabled draw buttons */
-.leaflet-draw-toolbar a.leaflet-disabled {
-  background-color: var(--background2-color) !important;
-  cursor: not-allowed;
-}
-/* Highlight icon in active draw tools and open toolbar panels */
-.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols,
-#layers-button.active .material-symbols,
-#download-button.active .material-symbols,
-#import-button.active .material-symbols {
-  color: var(--highlight-color);
-}
-
 /* Main container for all right-side panels */
 #main-right-container {
   position: absolute;
@@ -2328,6 +2296,42 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   z-index: 500;
 }
 
+/* Unified icon styling */
+
+/* 1. Center all icons in their button containers using flexbox. Use ">"
+   (not a plain descendant selector) on .leaflet-control-custom so this
+   centers only the control's own icon link - not the nested
+   .leaflet-draw-actions menu items further below, which need left-aligned
+   text instead. */
+.leaflet-control-custom > a,
+.leaflet-control-locate a,
+.leaflet-control-layers-toggle,
+.leaflet-control-zoom a,
+.leaflet-draw-toolbar a,
+.tab-button /* Also apply to tab buttons */ {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 2. Remove default background image from leaflet.draw icons */
+.leaflet-draw-toolbar a {
+  background-image: none !important;
+}
+
+/* Clear style for disabled draw buttons */
+.leaflet-draw-toolbar a.leaflet-disabled {
+  background-color: var(--background2-color) !important;
+  cursor: not-allowed;
+}
+/* Highlight icon in active draw tools and open toolbar panels */
+.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols,
+#layers-button.active .material-symbols,
+#download-button.active .material-symbols,
+#import-button.active .material-symbols {
+  color: var(--highlight-color);
+}
+
 /* Toolbar styles */
 .leaflet-touch .leaflet-bar,
 .leaflet-draw {
@@ -2361,14 +2365,37 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 .leaflet-touch .leaflet-draw-actions {
   left: 40px;
+}
+
+/* Stack action buttons vertically below the tool button, like the download
+   submenu, instead of leaflet-draw's default side-by-side bar. Width stays
+   shrink-to-fit (not fixed) so the menu takes no more horizontal space than
+   its own longest label needs - important on narrow mobile screens. */
+.leaflet-draw-actions {
   border: 1px solid var(--border-color) !important;
   border-radius: var(--border-radius);
   overflow: hidden;
 }
+.leaflet-draw-actions li {
+  display: block;
+}
+.leaflet-draw-actions li:first-child a,
+.leaflet-draw-actions li:last-child a {
+  border-radius: 0;
+}
 .leaflet-draw-actions a,
 .leaflet-draw-actions a:hover {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   background-color: var(--background-color);
   color: var(--text-color);
+  text-align: left;
+  border-left: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+.leaflet-draw-actions li:last-child a {
+  border-bottom: none !important;
 }
 .leaflet-draw-actions a.leaflet-disabled,
 .leaflet-draw-actions a.leaflet-disabled:hover {
@@ -2392,16 +2419,13 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 #rectangle-select-button.active .material-symbols {
   color: var(--highlight-color);
 }
-/* Its actions list lives inside a .leaflet-bar control (unlike leaflet-draw's
-   own toolbars, where the actions list is a sibling of .leaflet-bar), so it
-   also picks up the global .leaflet-bar rules that fix button width to 26px
-   and strip all borders - undo both to match leaflet-draw's own toolbar. */
+/* Unlike leaflet-draw's own toolbars (whose actions list is a sibling of
+   .leaflet-bar), this one lives inside a .leaflet-bar control, so it also
+   picks up core Leaflet's ".leaflet-touch .leaflet-bar a" rule (width: 30px),
+   which outranks the general ".leaflet-draw-actions a" width rule above on
+   specificity - restate it here with an ID selector so it wins outright. */
 #rectangle-select-button .leaflet-draw-actions a {
-  width: auto;
-  border-left: 1px solid var(--border-color) !important;
-}
-#rectangle-select-button .leaflet-draw-actions li:first-child a {
-  border-left: none !important;
+  width: 100%;
 }
 
 /* Border around the toolbar */

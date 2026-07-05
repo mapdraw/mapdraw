@@ -1371,6 +1371,9 @@ async function initializeMap() {
   L.drawLocal.edit.toolbar.buttons.remove = "Delete";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No items to edit";
   L.drawLocal.edit.toolbar.buttons.removeDisabled = "No items to delete";
+  L.drawLocal.edit.toolbar.actions.clearAll.text = "Clear All (Drawn)";
+  L.drawLocal.edit.toolbar.actions.clearAll.title =
+    "Clear all drawn items (not imported files or Strava activities)";
 
   // Edit toolbar tooltips
   L.drawLocal.edit.handlers.edit.tooltip.text =
