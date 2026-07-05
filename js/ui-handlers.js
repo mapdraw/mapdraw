@@ -66,9 +66,12 @@ function toggleLayerVisibility(layerToToggle) {
  * Duplicates a layer (marker, polygon, or polyline) as an independent drawn item,
  * selects the new copy, and returns it.
  * @param {L.Layer} layerToDuplicate - The layer to duplicate
+ * @param {{skipUiUpdate?: boolean}} [options] - Pass skipUiUpdate when duplicating
+ *   many layers in a row, so the caller can select/refresh once at the end
+ *   instead of doing it - and popping a simplification toast - per layer.
  * @returns {L.Layer|undefined} The newly created layer, or undefined if it couldn't be duplicated
  */
-function duplicateLayer(layerToDuplicate) {
+function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
   if (!layerToDuplicate) return undefined;
 
   if (window.app && typeof window.app.removeFromRectangleSelection === "function") {
@@ -109,8 +112,9 @@ function duplicateLayer(layerToDuplicate) {
       }
     }
 
-    // Show a notification if simplification occurred
-    if (simplificationHappened) {
+    // Show a notification if simplification occurred (skipped in bulk mode -
+    // popping one toast per item would spam the screen for a large selection)
+    if (simplificationHappened && !skipUiUpdate) {
       Swal.fire({
         toast: true,
         icon: "info",
@@ -145,8 +149,9 @@ function duplicateLayer(layerToDuplicate) {
       }
     }
 
-    // Show a notification if simplification occurred
-    if (simplificationHappened) {
+    // Show a notification if simplification occurred (skipped in bulk mode -
+    // popping one toast per item would spam the screen for a large selection)
+    if (simplificationHappened && !skipUiUpdate) {
       Swal.fire({
         toast: true,
         icon: "info",
@@ -179,9 +184,11 @@ function duplicateLayer(layerToDuplicate) {
     });
     drawnItems.addLayer(newLayer);
     editableLayers.addLayer(newLayer);
-    updateOverviewList();
-    updateDrawControlStates();
-    selectItem(newLayer);
+    if (!skipUiUpdate) {
+      updateOverviewList();
+      updateDrawControlStates();
+      selectItem(newLayer);
+    }
   }
   return newLayer;
 }

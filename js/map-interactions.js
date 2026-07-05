@@ -372,8 +372,11 @@ function updateDrawControlStates() {
 /**
  * Deletes a layer and its associated data immediately from all groups and the UI.
  * @param {L.Layer} layer - The layer to be deleted.
+ * @param {{skipUiUpdate?: boolean}} [options] - Pass skipUiUpdate when deleting
+ *   many layers in a row, so the caller can refresh the UI once at the end
+ *   instead of rebuilding the whole overview panel after every single layer.
  */
-function deleteLayerImmediately(layer) {
+function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
   if (!layer) return;
 
   // If the layer being deleted is the active route, we must call the dedicated
@@ -415,6 +418,8 @@ function deleteLayerImmediately(layer) {
   if (layer === currentRoutePath) {
     currentRoutePath = null;
   }
+
+  if (skipUiUpdate) return;
 
   updateDrawControlStates();
   updateOverviewList();

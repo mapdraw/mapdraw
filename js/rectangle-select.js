@@ -19,7 +19,7 @@
   let selectTooltip = null;
   let visibilityAction = null;
   let deleteAction = null;
-  let copyAction = null;
+  let duplicateAction = null;
   let doneAction = null;
 
   const selectedLayers = new Set();
@@ -173,17 +173,17 @@
     const hasSelection = selectedLayers.size > 0;
     visibilityAction.classList.toggle("leaflet-disabled", !hasSelection);
     deleteAction.classList.toggle("leaflet-disabled", !hasSelection);
-    copyAction.classList.toggle("leaflet-disabled", !hasSelection);
+    duplicateAction.classList.toggle("leaflet-disabled", !hasSelection);
     if (hasSelection) {
       const showing = anySelectedVisible();
       visibilityAction.textContent = showing ? "Hide" : "Show";
       visibilityAction.title = showing ? "Hide selected items" : "Show selected items";
       deleteAction.title = "Delete selected items";
-      copyAction.title = "Duplicate selected items";
+      duplicateAction.title = "Duplicate selected items";
     } else {
       visibilityAction.title = NO_SELECTION_HINT;
       deleteAction.title = NO_SELECTION_HINT;
-      copyAction.title = NO_SELECTION_HINT;
+      duplicateAction.title = NO_SELECTION_HINT;
     }
   }
 
@@ -268,18 +268,24 @@
     if (selectedLayers.size === 0) return;
     const toDelete = Array.from(selectedLayers);
     clearSelection();
-    toDelete.forEach((layer) => deleteLayerImmediately(layer));
+    // Skip the per-layer UI refresh (rebuilding the whole overview panel is
+    // O(n) on its own) and do it once after the loop instead - otherwise
+    // deleting hundreds of items is O(n^2) and visibly slow.
+    toDelete.forEach((layer) => deleteLayerImmediately(layer, { skipUiUpdate: true }));
+    updateDrawControlStates();
+    updateOverviewList();
     exitSelectMode();
   }
 
-  function performBulkCopy() {
+  function performBulkDuplicate() {
     if (selectedLayers.size === 0) return;
     const toDuplicate = Array.from(selectedLayers);
     clearSelection();
-    toDuplicate.forEach((layer) => duplicateLayer(layer));
-    // duplicateLayer() single-selects each new copy as it's created, so the last
-    // one would otherwise linger as globallySelectedItem after we exit.
-    deselectCurrentItem();
+    // Skip the per-layer UI refresh and simplification toast (same O(n^2) and
+    // notification-spam issue as bulk delete) and refresh once at the end instead.
+    toDuplicate.forEach((layer) => duplicateLayer(layer, { skipUiUpdate: true }));
+    updateOverviewList();
+    updateDrawControlStates();
     exitSelectMode();
   }
 
@@ -424,10 +430,10 @@
         deleteAction = L.DomUtil.create("a", "leaflet-disabled", deleteLi);
         deleteAction.href = "#";
         deleteAction.textContent = "Delete";
-        const copyLi = L.DomUtil.create("li", "", actionsList);
-        copyAction = L.DomUtil.create("a", "leaflet-disabled", copyLi);
-        copyAction.href = "#";
-        copyAction.textContent = "Duplicate";
+        const duplicateLi = L.DomUtil.create("li", "", actionsList);
+        duplicateAction = L.DomUtil.create("a", "leaflet-disabled", duplicateLi);
+        duplicateAction.href = "#";
+        duplicateAction.textContent = "Duplicate";
         const doneLi = L.DomUtil.create("li", "", actionsList);
         doneAction = L.DomUtil.create("a", "", doneLi);
         doneAction.href = "#";
@@ -451,9 +457,9 @@
           L.DomEvent.stop(ev);
           performBulkVisibilityToggle();
         });
-        L.DomEvent.on(copyAction, "click", (ev) => {
+        L.DomEvent.on(duplicateAction, "click", (ev) => {
           L.DomEvent.stop(ev);
-          performBulkCopy();
+          performBulkDuplicate();
         });
         L.DomEvent.on(deleteAction, "click", (ev) => {
           L.DomEvent.stop(ev);

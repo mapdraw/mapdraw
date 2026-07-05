@@ -1512,9 +1512,11 @@ async function initializeMap() {
 
   map.on(L.Draw.Event.DELETED, (e) => {
     e.layers.eachLayer((layer) => {
-      deleteLayerImmediately(layer);
+      deleteLayerImmediately(layer, { skipUiUpdate: true });
       layer.isDeletedFromToolbar = false;
     });
+    updateDrawControlStates();
+    updateOverviewList();
   });
 
   // Distance labels for drawing
