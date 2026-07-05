@@ -810,6 +810,7 @@ function initializeRouting() {
     if (penModeActive) exitPenMode();
     exitRoutePointSelectionMode();
     if (!mode) return;
+    deselectCurrentItem();
     if (mode === "start" && startMarker) {
       map.removeLayer(startMarker);
       startMarker = null;
@@ -822,6 +823,7 @@ function initializeRouting() {
       map.removeLayer(viaMarker);
       viaMarker = null;
     }
+    window.app.activateMode("route-select", { onCancel: exitRoutePointSelectionMode });
     routePointSelectionMode = mode;
     document.body.classList.add("route-point-select-mode");
     selectStartBtn.classList.toggle("active", mode === "start");
@@ -841,6 +843,7 @@ function initializeRouting() {
   };
 
   const exitRoutePointSelectionMode = () => {
+    window.app.deactivateMode("route-select");
     routePointSelectionMode = null;
     document.body.classList.remove("route-point-select-mode");
     selectStartBtn.classList.remove("active");
@@ -869,14 +872,17 @@ function initializeRouting() {
 
   const enterPenMode = () => {
     exitRoutePointSelectionMode();
+    deselectCurrentItem();
     clearRouting();
     penModeActive = true;
     penModeClickCount = 0;
     penModeBtn.classList.add("active");
     document.body.classList.add("pen-draw-mode");
+    window.app.activateMode("pen", { onCancel: exitPenMode });
   };
 
   const exitPenMode = () => {
+    window.app.deactivateMode("pen");
     penModeActive = false;
     penModeClickCount = 0;
     penModeBtn.classList.remove("active");
@@ -1101,4 +1107,5 @@ function initializeRouting() {
   window.app.exitRoutePointSelectionMode = exitRoutePointSelectionMode;
   window.app.exitPenMode = exitPenMode;
   window.app.isPenModeActive = () => penModeActive;
+  window.app.isRoutePointSelectionModeActive = () => !!routePointSelectionMode;
 }

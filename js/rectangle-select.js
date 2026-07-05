@@ -10,7 +10,6 @@
 (function () {
   let map = null;
   let isActive = false;
-  let otherModeActive = false;
   let isDragging = false;
   let dragStartLatLng = null;
   let tempRectangle = null;
@@ -299,14 +298,11 @@
     );
   }
 
-  function setOtherModeActive(active) {
-    otherModeActive = active;
-  }
-
   function enterSelectMode() {
-    if (otherModeActive || isActive || !hasAnyItems()) return;
+    if (isActive || !hasAnyItems()) return;
     deselectCurrentItem();
     isActive = true;
+    window.app.activateMode("select", { onCancel: exitSelectMode });
     button.classList.add("active");
     map.dragging.disable();
     map.getContainer().classList.add("leaflet-crosshair");
@@ -319,6 +315,7 @@
 
   function exitSelectMode() {
     if (!isActive) return;
+    window.app.deactivateMode("select");
     isActive = false;
     button.classList.remove("active");
     map.dragging.enable();
@@ -401,8 +398,6 @@
     if ((e.key === "Delete" || e.key === "Backspace") && selectedLayers.size > 0) {
       e.preventDefault();
       performBulkDelete();
-    } else if (e.key === "Escape") {
-      exitSelectMode();
     }
   }
 
@@ -445,11 +440,10 @@
           if (isActive) {
             exitSelectMode();
           } else {
-            // Cancel any active draw/edit/delete tool first, same as clicking
-            // between draw tools does, so this switches straight into select
-            // mode instead of being blocked until the other tool is finished.
-            drawControl._toolbars[L.DrawToolbar.TYPE].disable();
-            drawControl._toolbars[L.EditToolbar.TYPE].disable();
+            // Cancel any other active mode first, same as clicking between
+            // draw tools does, so this switches straight into select mode
+            // instead of being blocked until the other tool is finished.
+            window.app.cancelActiveMode();
             enterSelectMode();
           }
         });
@@ -482,22 +476,6 @@
       .on("touchstart", onMouseDown)
       .on("touchmove", onMouseMove);
     document.addEventListener("keydown", onKeyDown);
-
-    map.on(L.Draw.Event.DRAWSTART, () => {
-      exitSelectMode();
-      setOtherModeActive(true);
-    });
-    map.on(L.Draw.Event.DRAWSTOP, () => setOtherModeActive(false));
-    map.on(L.Draw.Event.EDITSTART, () => {
-      exitSelectMode();
-      setOtherModeActive(true);
-    });
-    map.on(L.Draw.Event.EDITSTOP, () => setOtherModeActive(false));
-    map.on(L.Draw.Event.DELETESTART, () => {
-      exitSelectMode();
-      setOtherModeActive(true);
-    });
-    map.on(L.Draw.Event.DELETESTOP, () => setOtherModeActive(false));
   }
 
   window.app = window.app || {};

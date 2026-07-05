@@ -151,7 +151,14 @@ function deselectCurrentItem() {
  * @param {L.Layer} layer - The Leaflet layer to select
  */
 function selectItem(layer) {
-  if (isDeleteMode || isEditMode || window.app?.isRectangleSelectActive?.()) return;
+  if (
+    isDeleteMode ||
+    isEditMode ||
+    window.app?.isRectangleSelectActive?.() ||
+    window.app?.isPenModeActive?.() ||
+    window.app?.isRoutePointSelectionModeActive?.()
+  )
+    return;
   if (globallySelectedItem && globallySelectedItem !== layer) {
     const keepElevation =
       isElevationProfileVisible &&

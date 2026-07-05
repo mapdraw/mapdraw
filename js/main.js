@@ -526,8 +526,16 @@ async function initializeMap() {
       L.DomEvent.on(link, "click", (e) => {
         L.DomEvent.stop(e);
         const panel = document.getElementById("custom-layers-panel");
-        const isVisible = panel.style.display === "block";
-        panel.style.display = isVisible ? "none" : "block";
+        if (panel.style.display === "block") {
+          panel.style.display = "none";
+          window.app.deactivateMode("layers-panel", "panels");
+        } else {
+          window.app.activateMode("layers-panel", {
+            group: "panels",
+            onCancel: () => (panel.style.display = "none"),
+          });
+          panel.style.display = "block";
+        }
       });
 
       return container;
@@ -886,6 +894,7 @@ async function initializeMap() {
         !layersPanel.contains(event.target)
       ) {
         layersPanel.style.display = "none";
+        window.app.deactivateMode("layers-panel", "panels");
       }
 
       if (
@@ -896,6 +905,7 @@ async function initializeMap() {
         !downloadMenu.contains(event.target)
       ) {
         downloadMenu.style.display = "none";
+        window.app.deactivateMode("download-menu", "panels");
       }
     },
     true,
@@ -911,22 +921,35 @@ async function initializeMap() {
       container.id = "elevation-button";
       container.title = "Select a path to show elevation";
       container.innerHTML = '<a href="#" role="button"></a>';
+      const hideElevationPanel = () => {
+        isElevationProfileVisible = false;
+        document.getElementById("elevation-div").style.visibility = "hidden";
+        window.elevationProfile.clearElevationProfile();
+        updateElevationToggleIconColor();
+      };
+
       L.DomEvent.on(container, "click", (ev) => {
         L.DomEvent.stop(ev);
         if (L.DomUtil.hasClass(container, "disabled")) return;
         const elevationDiv = document.getElementById("elevation-div");
-        isElevationProfileVisible =
+        const isHidden =
           elevationDiv.style.visibility === "hidden" || elevationDiv.style.visibility === "";
-        elevationDiv.style.visibility = isElevationProfileVisible ? "visible" : "hidden";
-        if (isElevationProfileVisible) {
+        if (isHidden) {
+          window.app.activateMode("elevation-panel", {
+            group: "panels",
+            onCancel: hideElevationPanel,
+          });
+          isElevationProfileVisible = true;
+          elevationDiv.style.visibility = "visible";
           if (selectedElevationPath) {
             window.elevationProfile.clearElevationProfile();
             addElevationProfileForLayer(selectedElevationPath);
           }
+          updateElevationToggleIconColor();
         } else {
-          window.elevationProfile.clearElevationProfile();
+          window.app.deactivateMode("elevation-panel", "panels");
+          hideElevationPanel();
         }
-        updateElevationToggleIconColor();
       });
       return container;
     },
@@ -959,8 +982,16 @@ async function initializeMap() {
         if (L.DomUtil.hasClass(container, "disabled")) {
           return;
         }
-        const isVisible = subMenu.style.display === "block";
-        subMenu.style.display = isVisible ? "none" : "block";
+        if (subMenu.style.display === "block") {
+          subMenu.style.display = "none";
+          window.app.deactivateMode("download-menu", "panels");
+        } else {
+          window.app.activateMode("download-menu", {
+            group: "panels",
+            onCancel: () => (subMenu.style.display = "none"),
+          });
+          subMenu.style.display = "block";
+        }
       });
 
       // Sync download-button active highlight with submenu visibility
@@ -1226,10 +1257,6 @@ async function initializeMap() {
       e.preventDefault();
       deleteLayerImmediately(globallySelectedItem);
     }
-    if (e.key === "Escape") {
-      if (window.app.exitRoutePointSelectionMode) window.app.exitRoutePointSelectionMode();
-      if (window.app.exitPenMode) window.app.exitPenMode();
-    }
   });
 
   // Sidebar toggle button
@@ -1405,6 +1432,11 @@ async function initializeMap() {
   });
   map.addControl(drawControl);
 
+  const cancelDrawTools = () => {
+    drawControl._toolbars[L.DrawToolbar.TYPE].disable();
+    drawControl._toolbars[L.EditToolbar.TYPE].disable();
+  };
+
   // Every toolbar button's click is hardwired by leaflet-draw to call
   // handler.enable(), with no way to toggle it back off by clicking the
   // same button again. Swap that one listener for a toggle version, using
@@ -1527,6 +1559,7 @@ async function initializeMap() {
   let totalDistance = 0;
 
   map.on(L.Draw.Event.DRAWSTART, function (e) {
+    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
     deselectCurrentItem();
     L.DomUtil.addClass(document.body, "leaflet-is-drawing");
     totalDistance = 0;
@@ -1558,6 +1591,7 @@ async function initializeMap() {
   });
 
   map.on(L.Draw.Event.DRAWSTOP, function () {
+    window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
     distanceLabels.forEach((label) => map.removeLayer(label));
     distanceLabels = [];
@@ -1573,14 +1607,8 @@ async function initializeMap() {
     }
   });
 
-  // Leaflet.draw handles Escape for draw tools internally, but not for edit/delete mode.
-  document.addEventListener("keyup", (e) => {
-    if (e.key !== "Escape") return;
-    const editToolbar = drawControl._toolbars[L.EditToolbar.TYPE];
-    if (editToolbar?.enabled()) editToolbar.disable();
-  });
-
   map.on(L.Draw.Event.DELETESTART, () => {
+    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
     isDeleteMode = true;
     deselectCurrentItem();
     editableLayers.eachLayer((layer) => {
@@ -1593,6 +1621,7 @@ async function initializeMap() {
   });
 
   map.on(L.Draw.Event.DELETESTOP, () => {
+    window.app.deactivateMode("draw-tools");
     isDeleteMode = false;
     updateDrawControlStates();
     editableLayers.eachLayer((layer) => {
@@ -1613,6 +1642,7 @@ async function initializeMap() {
   });
 
   map.on(L.Draw.Event.EDITSTART, () => {
+    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
     isEditMode = true;
     deselectCurrentItem();
     if (selectedPathOutline) map.removeLayer(selectedPathOutline);
@@ -1622,6 +1652,7 @@ async function initializeMap() {
   });
 
   map.on(L.Draw.Event.EDITSTOP, () => {
+    window.app.deactivateMode("draw-tools");
     isEditMode = false;
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
 
