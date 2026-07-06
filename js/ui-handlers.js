@@ -589,6 +589,12 @@ function updateOverviewList() {
     );
     if (checkbox) checkbox.checked = map.hasLayer(group);
   });
+
+  // Every row above is a brand-new element, so any rectangle-select highlight
+  // applied to the previous rows is gone - reapply it to whichever of the
+  // still-selected layers survived (called here so every one of this
+  // function's ~20 call sites across the app gets this for free).
+  window.app?.syncRectangleSelectionHighlight?.();
 }
 
 /**
@@ -597,6 +603,7 @@ function updateOverviewList() {
  */
 function showInfoPanel(layer) {
   // Style adjustments for when an item is selected
+  infoPanel.classList.remove("no-selection");
   infoPanelName.style.display = "block";
   infoPanelDetails.style.color = "var(--color-black)";
   infoPanelDetails.style.fontSize = "var(--font-size-12)"; // Reset font size
@@ -731,6 +738,7 @@ function showInfoPanel(layer) {
   // Set the color swatch and update picker state
   const color = layer.feature?.properties?.color || DEFAULT_COLOR;
   infoPanelColorSwatch.style.backgroundColor = color;
+  infoPanelColorSwatch.innerHTML = ""; // clear any leftover "mixed colors" indicator
   updateColorPickerSelection(color);
 
   // Hide the main color picker initially
@@ -742,10 +750,11 @@ function showInfoPanel(layer) {
  */
 function resetInfoPanel() {
   if (infoPanel) {
+    infoPanel.classList.add("no-selection");
     infoPanelName.style.display = "none";
     infoPanelDetails.textContent = "No item selected";
     infoPanelDetails.style.fontWeight = "normal";
-    infoPanelDetails.style.color = "var(--color-grey-dark)";
+    infoPanelDetails.style.color = "var(--text-color)";
     infoPanelDetails.style.fontSize = "var(--font-size-14)"; // Larger font for this message
     infoPanel.style.justifyContent = "center";
     infoPanelDetails.style.marginTop = "0";
@@ -766,24 +775,74 @@ function resetInfoPanel() {
 }
 
 /**
+ * Displays the info panel's multi-selection state, used when the rectangle-select
+ * tool has more than one item selected: shows a count instead of name/details,
+ * but (unlike resetInfoPanel) keeps the style row visible so the color swatch
+ * can be used to bulk-apply a color to every selected item.
+ * @param {number} count - Number of currently selected items
+ * @param {string} [commonColor] - The shared color if every selected item
+ *   already has the same one; omit/undefined if the selection is mixed.
+ */
+function showMultiSelectInfoPanel(count, commonColor) {
+  if (!infoPanel) return;
+  infoPanel.classList.remove("no-selection");
+
+  infoPanelName.style.display = "none";
+  infoPanelDetails.textContent = `${count} items selected`;
+  infoPanelDetails.style.fontWeight = "normal";
+  infoPanelDetails.style.color = "var(--text-color)";
+  infoPanelDetails.style.fontSize = "var(--font-size-14)";
+  infoPanel.style.justifyContent = "center";
+  infoPanelDetails.style.marginTop = "0";
+
+  infoPanelDetails.onclick = null;
+  infoPanelDetails.style.cursor = "default";
+  infoPanelDetails.title = "";
+
+  document.getElementById("info-panel-edit-hint").style.display = "none";
+  document.getElementById("info-panel-strava-link").style.display = "none";
+
+  // The swatch shows the shared color if every selected item already has the
+  // same one (self-explanatory, same as single-select), or a "mixed colors"
+  // question mark otherwise - labeled here so the "?" doesn't read as an
+  // unknown/error state instead of "click to set a color for everyone".
+  infoPanelLayerName.textContent = commonColor ? "" : "Mixed colors";
+  infoPanelStyleRow.style.display = "flex";
+  colorPicker.style.display = "none";
+  infoPanelColorSwatch.style.backgroundColor = commonColor || "var(--background2-color)";
+  infoPanelColorSwatch.innerHTML = commonColor
+    ? ""
+    : '<span class="material-symbols">question_mark</span>';
+  updateColorPickerSelection(commonColor);
+}
+
+/**
  * Updates the name of the selected layer from the info panel input.
+ * Falls back to the rectangle-select tool's single selected layer, since the
+ * info panel shows the same editable name field for that case too.
  */
 function updateLayerName() {
-  if (globallySelectedItem && globallySelectedItem.feature.properties) {
+  const target = globallySelectedItem || window.app?.getRectangleSelectionSingleLayer?.();
+  if (target && target.feature.properties) {
     let newName = infoPanelName.value.trim();
     if (!newName) {
       // Default name if input is empty
       newName =
-        globallySelectedItem instanceof L.Marker
-          ? "Marker"
-          : globallySelectedItem instanceof L.Polygon
-            ? "Area"
-            : "Path";
+        target instanceof L.Marker ? "Marker" : target instanceof L.Polygon ? "Area" : "Path";
       infoPanelName.value = newName;
     }
-    globallySelectedItem.feature.properties.name = newName;
+    target.feature.properties.name = newName;
     updateOverviewList();
   }
+}
+
+/**
+ * Whether there's something for the color picker to act on: either a normal
+ * single selection, or an active rectangle-select selection (single or bulk).
+ * @returns {boolean}
+ */
+function hasActiveColorTarget() {
+  return !!globallySelectedItem || (window.app?.getRectangleSelectionCount?.() ?? 0) > 0;
 }
 
 /**
@@ -800,7 +859,7 @@ function populateColorPicker() {
     swatch.title = color.name;
 
     swatch.addEventListener("click", () => {
-      if (!globallySelectedItem) return;
+      if (!hasActiveColorTarget()) return;
       applyColorToSelectedItem(color.hex);
     });
 
@@ -836,14 +895,14 @@ function populateColorPicker() {
 
   // Prevent color picker from opening if nothing is selected
   colorInput.addEventListener("click", (e) => {
-    if (!globallySelectedItem) {
+    if (!hasActiveColorTarget()) {
       e.preventDefault();
     }
   });
 
   // When native picker color changes, apply it (don't hide picker while user is selecting)
   colorInput.addEventListener("input", (e) => {
-    if (!globallySelectedItem) return;
+    if (!hasActiveColorTarget()) return;
     const selectedColor = e.target.value.toUpperCase();
     applyColorToSelectedItem(selectedColor, false);
     customSwatch.dataset.hex = selectedColor;
@@ -854,11 +913,34 @@ function populateColorPicker() {
 }
 
 /**
- * Applies a color to the currently selected item.
+ * Applies a color to whatever is currently selected: an active rectangle-select
+ * selection (single or multiple layers) takes priority, otherwise falls back
+ * to the normal single-item selection.
  * @param {string} hex - The hex color to apply
  * @param {boolean} hidePicker - Whether to hide the color picker after (default true)
  */
 function applyColorToSelectedItem(hex, hidePicker = true) {
+  // Rectangle-select selection (single or multiple) takes priority: apply to
+  // every selected layer's data only. Selected layers render in the tool's
+  // blue selection highlight regardless of their own color, so - same as a
+  // single item's real color only reappearing once it's deselected - the new
+  // color becomes visible once each layer is deselected, not immediately.
+  const rectSelectionCount = window.app?.getRectangleSelectionCount?.() ?? 0;
+  if (rectSelectionCount > 0) {
+    window.app.applyBulkColor(hex);
+    updateColorPickerSelection(hex);
+    infoPanelColorSwatch.style.backgroundColor = hex;
+    infoPanelColorSwatch.innerHTML = ""; // every selected item now shares this color
+    // Only the multi-select state's "Mixed colors" label needs clearing - a
+    // single rect-selected item's layer-name text (e.g. "Drawn Item") is
+    // unrelated and must stay as-is.
+    if (rectSelectionCount > 1) {
+      infoPanelLayerName.textContent = "";
+    }
+    if (hidePicker) colorPicker.style.display = "none";
+    return;
+  }
+
   if (!globallySelectedItem) return;
 
   // Store the color on the feature

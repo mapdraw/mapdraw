@@ -3,9 +3,13 @@
 // Rectangle Select Module
 // Adds an independent "marquee" selection tool: drag a rectangle on the map to
 // select multiple existing items at once (highlighted in blue, same as the
-// overview panel), then bulk duplicate/delete them. This is fully separate
-// from the app's normal single-item selection (globallySelectedItem), though
-// entering select mode clears it (same convention as draw/edit/delete modes).
+// overview panel), then bulk duplicate/delete/recolor them. The selection
+// state itself (this module's own Set) stays fully separate from the app's
+// normal single-item selection (globallySelectedItem) - entering select mode
+// clears the latter (same convention as draw/edit/delete modes) - but the info
+// panel is shared: a single rect-selected item displays exactly like a normal
+// selection, and a multi-item selection gets its own count/bulk-color state
+// (see showMultiSelectInfoPanel in ui-handlers.js).
 
 (function () {
   let map = null;
@@ -224,6 +228,41 @@
     }
   }
 
+  // Returns the shared color if every selected layer already has the same
+  // one, or undefined if the selection's colors are mixed.
+  function getCommonSelectionColor() {
+    let common;
+    for (const layer of selectedLayers) {
+      const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+      if (common === undefined) common = color;
+      else if (common !== color) return undefined;
+    }
+    return common;
+  }
+
+  // Mirrors the normal single-item info panel for 0/1 selected items, and adds
+  // a dedicated multi-selection state (count + bulk color swatch) otherwise.
+  function syncInfoPanelWithSelection() {
+    if (selectedLayers.size === 0) {
+      resetInfoPanel();
+    } else if (selectedLayers.size === 1) {
+      showInfoPanel(selectedLayers.values().next().value);
+    } else {
+      showMultiSelectInfoPanel(selectedLayers.size, getCommonSelectionColor());
+    }
+  }
+
+  // Applies a color to every selected layer's data. Doesn't touch the on-map
+  // style - selected layers stay in the blue selection highlight until
+  // deselected, at which point clearHighlight() picks up the new color.
+  function applyBulkColor(hex) {
+    selectedLayers.forEach((layer) => {
+      layer.feature = layer.feature || {};
+      layer.feature.properties = layer.feature.properties || {};
+      layer.feature.properties.color = hex;
+    });
+  }
+
   function setSelection(newSet) {
     selectedLayers.forEach((layer) => {
       if (!newSet.has(layer)) clearHighlight(layer);
@@ -235,6 +274,7 @@
     newSet.forEach((layer) => selectedLayers.add(layer));
     syncOverviewHighlight();
     updateActionButtonsState();
+    syncInfoPanelWithSelection();
   }
 
   function clearSelection() {
@@ -324,11 +364,10 @@
         toggleLayerVisibility(layer);
       }
     });
-    // Rebuilds every row (so each one's own eye icon reflects its new state),
-    // which also discards our rectangle-selected highlighting on the old row
-    // elements - re-apply it against the freshly rebuilt rows.
+    // Rebuilds every row so each one's own eye icon reflects its new state;
+    // updateOverviewList() re-applies our rectangle-selected highlighting to
+    // the freshly rebuilt rows itself.
     updateOverviewList();
-    syncOverviewHighlight();
     updateActionButtonsState();
   }
 
@@ -606,4 +645,9 @@
   window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
   window.app.pruneRectangleSelection = pruneSelection;
   window.app.isRectangleSelectActive = () => isActive;
+  window.app.getRectangleSelectionCount = () => selectedLayers.size;
+  window.app.getRectangleSelectionSingleLayer = () =>
+    selectedLayers.size === 1 ? selectedLayers.values().next().value : null;
+  window.app.applyBulkColor = applyBulkColor;
+  window.app.syncRectangleSelectionHighlight = syncOverviewHighlight;
 })();
