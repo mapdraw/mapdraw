@@ -326,6 +326,21 @@ body.glass-mode .swal2-container /* in glass mode, SweetAlert uses the same styl
   font-family: "Roboto", sans-serif !important;
   /* Forcefully remove blue highlight of button on mobile */
   -webkit-tap-highlight-color: transparent !important;
+  /* App, not a document: no text selection by default. Inputs/textareas
+     are exempt regardless; real content opts back in below. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Selectable content: dialogs (credits popup renders inside one), the
+   JSON editor, and route/path details. */
+.swal2-html-container,
+.CodeMirror,
+#info-panel-details,
+#routing-summary-container,
+#directions-list {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 a {
@@ -851,7 +866,6 @@ select:focus {
   align-items: center;
   cursor: pointer;
   line-height: 1;
-  user-select: none;
   flex-shrink: 0;
   color: var(--text-color);
 }
@@ -865,7 +879,6 @@ select:focus {
   align-items: center;
   cursor: pointer;
   line-height: 1;
-  user-select: none;
   flex-shrink: 0;
   color: var(--text-color);
 }
@@ -916,7 +929,6 @@ select:focus {
   display: flex;
   align-items: center;
   cursor: pointer;
-  user-select: none;
 }
 
 #overview-panel-list .overview-list-header:first-child {
@@ -1215,7 +1227,6 @@ select:focus {
   font-weight: normal;
   background-color: var(--background-color);
   cursor: pointer;
-  user-select: none;
   font-size: var(--font-size-12);
   border-bottom: 1px solid var(--border-color);
   box-sizing: border-box;
@@ -1577,7 +1588,6 @@ button.strava-button-secondary:not(:disabled) {
 /* Only apply pointer cursor to labels in items that contain a checkbox */
 #settings-panel .settings-control-item:has(input[type="checkbox"]) label {
   cursor: pointer;
-  user-select: none; /* Prevent text selection on click */
 }
 #settings-panel .settings-control-item input[type="checkbox"] {
   vertical-align: middle;
@@ -1822,11 +1832,6 @@ button.strava-button-secondary:not(:disabled) {
   fill: var(--text-color);
   font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
   font-size: var(--font-size-10);
-  /* Prevent text from being selected on drag */
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
 }
 
 .material-symbols.elevation-action-icon {
@@ -2174,7 +2179,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   overflow-y: auto;
   width: 300px;
   max-width: calc(100vw - 51px - 10px);
-  user-select: none;
 }
 
 /* Form content inside the panel */
@@ -2603,7 +2607,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   cursor: pointer;
   color: var(--text-color-secondary);
   flex-shrink: 0;
-  user-select: none;
   transition: color 0.15s;
 }
 
@@ -2620,7 +2623,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   cursor: pointer;
   color: var(--text-color-secondary);
   flex-shrink: 0;
-  user-select: none;
   transition: color 0.15s;
 }
 
@@ -2638,7 +2640,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   font-size: 18px;
   cursor: pointer;
   color: var(--text-color-secondary);
-  user-select: none;
   line-height: 1;
 }
 
@@ -3101,17 +3102,6 @@ body:has(.leaflet-top.leaflet-left a:hover) .leaflet-draw-tooltip {
  * ██║ ╚═╝ ██║╚██████╔╝██████╔╝██║███████╗███████╗
  * ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚══════╝╚══════╝
  */
-
-/* Applies styles for devices with a coarse pointer (e.g., a finger on a touchscreen). */
-@media (pointer: coarse) {
-  /* Fix the behavior where a long-press incorrectly selects UI text on touch devices */
-  * {
-    -webkit-user-select: none; /* Safari on iOS/iPadOS */
-    -moz-user-select: none; /* Firefox */
-    -ms-user-select: none; /* Internet Explorer/Edge */
-    user-select: none; /* Standard */
-  }
-}
 
 @media (max-width: 768px) {
   :root {
