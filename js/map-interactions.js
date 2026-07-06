@@ -122,13 +122,7 @@ function deselectCurrentItem() {
   }
 
   globallySelectedItem = null;
-  selectedElevationPath = null;
-  window.elevationProfile.clearElevationProfile();
-  document.getElementById("elevation-div").style.visibility = "hidden";
-  isElevationProfileVisible = false;
-  updateElevationToggleIconColor();
-  elevationToggleControl.getContainer().title = "Select a path to show elevation";
-  L.DomUtil.addClass(elevationToggleControl.getContainer(), "disabled");
+  disableElevation();
 
   const downloadContainer = downloadControl.getContainer();
   const gpxButton = downloadContainer.querySelector("#download-gpx-single");
@@ -146,17 +140,53 @@ function deselectCurrentItem() {
 }
 
 /**
+ * Disables and hides the elevation panel - used when nothing is selected, or
+ * the current selection doesn't support elevation (a marker or polygon).
+ */
+function disableElevation() {
+  selectedElevationPath = null;
+  window.elevationProfile.clearElevationProfile();
+  document.getElementById("elevation-div").style.visibility = "hidden";
+  isElevationProfileVisible = false;
+  updateElevationToggleIconColor();
+  elevationToggleControl.getContainer().title = "Select a path to show elevation";
+  L.DomUtil.addClass(elevationToggleControl.getContainer(), "disabled");
+}
+
+/**
+ * Enables the elevation toggle for a path layer and re-plots its profile,
+ * showing the panel immediately if it was already toggled visible.
+ * @param {L.Polyline} layer - The path to show elevation for (must not be a Polygon)
+ */
+function enableElevationForPath(layer) {
+  selectedElevationPath = layer;
+  if (elevationToggleControl) {
+    elevationToggleControl.getContainer().title = "Toggle elevation profile";
+    L.DomUtil.removeClass(elevationToggleControl.getContainer(), "disabled");
+  }
+  const elevationDiv = document.getElementById("elevation-div");
+  if (isElevationProfileVisible || elevationDiv.style.visibility === "visible") {
+    elevationDiv.style.visibility = "visible";
+    isElevationProfileVisible = true;
+  }
+  window.elevationProfile.clearElevationProfile();
+  addElevationProfileForLayer(layer);
+}
+
+/**
  * Selects a layer on the map and applies visual highlighting (outline, color change).
  * Updates the info panel, elevation profile, and download button states.
  * @param {L.Layer} layer - The Leaflet layer to select
  */
 function selectItem(layer) {
+  if (isDeleteMode || isEditMode || window.app?.isRectangleSelectActive?.()) return;
+  // Pen-mode/route-point-selection only guard against selecting some other,
+  // unrelated existing layer while placing route points - they were never
+  // meant to stop the route from selecting/highlighting itself, which is a
+  // normal and expected part of creating it via either of those flows.
   if (
-    isDeleteMode ||
-    isEditMode ||
-    window.app?.isRectangleSelectActive?.() ||
-    window.app?.isPenModeActive?.() ||
-    window.app?.isRoutePointSelectionModeActive?.()
+    layer !== currentRoutePath &&
+    (window.app?.isPenModeActive?.() || window.app?.isRoutePointSelectionModeActive?.())
   )
     return;
   if (globallySelectedItem && globallySelectedItem !== layer) {
@@ -257,18 +287,7 @@ function selectItem(layer) {
 
     // Only enable elevation for polylines, not polygons
     if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-      selectedElevationPath = layer;
-      if (elevationToggleControl) {
-        elevationToggleControl.getContainer().title = "Toggle elevation profile";
-        L.DomUtil.removeClass(elevationToggleControl.getContainer(), "disabled");
-      }
-      const elevationDiv = document.getElementById("elevation-div");
-      if (isElevationProfileVisible || elevationDiv.style.visibility === "visible") {
-        elevationDiv.style.visibility = "visible";
-        isElevationProfileVisible = true;
-      }
-      window.elevationProfile.clearElevationProfile();
-      addElevationProfileForLayer(layer);
+      enableElevationForPath(layer);
     }
   } else if (layer instanceof L.Marker) {
     const { outline } = STYLE_CONFIG.marker.highlight;

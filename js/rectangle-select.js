@@ -7,9 +7,10 @@
 // state itself (this module's own Set) stays fully separate from the app's
 // normal single-item selection (globallySelectedItem) - entering select mode
 // clears the latter (same convention as draw/edit/delete modes) - but the info
-// panel is shared: a single rect-selected item displays exactly like a normal
-// selection, and a multi-item selection gets its own count/bulk-color state
-// (see showMultiSelectInfoPanel in ui-handlers.js).
+// panel and elevation profile are shared: a single rect-selected item shows
+// info and enables elevation exactly like a normal selection does (see
+// map-interactions.js), while a multi-item selection gets its own dedicated
+// count/bulk-color state (see showMultiSelectInfoPanel in ui-handlers.js).
 
 (function () {
   let map = null;
@@ -252,6 +253,23 @@
     }
   }
 
+  // Mirrors the normal single-item elevation behavior: enabled only when
+  // exactly one path (Polyline, not Polygon) is selected. Reuses
+  // selectedElevationPath (the previously enabled path, if any) the same way
+  // selectItem() does, so switching directly between two single-path
+  // selections (e.g. via Invert) keeps the panel open instead of flickering
+  // closed and reopening.
+  function syncElevationWithSelection() {
+    const singleLayer = selectedLayers.size === 1 ? selectedLayers.values().next().value : null;
+    const isPath = singleLayer instanceof L.Polyline && !(singleLayer instanceof L.Polygon);
+    if (isPath && selectedElevationPath === singleLayer) return; // already showing this one
+
+    const keepVisible = isElevationProfileVisible && isPath && selectedElevationPath !== null;
+    disableElevation();
+    if (keepVisible) isElevationProfileVisible = true;
+    if (isPath) enableElevationForPath(singleLayer);
+  }
+
   // Applies a color to every selected layer's data. Doesn't touch the on-map
   // style - selected layers stay in the blue selection highlight until
   // deselected, at which point clearHighlight() picks up the new color.
@@ -275,6 +293,7 @@
     syncOverviewHighlight();
     updateActionButtonsState();
     syncInfoPanelWithSelection();
+    syncElevationWithSelection();
   }
 
   function clearSelection() {
