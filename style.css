@@ -382,7 +382,7 @@ select:focus {
 #main-right-container {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
-  right: calc(env(safe-area-inset-right) + 10px);
+  right: 10px;
   width: 340px;
   z-index: 1000;
   display: flex;
@@ -1858,8 +1858,8 @@ button.strava-button-secondary:not(:disabled) {
 /* Main popup container */
 .swal2-container {
   padding-top: calc(var(--swal2-container-padding) + env(safe-area-inset-top)) !important;
-  padding-left: calc(var(--swal2-container-padding) + env(safe-area-inset-left)) !important;
-  padding-right: calc(var(--swal2-container-padding) + env(safe-area-inset-right)) !important;
+  padding-left: var(--swal2-container-padding) !important;
+  padding-right: var(--swal2-container-padding) !important;
 }
 
 .swal2-popup {
@@ -2311,7 +2311,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 /* Main ui layout */
 .leaflet-left {
-  left: calc(env(safe-area-inset-left) + 10px);
+  left: 10px;
   margin-top: calc(env(safe-area-inset-top) + 10px);
 }
 /* Prevent bottom-left controls from overlapping toolbar */
@@ -2497,7 +2497,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 #top-right-container {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 10px);
-  right: calc(env(safe-area-inset-right) + 10px);
+  right: 10px;
   z-index: 1001;
   display: flex;
   flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
@@ -2853,8 +2853,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 #map-attribution {
   position: absolute;
-  bottom: env(safe-area-inset-bottom, 0px);
-  right: env(safe-area-inset-right, 0px);
+  bottom: 0px;
+  right: 0px;
   z-index: 499; /* Below #bottom-left-credits (500) */
   font-size: 10px;
   padding: 2.5px 5px;
@@ -3144,7 +3144,7 @@ body:has(.leaflet-top.leaflet-left a:hover) .leaflet-draw-tooltip {
     #offline-indicator {
       position: fixed;
       top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
-      right: calc(env(safe-area-inset-right) + 10px);
+      right: 10px;
       width: 190px;
       max-width: calc(100vw - 81px);
     }
