@@ -146,6 +146,7 @@ function applyDataEditor() {
   }
 
   updateOverviewList();
+  updateDrawControlStates();
   isDirty = false;
 
   Swal.fire({

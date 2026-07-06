@@ -366,7 +366,11 @@ function initializeContextMenu(map) {
     // Check if the click originated inside any of the specified UI containers.
     const clickedOnUi = e.originalEvent.target.closest(uiSelectors.join(", "));
 
-    if (!clickedOnUi && !window.app?.isPenModeActive?.()) {
+    if (
+      !clickedOnUi &&
+      !window.app?.isPenModeActive?.() &&
+      !window.app?.isRectangleSelectActive?.()
+    ) {
       // Close any existing popups before opening the context menu
       map.closePopup();
       showMapContextMenu(e);

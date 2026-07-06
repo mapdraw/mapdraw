@@ -325,6 +325,7 @@ function setButtonAvailability(elementId, enabled, enabledTitle, disabledTitle) 
  */
 function updateDrawControlStates() {
   if (!drawControl) return;
+  window.app?.pruneRectangleSelection?.();
   if (!editControlContainer) {
     editControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit");
     deleteControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit-remove");
@@ -345,7 +346,7 @@ function updateDrawControlStates() {
   setButtonAvailability(
     "rectangle-select-button",
     hasLayers,
-    "Drag to select multiple items",
+    "Click or drag to select multiple items",
     "No items to select",
   );
 
@@ -401,10 +402,6 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
     deselectCurrentItem();
   }
 
-  if (window.app && typeof window.app.removeFromRectangleSelection === "function") {
-    window.app.removeFromRectangleSelection(layer);
-  }
-
   [drawnItems, importedItems, stravaActivitiesLayer].forEach((group) => {
     if (group.hasLayer(layer)) {
       group.removeLayer(layer);
@@ -420,6 +417,12 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
   // Also remove it from the master editable layer group if it's there
   if (editableLayers.hasLayer(layer)) {
     editableLayers.removeLayer(layer);
+  }
+
+  // Must run after the removals above - it checks group membership to decide
+  // what's still selectable, so it needs to see the layer already gone.
+  if (window.app && typeof window.app.removeFromRectangleSelection === "function") {
+    window.app.removeFromRectangleSelection(layer);
   }
 
   if (layer === currentRoutePath) {

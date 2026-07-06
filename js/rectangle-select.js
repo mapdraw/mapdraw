@@ -19,14 +19,17 @@
   let visibilityAction = null;
   let deleteAction = null;
   let duplicateAction = null;
+  let invertAction = null;
   let doneAction = null;
+  let spacePanActive = false;
 
   const selectedLayers = new Set();
 
   const DRAG_THRESHOLD_PX = 6;
+  const CLICK_HIT_RADIUS_PX = 8;
   const NO_SELECTION_HINT = "Select items first";
-  const DRAG_TOOLTIP_START = "Click and drag to select items";
-  const DRAG_TOOLTIP_END = "Release mouse to finish selecting";
+  const DRAG_TOOLTIP_START = "Click or drag to select/deselect items<br>Hold Space to move the map";
+  const DRAG_TOOLTIP_END = "Release to update selection";
   const preventTouchScroll = (e) => L.DomEvent.preventDefault(e);
 
   function getHighlightColor() {
@@ -107,9 +110,31 @@
     return extractRings(layer.getLatLngs(), []);
   }
 
+  // Marker icons (e.g. the 50px pin glyph from createMarkerIcon) are anchored
+  // near their tip, not their visual center, so the clickable glyph sits mostly
+  // above the marker's actual latlng. Hit-test against the icon's real rendered
+  // box - the same area Leaflet's own marker click listener responds to -
+  // instead of just the anchor point, otherwise clicking the visible pin often
+  // misses in this tool while working fine in normal single-item selection.
+  function getMarkerIconBounds(layer) {
+    const icon = layer.options.icon;
+    const size = icon?.options?.iconSize;
+    const anchor = icon?.options?.iconAnchor;
+    const anchorPoint = map.latLngToContainerPoint(layer.getLatLng());
+    if (!size || !anchor) {
+      return L.latLngBounds(layer.getLatLng(), layer.getLatLng());
+    }
+    const topLeft = anchorPoint.subtract(anchor);
+    const bottomRight = topLeft.add(size);
+    return L.latLngBounds(
+      map.containerPointToLatLng(topLeft),
+      map.containerPointToLatLng(bottomRight),
+    );
+  }
+
   function layerIntersectsBounds(layer, bounds) {
     if (layer instanceof L.Marker) {
-      return bounds.contains(layer.getLatLng());
+      return bounds.overlaps(getMarkerIconBounds(layer));
     }
     if (typeof layer.getLatLngs !== "function") return false;
     const closed = layer instanceof L.Polygon;
@@ -184,6 +209,19 @@
       deleteAction.title = NO_SELECTION_HINT;
       duplicateAction.title = NO_SELECTION_HINT;
     }
+
+    const allSelected =
+      hasSelection && getCandidateLayers().every((layer) => selectedLayers.has(layer));
+    if (!hasSelection) {
+      invertAction.textContent = "Select all";
+      invertAction.title = "Select all items";
+    } else if (allSelected) {
+      invertAction.textContent = "Deselect all";
+      invertAction.title = "Deselect all items";
+    } else {
+      invertAction.textContent = "Invert";
+      invertAction.title = "Invert selection";
+    }
   }
 
   function setSelection(newSet) {
@@ -203,12 +241,43 @@
     setSelection(new Set());
   }
 
+  function performInvertSelection() {
+    const newSet = new Set(getCandidateLayers().filter((layer) => !selectedLayers.has(layer)));
+    setSelection(newSet);
+  }
+
+  // True group membership - unlike getCandidateLayers()'s map.hasLayer() check,
+  // this is unaffected by hide/show (toggleLayerVisibility only adds/removes the
+  // layer from the map, never from its owning group), so it only returns false
+  // once a layer has actually been deleted, not just hidden.
+  function isLayerStillTracked(layer) {
+    return (
+      editableLayers.hasLayer(layer) ||
+      stravaActivitiesLayer.hasLayer(layer) ||
+      importedItems.hasLayer(layer)
+    );
+  }
+
+  // Reconciles the selection against reality: drops any layer that got deleted
+  // through some other path (an overview panel row button, a whole category
+  // cleared, the GeoJSON data-editor replacing everything, etc.) instead of
+  // nuking the whole selection over one stale entry, and only exits the tool
+  // once there's genuinely nothing left on the map to select.
+  function pruneSelection() {
+    if (!isActive) return;
+    const newSet = new Set(Array.from(selectedLayers).filter(isLayerStillTracked));
+    if (newSet.size !== selectedLayers.size) setSelection(newSet);
+    if (!hasAnyItems()) exitSelectMode();
+  }
+
   // Called whenever a layer we're tracking gets deleted or duplicated through a
-  // different path (e.g. the overview panel's own row buttons). Rather than try
-  // to keep partial selection state in sync, just exit the tool entirely - the
-  // simplest option that can't leave a half-active tool behind.
-  function removeFromSelection(layer) {
-    if (selectedLayers.has(layer)) exitSelectMode();
+  // different path (e.g. the overview panel's own row buttons). The specific
+  // layer isn't needed beyond triggering a reconcile - updateDrawControlStates()
+  // (called by every mutation path, including this one's caller) would catch it
+  // moments later regardless, but pruning immediately here means the tool's own
+  // UI never shows stale state even for one intermediate render.
+  function removeFromSelection() {
+    pruneSelection();
   }
 
   // Called whenever any layer's visibility changes through any path (our own
@@ -305,7 +374,6 @@
     window.app.activateMode("select", { onCancel: exitSelectMode });
     button.classList.add("active");
     map.dragging.disable();
-    map.getContainer().classList.add("leaflet-crosshair");
     document.addEventListener("touchstart", preventTouchScroll, { passive: false });
     actionsList.style.display = "block";
     updateActionButtonsState();
@@ -317,17 +385,12 @@
     if (!isActive) return;
     window.app.deactivateMode("select");
     isActive = false;
+    spacePanActive = false;
     button.classList.remove("active");
     map.dragging.enable();
-    map.getContainer().classList.remove("leaflet-crosshair");
     document.removeEventListener("touchstart", preventTouchScroll);
     actionsList.style.display = "none";
-    L.DomEvent.off(document, "mouseup", onMouseUp).off(document, "touchend", onMouseUp);
-    if (tempRectangle) {
-      map.removeLayer(tempRectangle);
-      tempRectangle = null;
-    }
-    isDragging = false;
+    cancelDrag();
     clearSelection();
     selectTooltip.dispose();
     selectTooltip = null;
@@ -341,8 +404,32 @@
     return p1.distanceTo(p2);
   }
 
+  // Small lat/lng box around a single point, so a tap can hit-test through the
+  // same layerIntersectsBounds() logic a drag rectangle uses.
+  function pointBounds(latlng) {
+    const point = map.latLngToContainerPoint(latlng);
+    const nw = map.containerPointToLatLng(
+      point.subtract([CLICK_HIT_RADIUS_PX, CLICK_HIT_RADIUS_PX]),
+    );
+    const se = map.containerPointToLatLng(point.add([CLICK_HIT_RADIUS_PX, CLICK_HIT_RADIUS_PX]));
+    return L.latLngBounds(nw, se);
+  }
+
+  function cancelDrag() {
+    isDragging = false;
+    map.getContainer().classList.remove("leaflet-crosshair");
+    L.DomEvent.off(document, "mouseup", onMouseUp).off(document, "touchend", onMouseUp);
+    if (tempRectangle) {
+      map.removeLayer(tempRectangle);
+      tempRectangle = null;
+    }
+  }
+
   function onMouseDown(e) {
-    if (!isActive) return;
+    if (!isActive || spacePanActive) return;
+    // A second finger joining mid-gesture means the user wants to pinch/pan,
+    // not marquee-select - leave it to Leaflet's own touchZoom handler.
+    if (e.originalEvent?.touches?.length > 1) return;
     isDragging = true;
     dragStartLatLng = e.latlng;
     L.DomEvent.on(document, "mouseup", onMouseUp).on(document, "touchend", onMouseUp);
@@ -353,9 +440,14 @@
     if (!isActive) return;
     selectTooltip.updatePosition(e.latlng);
     if (!isDragging) return;
+    if (e.originalEvent?.touches?.length > 1) {
+      cancelDrag();
+      return;
+    }
     selectTooltip.updateContent({ text: DRAG_TOOLTIP_END });
     const bounds = L.latLngBounds(dragStartLatLng, e.latlng);
     if (!tempRectangle) {
+      map.getContainer().classList.add("leaflet-crosshair");
       tempRectangle = L.rectangle(bounds, {
         color: getHighlightColor(),
         weight: 4,
@@ -368,27 +460,24 @@
     }
   }
 
-  function onMouseUp(e) {
-    isDragging = false;
-    L.DomEvent.off(document, "mouseup", onMouseUp).off(document, "touchend", onMouseUp);
+  function onMouseUp() {
+    const wasDragging = isDragging;
+    const bounds = tempRectangle?.getBounds();
+    cancelDrag();
+    if (!wasDragging) return;
     selectTooltip.updateContent({ text: DRAG_TOOLTIP_START });
 
-    if (!tempRectangle) {
-      clearSelection();
-      return;
-    }
-    const bounds = tempRectangle.getBounds();
-    map.removeLayer(tempRectangle);
-    tempRectangle = null;
+    const isClick =
+      !bounds || pixelDistance(bounds.getNorthWest(), bounds.getSouthEast()) < DRAG_THRESHOLD_PX;
+    const hitBounds = isClick ? pointBounds(dragStartLatLng) : bounds;
 
-    if (pixelDistance(bounds.getNorthWest(), bounds.getSouthEast()) < DRAG_THRESHOLD_PX) {
-      clearSelection();
-      return;
-    }
-
-    const matched = getCandidateLayers().filter((layer) => layerIntersectsBounds(layer, bounds));
-    const newSet = e.shiftKey ? new Set(selectedLayers) : new Set();
-    matched.forEach((layer) => newSet.add(layer));
+    const matched = getCandidateLayers().filter((layer) => layerIntersectsBounds(layer, hitBounds));
+    if (matched.length === 0) return;
+    const newSet = new Set(selectedLayers);
+    matched.forEach((layer) => {
+      if (newSet.has(layer)) newSet.delete(layer);
+      else newSet.add(layer);
+    });
     setSelection(newSet);
   }
 
@@ -398,7 +487,28 @@
     if ((e.key === "Delete" || e.key === "Backspace") && selectedLayers.size > 0) {
       e.preventDefault();
       performBulkDelete();
+      return;
     }
+    if (e.code === "Space" && !isDragging && !spacePanActive) {
+      e.preventDefault();
+      spacePanActive = true;
+      map.dragging.enable();
+    }
+  }
+
+  function onKeyUp(e) {
+    if (!spacePanActive || e.code !== "Space") return;
+    spacePanActive = false;
+    map.dragging.disable();
+  }
+
+  // If the window loses focus while Space is held (e.g. alt-tab), no keyup
+  // ever arrives - without this, spacePanActive would stay stuck true and
+  // block the tool's own mousedown handling until re-entering select mode.
+  function onWindowBlur() {
+    if (!spacePanActive) return;
+    spacePanActive = false;
+    map.dragging.disable();
   }
 
   function initRectangleSelect(mapInstance) {
@@ -417,6 +527,11 @@
           '<a href="#" role="button"><span class="material-symbols">ink_selection</span></a>';
 
         actionsList = L.DomUtil.create("ul", "leaflet-draw-actions", container);
+        const invertLi = L.DomUtil.create("li", "", actionsList);
+        invertAction = L.DomUtil.create("a", "", invertLi);
+        invertAction.href = "#";
+        invertAction.title = "Invert selection";
+        invertAction.textContent = "Invert";
         const visibilityLi = L.DomUtil.create("li", "", actionsList);
         visibilityAction = L.DomUtil.create("a", "leaflet-disabled", visibilityLi);
         visibilityAction.href = "#";
@@ -432,7 +547,7 @@
         const doneLi = L.DomUtil.create("li", "", actionsList);
         doneAction = L.DomUtil.create("a", "", doneLi);
         doneAction.href = "#";
-        doneAction.title = "Close (keeps any changes already made)";
+        doneAction.title = "Exit selection mode";
         doneAction.textContent = "Done";
 
         L.DomEvent.on(container, "click", (ev) => {
@@ -446,6 +561,10 @@
             window.app.cancelActiveMode();
             enterSelectMode();
           }
+        });
+        L.DomEvent.on(invertAction, "click", (ev) => {
+          L.DomEvent.stop(ev);
+          performInvertSelection();
         });
         L.DomEvent.on(visibilityAction, "click", (ev) => {
           L.DomEvent.stop(ev);
@@ -476,6 +595,8 @@
       .on("touchstart", onMouseDown)
       .on("touchmove", onMouseMove);
     document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onWindowBlur);
   }
 
   window.app = window.app || {};
@@ -483,5 +604,6 @@
   window.app.removeFromRectangleSelection = removeFromSelection;
   window.app.notifyRectangleSelectionVisibilityChange = refreshIfTracked;
   window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
+  window.app.pruneRectangleSelection = pruneSelection;
   window.app.isRectangleSelectActive = () => isActive;
 })();
