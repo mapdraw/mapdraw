@@ -49,11 +49,15 @@
     // you could silently select something you can't see (map.hasLayer() already
     // covers both reasons a layer could be hidden: individually, or its whole
     // category toggled off).
-    return [
+    const layers = [
       ...editableLayers.getLayers(),
       ...stravaActivitiesLayer.getLayers(),
       ...importedItems.getLayers(),
-    ].filter((layer) => map.hasLayer(layer));
+    ];
+    // The live/unsaved route lives only in drawnItems, not editableLayers, so
+    // it needs to be added explicitly to be selectable like any other item.
+    if (currentRoutePath) layers.push(currentRoutePath);
+    return layers.filter((layer) => map.hasLayer(layer));
   }
 
   // --- Segment-aware hit-testing (so a box over the middle of a segment counts too) ---
@@ -294,6 +298,7 @@
     updateActionButtonsState();
     syncInfoPanelWithSelection();
     syncElevationWithSelection();
+    syncSelectedDownloadButtonsState();
   }
 
   function clearSelection() {
@@ -313,7 +318,8 @@
     return (
       editableLayers.hasLayer(layer) ||
       stravaActivitiesLayer.hasLayer(layer) ||
-      importedItems.hasLayer(layer)
+      importedItems.hasLayer(layer) ||
+      layer === currentRoutePath
     );
   }
 
@@ -667,6 +673,7 @@
   window.app.getRectangleSelectionCount = () => selectedLayers.size;
   window.app.getRectangleSelectionSingleLayer = () =>
     selectedLayers.size === 1 ? selectedLayers.values().next().value : null;
+  window.app.getRectangleSelectionLayers = () => Array.from(selectedLayers);
   window.app.applyBulkColor = applyBulkColor;
   window.app.syncRectangleSelectionHighlight = syncOverviewHighlight;
 })();

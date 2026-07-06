@@ -73,6 +73,55 @@ function updateMarkerOutlinePosition() {
 }
 
 /**
+ * Returns whatever is currently selected as an array of layers, regardless of
+ * whether the selection came from a normal single click or the rectangle-select
+ * tool (the two are mutually exclusive, so only one of these is ever non-empty).
+ * @returns {L.Layer[]}
+ */
+function getCurrentSelectionLayers() {
+  const rectLayers = window.app?.getRectangleSelectionLayers?.();
+  if (rectLayers && rectLayers.length > 0) return rectLayers;
+  return globallySelectedItem ? [globallySelectedItem] : [];
+}
+
+/**
+ * Enables/disables the download menu's "Selected"-scope buttons (GPX,
+ * GeoJSON, KML, Share Link) and updates their tooltips to reflect the
+ * current selection. Called whenever selection changes, from either
+ * selectItem()/deselectCurrentItem() or rectangle-select's setSelection().
+ */
+function syncSelectedDownloadButtonsState() {
+  if (!downloadControl) return;
+  const container = downloadControl.getContainer();
+  const gpxBtn = container.querySelector("#download-gpx-selected");
+  const geojsonBtn = container.querySelector("#download-geojson-selected");
+  const kmlBtn = container.querySelector("#download-kml-selected");
+  const shareBtn = container.querySelector("#download-share-selected");
+  const buttons = [gpxBtn, geojsonBtn, kmlBtn, shareBtn];
+
+  const layers = getCurrentSelectionLayers();
+  const hasSelection = layers.length > 0;
+  buttons.forEach((btn) => (btn.disabled = !hasSelection));
+
+  if (!hasSelection) {
+    gpxBtn.title = "Select an item to download as GPX";
+    geojsonBtn.title = "Select an item to download as GeoJSON";
+    kmlBtn.title = "Select an item to download as KML";
+    shareBtn.title = "Select an item to copy a share link for";
+    return;
+  }
+
+  const phrase = layers.length === 1 ? "the selected item" : `${layers.length} selected items`;
+  gpxBtn.title =
+    layers.length === 1 && layers[0].pathType === "strava"
+      ? "Download original GPX from Strava"
+      : `Download ${phrase} as GPX`;
+  geojsonBtn.title = `Download ${phrase} as GeoJSON`;
+  kmlBtn.title = `Download ${phrase} as KML`;
+  shareBtn.title = `Copy a share link for ${phrase}`;
+}
+
+/**
  * Deselects the currently selected item and cleans up all associated UI elements
  * (outlines, elevation profile, info panel, etc.).
  */
@@ -123,18 +172,7 @@ function deselectCurrentItem() {
 
   globallySelectedItem = null;
   disableElevation();
-
-  const downloadContainer = downloadControl.getContainer();
-  const gpxButton = downloadContainer.querySelector("#download-gpx-single");
-  const geojsonButton = downloadContainer.querySelector("#download-geojson-single");
-
-  gpxButton.disabled = true;
-  gpxButton.textContent = "GPX (Selected Item)";
-  gpxButton.title = "Select an item to download as GPX";
-
-  geojsonButton.disabled = true;
-  geojsonButton.textContent = "GeoJSON (Selected Item)";
-  geojsonButton.title = "Select an item to download as GeoJSON";
+  syncSelectedDownloadButtonsState();
 
   resetInfoPanel();
 }
@@ -222,28 +260,7 @@ function selectItem(layer) {
 
   showInfoPanel(layer);
 
-  if (downloadControl) {
-    const gpxButton = downloadControl.getContainer().querySelector("#download-gpx-single");
-    const geojsonButton = downloadControl.getContainer().querySelector("#download-geojson-single");
-    gpxButton.disabled = false;
-    geojsonButton.disabled = false;
-
-    const itemType =
-      layer instanceof L.Marker ? "Marker" : layer instanceof L.Polygon ? "Area" : "Path";
-
-    // Only show 'Original' label for live Strava activities; imported items are labeled as regular paths/markers.
-    if (layer.pathType === "strava") {
-      gpxButton.textContent = `GPX (Original from Strava)`;
-      gpxButton.title = `Download original GPX from Strava`;
-    } else {
-      gpxButton.textContent = `GPX (Selected ${itemType})`;
-      gpxButton.title = `Download selected ${itemType.toLowerCase()} as GPX`;
-    }
-
-    // GeoJSON button label
-    geojsonButton.textContent = `GeoJSON (Selected ${itemType})`;
-    geojsonButton.title = `Download selected ${itemType.toLowerCase()} as GeoJSON`;
-  }
+  syncSelectedDownloadButtonsState();
 
   if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
     if (layer.pathType !== "route") {

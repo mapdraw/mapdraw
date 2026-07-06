@@ -525,10 +525,10 @@ function updateOverviewList() {
         dupBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           // Same per-layer path used by the individual duplicate button and
-          // rect-select's bulk duplicate. The live route isn't duplicable from
-          // its own row either, so skip it here for the same reason.
+          // rect-select's bulk duplicate - including the live route, which
+          // duplicateLayer() already handles like any other layer (an
+          // independent copy saved to Drawn Items, route keeps running).
           itemsInGroup.forEach((item) => {
-            if (item === currentRoutePath) return;
             duplicateLayer(item, { skipUiUpdate: true });
           });
           updateOverviewList();

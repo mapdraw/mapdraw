@@ -969,11 +969,26 @@ async function initializeMap() {
       container.innerHTML =
         '<a href="#" role="button"></a>' +
         '<div class="download-submenu">' +
-        '<button id="download-gpx-single" disabled title="Select an item to download as GPX">GPX (Selected Item)</button>' +
-        '<button id="download-geojson-single" disabled title="Select an item to download as GeoJSON">GeoJSON (Selected Item)</button>' +
-        '<button id="download-geojson" title="Download everything as GeoJSON">GeoJSON (Everything)</button>' +
-        '<button id="download-kml" title="Download everything as KML">KML (Everything)</button>' +
-        '<button id="share-link" title="Copy share link for everything">Copy Share Link (Everything)</button>' +
+        '<div class="download-row">' +
+        '<span class="download-row-label" title="">GeoJSON</span>' +
+        '<button id="download-geojson-selected" disabled title="Select an item to download as GeoJSON">Selected</button>' +
+        '<button id="download-geojson-all" title="Download everything as GeoJSON">All</button>' +
+        "</div>" +
+        '<div class="download-row">' +
+        '<span class="download-row-label" title="">GPX</span>' +
+        '<button id="download-gpx-selected" disabled title="Select an item to download as GPX">Selected</button>' +
+        '<button id="download-gpx-all" title="Download everything as GPX">All</button>' +
+        "</div>" +
+        '<div class="download-row">' +
+        '<span class="download-row-label" title="">KML</span>' +
+        '<button id="download-kml-selected" disabled title="Select an item to download as KML">Selected</button>' +
+        '<button id="download-kml-all" title="Download everything as KML">All</button>' +
+        "</div>" +
+        '<div class="download-row">' +
+        '<span class="download-row-label" title="">Share Link</span>' +
+        '<button id="download-share-selected" disabled title="Select an item to copy a share link for">Selected</button>' +
+        '<button id="download-share-all" title="Copy a share link for everything">All</button>' +
+        "</div>" +
         "</div>";
       const subMenu = container.querySelector(".download-submenu");
 
@@ -1000,44 +1015,89 @@ async function initializeMap() {
         container.classList.toggle("active", subMenu.style.display === "block");
       }).observe(subMenu, { attributes: true, attributeFilter: ["style"] });
 
-      L.DomEvent.on(container.querySelector("#download-gpx-single"), "click", (e) => {
-        L.DomEvent.stop(e);
-        // Only download from Strava for live Strava activities; imported items with 'stravaId' use internal GPX export.
-        if (globallySelectedItem && globallySelectedItem.pathType === "strava") {
-          const { stravaId, name } = globallySelectedItem.feature.properties;
+      // GPX: a single selected Strava activity downloads the original file from
+      // Strava (fidelity-preserving); anything else - single or multiple - uses
+      // the local converter, bundled into one file when there's more than one.
+      const downloadGpxForLayers = (layers) => {
+        if (layers.length === 0) return;
+        if (layers.length === 1 && layers[0].pathType === "strava") {
+          const { stravaId, name } = layers[0].feature.properties;
           downloadOriginalStravaGpx(stravaId, name);
-          subMenu.style.display = "none";
-        } else {
-          if (!globallySelectedItem) return;
-          const name = globallySelectedItem.feature?.properties?.name || `Map_Export_${Date.now()}`;
-          const data = convertLayerToGpx(globallySelectedItem);
-          if (data) {
-            downloadFile(`${name}.gpx`, data);
-          }
-          subMenu.style.display = "none";
+          return;
         }
-      });
-      L.DomEvent.on(container.querySelector("#download-geojson-single"), "click", (e) => {
+        if (layers.length === 1) {
+          const name = layers[0].feature?.properties?.name || `Map_Export_${Date.now()}`;
+          const data = convertLayerToGpx(layers[0]);
+          if (data) downloadFile(`${name}.gpx`, data);
+          return;
+        }
+        const data = convertLayersToGpx(layers);
+        downloadFile(generateTimestampedFilename("Selected_Export", "gpx"), data);
+        // Silent for a single item (above); multi-item "Selected" confirms
+        // with a count, same as GeoJSON/KML/"All" already do.
+        Swal.fire({
+          title: "Export Successful!",
+          text: `${layers.length} selected items have been exported to GPX.`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      };
+
+      L.DomEvent.on(container.querySelector("#download-gpx-selected"), "click", (e) => {
         L.DomEvent.stop(e);
-        if (!globallySelectedItem) return;
-        exportGeoJson({ mode: "single", layer: globallySelectedItem });
+        downloadGpxForLayers(getCurrentSelectionLayers());
         subMenu.style.display = "none";
       });
-      L.DomEvent.on(container.querySelector("#download-kml"), "click", (e) => {
+      L.DomEvent.on(container.querySelector("#download-gpx-all"), "click", (e) => {
         L.DomEvent.stop(e);
-        exportKml();
+        const layers = getAllExportableLayers();
+        if (layers.length === 0) {
+          Swal.fire({
+            title: "No Data to Export",
+            text: "There are no items on the map to export.",
+          });
+          subMenu.style.display = "none";
+          return;
+        }
+        const data = convertLayersToGpx(layers);
+        downloadFile(generateTimestampedFilename("Map_Export", "gpx"), data);
+        Swal.fire({
+          title: "Export Successful!",
+          text: "All items have been exported to GPX.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
         subMenu.style.display = "none";
       });
-      L.DomEvent.on(container.querySelector("#download-geojson"), "click", (e) => {
+
+      L.DomEvent.on(container.querySelector("#download-geojson-selected"), "click", (e) => {
+        L.DomEvent.stop(e);
+        exportGeoJson({ mode: "selection", layers: getCurrentSelectionLayers() });
+        subMenu.style.display = "none";
+      });
+      L.DomEvent.on(container.querySelector("#download-geojson-all"), "click", (e) => {
         L.DomEvent.stop(e);
         exportGeoJson();
         subMenu.style.display = "none";
       });
-      L.DomEvent.on(container.querySelector("#share-link"), "click", async (e) => {
+
+      L.DomEvent.on(container.querySelector("#download-kml-selected"), "click", (e) => {
         L.DomEvent.stop(e);
+        exportKml({ layers: getCurrentSelectionLayers() });
+        subMenu.style.display = "none";
+      });
+      L.DomEvent.on(container.querySelector("#download-kml-all"), "click", (e) => {
+        L.DomEvent.stop(e);
+        exportKml();
+        subMenu.style.display = "none";
+      });
+
+      // Share Link: shared copy/toast logic for both scopes - only the layer
+      // list (or null for "everything") differs.
+      const copyShareLinkForLayers = async (layers) => {
         let shareUrl;
         try {
-          shareUrl = await buildShareableUrl();
+          shareUrl = await buildShareableUrl(layers);
         } catch {
           Swal.fire({
             toast: true,
@@ -1081,6 +1141,15 @@ async function initializeMap() {
           }
         }
         subMenu.style.display = "none";
+      };
+
+      L.DomEvent.on(container.querySelector("#download-share-selected"), "click", async (e) => {
+        L.DomEvent.stop(e);
+        await copyShareLinkForLayers(getCurrentSelectionLayers());
+      });
+      L.DomEvent.on(container.querySelector("#download-share-all"), "click", async (e) => {
+        L.DomEvent.stop(e);
+        await copyShareLinkForLayers(null);
       });
       return container;
     },

@@ -2255,7 +2255,10 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   z-index: 4000;
 }
 
-/* Style for the download submenu */
+/* Style for the download submenu: one row per format (GPX/GeoJSON/KML/Share
+   Link), each with a label plus a "Selected" and an "All" button. overflow:
+   hidden clips everything inside to the outer border-radius, so individual
+   rows/buttons never need their own corner-rounding rules. */
 .leaflet-control-custom .download-submenu {
   background-color: var(--background-color);
   border: 1px solid var(--border-color);
@@ -2267,27 +2270,36 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   white-space: nowrap;
   z-index: 1000;
   color: var(--text-color) !important;
+  overflow: hidden;
 }
 
-.download-submenu button {
-  border-bottom: 1px solid var(--border-color) !important;
-  height: 30px !important;
+.download-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.download-submenu button:last-child {
-  border: none !important;
+.download-row:last-child {
+  border-bottom: none;
+}
+
+.download-row-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  font-size: var(--font-size-12);
 }
 
 .leaflet-control-custom .download-submenu button {
   background: none;
   border: none;
+  border-left: 1px solid var(--border-color);
   cursor: pointer;
-  display: block;
   font-size: var(--font-size-12);
   padding: 5px 10px;
-  text-align: left;
-  width: 100%;
   color: var(--text-color);
+  height: 30px;
   overflow: hidden !important;
 }
 
@@ -2295,18 +2307,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   color: var(--text-color);
   background-color: var(--background2-color);
   cursor: not-allowed;
-}
-
-/* Rounds the top corners of the first button */
-.download-submenu button:first-child {
-  border-top-left-radius: 7px;
-  border-top-right-radius: 7px;
-}
-
-/* Rounds the bottom corners of the last button */
-.download-submenu button:last-child {
-  border-bottom-left-radius: 7px;
-  border-bottom-right-radius: 7px;
 }
 
 /* Main ui layout */
@@ -2998,8 +2998,10 @@ body.using-touch {
   }
 }
 
-/* Hide the leaflet draw tooltips while hovering topleft buttons */
-body:has(.leaflet-top.leaflet-left a:hover) .leaflet-draw-tooltip {
+/* Hide the leaflet draw tooltips while hovering topleft buttons or their
+   submenus (e.g. the download menu's rows/buttons aren't <a> tags, so this
+   has to match any hovered descendant, not just a:hover). */
+body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
   display: none !important;
 }
 
