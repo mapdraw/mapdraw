@@ -45,6 +45,10 @@
     onCancel();
   }
 
+  function isAnyModeActive(group = "tools") {
+    return getGroup(group).activeId !== null;
+  }
+
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (e.target.matches("input, textarea")) return;
@@ -56,4 +60,5 @@
   window.app.activateMode = activateMode;
   window.app.deactivateMode = deactivateMode;
   window.app.cancelActiveMode = cancelActiveMode;
+  window.app.isAnyModeActive = isAnyModeActive;
 })();
