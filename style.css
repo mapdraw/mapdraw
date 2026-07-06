@@ -835,7 +835,7 @@ select:focus {
 .overview-save-btn,
 .overview-header-visibility-btn,
 .overview-header-delete-btn,
-.overview-header-arrow,
+.overview-header-duplicate-btn,
 .overview-icon-spacer {
   width: 32px;
   display: flex;
@@ -852,12 +852,23 @@ select:focus {
   cursor: default;
 }
 
+.overview-header-arrow {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+  color: var(--text-color);
+}
+
 .overview-visibility-btn .material-symbols,
 .overview-duplicate-btn .material-symbols,
 .overview-delete-btn .material-symbols,
 .overview-save-btn .material-symbols,
 .overview-header-visibility-btn .material-symbols,
 .overview-header-delete-btn .material-symbols,
+.overview-header-duplicate-btn .material-symbols,
 .overview-header-arrow .material-symbols {
   font-size: var(--icon-size-20) !important;
 }

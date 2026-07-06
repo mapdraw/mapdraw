@@ -357,18 +357,32 @@ function updateOverviewList() {
 
   // 2. Group all items by their type
   const groupedItems = {};
+  // Stable grouping keys, decoupled from the display label so renaming a
+  // label below can never silently break the ordering/lookup logic that
+  // compares against it.
+  const GROUP_LABELS = {
+    DrawnItems: "Drawn Items",
+    ImportedFiles: "Imported Files",
+    StravaActivities: "Strava Activities",
+    Other: "Other",
+  };
+  const GROUP_LAYERS = {
+    DrawnItems: drawnItems,
+    ImportedFiles: importedItems,
+    StravaActivities: stravaActivitiesLayer,
+  };
   const getGroupTitle = (pathType) => {
     switch (pathType) {
       case "route":
       case "drawn":
-        return "Drawn Items";
+        return "DrawnItems";
       case "gpx":
       case "kml":
       case "geojson":
       case "kmz":
-        return "Imported Files";
+        return "ImportedFiles";
       case "strava":
-        return "Strava Activities";
+        return "StravaActivities";
       default:
         return "Other";
     }
@@ -379,51 +393,42 @@ function updateOverviewList() {
 
   // Helper to expand a category if it's collapsed, ensuring a layer is visible in the list
   window.expandCategoryForItem = (layer) => {
-    const title = getGroupTitle(layer.pathType);
-    if (collapsedCategories.has(title)) {
-      collapsedCategories.delete(title);
+    const key = getGroupTitle(layer.pathType);
+    if (collapsedCategories.has(key)) {
+      collapsedCategories.delete(key);
       updateOverviewList();
     }
   };
 
   allItems.forEach((layer) => {
-    const title = getGroupTitle(layer.pathType);
-    if (!groupedItems[title]) {
-      groupedItems[title] = [];
+    const key = getGroupTitle(layer.pathType);
+    if (!groupedItems[key]) {
+      groupedItems[key] = [];
     }
-    groupedItems[title].push(layer);
+    groupedItems[key].push(layer);
   });
 
   // 3. Render the groups in a specific order
   const fragment = document.createDocumentFragment();
-  const groupOrder = ["Drawn Items", "Imported Files", "Strava Activities", "Other"];
+  const groupOrder = ["DrawnItems", "ImportedFiles", "StravaActivities", "Other"];
 
   // Track which headers we're actually rendering
   const renderedHeaders = [];
 
-  groupOrder.forEach((title) => {
-    const itemsInGroup = groupedItems[title];
+  groupOrder.forEach((key) => {
+    const itemsInGroup = groupedItems[key];
     if (itemsInGroup && itemsInGroup.length > 0) {
-      const isCollapsed = collapsedCategories.has(title);
+      const label = GROUP_LABELS[key];
+      const isCollapsed = collapsedCategories.has(key);
 
       // Create the header element
       const header = document.createElement("div");
       header.className = "overview-list-header";
       if (isCollapsed) header.classList.add("collapsed");
 
-      // Determine the corresponding layer group for this category
-      let layerGroup = null;
-      let layerNameInControl = null;
-      if (title === "Drawn Items") {
-        layerGroup = drawnItems;
-        layerNameInControl = "DrawnItems";
-      } else if (title === "Imported Files") {
-        layerGroup = importedItems;
-        layerNameInControl = "ImportedFiles";
-      } else if (title === "Strava Activities") {
-        layerGroup = stravaActivitiesLayer;
-        layerNameInControl = "StravaActivities";
-      }
+      // "Other" has no real Leaflet layer group behind it, so its header
+      // renders without visibility/delete/duplicate buttons (spacers only).
+      const layerGroup = GROUP_LAYERS[key] || null;
 
       const arrow = document.createElement("span");
       arrow.className = "material-symbols";
@@ -444,12 +449,12 @@ function updateOverviewList() {
           const isRemoving = map.hasLayer(layerGroup);
           if (isRemoving) {
             map.removeLayer(layerGroup);
-            if (title === "Drawn Items" && currentRoutePath) {
+            if (key === "DrawnItems" && currentRoutePath) {
               map.removeLayer(currentRoutePath);
             }
           } else {
             map.addLayer(layerGroup);
-            if (title === "Drawn Items" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
+            if (key === "DrawnItems" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
               map.addLayer(currentRoutePath);
             }
           }
@@ -467,19 +472,19 @@ function updateOverviewList() {
       }
       header.appendChild(eyeBtnSlot);
 
-      // 2. Delete Button (Clear)
+      // 2. Delete Button (Clear all)
       const delBtnSlot = document.createElement("div");
       delBtnSlot.className = "overview-header-delete-btn";
       if (layerGroup) {
         const delBtn = document.createElement("span");
         delBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
-        delBtn.title = `Clear all ${title}`;
+        delBtn.title = `Clear all ${label}`;
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           Swal.fire({
-            title: `Clear all items in "${title}"?`,
+            title: `Clear all items in "${label}"?`,
             text:
-              title === "Drawn Items" && currentRoutePath
+              key === "DrawnItems" && currentRoutePath
                 ? "This will also clear the current route."
                 : "This action cannot be undone.",
             icon: "warning",
@@ -488,13 +493,13 @@ function updateOverviewList() {
             confirmButtonText: "Yes, clear all",
           }).then((result) => {
             if (result.isConfirmed) {
-              if (title === "Drawn Items" && window.app?.clearRouting) window.app.clearRouting();
-              layerGroup.clearLayers();
-              itemsInGroup.forEach((item) => {
-                if (editableLayers.hasLayer(item)) editableLayers.removeLayer(item);
-              });
-              if (globallySelectedItem && itemsInGroup.includes(globallySelectedItem))
-                deselectCurrentItem();
+              if (key === "DrawnItems" && window.app?.clearRouting) {
+                window.app.clearRouting();
+              }
+              // Same per-layer path used by the individual delete button and
+              // rect-select's bulk delete - keeps rectangle-selection state,
+              // deselection, and group/editableLayers cleanup all in sync.
+              itemsInGroup.forEach((item) => deleteLayerImmediately(item, { skipUiUpdate: true }));
               updateDrawControlStates();
               if (!map.hasLayer(layerGroup)) {
                 map.addLayer(layerGroup);
@@ -510,23 +515,48 @@ function updateOverviewList() {
       }
       header.appendChild(delBtnSlot);
 
-      // 3. Arrow
+      // 3. Duplicate Button (Duplicate all)
+      const dupBtnSlot = document.createElement("div");
+      dupBtnSlot.className = "overview-header-duplicate-btn";
+      if (layerGroup) {
+        const dupBtn = document.createElement("span");
+        dupBtn.innerHTML = '<span class="material-symbols">content_copy</span>';
+        dupBtn.title = `Duplicate all ${label}`;
+        dupBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          // Same per-layer path used by the individual duplicate button and
+          // rect-select's bulk duplicate. The live route isn't duplicable from
+          // its own row either, so skip it here for the same reason.
+          itemsInGroup.forEach((item) => {
+            if (item === currentRoutePath) return;
+            duplicateLayer(item, { skipUiUpdate: true });
+          });
+          updateOverviewList();
+          updateDrawControlStates();
+        });
+        dupBtnSlot.appendChild(dupBtn);
+      } else {
+        dupBtnSlot.className = "overview-icon-spacer";
+      }
+      header.appendChild(dupBtnSlot);
+
+      // 4. Arrow
       const arrowContainer = document.createElement("div");
       arrowContainer.className = "overview-header-arrow";
       arrowContainer.appendChild(arrow);
       header.appendChild(arrowContainer);
 
-      // 4. Title
+      // 5. Title
       const titleSpan = document.createElement("span");
       titleSpan.className = "overview-header-text";
-      titleSpan.textContent = `${title} (${itemsInGroup.length})`;
+      titleSpan.textContent = `${label} (${itemsInGroup.length})`;
       header.appendChild(titleSpan);
 
       header.addEventListener("click", () => {
         if (isCollapsed) {
-          collapsedCategories.delete(title);
+          collapsedCategories.delete(key);
         } else {
-          collapsedCategories.add(title);
+          collapsedCategories.add(key);
         }
         updateOverviewList();
       });
@@ -553,13 +583,7 @@ function updateOverviewList() {
   listContainer.appendChild(fragment);
 
   // Sync checkboxes in the custom layers panel with the map's current state
-  const checkboxMapping = {
-    DrawnItems: drawnItems,
-    ImportedFiles: importedItems,
-    StravaActivities: stravaActivitiesLayer,
-  };
-
-  Object.entries(checkboxMapping).forEach(([name, group]) => {
+  Object.entries(GROUP_LAYERS).forEach(([name, group]) => {
     const checkbox = document.querySelector(
       `#custom-layers-panel input[data-layer-name="${name}"]`,
     );
