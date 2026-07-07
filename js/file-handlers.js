@@ -942,12 +942,13 @@ function buildGpxSnippet(layer) {
   </trk>`;
   } else if (layer instanceof L.Marker) {
     const latlng = layer.getLatLng();
+    const hasElevation = typeof latlng.alt === "number";
     const wptExtensions =
       `\n    <extensions>\n      <color>#FF${gpxColorHex}</color>` +
       (stravaId ? `\n      <stravaId>${stravaId}</stravaId>` : "") +
       `\n    </extensions>`;
     return `
-  <wpt lat="${latlng.lat}" lon="${latlng.lng}">
+  <wpt lat="${latlng.lat}" lon="${latlng.lng}">${hasElevation ? `\n    <ele>${latlng.alt}</ele>` : ""}
     <name>${safeName}</name>${safeDescription ? `\n    <desc>${safeDescription}</desc>` : ""}${wptExtensions}
   </wpt>`;
   }
@@ -967,11 +968,16 @@ function convertLayerToGpx(layer) {
  * Converts multiple layers into a single GPX document containing one <trk>
  * or <wpt> element per layer - the same "one file, several entries" approach
  * GeoJSON/KML export already use, so no zip/multi-file bundling is needed.
+ * The GPX 1.1 schema requires all <wpt> elements before any <trk>, so markers
+ * are grouped first while preserving each group's relative order.
  * @param {Array} layers - The layers to convert
  * @returns {string} The GPX file content as a string
  */
 function convertLayersToGpx(layers) {
-  return GPX_HEADER + layers.map(buildGpxSnippet).join("") + GPX_FOOTER;
+  const markers = layers.filter((layer) => layer instanceof L.Marker);
+  const paths = layers.filter((layer) => !(layer instanceof L.Marker));
+  const orderedLayers = [...markers, ...paths];
+  return GPX_HEADER + orderedLayers.map(buildGpxSnippet).join("") + GPX_FOOTER;
 }
 
 // KML / KMZ
