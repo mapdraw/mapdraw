@@ -907,7 +907,7 @@ function buildGpxSnippet(layer) {
     const pathPoints = closedLatLngs
       .map((p) => {
         let pt = `<trkpt lat="${p.lat}" lon="${p.lng}">`;
-        if (typeof p.alt !== "undefined" && p.alt !== null) {
+        if (typeof p.alt === "number") {
           pt += `<ele>${p.alt}</ele>`;
         }
         pt += `</trkpt>`;
@@ -937,7 +937,7 @@ function buildGpxSnippet(layer) {
     const pathPoints = latlngs
       .map((p) => {
         let pt = `<trkpt lat="${p.lat}" lon="${p.lng}">`;
-        if (typeof p.alt !== "undefined" && p.alt !== null) {
+        if (typeof p.alt === "number") {
           pt += `<ele>${p.alt}</ele>`;
         }
         pt += `</trkpt>`;
