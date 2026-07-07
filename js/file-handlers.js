@@ -17,6 +17,22 @@
 // --------------------------------------------------------------------
 
 /**
+ * Checks whether a closed ring of [lng, lat, ele?] coordinates winds
+ * clockwise, using the shoelace formula.
+ * @param {Array} ring - Closed ring coordinates (first and last equal)
+ * @returns {boolean} True if the ring winds clockwise
+ */
+function isRingClockwise(ring) {
+  let sum = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[i + 1];
+    sum += (x2 - x1) * (y2 + y1);
+  }
+  return sum > 0;
+}
+
+/**
  * Overwrites a GeoJSON geometry's coordinates with full precision values
  * read directly from the Leaflet layer (avoids toGeoJSON precision loss).
  * @param {L.Layer} layer - The Leaflet layer
@@ -36,6 +52,8 @@ function applyFullPrecisionCoordinates(layer, geojson) {
       return coord;
     });
     coords.push(coords[0]); // Close the polygon
+    // RFC 7946 section 3.1.6: exterior rings MUST wind counterclockwise.
+    if (isRingClockwise(coords)) coords.reverse();
     geojson.geometry.coordinates = [coords];
   } else if (layer instanceof L.Polyline) {
     let latlngs = layer.getLatLngs();
