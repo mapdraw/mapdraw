@@ -1875,7 +1875,13 @@ button.strava-button-secondary:not(:disabled) {
   padding-bottom: 0 !important;
 }
 
-.swal-no-actions {
+/* Restores bottom padding whenever a normal (non-toast) popup hides its
+   actions row (no confirm/cancel/deny button - e.g. a timer-only dialog).
+   SweetAlert2 never removes .swal2-actions, it only sets its inline display
+   to "none", so we can detect that directly instead of adding a class to
+   every such call. Toasts are excluded - they carry .swal2-popup too, but
+   are compact by design and shouldn't get this extra padding. */
+.swal2-popup:not(.swal2-toast):has(.swal2-actions[style*="display: none"]) {
   padding-bottom: 10px !important;
 }
 
@@ -2273,9 +2279,21 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   overflow: hidden;
 }
 
+/* Rows share one grid so their label/button column boundaries always line
+   up, even though each row's button text (and thus natural width) differs -
+   the same alignment a <table> would give, without the border-radius
+   clipping issues a real table would bring. Each row is a real box (using
+   subgrid to inherit the parent's column tracks) rather than display:contents,
+   which has inconsistent rendering across browsers. */
+.download-rows {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+}
+
 .download-row {
-  display: flex;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -2284,7 +2302,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 }
 
 .download-row-label {
-  flex: 1;
   display: flex;
   align-items: center;
   padding: 5px 10px;
@@ -2300,13 +2317,25 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   padding: 5px 10px;
   color: var(--text-color);
   height: 30px;
-  overflow: hidden !important;
 }
 
 .download-submenu button:disabled {
   color: var(--text-color);
   background-color: var(--background2-color);
   cursor: not-allowed;
+}
+
+/* Strava-original row: its one button spans both button columns, since
+   there's no "All" counterpart. */
+#download-strava-row button {
+  grid-column: span 2;
+}
+
+/* Only the button text is tinted with Strava's brand color, same treatment
+   as the Strava panel's own buttons and the info panel's Strava link - the
+   "GPX" label keeps the normal text color, like every other row's label. */
+#download-gpx-strava-original {
+  color: var(--strava-color);
 }
 
 /* Main ui layout */

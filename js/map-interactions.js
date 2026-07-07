@@ -87,8 +87,10 @@ function getCurrentSelectionLayers() {
 /**
  * Enables/disables the download menu's "Selected"-scope buttons (GPX,
  * GeoJSON, KML, Share Link) and updates their tooltips and labels to reflect
- * the current selection. Called whenever selection changes, from either
- * selectItem()/deselectCurrentItem() or rectangle-select's setSelection().
+ * the current selection. Also shows the "Original Strava" row only when the
+ * whole selection is Strava activities. Called whenever selection changes,
+ * from either selectItem()/deselectCurrentItem() or rectangle-select's
+ * setSelection().
  */
 function syncSelectedDownloadButtonsState() {
   if (!downloadControl) return;
@@ -98,6 +100,8 @@ function syncSelectedDownloadButtonsState() {
   const kmlBtn = container.querySelector("#download-kml-selected");
   const shareBtn = container.querySelector("#download-share-selected");
   const buttons = [gpxBtn, geojsonBtn, kmlBtn, shareBtn];
+  const stravaRow = container.querySelector("#download-strava-row");
+  const stravaBtn = container.querySelector("#download-gpx-strava-original");
 
   const layers = getCurrentSelectionLayers();
   const hasSelection = layers.length > 0;
@@ -111,17 +115,25 @@ function syncSelectedDownloadButtonsState() {
     geojsonBtn.title = "Select an item to download as GeoJSON";
     kmlBtn.title = "Select an item to download as KML";
     shareBtn.title = "Select an item to copy a share link for";
+    stravaRow.style.display = "none";
     return;
   }
 
-  const phrase = layers.length === 1 ? "the selected item" : `${layers.length} selected items`;
-  gpxBtn.title =
-    layers.length === 1 && layers[0].pathType === "strava"
-      ? "Download original GPX from Strava"
-      : `Download ${phrase} as GPX`;
-  geojsonBtn.title = `Download ${phrase} as GeoJSON`;
-  kmlBtn.title = `Download ${phrase} as KML`;
-  shareBtn.title = `Copy a share link for ${phrase}`;
+  gpxBtn.title = "Download the selection as GPX";
+  geojsonBtn.title = "Download the selection as GeoJSON";
+  kmlBtn.title = "Download the selection as KML";
+  shareBtn.title = "Copy a share link for the selection";
+
+  const allStrava = layers.every((layer) => layer.pathType === "strava");
+  stravaRow.style.display = allStrava ? "" : "none";
+  if (allStrava) {
+    stravaBtn.textContent =
+      layers.length > 1 ? `Original Strava (${layers.length})` : "Original Strava";
+    stravaBtn.title =
+      layers.length === 1
+        ? "Download the original GPX file from Strava"
+        : "Download original GPX files from Strava";
+  }
 }
 
 /**

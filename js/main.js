@@ -969,6 +969,7 @@ async function initializeMap() {
       container.innerHTML =
         '<a href="#" role="button"></a>' +
         '<div class="download-submenu">' +
+        '<div class="download-rows">' +
         '<div class="download-row">' +
         '<span class="download-row-label" title="">GeoJSON</span>' +
         '<button id="download-geojson-selected" disabled title="Select an item to download as GeoJSON">Selected</button>' +
@@ -979,6 +980,10 @@ async function initializeMap() {
         '<button id="download-gpx-selected" disabled title="Select an item to download as GPX">Selected</button>' +
         '<button id="download-gpx-all" title="Download everything as GPX">All</button>' +
         "</div>" +
+        '<div class="download-row" id="download-strava-row" style="display: none">' +
+        '<span class="download-row-label" title="">GPX</span>' +
+        '<button id="download-gpx-strava-original" title="Download the original GPX file from Strava">Original Strava</button>' +
+        "</div>" +
         '<div class="download-row">' +
         '<span class="download-row-label" title="">KML</span>' +
         '<button id="download-kml-selected" disabled title="Select an item to download as KML">Selected</button>' +
@@ -988,6 +993,7 @@ async function initializeMap() {
         '<span class="download-row-label" title="">Share Link</span>' +
         '<button id="download-share-selected" disabled title="Select an item to copy a share link for">Selected</button>' +
         '<button id="download-share-all" title="Copy a share link for everything">All</button>' +
+        "</div>" +
         "</div>" +
         "</div>";
       const subMenu = container.querySelector(".download-submenu");
@@ -1015,16 +1021,11 @@ async function initializeMap() {
         container.classList.toggle("active", subMenu.style.display === "block");
       }).observe(subMenu, { attributes: true, attributeFilter: ["style"] });
 
-      // GPX: a single selected Strava activity downloads the original file from
-      // Strava (fidelity-preserving); anything else - single or multiple - uses
-      // the local converter, bundled into one file when there's more than one.
+      // GPX: always the local converter, bundled into one file when there's
+      // more than one layer. Fetching the original file(s) from Strava is a
+      // separate, explicit action - see the "Original Strava" button below.
       const downloadGpxForLayers = (layers) => {
         if (layers.length === 0) return;
-        if (layers.length === 1 && layers[0].pathType === "strava") {
-          const { stravaId, name } = layers[0].feature.properties;
-          downloadOriginalStravaGpx(stravaId, name);
-          return;
-        }
         if (layers.length === 1) {
           const name = layers[0].feature?.properties?.name || `Map_Export_${Date.now()}`;
           const data = convertLayerToGpx(layers[0]);
@@ -1068,6 +1069,39 @@ async function initializeMap() {
           showConfirmButton: false,
         });
         subMenu.style.display = "none";
+      });
+
+      // Original Strava: only shown when the whole selection is real Strava
+      // activities. A single one downloads immediately, same as before. For
+      // multiple, browsers only allow one script-triggered download per
+      // genuine click, so instead we list real, individually-clickable
+      // links - an actual anchor click bypasses that restriction entirely.
+      L.DomEvent.on(container.querySelector("#download-gpx-strava-original"), "click", (e) => {
+        L.DomEvent.stop(e);
+        const layers = getCurrentSelectionLayers();
+        subMenu.style.display = "none";
+        if (layers.length === 0) return;
+
+        if (layers.length === 1) {
+          const { stravaId, name } = layers[0].feature.properties;
+          downloadOriginalStravaGpx(stravaId, name);
+          return;
+        }
+
+        const links = layers
+          .map((layer, i) => {
+            const { stravaId, name } = layer.feature.properties;
+            const style = i === 0 ? "" : ' style="margin-top: 4px;"';
+            return `<li${style}><a href="https://www.strava.com/activities/${stravaId}/export_gpx" target="_blank" rel="noopener noreferrer">${escapeXml(name)}</a></li>`;
+          })
+          .join("");
+        Swal.fire({
+          title: "Download Original Strava GPX Files",
+          html: `
+            <p style="text-align: left; margin: 0;">Click each link to download its original file from Strava:</p>
+            <ul style="margin: 4px 0; padding-left: 20px; text-align: left;">${links}</ul>
+          `,
+        });
       });
 
       L.DomEvent.on(container.querySelector("#download-geojson-selected"), "click", (e) => {
