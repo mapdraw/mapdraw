@@ -1026,10 +1026,12 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
   const placemarkStart =
     `  <Placemark>\n` +
     `    <name>${safeName}</name>\n` +
-    (safeDescription ? `    <description>${safeDescription}</description>\n` : "") +
-    (stravaId
-      ? `    <ExtendedData>\n      <Data name="stravaId">\n        <value>${stravaId}</value>\n      </Data>\n    </ExtendedData>\n`
-      : "");
+    (safeDescription ? `    <description>${safeDescription}</description>\n` : "");
+
+  // KML 2.2's AbstractFeatureType schema requires Style before ExtendedData.
+  const extendedDataTag = stravaId
+    ? `    <ExtendedData>\n      <Data name="stravaId">\n        <value>${stravaId}</value>\n      </Data>\n    </ExtendedData>\n`
+    : "";
 
   const placemarkEnd = `  </Placemark>`;
 
@@ -1067,7 +1069,7 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
       `      </LineStyle>\n` +
       `    </Style>\n`;
 
-    return placemarkStart + styleTag + geometryTag + placemarkEnd;
+    return placemarkStart + styleTag + extendedDataTag + geometryTag + placemarkEnd;
   }
 
   if (layer instanceof L.Marker) {
@@ -1085,7 +1087,7 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
       `      </IconStyle>\n` +
       `    </Style>\n`;
 
-    return placemarkStart + styleTag + pointTag + placemarkEnd;
+    return placemarkStart + styleTag + extendedDataTag + pointTag + placemarkEnd;
   }
 
   return null;
