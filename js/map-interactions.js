@@ -86,8 +86,8 @@ function getCurrentSelectionLayers() {
 
 /**
  * Enables/disables the download menu's "Selected"-scope buttons (GPX,
- * GeoJSON, KML, Share Link) and updates their tooltips to reflect the
- * current selection. Called whenever selection changes, from either
+ * GeoJSON, KML, Share Link) and updates their tooltips and labels to reflect
+ * the current selection. Called whenever selection changes, from either
  * selectItem()/deselectCurrentItem() or rectangle-select's setSelection().
  */
 function syncSelectedDownloadButtonsState() {
@@ -101,7 +101,10 @@ function syncSelectedDownloadButtonsState() {
 
   const layers = getCurrentSelectionLayers();
   const hasSelection = layers.length > 0;
-  buttons.forEach((btn) => (btn.disabled = !hasSelection));
+  buttons.forEach((btn) => {
+    btn.disabled = !hasSelection;
+    btn.textContent = layers.length > 1 ? `Selected (${layers.length})` : "Selected";
+  });
 
   if (!hasSelection) {
     gpxBtn.title = "Select an item to download as GPX";
