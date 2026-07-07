@@ -80,7 +80,13 @@ function updateMarkerOutlinePosition() {
  */
 function getCurrentSelectionLayers() {
   const rectLayers = window.app?.getRectangleSelectionLayers?.();
-  if (rectLayers && rectLayers.length > 0) return rectLayers;
+  if (rectLayers && rectLayers.length > 0) {
+    // Reorder to match getAllExportableLayers() (used by "All" exports) instead
+    // of the rectangle-select tool's selection-order Set, so "Selected" exports
+    // list features in the same order as "All" exports.
+    const selectedSet = new Set(rectLayers);
+    return getAllExportableLayers().filter((layer) => selectedSet.has(layer));
+  }
   return globallySelectedItem ? [globallySelectedItem] : [];
 }
 
