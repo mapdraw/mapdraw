@@ -622,6 +622,7 @@
 
         L.DomEvent.on(container, "click", (ev) => {
           L.DomEvent.stop(ev);
+          if (L.DomUtil.hasClass(container, "disabled")) return;
           if (isActive) {
             exitSelectMode();
           } else {
