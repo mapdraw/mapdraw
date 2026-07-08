@@ -564,7 +564,7 @@ function initializeRouting() {
   /**
    * Clears all routing markers, inputs, and route path from the map.
    */
-  const clearRouting = () => {
+  const clearRouting = ({ skipUiUpdate = false } = {}) => {
     if (penModeActive) exitPenMode();
     if (routingControl) {
       routingControl.setWaypoints([]);
@@ -607,8 +607,10 @@ function initializeRouting() {
       drawnItems.removeLayer(currentRoutePath);
       map.removeLayer(currentRoutePath);
       currentRoutePath = null;
-      updateOverviewList();
-      updateDrawControlStates();
+      if (!skipUiUpdate) {
+        updateOverviewList();
+        updateDrawControlStates();
+      }
     }
     if (saveRouteBtn) saveRouteBtn.disabled = true;
 

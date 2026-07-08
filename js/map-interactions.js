@@ -450,7 +450,7 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
   if (layer === currentRoutePath) {
     // This function is exposed on window.app from routing.js and handles all cleanup.
     if (window.app && typeof window.app.clearRouting === "function") {
-      window.app.clearRouting();
+      window.app.clearRouting({ skipUiUpdate });
     }
     return;
   }
