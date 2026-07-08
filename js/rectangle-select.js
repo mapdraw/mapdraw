@@ -35,7 +35,12 @@
   const NO_SELECTION_HINT = "Select items first";
   const DRAG_TOOLTIP_START = "Click or drag to select/deselect items<br>Hold Space to move the map";
   const DRAG_TOOLTIP_END = "Release to update selection";
-  const preventTouchScroll = (e) => L.DomEvent.preventDefault(e);
+  // Skip Leaflet controls and anything outside the map so their taps still work.
+  const preventTouchScroll = (e) => {
+    if (map.getContainer().contains(e.target) && !e.target.closest(".leaflet-control-container")) {
+      L.DomEvent.preventDefault(e);
+    }
+  };
 
   function getHighlightColor() {
     return (
