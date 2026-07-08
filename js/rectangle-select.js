@@ -497,6 +497,9 @@
 
   function onMouseDown(e) {
     if (!isActive || spacePanActive) return;
+    // Right-click is reserved for the context menu, which stays suppressed while a mode
+    // is active; don't also treat it as a marquee-select click/drag.
+    if (e.originalEvent?.button === 2) return;
     // A second finger joining mid-gesture means the user wants to pinch/pan,
     // not marquee-select - leave it to Leaflet's own touchZoom handler.
     if (e.originalEvent?.touches?.length > 1) return;
