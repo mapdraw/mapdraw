@@ -228,13 +228,13 @@
       hasSelection && getCandidateLayers().every((layer) => selectedLayers.has(layer));
     if (!hasSelection) {
       invertAction.textContent = "Select all";
-      invertAction.title = "Select all items";
+      invertAction.title = "Select all visible items";
     } else if (allSelected) {
       invertAction.textContent = "Deselect all";
       invertAction.title = "Deselect all items";
     } else {
       invertAction.textContent = "Invert";
-      invertAction.title = "Invert selection";
+      invertAction.title = "Invert selection of visible items";
     }
   }
 
@@ -353,34 +353,26 @@
   // Called whenever any layer's visibility changes through any path (our own
   // bulk action, or the overview panel's own row button). Unlike delete/duplicate,
   // visibility doesn't change a layer's identity, so we keep the tool and
-  // selection active - just refresh the Hide/Show label/disabled state so it
-  // can't go stale relative to what actually happened.
+  // selection active - just refresh the button states so they can't go stale
+  // relative to what actually happened. This must run regardless of whether
+  // `layer` itself is selected: the Invert/Select all/Deselect all label
+  // depends on the whole visible-candidate set (see updateActionButtonsState's
+  // allSelected check), which changes whenever *any* tracked layer's
+  // visibility changes, not just a selected one.
   function refreshIfTracked(layer) {
-    if (!selectedLayers.has(layer)) return;
+    if (!isActive || !isLayerStillTracked(layer)) return;
     updateActionButtonsState();
   }
 
   // Called whenever a whole layer-group's visibility is toggled (the overview
   // panel's category header, or the layers panel checkbox) - neither goes
   // through toggleLayerVisibility() for each individual item, so refreshIfTracked
-  // never fires for them on its own. Find any of our tracked layers that belong
-  // to the toggled group (including nested GeoJSON sub-groups, same as
-  // toggleLayerVisibility's own check) and refresh those specifically.
+  // never fires for them on its own. The candidate set changes for the whole
+  // tool regardless of which of the group's members are selected, so just
+  // refresh once rather than hunting for a specific tracked member.
   function refreshGroupMembers(group) {
-    if (!group || typeof group.hasLayer !== "function") return;
-    selectedLayers.forEach((layer) => {
-      if (group.hasLayer(layer)) {
-        refreshIfTracked(layer);
-        return;
-      }
-      if (typeof group.eachLayer === "function") {
-        group.eachLayer((child) => {
-          if (child instanceof L.GeoJSON && child.hasLayer(layer)) {
-            refreshIfTracked(layer);
-          }
-        });
-      }
-    });
+    if (!group || typeof group.hasLayer !== "function" || !isActive) return;
+    updateActionButtonsState();
   }
 
   // Converges all selected layers to a single target state (hide all if any are
@@ -606,8 +598,8 @@
         const invertLi = L.DomUtil.create("li", "", actionsList);
         invertAction = L.DomUtil.create("a", "", invertLi);
         invertAction.href = "#";
-        invertAction.title = "Invert selection";
-        invertAction.textContent = "Invert";
+        invertAction.title = "Select all visible items";
+        invertAction.textContent = "Select all";
         const visibilityLi = L.DomUtil.create("li", "", actionsList);
         visibilityAction = L.DomUtil.create("a", "leaflet-disabled", visibilityLi);
         visibilityAction.href = "#";
