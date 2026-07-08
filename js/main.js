@@ -1474,6 +1474,26 @@ async function initializeMap() {
     };
   }
 
+  // A hidden marker has no marker.dragging (deleted by Leaflet on removal, recreated on
+  // add). leaflet-draw touches it unconditionally, throwing "Cannot read properties of
+  // undefined (reading 'enable'/'disable')" when Edit mode is entered while a marker is
+  // hidden, or when Save/Cancel is pressed while one is hidden. Paths/polygons don't use
+  // .dragging, so only markers need this guard.
+  if (L.EditToolbar && L.EditToolbar.Edit) {
+    const origEnableLayerEdit = L.EditToolbar.Edit.prototype._enableLayerEdit;
+    L.EditToolbar.Edit.prototype._enableLayerEdit = function (e) {
+      const layer = e.layer || e.target || e;
+      if (layer instanceof L.Marker && !layer.dragging) return;
+      origEnableLayerEdit.call(this, e);
+    };
+    const origDisableLayerEdit = L.EditToolbar.Edit.prototype._disableLayerEdit;
+    L.EditToolbar.Edit.prototype._disableLayerEdit = function (e) {
+      const layer = e.layer || e.target || e;
+      if (layer instanceof L.Marker && !layer.dragging) return;
+      origDisableLayerEdit.call(this, e);
+    };
+  }
+
   // Patch deprecated _flat method
   if (L.Polyline && L.LineUtil && L.LineUtil.isFlat) {
     L.Polyline._flat = L.LineUtil.isFlat;

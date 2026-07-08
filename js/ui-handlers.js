@@ -19,6 +19,10 @@ function toggleLayerVisibility(layerToToggle) {
   layerToToggle.isManuallyHidden = !layerToToggle.isManuallyHidden;
 
   if (layerToToggle.isManuallyHidden) {
+    // Disable editing before hiding (no-op if not editing) - otherwise a marker's edit
+    // highlight gets stuck once its icon is rebuilt on the next show.
+    if (layerToToggle.editing) layerToToggle.editing.disable();
+
     // Hide the layer and its potential outline
     map.removeLayer(layerToToggle);
     if (layerToToggle === globallySelectedItem) {
@@ -54,6 +58,9 @@ function toggleLayerVisibility(layerToToggle) {
         if (selectedPathOutline) selectedPathOutline.addTo(map).bringToBack();
         if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
       }
+
+      // Resume editing, but only if Edit mode is still active
+      if (isEditMode && layerToToggle.editing) layerToToggle.editing.enable();
     }
   }
 
