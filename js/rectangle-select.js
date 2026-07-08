@@ -575,13 +575,16 @@
     map.dragging.disable();
   }
 
-  // If the window loses focus while Space is held (e.g. alt-tab), no keyup
-  // ever arrives - without this, spacePanActive would stay stuck true and
-  // block the tool's own mousedown handling until re-entering select mode.
+  // If the window loses focus mid-gesture (e.g. alt-tab), no keyup/mouseup
+  // ever arrives - without this, spacePanActive/isDragging would stay stuck
+  // and either block the tool's own mousedown handling or leave the temp
+  // selection rectangle following the cursor with no button held.
   function onWindowBlur() {
-    if (!spacePanActive) return;
-    spacePanActive = false;
-    map.dragging.disable();
+    if (spacePanActive) {
+      spacePanActive = false;
+      map.dragging.disable();
+    }
+    if (isDragging) cancelDrag();
   }
 
   function initRectangleSelect(mapInstance) {
