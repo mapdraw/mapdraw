@@ -825,7 +825,14 @@ function initializeRouting() {
       map.removeLayer(viaMarker);
       viaMarker = null;
     }
-    window.app.activateMode("route-select", { onCancel: exitRoutePointSelectionMode });
+    // Only guards against selecting some other, unrelated existing layer while
+    // placing route points - it was never meant to stop the route from
+    // selecting/highlighting itself, which is a normal and expected part of
+    // creating it via this flow.
+    window.app.activateMode("route-select", {
+      onCancel: exitRoutePointSelectionMode,
+      canSelect: (layer) => layer === currentRoutePath,
+    });
     routePointSelectionMode = mode;
     document.body.classList.add("route-point-select-mode");
     selectStartBtn.classList.toggle("active", mode === "start");
@@ -880,7 +887,12 @@ function initializeRouting() {
     penModeClickCount = 0;
     penModeBtn.classList.add("active");
     document.body.classList.add("pen-draw-mode");
-    window.app.activateMode("pen", { onCancel: exitPenMode });
+    // Same carve-out as route-select above: selecting the route being built
+    // is expected, selecting anything else while placing points is not.
+    window.app.activateMode("pen", {
+      onCancel: exitPenMode,
+      canSelect: (layer) => layer === currentRoutePath,
+    });
   };
 
   const exitPenMode = () => {
@@ -1106,6 +1118,4 @@ function initializeRouting() {
   window.app.updateRoutingPoint = updateRoutingPoint;
   window.app.exitRoutePointSelectionMode = exitRoutePointSelectionMode;
   window.app.exitPenMode = exitPenMode;
-  window.app.isPenModeActive = () => penModeActive;
-  window.app.isRoutePointSelectionModeActive = () => !!routePointSelectionMode;
 }

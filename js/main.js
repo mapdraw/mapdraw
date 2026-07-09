@@ -1647,7 +1647,10 @@ async function initializeMap() {
   let totalDistance = 0;
 
   map.on(L.Draw.Event.DRAWSTART, function (e) {
-    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
+    // draw:created (which selects the newly-drawn shape) fires before
+    // draw:drawstop deactivates this mode, so selection must stay allowed
+    // throughout - unlike the delete/edit sub-modes below, which block it.
+    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools, canSelect: () => true });
     deselectCurrentItem();
     L.DomUtil.addClass(document.body, "leaflet-is-drawing");
     totalDistance = 0;

@@ -238,16 +238,7 @@ function enableElevationForPath(layer) {
  * @param {L.Layer} layer - The Leaflet layer to select
  */
 function selectItem(layer) {
-  if (isDeleteMode || isEditMode || window.app?.isRectangleSelectActive?.()) return;
-  // Pen-mode/route-point-selection only guard against selecting some other,
-  // unrelated existing layer while placing route points - they were never
-  // meant to stop the route from selecting/highlighting itself, which is a
-  // normal and expected part of creating it via either of those flows.
-  if (
-    layer !== currentRoutePath &&
-    (window.app?.isPenModeActive?.() || window.app?.isRoutePointSelectionModeActive?.())
-  )
-    return;
+  if (!window.app?.canSelectLayer?.(layer)) return;
   if (globallySelectedItem && globallySelectedItem !== layer) {
     const keepElevation =
       isElevationProfileVisible &&

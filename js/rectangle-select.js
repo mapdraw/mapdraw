@@ -675,7 +675,6 @@
   window.app.notifyRectangleSelectionVisibilityChange = refreshIfTracked;
   window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
   window.app.pruneRectangleSelection = pruneSelection;
-  window.app.isRectangleSelectActive = () => isActive;
   window.app.getRectangleSelectionCount = () => selectedLayers.size;
   window.app.getRectangleSelectionSingleLayer = () =>
     selectedLayers.size === 1 ? selectedLayers.values().next().value : null;
