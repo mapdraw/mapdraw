@@ -49,20 +49,31 @@
     );
   }
 
+  // Single source of truth for "every LayerGroup that makes up the map's
+  // content" - getCandidateLayers(), isLayerStillTracked(), and hasAnyItems()
+  // each apply their own semantics (visible-only, group-membership,
+  // non-empty) on top of this instead of re-listing the groups themselves,
+  // so a new group-based layer source only needs to be added here. The live
+  // route stays a special case in each of the three below, since it's a lone
+  // layer, not a group.
+  function getAllGroups() {
+    return [editableLayers, stravaActivitiesLayer, importedItems];
+  }
+
+  function getAllLayers() {
+    const layers = getAllGroups().flatMap((group) => group.getLayers());
+    // The live/unsaved route lives only in drawnItems, not editableLayers, so
+    // it needs to be added explicitly to be selectable like any other item.
+    if (currentRoutePath) layers.push(currentRoutePath);
+    return layers;
+  }
+
   function getCandidateLayers() {
     // Only layers actually visible right now can be drag-selected - otherwise
     // you could silently select something you can't see (map.hasLayer() already
     // covers both reasons a layer could be hidden: individually, or its whole
     // category toggled off).
-    const layers = [
-      ...editableLayers.getLayers(),
-      ...stravaActivitiesLayer.getLayers(),
-      ...importedItems.getLayers(),
-    ];
-    // The live/unsaved route lives only in drawnItems, not editableLayers, so
-    // it needs to be added explicitly to be selectable like any other item.
-    if (currentRoutePath) layers.push(currentRoutePath);
-    return layers.filter((layer) => map.hasLayer(layer));
+    return getAllLayers().filter((layer) => map.hasLayer(layer));
   }
 
   // --- Segment-aware hit-testing (so a box over the middle of a segment counts too) ---
@@ -320,12 +331,7 @@
   // layer from the map, never from its owning group), so it only returns false
   // once a layer has actually been deleted, not just hidden.
   function isLayerStillTracked(layer) {
-    return (
-      editableLayers.hasLayer(layer) ||
-      stravaActivitiesLayer.hasLayer(layer) ||
-      importedItems.hasLayer(layer) ||
-      layer === currentRoutePath
-    );
+    return getAllGroups().some((group) => group.hasLayer(layer)) || layer === currentRoutePath;
   }
 
   // Reconciles the selection against reality: drops any layer that got deleted
@@ -421,12 +427,7 @@
   // --- Mode lifecycle ---
 
   function hasAnyItems() {
-    return (
-      editableLayers.getLayers().length > 0 ||
-      stravaActivitiesLayer.getLayers().length > 0 ||
-      importedItems.getLayers().length > 0 ||
-      !!currentRoutePath
-    );
+    return getAllGroups().some((group) => group.getLayers().length > 0) || !!currentRoutePath;
   }
 
   function enterSelectMode() {
