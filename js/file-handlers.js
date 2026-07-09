@@ -695,8 +695,7 @@ const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
 /**
  * Exports map items to a GeoJSON file with color preservation.
  * @param {Object} options - Export options
- * @param {string} options.mode - Export mode: "all" (default), "single", or "strava"
- * @param {L.Layer} options.layer - Single layer to export (required when mode is "single")
+ * @param {string} options.mode - Export mode: "all" (default), "selection", or "strava"
  * @param {string} options.filePrefix - Prefix for the filename (defaults based on mode)
  * @param {string} options.successTitle - Success dialog title (defaults based on mode)
  * @param {string} options.successText - Success dialog text (defaults based on mode)
@@ -704,7 +703,6 @@ const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
 function exportGeoJson(options = {}) {
   const {
     mode = "all",
-    layer = null,
     layers = null,
     filePrefix = null,
     successTitle = "Export Successful!",
@@ -715,15 +713,7 @@ function exportGeoJson(options = {}) {
   let allLayers = [];
 
   // Collect layers based on mode
-  if (mode === "single") {
-    if (!layer) {
-      return Swal.fire({
-        title: "No Item Selected",
-        text: "Please select an item to export.",
-      });
-    }
-    allLayers = [layer];
-  } else if (mode === "selection") {
+  if (mode === "selection") {
     if (!layers || layers.length === 0) {
       return Swal.fire({
         title: "Nothing Selected",
@@ -816,13 +806,11 @@ function exportGeoJson(options = {}) {
     features: features,
   };
 
-  // A lone named item - whether via "single" mode or a "selection" of exactly
-  // one - is named after itself with no timestamp, same as GPX; anything else
-  // (a real bulk export) gets a generic prefix plus a timestamp.
+  // A lone named item - a "selection" of exactly one - is named after itself
+  // with no timestamp, same as GPX; anything else (a real bulk export) gets a
+  // generic prefix plus a timestamp.
   const singleNamedItem =
-    (mode === "single" || mode === "selection") && allLayers.length === 1
-      ? allLayers[0].feature?.properties?.name
-      : null;
+    mode === "selection" && allLayers.length === 1 ? allLayers[0].feature?.properties?.name : null;
 
   // Determine filename prefix
   let finalFilePrefix = filePrefix;
@@ -845,10 +833,10 @@ function exportGeoJson(options = {}) {
   // Download file
   downloadFile(fileName, JSON.stringify(geojsonDoc, null, 2));
 
-  // Silent for a single-item download ("single" mode, or a "selection" of
-  // exactly one) - an obviously-intentional single download needs no
-  // confirmation beyond the browser's own download indicator, same as GPX.
-  // Multi-item "selection" confirms with a count, same as "all" already does.
+  // Silent for a single-item download (a "selection" of exactly one) - an
+  // obviously-intentional single download needs no confirmation beyond the
+  // browser's own download indicator, same as GPX. Multi-item "selection"
+  // confirms with a count, same as "all" already does.
   if (mode === "all") {
     Swal.fire({
       title: successTitle,
