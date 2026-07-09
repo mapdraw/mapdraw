@@ -974,15 +974,6 @@ function buildGpxSnippet(layer) {
 }
 
 /**
- * Converts a Leaflet layer to a GPX string, supporting markers and paths with colors.
- * @param {L.Layer} layer - The layer to convert
- * @returns {string} The GPX file content as a string
- */
-function convertLayerToGpx(layer) {
-  return GPX_HEADER + buildGpxSnippet(layer) + GPX_FOOTER;
-}
-
-/**
  * Converts multiple layers into a single GPX document containing one <trk>
  * or <wpt> element per layer - the same "one file, several entries" approach
  * GeoJSON/KML export already use, so no zip/multi-file bundling is needed.
@@ -996,6 +987,55 @@ function convertLayersToGpx(layers) {
   const paths = layers.filter((layer) => !(layer instanceof L.Marker));
   const orderedLayers = [...markers, ...paths];
   return GPX_HEADER + orderedLayers.map(buildGpxSnippet).join("") + GPX_FOOTER;
+}
+
+/**
+ * Handles the export and download of the GPX file.
+ * @param {{layers?: Array}} [options] - Pass layers to export only a specific
+ *   subset (e.g. the current selection) instead of everything on the map.
+ */
+function exportGpx({ layers = null } = {}) {
+  if (layers && layers.length === 0) {
+    return Swal.fire({
+      title: "Nothing Selected",
+      text: "Please select at least one item to export.",
+    });
+  }
+
+  const allLayers = layers || getAllExportableLayers();
+
+  if (allLayers.length === 0) {
+    return Swal.fire({
+      title: "No Data to Export",
+      text: "There are no items on the map to export.",
+    });
+  }
+
+  // A lone selected named item is named after itself with no timestamp, same
+  // as GeoJSON/KML; anything else (a real bulk export) gets a generic prefix
+  // plus a timestamp.
+  const singleNamedItem = layers?.length === 1 ? layers[0].feature?.properties?.name : null;
+  const filePrefix = singleNamedItem || (layers ? "Selected_Export" : "Map_Export");
+  const fileName = singleNamedItem
+    ? `${filePrefix}.gpx`
+    : generateTimestampedFilename(filePrefix, "gpx");
+
+  downloadFile(fileName, convertLayersToGpx(allLayers));
+
+  // Silent for a single-item download - an obviously-intentional single
+  // download needs no confirmation beyond the browser's own download
+  // indicator, same as GeoJSON/KML. Multi-item "Selected" confirms with a
+  // count, same as "All" already does.
+  if (!layers || layers.length > 1) {
+    Swal.fire({
+      title: "Export Successful!",
+      text: layers
+        ? `${layers.length} selected items have been exported to GPX.`
+        : "All items have been exported to GPX.",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  }
 }
 
 // KML / KMZ

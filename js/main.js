@@ -1024,50 +1024,14 @@ async function initializeMap() {
       // GPX: always the local converter, bundled into one file when there's
       // more than one layer. Fetching the original file(s) from Strava is a
       // separate, explicit action - see the "Original Strava" button below.
-      const downloadGpxForLayers = (layers) => {
-        if (layers.length === 0) return;
-        if (layers.length === 1) {
-          const name = layers[0].feature?.properties?.name || `Map_Export_${Date.now()}`;
-          const data = convertLayerToGpx(layers[0]);
-          if (data) downloadFile(`${name}.gpx`, data);
-          return;
-        }
-        const data = convertLayersToGpx(layers);
-        downloadFile(generateTimestampedFilename("Selected_Export", "gpx"), data);
-        // Silent for a single item (above); multi-item "Selected" confirms
-        // with a count, same as GeoJSON/KML/"All" already do.
-        Swal.fire({
-          title: "Export Successful!",
-          text: `${layers.length} selected items have been exported to GPX.`,
-          timer: 2000,
-          showConfirmButton: false,
-        });
-      };
-
       L.DomEvent.on(container.querySelector("#download-gpx-selected"), "click", (e) => {
         L.DomEvent.stop(e);
-        downloadGpxForLayers(getCurrentSelectionLayers());
+        exportGpx({ layers: getCurrentSelectionLayers() });
         subMenu.style.display = "none";
       });
       L.DomEvent.on(container.querySelector("#download-gpx-all"), "click", (e) => {
         L.DomEvent.stop(e);
-        const layers = getAllExportableLayers();
-        if (layers.length === 0) {
-          Swal.fire({
-            title: "No Data to Export",
-            text: "There are no items on the map to export.",
-          });
-          subMenu.style.display = "none";
-          return;
-        }
-        const data = convertLayersToGpx(layers);
-        downloadFile(generateTimestampedFilename("Map_Export", "gpx"), data);
-        Swal.fire({
-          title: "Export Successful!",
-          text: "All items have been exported to GPX.",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        exportGpx();
         subMenu.style.display = "none";
       });
 
