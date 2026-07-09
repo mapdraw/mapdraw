@@ -880,14 +880,14 @@ const GPX_HEADER = `<?xml version="1.0" encoding="UTF-8"?>
 const GPX_FOOTER = "\n</gpx>";
 
 /**
- * Builds the <trk> or <wpt> XML snippet for a single layer, with no
+ * Converts a single layer to a <trk> or <wpt> XML snippet, with no
  * header/footer, so multiple snippets can be concatenated into one GPX
- * document (see convertLayersToGpx).
+ * document (see buildGpxContent).
  * Note: GPX has no polygon support; areas export as closed tracks and import as paths.
  * @param {L.Layer} layer - The layer to convert
  * @returns {string} The GPX track/waypoint snippet, or "" if unsupported
  */
-function buildGpxSnippet(layer) {
+function convertLayerToGpxSnippet(layer) {
   const name = layer.feature?.properties?.name || "Exported Feature";
   const description = layer.feature?.properties?.description || "";
   const color = layer.feature?.properties?.color || DEFAULT_COLOR;
@@ -974,19 +974,19 @@ function buildGpxSnippet(layer) {
 }
 
 /**
- * Converts multiple layers into a single GPX document containing one <trk>
- * or <wpt> element per layer - the same "one file, several entries" approach
- * GeoJSON/KML export already use, so no zip/multi-file bundling is needed.
+ * Builds a single GPX document containing one <trk> or <wpt> element per
+ * layer - the same "one file, several entries" approach GeoJSON/KML export
+ * already use, so no zip/multi-file bundling is needed.
  * The GPX 1.1 schema requires all <wpt> elements before any <trk>, so markers
  * are grouped first while preserving each group's relative order.
  * @param {Array} layers - The layers to convert
  * @returns {string} The GPX file content as a string
  */
-function convertLayersToGpx(layers) {
+function buildGpxContent(layers) {
   const markers = layers.filter((layer) => layer instanceof L.Marker);
   const paths = layers.filter((layer) => !(layer instanceof L.Marker));
   const orderedLayers = [...markers, ...paths];
-  return GPX_HEADER + orderedLayers.map(buildGpxSnippet).join("") + GPX_FOOTER;
+  return GPX_HEADER + orderedLayers.map(convertLayerToGpxSnippet).join("") + GPX_FOOTER;
 }
 
 /**
@@ -1020,7 +1020,7 @@ function exportGpx({ layers = null } = {}) {
     ? `${filePrefix}.gpx`
     : generateTimestampedFilename(filePrefix, "gpx");
 
-  downloadFile(fileName, convertLayersToGpx(allLayers));
+  downloadFile(fileName, buildGpxContent(allLayers));
 
   // Silent for a single-item download - an obviously-intentional single
   // download needs no confirmation beyond the browser's own download
@@ -1131,26 +1131,6 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
   }
 
   return null;
-}
-
-/**
- * Builds a complete, pretty-printed KML document string from a name and an array of placemarks.
- * @param {string} name - The name for the <Document>
- * @param {Array<string>} placemarks - An array of pre-formatted KML <Placemark> strings
- * @returns {string} The full KML document as a string
- */
-function buildKmlDocument(name, placemarks) {
-  const safeName = escapeXml(name);
-
-  return (
-    `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<kml xmlns="http://www.opengis.net/kml/2.2">\n` +
-    `<Document>\n` +
-    `  <name>${safeName}</name>\n` +
-    `${placemarks.join("\n")}\n` +
-    `</Document>\n` +
-    `</kml>`
-  );
 }
 
 /**
