@@ -200,6 +200,25 @@ function parseMapHash(hashString) {
   return null;
 }
 
+function closePanelMode(id, hide) {
+  hide();
+  window.app.deactivateMode(id, "panels");
+}
+
+/**
+ * The hide callback also serves as mode-manager's onCancel, so a panel
+ * closes the same way whether the user re-clicks its own button or
+ * another panel takes over.
+ */
+function togglePanelMode(id, isVisible, show, hide) {
+  if (isVisible()) {
+    closePanelMode(id, hide);
+  } else {
+    window.app.activateMode(id, { group: "panels", onCancel: hide });
+    show();
+  }
+}
+
 /**
  * Initializes the map and all its components (layers, controls, event handlers).
  */
@@ -531,16 +550,12 @@ async function initializeMap() {
       L.DomEvent.on(link, "click", (e) => {
         L.DomEvent.stop(e);
         const panel = document.getElementById("custom-layers-panel");
-        if (panel.style.display === "block") {
-          panel.style.display = "none";
-          window.app.deactivateMode("layers-panel", "panels");
-        } else {
-          window.app.activateMode("layers-panel", {
-            group: "panels",
-            onCancel: () => (panel.style.display = "none"),
-          });
-          panel.style.display = "block";
-        }
+        togglePanelMode(
+          "layers-panel",
+          () => panel.style.display === "block",
+          () => (panel.style.display = "block"),
+          () => (panel.style.display = "none"),
+        );
       });
 
       return container;
@@ -898,8 +913,7 @@ async function initializeMap() {
         !layersButton.contains(event.target) &&
         !layersPanel.contains(event.target)
       ) {
-        layersPanel.style.display = "none";
-        window.app.deactivateMode("layers-panel", "panels");
+        closePanelMode("layers-panel", () => (layersPanel.style.display = "none"));
       }
 
       if (
@@ -909,8 +923,7 @@ async function initializeMap() {
         !downloadButton.contains(event.target) &&
         !downloadMenu.contains(event.target)
       ) {
-        downloadMenu.style.display = "none";
-        window.app.deactivateMode("download-menu", "panels");
+        closePanelMode("download-menu", () => (downloadMenu.style.display = "none"));
       }
     },
     true,
@@ -937,24 +950,20 @@ async function initializeMap() {
         L.DomEvent.stop(ev);
         if (L.DomUtil.hasClass(container, "disabled")) return;
         const elevationDiv = document.getElementById("elevation-div");
-        const isHidden =
-          elevationDiv.style.visibility === "hidden" || elevationDiv.style.visibility === "";
-        if (isHidden) {
-          window.app.activateMode("elevation-panel", {
-            group: "panels",
-            onCancel: hideElevationPanel,
-          });
-          isElevationProfileVisible = true;
-          elevationDiv.style.visibility = "visible";
-          if (selectedElevationPath) {
-            window.elevationProfile.clearElevationProfile();
-            addElevationProfileForLayer(selectedElevationPath);
-          }
-          updateElevationToggleIconColor();
-        } else {
-          window.app.deactivateMode("elevation-panel", "panels");
-          hideElevationPanel();
-        }
+        togglePanelMode(
+          "elevation-panel",
+          () => elevationDiv.style.visibility === "visible",
+          () => {
+            isElevationProfileVisible = true;
+            elevationDiv.style.visibility = "visible";
+            if (selectedElevationPath) {
+              window.elevationProfile.clearElevationProfile();
+              addElevationProfileForLayer(selectedElevationPath);
+            }
+            updateElevationToggleIconColor();
+          },
+          hideElevationPanel,
+        );
       });
       return container;
     },
@@ -1008,16 +1017,12 @@ async function initializeMap() {
         if (L.DomUtil.hasClass(container, "disabled")) {
           return;
         }
-        if (subMenu.style.display === "block") {
-          subMenu.style.display = "none";
-          window.app.deactivateMode("download-menu", "panels");
-        } else {
-          window.app.activateMode("download-menu", {
-            group: "panels",
-            onCancel: () => (subMenu.style.display = "none"),
-          });
-          subMenu.style.display = "block";
-        }
+        togglePanelMode(
+          "download-menu",
+          () => subMenu.style.display === "block",
+          () => (subMenu.style.display = "block"),
+          () => (subMenu.style.display = "none"),
+        );
       });
 
       // Sync download-button active highlight with submenu visibility
