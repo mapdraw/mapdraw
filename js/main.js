@@ -1451,7 +1451,14 @@ async function initializeMap() {
     const origEnableLayerEdit = L.EditToolbar.Edit.prototype._enableLayerEdit;
     L.EditToolbar.Edit.prototype._enableLayerEdit = function (e) {
       const layer = e.layer || e.target || e;
-      if (layer instanceof L.Marker && !layer.dragging) return;
+      if (layer instanceof L.Marker && !layer.dragging) {
+        // Still back up the latlng even though we can't make it draggable yet -
+        // _backupLayer() only touches getLatLng(), never .dragging, so it's safe
+        // here. Without this, un-hiding the marker later (toggleLayerVisibility)
+        // makes it draggable with no backup taken, so Cancel can't revert it.
+        this._backupLayer(layer);
+        return;
+      }
       origEnableLayerEdit.call(this, e);
     };
     const origDisableLayerEdit = L.EditToolbar.Edit.prototype._disableLayerEdit;
