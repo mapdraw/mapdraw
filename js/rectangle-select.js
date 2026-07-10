@@ -24,6 +24,7 @@
   let visibilityAction = null;
   let deleteAction = null;
   let duplicateAction = null;
+  let selectAllAction = null;
   let invertAction = null;
   let doneAction = null;
   let spacePanActive = false;
@@ -237,18 +238,8 @@
       duplicateAction.title = NO_SELECTION_HINT;
     }
 
-    const allSelected =
-      hasSelection && getCandidateLayers().every((layer) => selectedLayers.has(layer));
-    if (!hasSelection) {
-      invertAction.textContent = "Select all";
-      invertAction.title = "Select all visible items";
-    } else if (allSelected) {
-      invertAction.textContent = "Deselect all";
-      invertAction.title = "Deselect all items";
-    } else {
-      invertAction.textContent = "Invert";
-      invertAction.title = "Invert selection of visible items";
-    }
+    selectAllAction.textContent = hasSelection ? "Deselect all" : "Select all";
+    selectAllAction.title = hasSelection ? "Deselect all items" : "Select all visible items";
   }
 
   // Returns the shared color if every selected layer already has the same
@@ -324,6 +315,16 @@
     setSelection(new Set());
   }
 
+  // Mirrors the Select all/Deselect all label logic in updateActionButtonsState():
+  // any existing selection - even a partial one - clears entirely rather than
+  // growing to "all". That's the direct way to drop a partial selection without
+  // leaving select mode; Invert can't produce an empty result from a partial
+  // selection, since it always yields the complement.
+  function performSelectAllToggle() {
+    if (selectedLayers.size > 0) clearSelection();
+    else setSelection(new Set(getCandidateLayers()));
+  }
+
   function performInvertSelection() {
     const newSet = new Set(getCandidateLayers().filter((layer) => !selectedLayers.has(layer)));
     setSelection(newSet);
@@ -363,11 +364,10 @@
   // bulk action, or the overview panel's own row button). Unlike delete/duplicate,
   // visibility doesn't change a layer's identity, so we keep the tool and
   // selection active - just refresh the button states so they can't go stale
-  // relative to what actually happened. This must run regardless of whether
-  // `layer` itself is selected: the Invert/Select all/Deselect all label
-  // depends on the whole visible-candidate set (see updateActionButtonsState's
-  // allSelected check), which changes whenever *any* tracked layer's
-  // visibility changes, not just a selected one.
+  // relative to what actually happened. Runs unconditionally (not gated on
+  // whether `layer` itself is selected) since that's the simplest way to keep
+  // the Hide/Show label - which reflects whichever selected layers are
+  // currently visible - always in sync, regardless of which layer changed.
   function refreshIfTracked(layer) {
     if (!isActive || !isLayerStillTracked(layer)) return;
     updateActionButtonsState();
@@ -376,9 +376,9 @@
   // Called whenever a whole layer-group's visibility is toggled (the overview
   // panel's category header, or the layers panel checkbox) - neither goes
   // through toggleLayerVisibility() for each individual item, so refreshIfTracked
-  // never fires for them on its own. The candidate set changes for the whole
-  // tool regardless of which of the group's members are selected, so just
-  // refresh once rather than hunting for a specific tracked member.
+  // never fires for them on its own. Kept as an unconditional refresh so the
+  // button states can't drift from a category-wide change, even though none
+  // of today's button states happen to depend on the candidate set.
   function refreshGroupMembers(group) {
     if (!group || typeof group.hasLayer !== "function" || !isActive) return;
     updateActionButtonsState();
@@ -599,11 +599,16 @@
           '<a href="#" role="button"><span class="material-symbols">ink_selection</span></a>';
 
         actionsList = L.DomUtil.create("ul", "leaflet-draw-actions", container);
+        const selectAllLi = L.DomUtil.create("li", "", actionsList);
+        selectAllAction = L.DomUtil.create("a", "", selectAllLi);
+        selectAllAction.href = "#";
+        selectAllAction.title = "Select all visible items";
+        selectAllAction.textContent = "Select all";
         const invertLi = L.DomUtil.create("li", "", actionsList);
         invertAction = L.DomUtil.create("a", "", invertLi);
         invertAction.href = "#";
-        invertAction.title = "Select all visible items";
-        invertAction.textContent = "Select all";
+        invertAction.title = "Invert selection of visible items";
+        invertAction.textContent = "Invert";
         const visibilityLi = L.DomUtil.create("li", "", actionsList);
         visibilityAction = L.DomUtil.create("a", "leaflet-disabled", visibilityLi);
         visibilityAction.href = "#";
@@ -634,6 +639,10 @@
             window.app.cancelActiveMode();
             enterSelectMode();
           }
+        });
+        L.DomEvent.on(selectAllAction, "click", (ev) => {
+          L.DomEvent.stop(ev);
+          performSelectAllToggle();
         });
         L.DomEvent.on(invertAction, "click", (ev) => {
           L.DomEvent.stop(ev);
