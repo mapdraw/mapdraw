@@ -829,7 +829,7 @@ function showMultiSelectInfoPanel(count, commonColor) {
  * info panel shows the same editable name field for that case too.
  */
 function updateLayerName() {
-  const target = globallySelectedItem || window.app?.getRectangleSelectionSingleLayer?.();
+  const target = getEffectiveSelectedLayer();
   if (target && target.feature.properties) {
     let newName = infoPanelName.value.trim();
     if (!newName) {

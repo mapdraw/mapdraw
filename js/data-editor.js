@@ -307,7 +307,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("data-editor-apply").addEventListener("click", applyDataEditor);
 
   document.getElementById("data-editor-find").addEventListener("click", () => {
-    if (!globallySelectedItem) {
+    const target = getEffectiveSelectedLayer();
+    if (!target) {
       Swal.fire({
         toast: true,
         icon: "info",
@@ -328,7 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const allLayers = [...editableLayers.getLayers(), ...importedItems.getLayers()];
-    const index = allLayers.indexOf(globallySelectedItem);
+    const index = allLayers.indexOf(target);
     if (index === -1) {
       Swal.fire({
         toast: true,

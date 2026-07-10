@@ -92,8 +92,9 @@ function adjustInfoPanelNameHeight(textarea) {
  * when the user toggles between metric and imperial units.
  */
 function updateAllDynamicUnitDisplays() {
-  if (globallySelectedItem) {
-    showInfoPanel(globallySelectedItem);
+  const selected = getEffectiveSelectedLayer();
+  if (selected) {
+    showInfoPanel(selected);
   }
 
   if (window.app && typeof window.app.redisplayCurrentRoute === "function") {
@@ -268,16 +269,19 @@ async function initializeMap() {
         targetPanel.classList.add("active");
       }
 
-      if (targetPanelId === "overview-panel" && globallySelectedItem) {
-        if (window.expandCategoryForItem) {
-          window.expandCategoryForItem(globallySelectedItem);
-        }
-        const layerId = L.Util.stamp(globallySelectedItem);
-        const listItem = document.querySelector(
-          `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
-        );
-        if (listItem) {
-          listItem.scrollIntoView({ behavior: "auto", block: "nearest" });
+      if (targetPanelId === "overview-panel") {
+        const selectedForOverview = getEffectiveSelectedLayer();
+        if (selectedForOverview) {
+          if (window.expandCategoryForItem) {
+            window.expandCategoryForItem(selectedForOverview);
+          }
+          const layerId = L.Util.stamp(selectedForOverview);
+          const listItem = document.querySelector(
+            `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
+          );
+          if (listItem) {
+            listItem.scrollIntoView({ behavior: "auto", block: "nearest" });
+          }
         }
       }
 
@@ -1336,7 +1340,7 @@ async function initializeMap() {
     sidebarToggleBtn.classList.toggle("panels-visible");
     sidebarToggleBtn.classList.toggle("panels-hidden");
 
-    if (!panelContainer.classList.contains("hidden") && globallySelectedItem) {
+    if (!panelContainer.classList.contains("hidden") && getEffectiveSelectedLayer()) {
       adjustInfoPanelNameHeight(infoPanelName);
     }
   });

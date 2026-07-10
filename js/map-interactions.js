@@ -73,6 +73,17 @@ function updateMarkerOutlinePosition() {
 }
 
 /**
+ * Returns the single selected layer, whether it came from a normal single
+ * click or the rectangle-select tool's single-item selection - the info panel
+ * displays both the same way (e.g. the editable name field), so consumers
+ * that only checked globallySelectedItem need this fallback too.
+ * @returns {L.Layer|null}
+ */
+function getEffectiveSelectedLayer() {
+  return globallySelectedItem || window.app?.getRectangleSelectionSingleLayer?.() || null;
+}
+
+/**
  * Returns whatever is currently selected as an array of layers, regardless of
  * whether the selection came from a normal single click or the rectangle-select
  * tool (the two are mutually exclusive, so only one of these is ever non-empty).
