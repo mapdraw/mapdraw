@@ -180,8 +180,7 @@
 
   // --- Highlight: recolors the item itself, no separate outline layer ---
 
-  function applyHighlight(layer) {
-    const highlightColor = getHighlightColor();
+  function applyHighlight(layer, highlightColor) {
     if (layer instanceof L.Marker) {
       layer.setIcon(createMarkerIcon(highlightColor, STYLE_CONFIG.marker.highlight.opacity));
       layer.setZIndexOffset(1000);
@@ -305,8 +304,9 @@
     selectedLayers.forEach((layer) => {
       if (!newSet.has(layer)) clearHighlight(layer);
     });
+    const highlightColor = getHighlightColor();
     newSet.forEach((layer) => {
-      if (!selectedLayers.has(layer)) applyHighlight(layer);
+      if (!selectedLayers.has(layer)) applyHighlight(layer, highlightColor);
     });
     selectedLayers.clear();
     newSet.forEach((layer) => selectedLayers.add(layer));
