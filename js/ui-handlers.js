@@ -82,7 +82,7 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
   if (!layerToDuplicate) return undefined;
 
   if (window.app && typeof window.app.removeFromRectangleSelection === "function") {
-    window.app.removeFromRectangleSelection(layerToDuplicate);
+    window.app.removeFromRectangleSelection();
   }
 
   let newLayer;

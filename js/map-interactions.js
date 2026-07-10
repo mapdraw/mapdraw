@@ -487,7 +487,7 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
   // Must run after the removals above - it checks group membership to decide
   // what's still selectable, so it needs to see the layer already gone.
   if (window.app && typeof window.app.removeFromRectangleSelection === "function") {
-    window.app.removeFromRectangleSelection(layer);
+    window.app.removeFromRectangleSelection();
   }
 
   if (layer === currentRoutePath) {
