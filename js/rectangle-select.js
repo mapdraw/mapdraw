@@ -51,22 +51,22 @@
   }
 
   // Single source of truth for "every LayerGroup that makes up the map's
-  // content" - getCandidateLayers(), isLayerStillTracked(), and hasAnyItems()
-  // each apply their own semantics (visible-only, group-membership,
-  // non-empty) on top of this instead of re-listing the groups themselves,
-  // so a new group-based layer source only needs to be added here. The live
-  // route stays a special case in each of the three below, since it's a lone
-  // layer, not a group.
+  // content" - isLayerStillTracked() and hasAnyItems() each apply their own
+  // semantics (group-membership, non-empty) on top of this instead of
+  // re-listing the groups themselves, so a new group-based layer source only
+  // needs to be added here (and to getAllExportableLayers() in
+  // file-handlers.js, which getAllLayers() below delegates to for the
+  // flattened/ordered list). The live route stays a special case in each,
+  // since it's a lone layer, not a group.
   function getAllGroups() {
     return [editableLayers, stravaActivitiesLayer, importedItems];
   }
 
+  // Delegates to file-handlers.js's canonical export-order list instead of
+  // re-deriving its own traversal order, so selection order always matches
+  // "All" export order with no reconciliation needed downstream.
   function getAllLayers() {
-    const layers = getAllGroups().flatMap((group) => group.getLayers());
-    // The live/unsaved route lives only in drawnItems, not editableLayers, so
-    // it needs to be added explicitly to be selectable like any other item.
-    if (currentRoutePath) layers.push(currentRoutePath);
-    return layers;
+    return getAllExportableLayers();
   }
 
   function getCandidateLayers() {
