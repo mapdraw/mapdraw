@@ -529,9 +529,17 @@
     }
   }
 
-  function onMouseUp() {
+  function onMouseUp(e) {
     const wasDragging = isDragging;
-    const bounds = tempRectangle?.getBounds();
+    let bounds = tempRectangle?.getBounds();
+    // If the cursor left the map before any mousemove fired there, tempRectangle
+    // stays null - fall back to the actual release point instead of silently
+    // downgrading the whole gesture into a click at the start point. Guarded to
+    // mouse events only: this handler is also bound to touchend, and touch events
+    // don't have a top-level clientX for mouseEventToLatLng() to read.
+    if (wasDragging && !bounds && typeof e?.clientX === "number") {
+      bounds = L.latLngBounds(dragStartLatLng, map.mouseEventToLatLng(e));
+    }
     cancelDrag();
     if (!wasDragging) return;
     selectTooltip.updateContent({ text: DRAG_TOOLTIP_START });
