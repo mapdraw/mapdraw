@@ -162,6 +162,9 @@
       return bounds.overlaps(getMarkerIconBounds(layer));
     }
     if (typeof layer.getLatLngs !== "function") return false;
+    // Cheap reject first: Leaflet caches getBounds(), so this skips the
+    // per-segment scan entirely for layers nowhere near the hit box.
+    if (!layer.getBounds().intersects(bounds)) return false;
     const closed = layer instanceof L.Polygon;
     return getRings(layer).some((ring) => {
       for (let i = 0; i < ring.length - 1; i++) {
