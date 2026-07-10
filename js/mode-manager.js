@@ -64,7 +64,10 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (e.target.matches("input, textarea")) return;
+    // Swal-based fields (search, POI finder, route points) already close on
+    // Escape themselves; plain fields (info panel name, Data-tab editor) don't,
+    // so only exempt Swal dialogs instead of blocking every input.
+    if (e.target.closest(".swal2-popup")) return;
     cancelActiveMode("tools");
     cancelActiveMode("panels");
   });
