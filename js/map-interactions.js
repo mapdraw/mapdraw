@@ -263,7 +263,7 @@ function selectItem(layer) {
     newListItem.classList.add("selected");
     if (document.getElementById("overview-panel").classList.contains("active")) {
       requestAnimationFrame(() => {
-        newListItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        newListItem.scrollIntoView({ behavior: "auto", block: "nearest" });
       });
     }
   }

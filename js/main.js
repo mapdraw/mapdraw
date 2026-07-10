@@ -277,7 +277,7 @@ async function initializeMap() {
           `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
         );
         if (listItem) {
-          listItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          listItem.scrollIntoView({ behavior: "auto", block: "nearest" });
         }
       }
 
