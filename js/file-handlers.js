@@ -113,6 +113,17 @@ function escapeXml(unsafe) {
 }
 
 /**
+ * A lone selected item - a "selection" of exactly one - is named after
+ * itself with no timestamp, same across GeoJSON/GPX/KML; anything else
+ * (a real bulk export) gets a generic prefix plus a timestamp instead.
+ * @param {Array|null} layers - The selection passed to the export function
+ * @returns {string|null} The item's name, or null if not a single-item selection
+ */
+function getSingleNamedItem(layers) {
+  return layers?.length === 1 ? layers[0].feature?.properties?.name : null;
+}
+
+/**
  * Supported geometry types for import.
  * Multi-geometry types (MultiLineString, MultiPolygon, etc.) and GeometryCollections
  * are automatically exploded into separate simple features for editing compatibility.
@@ -676,6 +687,17 @@ async function importKmzFile(file) {
 // --------------------------------------------------------------------
 
 /**
+ * Shows the dialog shared by GeoJSON/GPX/KML export when a selection-based
+ * export is invoked with nothing selected.
+ */
+function alertNothingSelected() {
+  return Swal.fire({
+    title: "Nothing Selected",
+    text: "Please select at least one item to export.",
+  });
+}
+
+/**
  * Properties to exclude from GeoJSON export.
  * These are internal/style properties that shouldn't be included in exported files.
  */
@@ -715,10 +737,7 @@ function exportGeoJson(options = {}) {
   // Collect layers based on mode
   if (mode === "selection") {
     if (!layers || layers.length === 0) {
-      return Swal.fire({
-        title: "Nothing Selected",
-        text: "Please select at least one item to export.",
-      });
+      return alertNothingSelected();
     }
     allLayers = layers;
   } else if (mode === "strava") {
@@ -806,11 +825,7 @@ function exportGeoJson(options = {}) {
     features: features,
   };
 
-  // A lone named item - a "selection" of exactly one - is named after itself
-  // with no timestamp, same as GPX; anything else (a real bulk export) gets a
-  // generic prefix plus a timestamp.
-  const singleNamedItem =
-    mode === "selection" && allLayers.length === 1 ? allLayers[0].feature?.properties?.name : null;
+  const singleNamedItem = mode === "selection" ? getSingleNamedItem(allLayers) : null;
 
   // Determine filename prefix
   let finalFilePrefix = filePrefix;
@@ -984,10 +999,7 @@ function buildGpxContent(layers) {
  */
 function exportGpx({ layers = null } = {}) {
   if (layers && layers.length === 0) {
-    return Swal.fire({
-      title: "Nothing Selected",
-      text: "Please select at least one item to export.",
-    });
+    return alertNothingSelected();
   }
 
   const allLayers = layers || getAllExportableLayers();
@@ -999,10 +1011,7 @@ function exportGpx({ layers = null } = {}) {
     });
   }
 
-  // A lone selected named item is named after itself with no timestamp, same
-  // as GeoJSON/KML; anything else (a real bulk export) gets a generic prefix
-  // plus a timestamp.
-  const singleNamedItem = layers?.length === 1 ? layers[0].feature?.properties?.name : null;
+  const singleNamedItem = getSingleNamedItem(layers);
   const filePrefix = singleNamedItem || (layers ? "Selected_Export" : "Map_Export");
   const fileName = singleNamedItem
     ? `${filePrefix}.gpx`
@@ -1214,16 +1223,10 @@ function buildKmlContent(docName, layers = null) {
  */
 function exportKml({ layers = null } = {}) {
   if (layers && layers.length === 0) {
-    return Swal.fire({
-      title: "Nothing Selected",
-      text: "Please select at least one item to export.",
-    });
+    return alertNothingSelected();
   }
 
-  // A lone selected named item is named after itself with no timestamp, same
-  // as GPX/GeoJSON; anything else (a real bulk export) gets a generic prefix
-  // plus a timestamp.
-  const singleNamedItem = layers?.length === 1 ? layers[0].feature?.properties?.name : null;
+  const singleNamedItem = getSingleNamedItem(layers);
 
   const timestamp = generateTimestamp();
   const filePrefix = singleNamedItem || (layers ? "Selected_Export" : "Map_Export");
