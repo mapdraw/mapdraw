@@ -219,8 +219,12 @@ function disableElevation() {
   document.getElementById("elevation-div").style.visibility = "hidden";
   isElevationProfileVisible = false;
   updateElevationToggleIconColor();
-  elevationToggleControl.getContainer().title = "Select a path to show elevation";
-  L.DomUtil.addClass(elevationToggleControl.getContainer(), "disabled");
+  setButtonAvailability(
+    "elevation-button",
+    false,
+    "Toggle elevation profile",
+    "Select a path to show elevation",
+  );
 }
 
 /**
@@ -230,10 +234,12 @@ function disableElevation() {
  */
 function enableElevationForPath(layer) {
   selectedElevationPath = layer;
-  if (elevationToggleControl) {
-    elevationToggleControl.getContainer().title = "Toggle elevation profile";
-    L.DomUtil.removeClass(elevationToggleControl.getContainer(), "disabled");
-  }
+  setButtonAvailability(
+    "elevation-button",
+    true,
+    "Toggle elevation profile",
+    "Select a path to show elevation",
+  );
   const elevationDiv = document.getElementById("elevation-div");
   if (isElevationProfileVisible || elevationDiv.style.visibility === "visible") {
     elevationDiv.style.visibility = "visible";
