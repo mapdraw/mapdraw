@@ -112,6 +112,7 @@ function applyDataEditor() {
   error.style.display = "none";
 
   deselectCurrentItem();
+  window.app?.clearRouting?.({ skipUiUpdate: true });
   drawnItems.clearLayers();
   editableLayers.clearLayers();
   importedItems.clearLayers();
