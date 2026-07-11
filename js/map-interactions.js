@@ -396,9 +396,7 @@ function updateDrawControlStates() {
     deleteControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit-remove");
   }
 
-  const hasLayers =
-    window.app?.getAllGroups?.().some((group) => group.getLayers().length > 0) ||
-    currentRoutePath !== null;
+  const hasLayers = window.app?.hasAnyItems?.() ?? false;
 
   setButtonAvailability(
     "download-button",

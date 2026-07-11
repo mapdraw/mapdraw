@@ -709,4 +709,5 @@
   window.app.getRectangleSelectionLayers = () => Array.from(selectedLayers);
   window.app.applyBulkColor = applyBulkColor;
   window.app.syncRectangleSelectionHighlight = syncOverviewHighlight;
+  window.app.hasAnyItems = hasAnyItems;
 })();
