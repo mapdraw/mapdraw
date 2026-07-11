@@ -402,29 +402,25 @@
     updateActionButtonsState();
   }
 
-  function performBulkDelete() {
+  // Skips the per-layer UI refresh (and, for duplication, the simplification
+  // toast) - otherwise acting on hundreds of items is O(n^2) and visibly slow,
+  // and duplication would spam a toast per item. Refreshes once at the end instead.
+  function performBulkAction(perLayerAction) {
     if (selectedLayers.size === 0) return;
-    const toDelete = Array.from(selectedLayers);
+    const layers = Array.from(selectedLayers);
     clearSelection();
-    // Skip the per-layer UI refresh (rebuilding the whole overview panel is
-    // O(n) on its own) and do it once after the loop instead - otherwise
-    // deleting hundreds of items is O(n^2) and visibly slow.
-    toDelete.forEach((layer) => deleteLayerImmediately(layer, { skipUiUpdate: true }));
+    layers.forEach((layer) => perLayerAction(layer, { skipUiUpdate: true }));
     updateDrawControlStates();
     updateOverviewList();
     exitSelectMode();
   }
 
+  function performBulkDelete() {
+    performBulkAction(deleteLayerImmediately);
+  }
+
   function performBulkDuplicate() {
-    if (selectedLayers.size === 0) return;
-    const toDuplicate = Array.from(selectedLayers);
-    clearSelection();
-    // Skip the per-layer UI refresh and simplification toast (same O(n^2) and
-    // notification-spam issue as bulk delete) and refresh once at the end instead.
-    toDuplicate.forEach((layer) => duplicateLayer(layer, { skipUiUpdate: true }));
-    updateOverviewList();
-    updateDrawControlStates();
-    exitSelectMode();
+    performBulkAction(duplicateLayer);
   }
 
   // --- Mode lifecycle ---
