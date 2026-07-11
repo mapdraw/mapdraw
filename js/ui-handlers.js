@@ -744,27 +744,38 @@ function showInfoPanel(layer) {
 }
 
 /**
+ * Applies the shared "no single item selected" visual state to the info panel's
+ * details text: centered placeholder styling with no click handler, and the
+ * edit-hint/Strava-link hidden. Shared by resetInfoPanel() (nothing selected)
+ * and showMultiSelectInfoPanel() (multiple items selected via rectangle-select).
+ * @param {string} text - The message to show in place of an item name
+ */
+function resetInfoPanelDetailsStyle(text) {
+  infoPanelName.style.display = "none";
+  infoPanelDetails.textContent = text;
+  infoPanelDetails.style.fontWeight = "normal";
+  infoPanelDetails.style.color = "var(--text-color)";
+  infoPanelDetails.style.fontSize = "var(--font-size-14)"; // Larger font for this message
+  infoPanel.style.justifyContent = "center";
+  infoPanelDetails.style.marginTop = "0";
+
+  // Ensure click handler and styles are reset
+  infoPanelDetails.onclick = null;
+  infoPanelDetails.style.cursor = "default";
+  infoPanelDetails.title = "";
+
+  // Hide the hint and Strava link
+  document.getElementById("info-panel-edit-hint").style.display = "none";
+  document.getElementById("info-panel-strava-link").style.display = "none";
+}
+
+/**
  * Resets the info panel to its default state (no item selected).
  */
 function resetInfoPanel() {
   if (infoPanel) {
     infoPanel.classList.add("no-selection");
-    infoPanelName.style.display = "none";
-    infoPanelDetails.textContent = "No item selected";
-    infoPanelDetails.style.fontWeight = "normal";
-    infoPanelDetails.style.color = "var(--text-color)";
-    infoPanelDetails.style.fontSize = "var(--font-size-14)"; // Larger font for this message
-    infoPanel.style.justifyContent = "center";
-    infoPanelDetails.style.marginTop = "0";
-
-    // Ensure click handler and styles are reset
-    infoPanelDetails.onclick = null;
-    infoPanelDetails.style.cursor = "default";
-    infoPanelDetails.title = "";
-
-    // Hide the hint and Strava link when resetting
-    document.getElementById("info-panel-edit-hint").style.display = "none";
-    document.getElementById("info-panel-strava-link").style.display = "none";
+    resetInfoPanelDetailsStyle("No item selected");
 
     // Hide color picker and the new style row
     infoPanelStyleRow.style.display = "none";
@@ -784,21 +795,7 @@ function resetInfoPanel() {
 function showMultiSelectInfoPanel(count, commonColor) {
   if (!infoPanel) return;
   infoPanel.classList.remove("no-selection");
-
-  infoPanelName.style.display = "none";
-  infoPanelDetails.textContent = `${count} items selected`;
-  infoPanelDetails.style.fontWeight = "normal";
-  infoPanelDetails.style.color = "var(--text-color)";
-  infoPanelDetails.style.fontSize = "var(--font-size-14)";
-  infoPanel.style.justifyContent = "center";
-  infoPanelDetails.style.marginTop = "0";
-
-  infoPanelDetails.onclick = null;
-  infoPanelDetails.style.cursor = "default";
-  infoPanelDetails.title = "";
-
-  document.getElementById("info-panel-edit-hint").style.display = "none";
-  document.getElementById("info-panel-strava-link").style.display = "none";
+  resetInfoPanelDetailsStyle(`${count} items selected`);
 
   // The swatch shows the shared color if every selected item already has the
   // same one (self-explanatory, same as single-select), or a "mixed colors"
