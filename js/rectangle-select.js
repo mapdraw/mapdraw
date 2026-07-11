@@ -484,7 +484,9 @@
   function cancelDrag() {
     isDragging = false;
     map.getContainer().classList.remove("leaflet-crosshair");
-    L.DomEvent.off(document, "mouseup", onMouseUp).off(document, "touchend", onMouseUp);
+    L.DomEvent.off(document, "mouseup", onMouseUp)
+      .off(document, "touchend", onMouseUp)
+      .off(document, "touchcancel", cancelDrag);
     if (tempRectangle) {
       map.removeLayer(tempRectangle);
       tempRectangle = null;
@@ -501,7 +503,12 @@
     if (e.originalEvent?.touches?.length > 1) return;
     isDragging = true;
     dragStartLatLng = e.latlng;
-    L.DomEvent.on(document, "mouseup", onMouseUp).on(document, "touchend", onMouseUp);
+    // touchcancel (OS-interrupted touch: incoming call, edge-swipe, etc.) is
+    // routed to cancelDrag() rather than onMouseUp() - there's no valid end
+    // position for an aborted gesture, so it must discard rather than select.
+    L.DomEvent.on(document, "mouseup", onMouseUp)
+      .on(document, "touchend", onMouseUp)
+      .on(document, "touchcancel", cancelDrag);
     L.DomEvent.preventDefault(e.originalEvent);
   }
 
