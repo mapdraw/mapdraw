@@ -88,8 +88,7 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
   let newLayer;
   const newFeature = JSON.parse(JSON.stringify(layerToDuplicate.feature || { properties: {} }));
   newFeature.properties.name =
-    (newFeature.properties.name || (layerToDuplicate instanceof L.Marker ? "Marker" : "Path")) +
-    " (Copy)";
+    (newFeature.properties.name || getDefaultLayerName(layerToDuplicate)) + " (Copy)";
   const color = newFeature.properties.color || DEFAULT_COLOR;
 
   // Create the appropriate layer type (marker, polygon, or polyline)
@@ -208,9 +207,7 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
  */
 function createOverviewListItem(layer) {
   const layerId = L.Util.stamp(layer);
-  let layerName =
-    layer.feature?.properties?.name ||
-    (layer instanceof L.Marker ? "Marker" : layer instanceof L.Polygon ? "Area" : "Unnamed Path");
+  let layerName = layer.feature?.properties?.name || getDefaultLayerName(layer);
 
   const listItem = document.createElement("div");
   listItem.className = "overview-list-item";
@@ -620,7 +617,7 @@ function showInfoPanel(layer) {
   // Populating content
   layer.feature = layer.feature || {};
   layer.feature.properties = layer.feature.properties || {};
-  let name = layer.feature.properties.name || "";
+  let name = layer.feature.properties.name || getDefaultLayerName(layer);
   let details = "";
   const editHint = document.getElementById("info-panel-edit-hint");
   const stravaLink = document.getElementById("info-panel-strava-link");
@@ -635,7 +632,6 @@ function showInfoPanel(layer) {
   stravaLink.style.display = "none";
 
   if (layer instanceof L.Marker) {
-    name = name || "Marker";
     const latlng = layer.getLatLng();
     details = `<span>Lat: ${latlng.lat.toFixed(6)}, Lon: ${latlng.lng.toFixed(
       6,
@@ -672,15 +668,11 @@ function showInfoPanel(layer) {
         });
     };
   } else if (layer instanceof L.Polygon) {
-    name = name || "Area";
-
     const area = calculatePolygonArea(layer);
     const perimeter = calculatePathDistance(layer);
 
     details = `Area: ${formatArea(area)}<br>Perimeter: ${formatDistance(perimeter)}`;
   } else if (layer instanceof L.Polyline) {
-    name = name || "Path";
-
     // Recalculate distance from geometry to ensure consistency with elevation panel
     const totalDistance = calculatePathDistance(layer);
 
@@ -692,7 +684,6 @@ function showInfoPanel(layer) {
     details = `Length: ${formatDistance(totalDistance)}`;
   }
 
-  layer.feature.properties.name = name;
   infoPanelName.value = name;
   infoPanelDetails.innerHTML = details;
 
@@ -834,8 +825,7 @@ function updateLayerName() {
     let newName = infoPanelName.value.trim();
     if (!newName) {
       // Default name if input is empty
-      newName =
-        target instanceof L.Marker ? "Marker" : target instanceof L.Polygon ? "Area" : "Path";
+      newName = getDefaultLayerName(target);
       infoPanelName.value = newName;
     }
     target.feature.properties.name = newName;

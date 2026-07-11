@@ -290,6 +290,12 @@ function importGeoJsonToMap(geoJsonData, fileType) {
       // Store the resolved color
       layer.feature.properties.color = color;
 
+      // Default a missing/empty name so it's never treated as blank downstream
+      // (display, export).
+      if (!layer.feature.properties.name) {
+        layer.feature.properties.name = getDefaultLayerName(layer);
+      }
+
       // All imported items use fileType as pathType
       layer.pathType = fileType;
 

@@ -154,6 +154,10 @@ async function restoreAutosave() {
         properties: { ...props, color },
         geometry: feature.geometry,
       };
+      // Safety net for autosave data saved before names were guaranteed at creation time
+      if (!layer.feature.properties.name) {
+        layer.feature.properties.name = getDefaultLayerName(layer);
+      }
       layer.pathType = pathType;
 
       // Click handler

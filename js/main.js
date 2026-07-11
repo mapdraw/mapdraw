@@ -1620,6 +1620,7 @@ async function initializeMap() {
     layer.pathType = "drawn";
     layer.feature = layer.feature || { properties: {} };
     layer.feature.properties.color = DEFAULT_COLOR;
+    layer.feature.properties.name = getDefaultLayerName(layer);
     drawnItems.addLayer(layer);
     editableLayers.addLayer(layer);
     layer.on("click", (ev) => {
