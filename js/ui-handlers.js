@@ -836,7 +836,7 @@ function updateLayerName() {
  * @returns {boolean}
  */
 function hasActiveColorTarget() {
-  return !!globallySelectedItem || (window.app?.getRectangleSelectionCount?.() ?? 0) > 0;
+  return getCurrentSelectionLayers().length > 0;
 }
 
 /**
