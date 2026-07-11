@@ -691,6 +691,7 @@
 
   window.app = window.app || {};
   window.app.initRectangleSelect = initRectangleSelect;
+  window.app.getAllGroups = getAllGroups;
   window.app.removeFromRectangleSelection = removeFromSelection;
   window.app.notifyRectangleSelectionVisibilityChange = refreshIfTracked;
   window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
