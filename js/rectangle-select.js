@@ -513,9 +513,9 @@
       cancelDrag();
       return;
     }
-    selectTooltip.updateContent({ text: DRAG_TOOLTIP_END });
     const bounds = L.latLngBounds(dragStartLatLng, e.latlng);
     if (!tempRectangle) {
+      selectTooltip.updateContent({ text: DRAG_TOOLTIP_END });
       map.getContainer().classList.add("leaflet-crosshair");
       tempRectangle = L.rectangle(bounds, {
         color: getHighlightColor(),
