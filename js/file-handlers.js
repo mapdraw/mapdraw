@@ -698,6 +698,19 @@ function alertNothingSelected() {
 }
 
 /**
+ * Shows a timed "Export Successful" toast, or does nothing when `shouldNotify`
+ * is false - e.g. an obviously-intentional single-item download needs no
+ * confirmation beyond the browser's own download indicator.
+ * @param {boolean} shouldNotify
+ * @param {string} title
+ * @param {string} text
+ */
+function notifyExportSuccess(shouldNotify, title, text) {
+  if (!shouldNotify) return;
+  Swal.fire({ title, text, timer: 2000, showConfirmButton: false });
+}
+
+/**
  * Properties to exclude from GeoJSON export.
  * These are internal/style properties that shouldn't be included in exported files.
  */
@@ -848,27 +861,14 @@ function exportGeoJson(options = {}) {
   // Download file
   downloadFile(fileName, JSON.stringify(geojsonDoc, null, 2));
 
-  // Silent for a single-item download (a "selection" of exactly one) - an
-  // obviously-intentional single download needs no confirmation beyond the
-  // browser's own download indicator, same as GPX. Multi-item "selection"
-  // confirms with a count, same as "all" already does.
-  if (mode === "all") {
-    Swal.fire({
-      title: successTitle,
-      text: successText || "All items have been exported to GeoJSON.",
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  } else if (mode === "selection" && allLayers.length > 1) {
-    Swal.fire({
-      title: successTitle,
-      text: successText || `${allLayers.length} selected items have been exported to GeoJSON.`,
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  } else if (mode === "strava") {
-    // Strava mode was silent in the original, so we keep it silent
-  }
+  notifyExportSuccess(
+    mode === "all" || (mode === "selection" && allLayers.length > 1),
+    successTitle,
+    successText ||
+      (mode === "all"
+        ? "All items have been exported to GeoJSON."
+        : `${allLayers.length} selected items have been exported to GeoJSON.`),
+  );
 }
 
 // GPX
@@ -1019,20 +1019,13 @@ function exportGpx({ layers = null } = {}) {
 
   downloadFile(fileName, buildGpxContent(allLayers));
 
-  // Silent for a single-item download - an obviously-intentional single
-  // download needs no confirmation beyond the browser's own download
-  // indicator, same as GeoJSON/KML. Multi-item "Selected" confirms with a
-  // count, same as "All" already does.
-  if (!layers || layers.length > 1) {
-    Swal.fire({
-      title: "Export Successful!",
-      text: layers
-        ? `${layers.length} selected items have been exported to GPX.`
-        : "All items have been exported to GPX.",
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  }
+  notifyExportSuccess(
+    !layers || layers.length > 1,
+    "Export Successful!",
+    layers
+      ? `${layers.length} selected items have been exported to GPX.`
+      : "All items have been exported to GPX.",
+  );
 }
 
 // KML / KMZ
@@ -1253,20 +1246,13 @@ function exportKml({ layers = null } = {}) {
   document.body.removeChild(link);
   URL.revokeObjectURL(link.href);
 
-  // Silent for a single-item download - an obviously-intentional single
-  // download needs no confirmation beyond the browser's own download
-  // indicator, same as GPX/GeoJSON. Multi-item "Selected" confirms with a
-  // count, same as "All" already does.
-  if (!layers || layers.length > 1) {
-    Swal.fire({
-      title: "Export Successful!",
-      text: layers
-        ? `${layers.length} selected items have been exported to KML.`
-        : "All items have been exported to KML.",
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  }
+  notifyExportSuccess(
+    !layers || layers.length > 1,
+    "Export Successful!",
+    layers
+      ? `${layers.length} selected items have been exported to KML.`
+      : "All items have been exported to KML.",
+  );
 }
 
 // 4. SHARING (URL-BASED)
