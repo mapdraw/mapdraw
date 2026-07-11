@@ -124,6 +124,18 @@ function getSingleNamedItem(layers) {
 }
 
 /**
+ * Default filename prefix for an export: the single named item itself,
+ * or a generic "Selected"/"Map" prefix for anything else (bulk exports,
+ * which also get a timestamp appended by the caller).
+ * @param {string|null} singleNamedItem - Result of getSingleNamedItem()
+ * @param {boolean} hasSelection - Whether the export is scoped to a selection
+ * @returns {string} The resolved filename prefix
+ */
+function resolveExportFilePrefix(singleNamedItem, hasSelection) {
+  return singleNamedItem || (hasSelection ? "Selected_Export" : "Map_Export");
+}
+
+/**
  * Supported geometry types for import.
  * Multi-geometry types (MultiLineString, MultiPolygon, etc.) and GeometryCollections
  * are automatically exploded into separate simple features for editing compatibility.
@@ -849,15 +861,10 @@ function exportGeoJson(options = {}) {
   // Determine filename prefix
   let finalFilePrefix = filePrefix;
   if (!finalFilePrefix) {
-    if (singleNamedItem) {
-      finalFilePrefix = singleNamedItem;
-    } else if (mode === "selection") {
-      finalFilePrefix = "Selected_Export";
-    } else if (mode === "strava") {
-      finalFilePrefix = "Strava_Export";
-    } else {
-      finalFilePrefix = "Map_Export";
-    }
+    finalFilePrefix =
+      mode === "strava"
+        ? "Strava_Export"
+        : resolveExportFilePrefix(singleNamedItem, mode === "selection");
   }
 
   const fileName = singleNamedItem
@@ -1018,7 +1025,7 @@ function exportGpx({ layers = null } = {}) {
   }
 
   const singleNamedItem = getSingleNamedItem(layers);
-  const filePrefix = singleNamedItem || (layers ? "Selected_Export" : "Map_Export");
+  const filePrefix = resolveExportFilePrefix(singleNamedItem, !!layers);
   const fileName = singleNamedItem
     ? `${filePrefix}.gpx`
     : generateTimestampedFilename(filePrefix, "gpx");
@@ -1228,7 +1235,7 @@ function exportKml({ layers = null } = {}) {
   const singleNamedItem = getSingleNamedItem(layers);
 
   const timestamp = generateTimestamp();
-  const filePrefix = singleNamedItem || (layers ? "Selected_Export" : "Map_Export");
+  const filePrefix = resolveExportFilePrefix(singleNamedItem, !!layers);
   const fileName = singleNamedItem ? `${filePrefix}.kml` : `${filePrefix}_${timestamp}.kml`;
   const docName = singleNamedItem
     ? filePrefix
