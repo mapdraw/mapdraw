@@ -64,9 +64,7 @@ function toggleLayerVisibility(layerToToggle) {
     }
   }
 
-  if (window.app && typeof window.app.notifyRectangleSelectionVisibilityChange === "function") {
-    window.app.notifyRectangleSelectionVisibilityChange(layerToToggle);
-  }
+  window.app.notifyRectangleSelectionVisibilityChange(layerToToggle);
 }
 
 /**
@@ -81,9 +79,7 @@ function toggleLayerVisibility(layerToToggle) {
 function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
   if (!layerToDuplicate) return undefined;
 
-  if (window.app && typeof window.app.removeFromRectangleSelection === "function") {
-    window.app.removeFromRectangleSelection();
-  }
+  window.app.removeFromRectangleSelection();
 
   let newLayer;
   const newFeature = JSON.parse(JSON.stringify(layerToDuplicate.feature || { properties: {} }));
