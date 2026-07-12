@@ -684,7 +684,6 @@
 
   window.app = window.app || {};
   window.app.initRectangleSelect = initRectangleSelect;
-  window.app.getAllGroups = getAllGroups;
   window.app.notifyRectangleSelectionVisibilityChange = refreshIfTracked;
   window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
   // Called whenever a layer we're tracking gets deleted or duplicated through a
