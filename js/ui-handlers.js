@@ -605,7 +605,6 @@ function showInfoPanel(layer) {
   // Style adjustments for when an item is selected
   infoPanel.classList.remove("no-selection");
   infoPanelName.style.display = "block";
-  infoPanelDetails.style.color = "var(--color-black)";
   infoPanelDetails.style.fontSize = "var(--font-size-12)"; // Reset font size
   infoPanel.style.justifyContent = "flex-start";
   infoPanelDetails.style.marginTop = "5px";
@@ -750,7 +749,6 @@ function resetInfoPanelDetailsStyle(text) {
   infoPanelName.style.display = "none";
   infoPanelDetails.textContent = text;
   infoPanelDetails.style.fontWeight = "normal";
-  infoPanelDetails.style.color = "var(--text-color)";
   infoPanelDetails.style.fontSize = "var(--font-size-14)"; // Larger font for this message
   infoPanel.style.justifyContent = "center";
   infoPanelDetails.style.marginTop = "0";
