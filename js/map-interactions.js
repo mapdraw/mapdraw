@@ -139,13 +139,12 @@ function syncSelectedDownloadButtonsState() {
       geojsonBtn,
       kmlBtn,
       shareBtn,
-      buttons: [gpxBtn, geojsonBtn, kmlBtn, shareBtn],
       stravaRow,
       stravaBtn,
     };
   }
-  const { gpxBtn, geojsonBtn, kmlBtn, shareBtn, buttons, stravaRow, stravaBtn } =
-    downloadButtonsCache;
+  const { gpxBtn, geojsonBtn, kmlBtn, shareBtn, stravaRow, stravaBtn } = downloadButtonsCache;
+  const buttons = [gpxBtn, geojsonBtn, kmlBtn, shareBtn];
 
   const layers = getCurrentSelectionLayers();
   const hasSelection = layers.length > 0;
