@@ -518,10 +518,6 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
   // what's still selectable, so it needs to see the layer already gone.
   window.app.pruneRectangleSelection({ skipUiUpdate });
 
-  if (layer === currentRoutePath) {
-    currentRoutePath = null;
-  }
-
   if (skipUiUpdate) return;
 
   updateDrawControlStates();
