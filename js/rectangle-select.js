@@ -672,6 +672,12 @@
     });
     new RectangleSelectControl().addTo(map);
 
+    // Core Leaflet never forwards touchstart/touchmove as map events - they only
+    // fire here because leaflet-draw's L.Map.TouchExtend handler (auto-enabled on
+    // every map, see leaflet.draw.js) bridges raw touch DOM events into
+    // map.fire("touchstart"/"touchmove", {latlng, originalEvent, ...}). Do not
+    // remove these two bindings: confirmed by testing on Android/iOS that dragging
+    // a selection rectangle via touch stops working entirely without them.
     map
       .on("mousedown", onMouseDown)
       .on("mousemove", onMouseMove)
