@@ -195,13 +195,7 @@
   }
 
   function clearHighlight(layer) {
-    const color = layer.feature?.properties?.color || DEFAULT_COLOR;
-    if (layer instanceof L.Marker) {
-      layer.setIcon(createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity));
-      layer.setZIndexOffset(0);
-      return;
-    }
-    layer.setStyle({ ...STYLE_CONFIG.path.default, color: color });
+    resetLayerStyle(layer);
   }
 
   function syncOverviewHighlight() {

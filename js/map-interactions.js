@@ -65,6 +65,20 @@ function createMarkerIcon(
 }
 
 /**
+ * Resets a layer to its saved/default color and style, undoing any selection or highlight state.
+ * @param {L.Layer} layer - The Leaflet layer to reset
+ */
+function resetLayerStyle(layer) {
+  const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+  if (layer instanceof L.Marker) {
+    layer.setIcon(createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity));
+    layer.setZIndexOffset(0);
+  } else {
+    layer.setStyle({ ...STYLE_CONFIG.path.default, color });
+  }
+}
+
+/**
  * Keeps the marker outline synchronized with its parent marker during drag operations.
  */
 function updateMarkerOutlinePosition() {
@@ -206,14 +220,7 @@ function deselectCurrentItem() {
     listItem.classList.remove("selected");
   }
 
-  const item = globallySelectedItem;
-  const color = item.feature?.properties?.color || DEFAULT_COLOR;
-  if (item instanceof L.Polyline || item instanceof L.Polygon) {
-    item.setStyle({ ...STYLE_CONFIG.path.default, color: color });
-  } else if (item instanceof L.Marker) {
-    item.setIcon(createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity));
-    item.setZIndexOffset(0);
-  }
+  resetLayerStyle(globallySelectedItem);
 
   globallySelectedItem = null;
   disableElevation();
