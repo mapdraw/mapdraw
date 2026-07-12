@@ -452,8 +452,15 @@ function initializeRouting() {
     directionsPanel.classList.toggle("collapsed");
   });
 
+  [startInput, viaInput, endInput].forEach((input) => {
+    input.addEventListener("click", () => {
+      if (penModeActive) exitPenMode();
+    });
+  });
+
   // Use search modal for start input
   attachSearchModalToInput(startInput, "Set Start Point", (latlng, label) => {
+    if (penModeActive) exitPenMode();
     currentStartLatLng = latlng;
     startInput.style.color = "var(--color-black)";
     if (startMarker) {
@@ -472,6 +479,7 @@ function initializeRouting() {
 
   // Use search modal for end input
   attachSearchModalToInput(endInput, "Set End Point", (latlng, label) => {
+    if (penModeActive) exitPenMode();
     currentEndLatLng = latlng;
     endInput.style.color = "var(--color-black)";
     if (endMarker) {
@@ -490,6 +498,7 @@ function initializeRouting() {
 
   // Use search modal for via input
   attachSearchModalToInput(viaInput, "Set Via Point", (latlng, label) => {
+    if (penModeActive) exitPenMode();
     currentViaLatLng = latlng;
     viaInput.style.color = "var(--color-black)";
     if (viaMarker) {
@@ -625,6 +634,7 @@ function initializeRouting() {
    * Updates a routing point (start/via/end) with a new location and optional label.
    */
   const updateRoutingPoint = (latlng, type, label) => {
+    if (penModeActive) exitPenMode();
     const locationString = label || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
 
     if (type === "start") {
