@@ -685,15 +685,14 @@
   window.app = window.app || {};
   window.app.initRectangleSelect = initRectangleSelect;
   window.app.getAllGroups = getAllGroups;
+  window.app.notifyRectangleSelectionVisibilityChange = refreshIfTracked;
+  window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
   // Called whenever a layer we're tracking gets deleted or duplicated through a
   // different path (e.g. the overview panel's own row buttons). The specific
   // layer isn't needed beyond triggering a reconcile - updateDrawControlStates()
   // (called by every mutation path, including this one's caller) would catch it
   // moments later regardless, but pruning immediately here means the tool's own
   // UI never shows stale state even for one intermediate render.
-  window.app.removeFromRectangleSelection = pruneSelection;
-  window.app.notifyRectangleSelectionVisibilityChange = refreshIfTracked;
-  window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
   window.app.pruneRectangleSelection = pruneSelection;
   window.app.getRectangleSelectionCount = () => selectedLayers.size;
   window.app.getRectangleSelectionSingleLayer = () =>
