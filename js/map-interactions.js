@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 let elevationHoverMarker = null;
+let downloadButtonsCache = null;
 window.mapInteractions = {};
 
 /**
@@ -111,14 +112,26 @@ function getCurrentSelectionLayers() {
  */
 function syncSelectedDownloadButtonsState() {
   if (!downloadControl) return;
-  const container = downloadControl.getContainer();
-  const gpxBtn = container.querySelector("#download-gpx-selected");
-  const geojsonBtn = container.querySelector("#download-geojson-selected");
-  const kmlBtn = container.querySelector("#download-kml-selected");
-  const shareBtn = container.querySelector("#download-share-selected");
-  const buttons = [gpxBtn, geojsonBtn, kmlBtn, shareBtn];
-  const stravaRow = container.querySelector("#download-strava-row");
-  const stravaBtn = container.querySelector("#download-gpx-strava-original");
+  if (!downloadButtonsCache) {
+    const container = downloadControl.getContainer();
+    const gpxBtn = container.querySelector("#download-gpx-selected");
+    const geojsonBtn = container.querySelector("#download-geojson-selected");
+    const kmlBtn = container.querySelector("#download-kml-selected");
+    const shareBtn = container.querySelector("#download-share-selected");
+    const stravaRow = container.querySelector("#download-strava-row");
+    const stravaBtn = container.querySelector("#download-gpx-strava-original");
+    downloadButtonsCache = {
+      gpxBtn,
+      geojsonBtn,
+      kmlBtn,
+      shareBtn,
+      buttons: [gpxBtn, geojsonBtn, kmlBtn, shareBtn],
+      stravaRow,
+      stravaBtn,
+    };
+  }
+  const { gpxBtn, geojsonBtn, kmlBtn, shareBtn, buttons, stravaRow, stravaBtn } =
+    downloadButtonsCache;
 
   const layers = getCurrentSelectionLayers();
   const hasSelection = layers.length > 0;
