@@ -1063,7 +1063,7 @@ async function initializeMap() {
           .map((layer, i) => {
             const { stravaId, name } = layer.feature.properties;
             const style = i === 0 ? "" : ' style="margin-top: 4px;"';
-            return `<li${style}><a href="https://www.strava.com/activities/${stravaId}/export_gpx" target="_blank" rel="noopener noreferrer">${escapeXml(name)}</a></li>`;
+            return `<li${style}><a href="${stravaGpxExportUrl(stravaId)}" target="_blank" rel="noopener noreferrer">${escapeXml(name)}</a></li>`;
           })
           .join("");
         Swal.fire({

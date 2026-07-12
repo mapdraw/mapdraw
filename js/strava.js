@@ -528,13 +528,22 @@ async function exportStravaActivitiesAsJson() {
 }
 
 /**
+ * Builds the URL of an activity's original GPX export on Strava's website.
+ * @param {string} activityId - The ID of the Strava activity
+ * @returns {string} The export_gpx URL
+ */
+function stravaGpxExportUrl(activityId) {
+  return `https://www.strava.com/activities/${activityId}/export_gpx`;
+}
+
+/**
  * Triggers a browser download of the original GPX file from Strava's website.
  * @param {string} activityId - The ID of the Strava activity
  * @param {string} activityName - The name of the activity, used for the filename
  */
 function downloadOriginalStravaGpx(activityId, activityName) {
   const link = document.createElement("a");
-  link.href = `https://www.strava.com/activities/${activityId}/export_gpx`;
+  link.href = stravaGpxExportUrl(activityId);
   link.download = `${activityName.replace(/[^a-z0-9]/gi, "_")}.gpx`;
   document.body.appendChild(link);
   link.click();

@@ -242,13 +242,17 @@
     return common;
   }
 
+  function getSingleSelectedLayer() {
+    return selectedLayers.size === 1 ? selectedLayers.values().next().value : null;
+  }
+
   // Mirrors the normal single-item info panel for 0/1 selected items, and adds
   // a dedicated multi-selection state (count + bulk color swatch) otherwise.
   function syncInfoPanelWithSelection() {
     if (selectedLayers.size === 0) {
       resetInfoPanel();
     } else if (selectedLayers.size === 1) {
-      showInfoPanel(selectedLayers.values().next().value);
+      showInfoPanel(getSingleSelectedLayer());
     } else {
       showMultiSelectInfoPanel(selectedLayers.size, getCommonSelectionColor());
     }
@@ -261,7 +265,7 @@
   // selections (e.g. via Invert) keeps the panel open instead of flickering
   // closed and reopening.
   function syncElevationWithSelection() {
-    const singleLayer = selectedLayers.size === 1 ? selectedLayers.values().next().value : null;
+    const singleLayer = getSingleSelectedLayer();
     const isPath = singleLayer instanceof L.Polyline && !(singleLayer instanceof L.Polygon);
     if (isPath && selectedElevationPath === singleLayer) return; // already showing this one
 
@@ -693,8 +697,7 @@
   // UI never shows stale state even for one intermediate render.
   window.app.pruneRectangleSelection = pruneSelection;
   window.app.getRectangleSelectionCount = () => selectedLayers.size;
-  window.app.getRectangleSelectionSingleLayer = () =>
-    selectedLayers.size === 1 ? selectedLayers.values().next().value : null;
+  window.app.getRectangleSelectionSingleLayer = getSingleSelectedLayer;
   window.app.getRectangleSelectionLayers = () => Array.from(selectedLayers);
   window.app.applyBulkColor = applyBulkColor;
   window.app.syncRectangleSelectionHighlight = syncOverviewHighlight;
