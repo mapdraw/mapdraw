@@ -905,9 +905,7 @@ select:focus {
 .overview-list-item:last-child {
   border-bottom: none !important;
 }
-.overview-list-item.selected {
-  background-color: var(--highlight-color);
-}
+.overview-list-item.selected,
 .overview-list-item.rectangle-selected {
   background-color: var(--highlight-color);
 }
