@@ -1116,6 +1116,4 @@ function initializeRouting() {
   window.app.saveRoute = saveRoute;
   window.app.redisplayCurrentRoute = redisplayCurrentRoute;
   window.app.updateRoutingPoint = updateRoutingPoint;
-  window.app.exitRoutePointSelectionMode = exitRoutePointSelectionMode;
-  window.app.exitPenMode = exitPenMode;
 }
