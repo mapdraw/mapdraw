@@ -79,7 +79,7 @@ function toggleLayerVisibility(layerToToggle) {
 function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
   if (!layerToDuplicate) return undefined;
 
-  window.app.pruneRectangleSelection();
+  window.app.pruneRectangleSelection({ skipUiUpdate });
 
   let newLayer;
   const newFeature = JSON.parse(JSON.stringify(layerToDuplicate.feature || { properties: {} }));

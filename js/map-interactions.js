@@ -79,6 +79,23 @@ function resetLayerStyle(layer) {
 }
 
 /**
+ * Applies the selection-highlight color/z-index to a layer. Mirror image of
+ * resetLayerStyle(); shared by single-select (selectItem()) and the
+ * rectangle-select tool so both highlight identically.
+ * @param {L.Layer} layer - The Leaflet layer to highlight
+ * @param {string} highlightColor - The color to highlight with
+ */
+function applyLayerHighlight(layer, highlightColor) {
+  if (layer instanceof L.Marker) {
+    layer.setIcon(createMarkerIcon(highlightColor, STYLE_CONFIG.marker.highlight.opacity));
+    layer.setZIndexOffset(1000);
+  } else {
+    layer.setStyle({ ...STYLE_CONFIG.path.highlight, color: highlightColor });
+    layer.bringToFront();
+  }
+}
+
+/**
  * Keeps the marker outline synchronized with its parent marker during drag operations.
  */
 function updateMarkerOutlinePosition() {
@@ -347,8 +364,7 @@ function selectItem(layer) {
       }
     }
 
-    layer.setStyle({ ...STYLE_CONFIG.path.highlight, color: highlightColor });
-    layer.bringToFront();
+    applyLayerHighlight(layer, highlightColor);
 
     // Only enable elevation for polylines, not polygons
     if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
@@ -374,8 +390,7 @@ function selectItem(layer) {
       }
     }
 
-    layer.setIcon(createMarkerIcon(highlightColor, STYLE_CONFIG.marker.highlight.opacity));
-    layer.setZIndexOffset(1000);
+    applyLayerHighlight(layer, highlightColor);
 
     layer.on("drag", updateMarkerOutlinePosition);
   }
@@ -501,7 +516,7 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
 
   // Must run after the removals above - it checks group membership to decide
   // what's still selectable, so it needs to see the layer already gone.
-  window.app.pruneRectangleSelection();
+  window.app.pruneRectangleSelection({ skipUiUpdate });
 
   if (layer === currentRoutePath) {
     currentRoutePath = null;

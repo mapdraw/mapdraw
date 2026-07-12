@@ -185,13 +185,7 @@
   // --- Highlight: recolors the item itself, no separate outline layer ---
 
   function applyHighlight(layer, highlightColor) {
-    if (layer instanceof L.Marker) {
-      layer.setIcon(createMarkerIcon(highlightColor, STYLE_CONFIG.marker.highlight.opacity));
-      layer.setZIndexOffset(1000);
-      return;
-    }
-    layer.setStyle({ ...STYLE_CONFIG.path.highlight, color: highlightColor });
-    layer.bringToFront();
+    applyLayerHighlight(layer, highlightColor);
   }
 
   function clearHighlight(layer) {
@@ -337,10 +331,15 @@
   // cleared, the GeoJSON data-editor replacing everything, etc.) instead of
   // nuking the whole selection over one stale entry, and only exits the tool
   // once there's genuinely nothing left on the map to select.
-  function pruneSelection() {
+  // skipUiUpdate defers the hasAnyItems()/exitSelectMode() check - callers
+  // driving a bulk loop (performBulkAction) already run that check once via
+  // updateDrawControlStates() after the loop, so doing it per-item here would
+  // just rebuild the layer groups' arrays N times over for no benefit.
+  function pruneSelection({ skipUiUpdate = false } = {}) {
     if (!isActive) return;
     const newSet = new Set(Array.from(selectedLayers).filter(isLayerStillTracked));
     if (newSet.size !== selectedLayers.size) setSelection(newSet);
+    if (skipUiUpdate) return;
     if (!hasAnyItems()) exitSelectMode();
   }
 
