@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 let elevationHoverMarker = null;
+let downloadButtonsCache = null;
 window.mapInteractions = {};
 
 /**
@@ -64,11 +65,134 @@ function createMarkerIcon(
 }
 
 /**
+ * Resets a layer to its saved/default color and style, undoing any selection or highlight state.
+ * @param {L.Layer} layer - The Leaflet layer to reset
+ */
+function resetLayerStyle(layer) {
+  const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+  if (layer instanceof L.Marker) {
+    layer.setIcon(createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity));
+    layer.setZIndexOffset(0);
+  } else {
+    layer.setStyle({ ...STYLE_CONFIG.path.default, color });
+  }
+}
+
+/**
+ * Applies the selection-highlight color/z-index to a layer. Mirror image of
+ * resetLayerStyle(); shared by single-select (selectItem()) and the
+ * rectangle-select tool so both highlight identically.
+ * @param {L.Layer} layer - The Leaflet layer to highlight
+ * @param {string} highlightColor - The color to highlight with
+ */
+function applyLayerHighlight(layer, highlightColor) {
+  if (layer instanceof L.Marker) {
+    layer.setIcon(createMarkerIcon(highlightColor, STYLE_CONFIG.marker.highlight.opacity));
+    layer.setZIndexOffset(1000);
+  } else {
+    layer.setStyle({ ...STYLE_CONFIG.path.highlight, color: highlightColor });
+    layer.bringToFront();
+  }
+}
+
+/**
  * Keeps the marker outline synchronized with its parent marker during drag operations.
  */
 function updateMarkerOutlinePosition() {
   if (globallySelectedItem instanceof L.Marker && selectedMarkerOutline) {
     selectedMarkerOutline.setLatLng(globallySelectedItem.getLatLng());
+  }
+}
+
+/**
+ * Returns the single selected layer, whether it came from a normal single
+ * click or the rectangle-select tool's single-item selection - the info panel
+ * displays both the same way (e.g. the editable name field), so consumers
+ * that only checked globallySelectedItem need this fallback too.
+ * @returns {L.Layer|null}
+ */
+function getEffectiveSelectedLayer() {
+  return globallySelectedItem || window.app?.getRectangleSelectionSingleLayer?.() || null;
+}
+
+/**
+ * Returns whatever is currently selected as an array of layers, regardless of
+ * whether the selection came from a normal single click or the rectangle-select
+ * tool (the two are mutually exclusive, so only one of these is ever non-empty).
+ * @returns {L.Layer[]}
+ */
+function getCurrentSelectionLayers() {
+  const rectLayers = window.app?.getRectangleSelectionLayers?.();
+  if (rectLayers && rectLayers.length > 0) {
+    // Reorder to match getAllExportableLayers() (used by "All" exports) instead
+    // of the rectangle-select tool's selection-order Set, so "Selected" exports
+    // list features in the same order as "All" exports.
+    const selectedSet = new Set(rectLayers);
+    return getAllExportableLayers().filter((layer) => selectedSet.has(layer));
+  }
+  return globallySelectedItem ? [globallySelectedItem] : [];
+}
+
+/**
+ * Enables/disables the download menu's "Selected"-scope buttons (GPX,
+ * GeoJSON, KML, Share Link) and updates their tooltips and labels to reflect
+ * the current selection. Also shows the "Original Strava" row only when the
+ * whole selection is Strava activities. Called whenever selection changes,
+ * from either selectItem()/deselectCurrentItem() or rectangle-select's
+ * setSelection().
+ */
+function syncSelectedDownloadButtonsState() {
+  if (!downloadControl) return;
+  if (!downloadButtonsCache) {
+    const container = downloadControl.getContainer();
+    const gpxBtn = container.querySelector("#download-gpx-selected");
+    const geojsonBtn = container.querySelector("#download-geojson-selected");
+    const kmlBtn = container.querySelector("#download-kml-selected");
+    const shareBtn = container.querySelector("#download-share-selected");
+    const stravaRow = container.querySelector("#download-strava-row");
+    const stravaBtn = container.querySelector("#download-gpx-strava-original");
+    downloadButtonsCache = {
+      gpxBtn,
+      geojsonBtn,
+      kmlBtn,
+      shareBtn,
+      stravaRow,
+      stravaBtn,
+    };
+  }
+  const { gpxBtn, geojsonBtn, kmlBtn, shareBtn, stravaRow, stravaBtn } = downloadButtonsCache;
+  const buttons = [gpxBtn, geojsonBtn, kmlBtn, shareBtn];
+
+  const layers = getCurrentSelectionLayers();
+  const hasSelection = layers.length > 0;
+  buttons.forEach((btn) => {
+    btn.disabled = !hasSelection;
+    btn.textContent = layers.length > 1 ? `Selected (${layers.length})` : "Selected";
+  });
+
+  if (!hasSelection) {
+    gpxBtn.title = "Select an item to download as GPX";
+    geojsonBtn.title = "Select an item to download as GeoJSON";
+    kmlBtn.title = "Select an item to download as KML";
+    shareBtn.title = "Select an item to copy a share link for";
+    stravaRow.style.display = "none";
+    return;
+  }
+
+  gpxBtn.title = "Download the selection as GPX";
+  geojsonBtn.title = "Download the selection as GeoJSON";
+  kmlBtn.title = "Download the selection as KML";
+  shareBtn.title = "Copy a share link for the selection";
+
+  const allStrava = layers.every((layer) => layer.pathType === "strava");
+  stravaRow.style.display = allStrava ? "" : "none";
+  if (allStrava) {
+    stravaBtn.textContent =
+      layers.length > 1 ? `Original Strava (${layers.length})` : "Original Strava";
+    stravaBtn.title =
+      layers.length === 1
+        ? "Download the original GPX file from Strava"
+        : "Download original GPX files from Strava";
   }
 }
 
@@ -112,37 +236,53 @@ function deselectCurrentItem() {
     listItem.classList.remove("selected");
   }
 
-  const item = globallySelectedItem;
-  const color = item.feature?.properties?.color || DEFAULT_COLOR;
-  if (item instanceof L.Polyline || item instanceof L.Polygon) {
-    item.setStyle({ ...STYLE_CONFIG.path.default, color: color });
-  } else if (item instanceof L.Marker) {
-    item.setIcon(createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity));
-    item.setZIndexOffset(0);
-  }
+  resetLayerStyle(globallySelectedItem);
 
   globallySelectedItem = null;
+  disableElevation();
+  syncSelectedDownloadButtonsState();
+
+  resetInfoPanel();
+}
+
+/**
+ * Disables and hides the elevation panel - used when nothing is selected, or
+ * the current selection doesn't support elevation (a marker or polygon).
+ */
+function disableElevation() {
   selectedElevationPath = null;
   window.elevationProfile.clearElevationProfile();
   document.getElementById("elevation-div").style.visibility = "hidden";
   isElevationProfileVisible = false;
   updateElevationToggleIconColor();
-  elevationToggleControl.getContainer().title = "Select a path to show elevation";
-  L.DomUtil.addClass(elevationToggleControl.getContainer(), "disabled");
+  setButtonAvailability(
+    "elevation-button",
+    false,
+    "Toggle elevation profile",
+    "Select a path to show elevation",
+  );
+}
 
-  const downloadContainer = downloadControl.getContainer();
-  const gpxButton = downloadContainer.querySelector("#download-gpx-single");
-  const geojsonButton = downloadContainer.querySelector("#download-geojson-single");
-
-  gpxButton.disabled = true;
-  gpxButton.textContent = "GPX (Selected Item)";
-  gpxButton.title = "Select an item to download as GPX";
-
-  geojsonButton.disabled = true;
-  geojsonButton.textContent = "GeoJSON (Selected Item)";
-  geojsonButton.title = "Select an item to download as GeoJSON";
-
-  resetInfoPanel();
+/**
+ * Enables the elevation toggle for a path layer and re-plots its profile,
+ * showing the panel immediately if it was already toggled visible.
+ * @param {L.Polyline} layer - The path to show elevation for (must not be a Polygon)
+ */
+function enableElevationForPath(layer) {
+  selectedElevationPath = layer;
+  setButtonAvailability(
+    "elevation-button",
+    true,
+    "Toggle elevation profile",
+    "Select a path to show elevation",
+  );
+  const elevationDiv = document.getElementById("elevation-div");
+  if (isElevationProfileVisible || elevationDiv.style.visibility === "visible") {
+    elevationDiv.style.visibility = "visible";
+    isElevationProfileVisible = true;
+  }
+  window.elevationProfile.clearElevationProfile();
+  addElevationProfileForLayer(layer);
 }
 
 /**
@@ -151,7 +291,7 @@ function deselectCurrentItem() {
  * @param {L.Layer} layer - The Leaflet layer to select
  */
 function selectItem(layer) {
-  if (isDeleteMode || isEditMode) return;
+  if (!window.app?.canSelectLayer?.(layer)) return;
   if (globallySelectedItem && globallySelectedItem !== layer) {
     const keepElevation =
       isElevationProfileVisible &&
@@ -176,7 +316,7 @@ function selectItem(layer) {
     newListItem.classList.add("selected");
     if (document.getElementById("overview-panel").classList.contains("active")) {
       requestAnimationFrame(() => {
-        newListItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        newListItem.scrollIntoView({ behavior: "auto", block: "nearest" });
       });
     }
   }
@@ -185,28 +325,7 @@ function selectItem(layer) {
 
   showInfoPanel(layer);
 
-  if (downloadControl) {
-    const gpxButton = downloadControl.getContainer().querySelector("#download-gpx-single");
-    const geojsonButton = downloadControl.getContainer().querySelector("#download-geojson-single");
-    gpxButton.disabled = false;
-    geojsonButton.disabled = false;
-
-    const itemType =
-      layer instanceof L.Marker ? "Marker" : layer instanceof L.Polygon ? "Area" : "Path";
-
-    // Only show 'Original' label for live Strava activities; imported items are labeled as regular paths/markers.
-    if (layer.pathType === "strava") {
-      gpxButton.textContent = `GPX (Original from Strava)`;
-      gpxButton.title = `Download original GPX from Strava`;
-    } else {
-      gpxButton.textContent = `GPX (Selected ${itemType})`;
-      gpxButton.title = `Download selected ${itemType.toLowerCase()} as GPX`;
-    }
-
-    // GeoJSON button label
-    geojsonButton.textContent = `GeoJSON (Selected ${itemType})`;
-    geojsonButton.title = `Download selected ${itemType.toLowerCase()} as GeoJSON`;
-  }
+  syncSelectedDownloadButtonsState();
 
   if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
     if (layer.pathType !== "route") {
@@ -245,23 +364,11 @@ function selectItem(layer) {
       }
     }
 
-    layer.setStyle({ ...STYLE_CONFIG.path.highlight, color: highlightColor });
-    layer.bringToFront();
+    applyLayerHighlight(layer, highlightColor);
 
     // Only enable elevation for polylines, not polygons
     if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-      selectedElevationPath = layer;
-      if (elevationToggleControl) {
-        elevationToggleControl.getContainer().title = "Toggle elevation profile";
-        L.DomUtil.removeClass(elevationToggleControl.getContainer(), "disabled");
-      }
-      const elevationDiv = document.getElementById("elevation-div");
-      if (isElevationProfileVisible || elevationDiv.style.visibility === "visible") {
-        elevationDiv.style.visibility = "visible";
-        isElevationProfileVisible = true;
-      }
-      window.elevationProfile.clearElevationProfile();
-      addElevationProfileForLayer(layer);
+      enableElevationForPath(layer);
     }
   } else if (layer instanceof L.Marker) {
     const { outline } = STYLE_CONFIG.marker.highlight;
@@ -283,8 +390,7 @@ function selectItem(layer) {
       }
     }
 
-    layer.setIcon(createMarkerIcon(highlightColor, STYLE_CONFIG.marker.highlight.opacity));
-    layer.setZIndexOffset(1000);
+    applyLayerHighlight(layer, highlightColor);
 
     layer.on("drag", updateMarkerOutlinePosition);
   }
@@ -293,32 +399,51 @@ function selectItem(layer) {
 }
 
 /**
+ * Enables or disables a custom toolbar button (by element id), updating its
+ * "disabled" class and tooltip to match.
+ * @param {string} elementId - The id of the button's container element.
+ * @param {boolean} enabled - Whether the button should be enabled.
+ * @param {string} enabledTitle - Tooltip to show while enabled.
+ * @param {string} disabledTitle - Tooltip to show while disabled.
+ */
+function setButtonAvailability(elementId, enabled, enabledTitle, disabledTitle) {
+  const container = document.getElementById(elementId);
+  if (!container) return;
+  if (enabled) {
+    L.DomUtil.removeClass(container, "disabled");
+    container.title = enabledTitle;
+  } else {
+    L.DomUtil.addClass(container, "disabled");
+    container.title = disabledTitle;
+  }
+}
+
+/**
  * Updates the state of edit/delete controls and layer toggles based on available layers
  * and current edit/delete mode status.
  */
 function updateDrawControlStates() {
   if (!drawControl) return;
+  window.app?.pruneRectangleSelection?.();
   if (!editControlContainer) {
     editControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit");
     deleteControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit-remove");
   }
 
-  const hasLayers =
-    editableLayers.getLayers().length > 0 ||
-    stravaActivitiesLayer.getLayers().length > 0 ||
-    importedItems.getLayers().length > 0 ||
-    currentRoutePath !== null;
+  const hasLayers = window.app?.hasAnyItems?.() ?? false;
 
-  const downloadButtonContainer = document.getElementById("download-button");
-  if (downloadButtonContainer) {
-    if (hasLayers) {
-      L.DomUtil.removeClass(downloadButtonContainer, "disabled");
-      downloadButtonContainer.title = "Download or share";
-    } else {
-      L.DomUtil.addClass(downloadButtonContainer, "disabled");
-      downloadButtonContainer.title = "No items to download or share";
-    }
-  }
+  setButtonAvailability(
+    "download-button",
+    hasLayers,
+    "Download or share",
+    "No items to download or share",
+  );
+  setButtonAvailability(
+    "rectangle-select-button",
+    hasLayers,
+    "Click or drag to select multiple items",
+    "No items to select",
+  );
 
   const hasEditableLayers = editableLayers.getLayers().length > 0;
 
@@ -350,8 +475,11 @@ function updateDrawControlStates() {
 /**
  * Deletes a layer and its associated data immediately from all groups and the UI.
  * @param {L.Layer} layer - The layer to be deleted.
+ * @param {{skipUiUpdate?: boolean}} [options] - Pass skipUiUpdate when deleting
+ *   many layers in a row, so the caller can refresh the UI once at the end
+ *   instead of rebuilding the whole overview panel after every single layer.
  */
-function deleteLayerImmediately(layer) {
+function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
   if (!layer) return;
 
   // If the layer being deleted is the active route, we must call the dedicated
@@ -360,7 +488,7 @@ function deleteLayerImmediately(layer) {
   if (layer === currentRoutePath) {
     // This function is exposed on window.app from routing.js and handles all cleanup.
     if (window.app && typeof window.app.clearRouting === "function") {
-      window.app.clearRouting();
+      window.app.clearRouting({ skipUiUpdate });
     }
     return;
   }
@@ -386,9 +514,11 @@ function deleteLayerImmediately(layer) {
     editableLayers.removeLayer(layer);
   }
 
-  if (layer === currentRoutePath) {
-    currentRoutePath = null;
-  }
+  // Must run after the removals above - it checks group membership to decide
+  // what's still selectable, so it needs to see the layer already gone.
+  window.app.pruneRectangleSelection({ skipUiUpdate });
+
+  if (skipUiUpdate) return;
 
   updateDrawControlStates();
   updateOverviewList();

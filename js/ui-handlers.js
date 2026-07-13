@@ -8,6 +8,192 @@
 const collapsedCategories = new Set();
 
 /**
+ * Toggles a layer's manual visibility flag and shows/hides it on the map accordingly,
+ * respecting whether its parent category group is currently visible.
+ * @param {L.Layer} layerToToggle - The layer to toggle
+ */
+function toggleLayerVisibility(layerToToggle) {
+  if (!layerToToggle) return;
+
+  // Toggle the manual hidden state
+  layerToToggle.isManuallyHidden = !layerToToggle.isManuallyHidden;
+
+  if (layerToToggle.isManuallyHidden) {
+    // Disable editing before hiding (no-op if not editing) - otherwise a marker's edit
+    // highlight gets stuck once its icon is rebuilt on the next show.
+    if (layerToToggle.editing) layerToToggle.editing.disable();
+
+    // Hide the layer and its potential outline
+    map.removeLayer(layerToToggle);
+    if (layerToToggle === globallySelectedItem) {
+      if (selectedPathOutline) map.removeLayer(selectedPathOutline);
+      if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);
+    }
+  } else {
+    // Show the layer (if its parent group is on the map)
+    // Check if any of its parent groups are on the map
+    let isParentVisible = false;
+    [drawnItems, stravaActivitiesLayer, importedItems].forEach((group) => {
+      if (group.hasLayer(layerToToggle) && map.hasLayer(group)) {
+        isParentVisible = true;
+      } else {
+        // Also check inside GeoJSON groups for imported items
+        group.eachLayer((child) => {
+          if (child instanceof L.GeoJSON && child.hasLayer(layerToToggle) && map.hasLayer(group)) {
+            isParentVisible = true;
+          }
+        });
+      }
+    });
+
+    // Special case for route (it's not in a group)
+    // But it's now visually part of "Drawn Items" (layerGroup DrawnItems)
+    if (layerToToggle === currentRoutePath) {
+      isParentVisible = map.hasLayer(drawnItems);
+    }
+
+    if (isParentVisible) {
+      map.addLayer(layerToToggle);
+      if (layerToToggle === globallySelectedItem) {
+        if (selectedPathOutline) selectedPathOutline.addTo(map).bringToBack();
+        if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
+      }
+
+      // Resume editing, but only if Edit mode is still active
+      if (isEditMode && layerToToggle.editing) layerToToggle.editing.enable();
+    }
+  }
+
+  window.app.notifyRectangleSelectionVisibilityChange(layerToToggle);
+}
+
+/**
+ * Duplicates a layer (marker, polygon, or polyline) as an independent drawn item,
+ * selects the new copy, and returns it.
+ * @param {L.Layer} layerToDuplicate - The layer to duplicate
+ * @param {{skipUiUpdate?: boolean}} [options] - Pass skipUiUpdate when duplicating
+ *   many layers in a row, so the caller can select/refresh once at the end
+ *   instead of doing it - and popping a simplification toast - per layer.
+ * @returns {L.Layer|undefined} The newly created layer, or undefined if it couldn't be duplicated
+ */
+function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
+  if (!layerToDuplicate) return undefined;
+
+  let newLayer;
+  const newFeature = JSON.parse(JSON.stringify(layerToDuplicate.feature || { properties: {} }));
+  newFeature.properties.name =
+    (newFeature.properties.name || getDefaultLayerName(layerToDuplicate)) + " (Copy)";
+  const color = newFeature.properties.color || DEFAULT_COLOR;
+
+  // Create the appropriate layer type (marker, polygon, or polyline)
+  if (layerToDuplicate instanceof L.Marker) {
+    newLayer = L.marker(layerToDuplicate.getLatLng(), {
+      icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
+    });
+  } else if (layerToDuplicate instanceof L.Polygon) {
+    // Handle polygon (must check before Polyline since Polygon extends Polyline)
+    const originalCoords = layerToDuplicate
+      .getLatLngs()[0]
+      .map((latlng) =>
+        latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
+      );
+
+    let coordsToUse = originalCoords;
+    let simplificationHappened = false;
+
+    // Apply simplification if enabled
+    if (enablePathSimplification) {
+      const simplifiedResult = simplifyPath(originalCoords, "Polygon", pathSimplificationConfig);
+
+      // Check if the polygon was actually simplified
+      if (simplifiedResult.simplified) {
+        coordsToUse = simplifiedResult.coords;
+        simplificationHappened = true;
+      }
+    }
+
+    // Show a notification if simplification occurred (skipped in bulk mode -
+    // popping one toast per item would spam the screen for a large selection)
+    if (simplificationHappened && !skipUiUpdate) {
+      Swal.fire({
+        toast: true,
+        icon: "info",
+        title: "Area Optimized",
+        text: "The duplicated area was simplified for better performance.",
+        showConfirmButton: false,
+        timer: 3000,
+      });
+    }
+
+    newLayer = L.polygon(
+      coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
+      { ...STYLE_CONFIG.path.default, color: color },
+    );
+  } else if (layerToDuplicate instanceof L.Polyline) {
+    const originalCoords = layerToDuplicate
+      .getLatLngs()
+      .map((latlng) =>
+        latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
+      );
+
+    let coordsToUse = originalCoords;
+    let simplificationHappened = false;
+
+    if (enablePathSimplification) {
+      const simplifiedResult = simplifyPath(originalCoords, "LineString", pathSimplificationConfig);
+
+      // Check if the path was actually simplified
+      if (simplifiedResult.simplified) {
+        coordsToUse = simplifiedResult.coords;
+        simplificationHappened = true;
+      }
+    }
+
+    // Show a notification if simplification occurred (skipped in bulk mode -
+    // popping one toast per item would spam the screen for a large selection)
+    if (simplificationHappened && !skipUiUpdate) {
+      Swal.fire({
+        toast: true,
+        icon: "info",
+        title: "Path Optimized",
+        text: "The duplicated path was simplified for better performance.",
+        showConfirmButton: false,
+        timer: 3000,
+      });
+    }
+
+    newLayer = L.polyline(
+      coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
+      { ...STYLE_CONFIG.path.default, color: color },
+    );
+    newFeature.properties.totalDistance = calculatePathDistance(newLayer);
+  }
+
+  if (newLayer) {
+    // Keep only essential properties (name, color) - discard all source-specific metadata
+    // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths
+    const cleanProperties = {
+      name: newFeature.properties.name,
+      color: newFeature.properties.color || DEFAULT_COLOR,
+    };
+    newLayer.feature = { properties: cleanProperties };
+    newLayer.pathType = "drawn";
+    newLayer.on("click", (ev) => {
+      L.DomEvent.stopPropagation(ev);
+      selectItem(newLayer);
+    });
+    drawnItems.addLayer(newLayer);
+    editableLayers.addLayer(newLayer);
+    if (!skipUiUpdate) {
+      updateOverviewList();
+      updateDrawControlStates();
+      selectItem(newLayer);
+    }
+  }
+  return newLayer;
+}
+
+/**
  * Helper function to create a single list item for the overview panel.
  * This encapsulates the logic for creating the item's text, buttons, and event listeners.
  * @param {L.Layer} layer - The layer to create the list item for
@@ -15,9 +201,7 @@ const collapsedCategories = new Set();
  */
 function createOverviewListItem(layer) {
   const layerId = L.Util.stamp(layer);
-  let layerName =
-    layer.feature?.properties?.name ||
-    (layer instanceof L.Marker ? "Marker" : layer instanceof L.Polygon ? "Area" : "Unnamed Path");
+  let layerName = layer.feature?.properties?.name || getDefaultLayerName(layer);
 
   const listItem = document.createElement("div");
   listItem.className = "overview-list-item";
@@ -43,51 +227,7 @@ function createOverviewListItem(layer) {
       (currentRoutePath && L.Util.stamp(currentRoutePath) === layerId ? currentRoutePath : null);
     if (!layerToToggle) return;
 
-    // Toggle the manual hidden state
-    layerToToggle.isManuallyHidden = !layerToToggle.isManuallyHidden;
-
-    if (layerToToggle.isManuallyHidden) {
-      // Hide the layer and its potential outline
-      map.removeLayer(layerToToggle);
-      if (layerToToggle === globallySelectedItem) {
-        if (selectedPathOutline) map.removeLayer(selectedPathOutline);
-        if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);
-      }
-    } else {
-      // Show the layer (if its parent group is on the map)
-      // Check if any of its parent groups are on the map
-      let isParentVisible = false;
-      [drawnItems, stravaActivitiesLayer, importedItems].forEach((group) => {
-        if (group.hasLayer(layerToToggle) && map.hasLayer(group)) {
-          isParentVisible = true;
-        } else {
-          // Also check inside GeoJSON groups for imported items
-          group.eachLayer((child) => {
-            if (
-              child instanceof L.GeoJSON &&
-              child.hasLayer(layerToToggle) &&
-              map.hasLayer(group)
-            ) {
-              isParentVisible = true;
-            }
-          });
-        }
-      });
-
-      // Special case for route (it's not in a group)
-      // But it's now visually part of "Drawn Items" (layerGroup DrawnItems)
-      if (layerToToggle === currentRoutePath) {
-        isParentVisible = map.hasLayer(drawnItems);
-      }
-
-      if (isParentVisible) {
-        map.addLayer(layerToToggle);
-        if (layerToToggle === globallySelectedItem) {
-          if (selectedPathOutline) selectedPathOutline.addTo(map).bringToBack();
-          if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
-        }
-      }
-    }
+    toggleLayerVisibility(layerToToggle);
     // Icon state reflects ONLY the manual override, not effective visibility
     setIcon(!layerToToggle.isManuallyHidden);
   });
@@ -104,129 +244,7 @@ function createOverviewListItem(layer) {
         editableLayers.getLayer(layerId) ||
         stravaActivitiesLayer.getLayer(layerId) ||
         importedItems.getLayer(layerId);
-      if (!layerToDuplicate) return;
-      let newLayer;
-      const newFeature = JSON.parse(JSON.stringify(layerToDuplicate.feature || { properties: {} }));
-      newFeature.properties.name =
-        (newFeature.properties.name || (layerToDuplicate instanceof L.Marker ? "Marker" : "Path")) +
-        " (Copy)";
-      const color = newFeature.properties.color || DEFAULT_COLOR;
-
-      // Create the appropriate layer type (marker, polygon, or polyline)
-      if (layerToDuplicate instanceof L.Marker) {
-        newLayer = L.marker(layerToDuplicate.getLatLng(), {
-          icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
-        });
-      } else if (layerToDuplicate instanceof L.Polygon) {
-        // Handle polygon (must check before Polyline since Polygon extends Polyline)
-        const originalCoords = layerToDuplicate
-          .getLatLngs()[0]
-          .map((latlng) =>
-            latlng.alt !== undefined
-              ? [latlng.lng, latlng.lat, latlng.alt]
-              : [latlng.lng, latlng.lat],
-          );
-
-        let coordsToUse = originalCoords;
-        let simplificationHappened = false;
-
-        // Apply simplification if enabled
-        if (enablePathSimplification) {
-          const simplifiedResult = simplifyPath(
-            originalCoords,
-            "Polygon",
-            pathSimplificationConfig,
-          );
-
-          // Check if the polygon was actually simplified
-          if (simplifiedResult.simplified) {
-            coordsToUse = simplifiedResult.coords;
-            simplificationHappened = true;
-          }
-        }
-
-        // Show a notification if simplification occurred
-        if (simplificationHappened) {
-          Swal.fire({
-            toast: true,
-            icon: "info",
-            title: "Area Optimized",
-            text: "The duplicated area was simplified for better performance.",
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-          });
-        }
-
-        newLayer = L.polygon(
-          coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
-          { ...STYLE_CONFIG.path.default, color: color },
-        );
-      } else if (layerToDuplicate instanceof L.Polyline) {
-        const originalCoords = layerToDuplicate
-          .getLatLngs()
-          .map((latlng) =>
-            latlng.alt !== undefined
-              ? [latlng.lng, latlng.lat, latlng.alt]
-              : [latlng.lng, latlng.lat],
-          );
-
-        let coordsToUse = originalCoords;
-        let simplificationHappened = false;
-
-        if (enablePathSimplification) {
-          const simplifiedResult = simplifyPath(
-            originalCoords,
-            "LineString",
-            pathSimplificationConfig,
-          );
-
-          // Check if the path was actually simplified
-          if (simplifiedResult.simplified) {
-            coordsToUse = simplifiedResult.coords;
-            simplificationHappened = true;
-          }
-        }
-
-        // Show a notification if simplification occurred
-        if (simplificationHappened) {
-          Swal.fire({
-            toast: true,
-            icon: "info",
-            title: "Path Optimized",
-            text: "The duplicated path was simplified for better performance.",
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-          });
-        }
-
-        newLayer = L.polyline(
-          coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
-          { ...STYLE_CONFIG.path.default, color: color },
-        );
-        newFeature.properties.totalDistance = calculatePathDistance(newLayer);
-      }
-
-      if (newLayer) {
-        // Keep only essential properties (name, color) - discard all source-specific metadata
-        // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths
-        const cleanProperties = {
-          name: newFeature.properties.name,
-          color: newFeature.properties.color || DEFAULT_COLOR,
-        };
-        newLayer.feature = { properties: cleanProperties };
-        newLayer.pathType = "drawn";
-        newLayer.on("click", (ev) => {
-          L.DomEvent.stopPropagation(ev);
-          selectItem(newLayer);
-        });
-        drawnItems.addLayer(newLayer);
-        editableLayers.addLayer(newLayer);
-        updateOverviewList();
-        updateDrawControlStates();
-        selectItem(newLayer);
-      }
+      duplicateLayer(layerToDuplicate);
     });
   }
 
@@ -337,18 +355,32 @@ function updateOverviewList() {
 
   // 2. Group all items by their type
   const groupedItems = {};
+  // Stable grouping keys, decoupled from the display label so renaming a
+  // label below can never silently break the ordering/lookup logic that
+  // compares against it.
+  const GROUP_LABELS = {
+    DrawnItems: "Drawn Items",
+    ImportedFiles: "Imported Files",
+    StravaActivities: "Strava Activities",
+    Other: "Other",
+  };
+  const GROUP_LAYERS = {
+    DrawnItems: drawnItems,
+    ImportedFiles: importedItems,
+    StravaActivities: stravaActivitiesLayer,
+  };
   const getGroupTitle = (pathType) => {
     switch (pathType) {
       case "route":
       case "drawn":
-        return "Drawn Items";
+        return "DrawnItems";
       case "gpx":
       case "kml":
       case "geojson":
       case "kmz":
-        return "Imported Files";
+        return "ImportedFiles";
       case "strava":
-        return "Strava Activities";
+        return "StravaActivities";
       default:
         return "Other";
     }
@@ -359,51 +391,42 @@ function updateOverviewList() {
 
   // Helper to expand a category if it's collapsed, ensuring a layer is visible in the list
   window.expandCategoryForItem = (layer) => {
-    const title = getGroupTitle(layer.pathType);
-    if (collapsedCategories.has(title)) {
-      collapsedCategories.delete(title);
+    const key = getGroupTitle(layer.pathType);
+    if (collapsedCategories.has(key)) {
+      collapsedCategories.delete(key);
       updateOverviewList();
     }
   };
 
   allItems.forEach((layer) => {
-    const title = getGroupTitle(layer.pathType);
-    if (!groupedItems[title]) {
-      groupedItems[title] = [];
+    const key = getGroupTitle(layer.pathType);
+    if (!groupedItems[key]) {
+      groupedItems[key] = [];
     }
-    groupedItems[title].push(layer);
+    groupedItems[key].push(layer);
   });
 
   // 3. Render the groups in a specific order
   const fragment = document.createDocumentFragment();
-  const groupOrder = ["Drawn Items", "Imported Files", "Strava Activities", "Other"];
+  const groupOrder = ["DrawnItems", "ImportedFiles", "StravaActivities", "Other"];
 
   // Track which headers we're actually rendering
   const renderedHeaders = [];
 
-  groupOrder.forEach((title) => {
-    const itemsInGroup = groupedItems[title];
+  groupOrder.forEach((key) => {
+    const itemsInGroup = groupedItems[key];
     if (itemsInGroup && itemsInGroup.length > 0) {
-      const isCollapsed = collapsedCategories.has(title);
+      const label = GROUP_LABELS[key];
+      const isCollapsed = collapsedCategories.has(key);
 
       // Create the header element
       const header = document.createElement("div");
       header.className = "overview-list-header";
       if (isCollapsed) header.classList.add("collapsed");
 
-      // Determine the corresponding layer group for this category
-      let layerGroup = null;
-      let layerNameInControl = null;
-      if (title === "Drawn Items") {
-        layerGroup = drawnItems;
-        layerNameInControl = "DrawnItems";
-      } else if (title === "Imported Files") {
-        layerGroup = importedItems;
-        layerNameInControl = "ImportedFiles";
-      } else if (title === "Strava Activities") {
-        layerGroup = stravaActivitiesLayer;
-        layerNameInControl = "StravaActivities";
-      }
+      // "Other" has no real Leaflet layer group behind it, so its header
+      // renders without visibility/delete/duplicate buttons (spacers only).
+      const layerGroup = GROUP_LAYERS[key] || null;
 
       const arrow = document.createElement("span");
       arrow.className = "material-symbols";
@@ -424,12 +447,12 @@ function updateOverviewList() {
           const isRemoving = map.hasLayer(layerGroup);
           if (isRemoving) {
             map.removeLayer(layerGroup);
-            if (title === "Drawn Items" && currentRoutePath) {
+            if (key === "DrawnItems" && currentRoutePath) {
               map.removeLayer(currentRoutePath);
             }
           } else {
             map.addLayer(layerGroup);
-            if (title === "Drawn Items" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
+            if (key === "DrawnItems" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
               map.addLayer(currentRoutePath);
             }
           }
@@ -447,19 +470,19 @@ function updateOverviewList() {
       }
       header.appendChild(eyeBtnSlot);
 
-      // 2. Delete Button (Clear)
+      // 2. Delete Button (Clear all)
       const delBtnSlot = document.createElement("div");
       delBtnSlot.className = "overview-header-delete-btn";
       if (layerGroup) {
         const delBtn = document.createElement("span");
         delBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
-        delBtn.title = `Clear all ${title}`;
+        delBtn.title = `Clear all ${label}`;
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           Swal.fire({
-            title: `Clear all items in "${title}"?`,
+            title: `Clear all items in "${label}"?`,
             text:
-              title === "Drawn Items" && currentRoutePath
+              key === "DrawnItems" && currentRoutePath
                 ? "This will also clear the current route."
                 : "This action cannot be undone.",
             icon: "warning",
@@ -468,13 +491,13 @@ function updateOverviewList() {
             confirmButtonText: "Yes, clear all",
           }).then((result) => {
             if (result.isConfirmed) {
-              if (title === "Drawn Items" && window.app?.clearRouting) window.app.clearRouting();
-              layerGroup.clearLayers();
-              itemsInGroup.forEach((item) => {
-                if (editableLayers.hasLayer(item)) editableLayers.removeLayer(item);
-              });
-              if (globallySelectedItem && itemsInGroup.includes(globallySelectedItem))
-                deselectCurrentItem();
+              if (key === "DrawnItems" && window.app?.clearRouting) {
+                window.app.clearRouting();
+              }
+              // Same per-layer path used by the individual delete button and
+              // rect-select's bulk delete - keeps rectangle-selection state,
+              // deselection, and group/editableLayers cleanup all in sync.
+              itemsInGroup.forEach((item) => deleteLayerImmediately(item, { skipUiUpdate: true }));
               updateDrawControlStates();
               if (!map.hasLayer(layerGroup)) {
                 map.addLayer(layerGroup);
@@ -490,23 +513,48 @@ function updateOverviewList() {
       }
       header.appendChild(delBtnSlot);
 
-      // 3. Arrow
+      // 3. Duplicate Button (Duplicate all)
+      const dupBtnSlot = document.createElement("div");
+      dupBtnSlot.className = "overview-header-duplicate-btn";
+      if (layerGroup) {
+        const dupBtn = document.createElement("span");
+        dupBtn.innerHTML = '<span class="material-symbols">content_copy</span>';
+        dupBtn.title = `Duplicate all ${label}`;
+        dupBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          // Same per-layer path used by the individual duplicate button and
+          // rect-select's bulk duplicate - including the live route, which
+          // duplicateLayer() already handles like any other layer (an
+          // independent copy saved to Drawn Items, route keeps running).
+          itemsInGroup.forEach((item) => {
+            duplicateLayer(item, { skipUiUpdate: true });
+          });
+          updateOverviewList();
+          updateDrawControlStates();
+        });
+        dupBtnSlot.appendChild(dupBtn);
+      } else {
+        dupBtnSlot.className = "overview-icon-spacer";
+      }
+      header.appendChild(dupBtnSlot);
+
+      // 4. Arrow
       const arrowContainer = document.createElement("div");
       arrowContainer.className = "overview-header-arrow";
       arrowContainer.appendChild(arrow);
       header.appendChild(arrowContainer);
 
-      // 4. Title
+      // 5. Title
       const titleSpan = document.createElement("span");
       titleSpan.className = "overview-header-text";
-      titleSpan.textContent = `${title} (${itemsInGroup.length})`;
+      titleSpan.textContent = `${label} (${itemsInGroup.length})`;
       header.appendChild(titleSpan);
 
       header.addEventListener("click", () => {
         if (isCollapsed) {
-          collapsedCategories.delete(title);
+          collapsedCategories.delete(key);
         } else {
-          collapsedCategories.add(title);
+          collapsedCategories.add(key);
         }
         updateOverviewList();
       });
@@ -533,18 +581,18 @@ function updateOverviewList() {
   listContainer.appendChild(fragment);
 
   // Sync checkboxes in the custom layers panel with the map's current state
-  const checkboxMapping = {
-    DrawnItems: drawnItems,
-    ImportedFiles: importedItems,
-    StravaActivities: stravaActivitiesLayer,
-  };
-
-  Object.entries(checkboxMapping).forEach(([name, group]) => {
+  Object.entries(GROUP_LAYERS).forEach(([name, group]) => {
     const checkbox = document.querySelector(
       `#custom-layers-panel input[data-layer-name="${name}"]`,
     );
     if (checkbox) checkbox.checked = map.hasLayer(group);
   });
+
+  // Every row above is a brand-new element, so any rectangle-select highlight
+  // applied to the previous rows is gone - reapply it to whichever of the
+  // still-selected layers survived (called here so every one of this
+  // function's ~20 call sites across the app gets this for free).
+  window.app?.syncRectangleSelectionHighlight?.();
 }
 
 /**
@@ -553,8 +601,8 @@ function updateOverviewList() {
  */
 function showInfoPanel(layer) {
   // Style adjustments for when an item is selected
+  infoPanel.classList.remove("no-selection");
   infoPanelName.style.display = "block";
-  infoPanelDetails.style.color = "var(--color-black)";
   infoPanelDetails.style.fontSize = "var(--font-size-12)"; // Reset font size
   infoPanel.style.justifyContent = "flex-start";
   infoPanelDetails.style.marginTop = "5px";
@@ -562,7 +610,7 @@ function showInfoPanel(layer) {
   // Populating content
   layer.feature = layer.feature || {};
   layer.feature.properties = layer.feature.properties || {};
-  let name = layer.feature.properties.name || "";
+  let name = layer.feature.properties.name || getDefaultLayerName(layer);
   let details = "";
   const editHint = document.getElementById("info-panel-edit-hint");
   const stravaLink = document.getElementById("info-panel-strava-link");
@@ -577,7 +625,6 @@ function showInfoPanel(layer) {
   stravaLink.style.display = "none";
 
   if (layer instanceof L.Marker) {
-    name = name || "Marker";
     const latlng = layer.getLatLng();
     details = `<span>Lat: ${latlng.lat.toFixed(6)}, Lon: ${latlng.lng.toFixed(
       6,
@@ -614,15 +661,11 @@ function showInfoPanel(layer) {
         });
     };
   } else if (layer instanceof L.Polygon) {
-    name = name || "Area";
-
     const area = calculatePolygonArea(layer);
     const perimeter = calculatePathDistance(layer);
 
     details = `Area: ${formatArea(area)}<br>Perimeter: ${formatDistance(perimeter)}`;
   } else if (layer instanceof L.Polyline) {
-    name = name || "Path";
-
     // Recalculate distance from geometry to ensure consistency with elevation panel
     const totalDistance = calculatePathDistance(layer);
 
@@ -634,7 +677,6 @@ function showInfoPanel(layer) {
     details = `Length: ${formatDistance(totalDistance)}`;
   }
 
-  layer.feature.properties.name = name;
   infoPanelName.value = name;
   infoPanelDetails.innerHTML = details;
 
@@ -687,6 +729,7 @@ function showInfoPanel(layer) {
   // Set the color swatch and update picker state
   const color = layer.feature?.properties?.color || DEFAULT_COLOR;
   infoPanelColorSwatch.style.backgroundColor = color;
+  infoPanelColorSwatch.innerHTML = ""; // clear any leftover "mixed colors" indicator
   updateColorPickerSelection(color);
 
   // Hide the main color picker initially
@@ -694,26 +737,37 @@ function showInfoPanel(layer) {
 }
 
 /**
+ * Applies the shared "no single item selected" visual state to the info panel's
+ * details text: centered placeholder styling with no click handler, and the
+ * edit-hint/Strava-link hidden. Shared by resetInfoPanel() (nothing selected)
+ * and showMultiSelectInfoPanel() (multiple items selected via rectangle-select).
+ * @param {string} text - The message to show in place of an item name
+ */
+function resetInfoPanelDetailsStyle(text) {
+  infoPanelName.style.display = "none";
+  infoPanelDetails.textContent = text;
+  infoPanelDetails.style.fontWeight = "normal";
+  infoPanelDetails.style.fontSize = "var(--font-size-14)"; // Larger font for this message
+  infoPanel.style.justifyContent = "center";
+  infoPanelDetails.style.marginTop = "0";
+
+  // Ensure click handler and styles are reset
+  infoPanelDetails.onclick = null;
+  infoPanelDetails.style.cursor = "default";
+  infoPanelDetails.title = "";
+
+  // Hide the hint and Strava link
+  document.getElementById("info-panel-edit-hint").style.display = "none";
+  document.getElementById("info-panel-strava-link").style.display = "none";
+}
+
+/**
  * Resets the info panel to its default state (no item selected).
  */
 function resetInfoPanel() {
   if (infoPanel) {
-    infoPanelName.style.display = "none";
-    infoPanelDetails.textContent = "No item selected";
-    infoPanelDetails.style.fontWeight = "normal";
-    infoPanelDetails.style.color = "var(--color-grey-dark)";
-    infoPanelDetails.style.fontSize = "var(--font-size-14)"; // Larger font for this message
-    infoPanel.style.justifyContent = "center";
-    infoPanelDetails.style.marginTop = "0";
-
-    // Ensure click handler and styles are reset
-    infoPanelDetails.onclick = null;
-    infoPanelDetails.style.cursor = "default";
-    infoPanelDetails.title = "";
-
-    // Hide the hint and Strava link when resetting
-    document.getElementById("info-panel-edit-hint").style.display = "none";
-    document.getElementById("info-panel-strava-link").style.display = "none";
+    infoPanel.classList.add("no-selection");
+    resetInfoPanelDetailsStyle("No item selected");
 
     // Hide color picker and the new style row
     infoPanelStyleRow.style.display = "none";
@@ -722,24 +776,59 @@ function resetInfoPanel() {
 }
 
 /**
+ * Displays the info panel's multi-selection state, used when the rectangle-select
+ * tool has more than one item selected: shows a count instead of name/details,
+ * but (unlike resetInfoPanel) keeps the style row visible so the color swatch
+ * can be used to bulk-apply a color to every selected item.
+ * @param {number} count - Number of currently selected items
+ * @param {string} [commonColor] - The shared color if every selected item
+ *   already has the same one; omit/undefined if the selection is mixed.
+ */
+function showMultiSelectInfoPanel(count, commonColor) {
+  if (!infoPanel) return;
+  infoPanel.classList.remove("no-selection");
+  resetInfoPanelDetailsStyle(`${count} items selected`);
+
+  // The swatch shows the shared color if every selected item already has the
+  // same one (self-explanatory, same as single-select), or a "mixed colors"
+  // question mark otherwise - labeled here so the "?" doesn't read as an
+  // unknown/error state instead of "click to set a color for everyone".
+  infoPanelLayerName.textContent = commonColor ? "" : "Mixed colors";
+  infoPanelStyleRow.style.display = "flex";
+  colorPicker.style.display = "none";
+  infoPanelColorSwatch.style.backgroundColor = commonColor || "var(--background2-color)";
+  infoPanelColorSwatch.innerHTML = commonColor
+    ? ""
+    : '<span class="material-symbols">question_mark</span>';
+  updateColorPickerSelection(commonColor);
+}
+
+/**
  * Updates the name of the selected layer from the info panel input.
+ * Falls back to the rectangle-select tool's single selected layer, since the
+ * info panel shows the same editable name field for that case too.
  */
 function updateLayerName() {
-  if (globallySelectedItem && globallySelectedItem.feature.properties) {
+  const target = getEffectiveSelectedLayer();
+  if (target && target.feature.properties) {
     let newName = infoPanelName.value.trim();
     if (!newName) {
       // Default name if input is empty
-      newName =
-        globallySelectedItem instanceof L.Marker
-          ? "Marker"
-          : globallySelectedItem instanceof L.Polygon
-            ? "Area"
-            : "Path";
+      newName = getDefaultLayerName(target);
       infoPanelName.value = newName;
     }
-    globallySelectedItem.feature.properties.name = newName;
+    target.feature.properties.name = newName;
     updateOverviewList();
   }
+}
+
+/**
+ * Whether there's something for the color picker to act on: either a normal
+ * single selection, or an active rectangle-select selection (single or bulk).
+ * @returns {boolean}
+ */
+function hasActiveColorTarget() {
+  return getCurrentSelectionLayers().length > 0;
 }
 
 /**
@@ -756,7 +845,7 @@ function populateColorPicker() {
     swatch.title = color.name;
 
     swatch.addEventListener("click", () => {
-      if (!globallySelectedItem) return;
+      if (!hasActiveColorTarget()) return;
       applyColorToSelectedItem(color.hex);
     });
 
@@ -792,14 +881,14 @@ function populateColorPicker() {
 
   // Prevent color picker from opening if nothing is selected
   colorInput.addEventListener("click", (e) => {
-    if (!globallySelectedItem) {
+    if (!hasActiveColorTarget()) {
       e.preventDefault();
     }
   });
 
   // When native picker color changes, apply it (don't hide picker while user is selecting)
   colorInput.addEventListener("input", (e) => {
-    if (!globallySelectedItem) return;
+    if (!hasActiveColorTarget()) return;
     const selectedColor = e.target.value.toUpperCase();
     applyColorToSelectedItem(selectedColor, false);
     customSwatch.dataset.hex = selectedColor;
@@ -810,11 +899,34 @@ function populateColorPicker() {
 }
 
 /**
- * Applies a color to the currently selected item.
+ * Applies a color to whatever is currently selected: an active rectangle-select
+ * selection (single or multiple layers) takes priority, otherwise falls back
+ * to the normal single-item selection.
  * @param {string} hex - The hex color to apply
  * @param {boolean} hidePicker - Whether to hide the color picker after (default true)
  */
 function applyColorToSelectedItem(hex, hidePicker = true) {
+  // Rectangle-select selection (single or multiple) takes priority: apply to
+  // every selected layer's data only. Selected layers render in the tool's
+  // blue selection highlight regardless of their own color, so - same as a
+  // single item's real color only reappearing once it's deselected - the new
+  // color becomes visible once each layer is deselected, not immediately.
+  const rectSelectionCount = window.app?.getRectangleSelectionCount?.() ?? 0;
+  if (rectSelectionCount > 0) {
+    window.app.applyBulkColor(hex);
+    updateColorPickerSelection(hex);
+    infoPanelColorSwatch.style.backgroundColor = hex;
+    infoPanelColorSwatch.innerHTML = ""; // every selected item now shares this color
+    // Only the multi-select state's "Mixed colors" label needs clearing - a
+    // single rect-selected item's layer-name text (e.g. "Drawn Item") is
+    // unrelated and must stay as-is.
+    if (rectSelectionCount > 1) {
+      infoPanelLayerName.textContent = "";
+    }
+    if (hidePicker) colorPicker.style.display = "none";
+    return;
+  }
+
   if (!globallySelectedItem) return;
 
   // Store the color on the feature

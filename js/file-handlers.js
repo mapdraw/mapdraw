@@ -17,6 +17,30 @@
 // --------------------------------------------------------------------
 
 /**
+ * Checks whether a closed ring of [lng, lat, ele?] coordinates winds
+ * clockwise, using the shoelace formula. Longitudes are unwrapped as the
+ * ring is walked - a >180 degree jump between consecutive vertices is
+ * treated as an antimeridian crossing rather than an actual half-world
+ * step - so the result stays correct for rings that cross +/-180 degrees.
+ * @param {Array} ring - Closed ring coordinates (first and last equal)
+ * @returns {boolean} True if the ring winds clockwise
+ */
+function isRingClockwise(ring) {
+  let sum = 0;
+  let x1 = ring[0][0];
+  for (let i = 0; i < ring.length - 1; i++) {
+    const y1 = ring[i][1];
+    const y2 = ring[i + 1][1];
+    let x2 = ring[i + 1][0];
+    if (x2 - x1 > 180) x2 -= 360;
+    else if (x2 - x1 < -180) x2 += 360;
+    sum += (x2 - x1) * (y2 + y1);
+    x1 = x2;
+  }
+  return sum > 0;
+}
+
+/**
  * Overwrites a GeoJSON geometry's coordinates with full precision values
  * read directly from the Leaflet layer (avoids toGeoJSON precision loss).
  * @param {L.Layer} layer - The Leaflet layer
@@ -36,6 +60,8 @@ function applyFullPrecisionCoordinates(layer, geojson) {
       return coord;
     });
     coords.push(coords[0]); // Close the polygon
+    // RFC 7946 section 3.1.6: exterior rings MUST wind counterclockwise.
+    if (isRingClockwise(coords)) coords.reverse();
     geojson.geometry.coordinates = [coords];
   } else if (layer instanceof L.Polyline) {
     let latlngs = layer.getLatLngs();
@@ -92,6 +118,29 @@ function escapeXml(unsafe) {
         return "&quot;";
     }
   });
+}
+
+/**
+ * A lone selected item - a "selection" of exactly one - is named after
+ * itself with no timestamp, same across GeoJSON/GPX/KML; anything else
+ * (a real bulk export) gets a generic prefix plus a timestamp instead.
+ * @param {Array|null} layers - The selection passed to the export function
+ * @returns {string|null} The item's name, or null if not a single-item selection
+ */
+function getSingleNamedItem(layers) {
+  return layers?.length === 1 ? layers[0].feature?.properties?.name : null;
+}
+
+/**
+ * Default filename prefix for an export: the single named item itself,
+ * or a generic "Selected"/"Map" prefix for anything else (bulk exports,
+ * which also get a timestamp appended by the caller).
+ * @param {string|null} singleNamedItem - Result of getSingleNamedItem()
+ * @param {boolean} hasSelection - Whether the export is scoped to a selection
+ * @returns {string} The resolved filename prefix
+ */
+function resolveExportFilePrefix(singleNamedItem, hasSelection) {
+  return singleNamedItem || (hasSelection ? "Selected_Export" : "Map_Export");
 }
 
 /**
@@ -260,6 +309,12 @@ function importGeoJsonToMap(geoJsonData, fileType) {
 
       // Store the resolved color
       layer.feature.properties.color = color;
+
+      // Default a missing/empty name so it's never treated as blank downstream
+      // (display, export).
+      if (!layer.feature.properties.name) {
+        layer.feature.properties.name = getDefaultLayerName(layer);
+      }
 
       // All imported items use fileType as pathType
       layer.pathType = fileType;
@@ -658,6 +713,30 @@ async function importKmzFile(file) {
 // --------------------------------------------------------------------
 
 /**
+ * Shows the dialog shared by GeoJSON/GPX/KML export when a selection-based
+ * export is invoked with nothing selected.
+ */
+function alertNothingSelected() {
+  return Swal.fire({
+    title: "Nothing Selected",
+    text: "Please select at least one item to export.",
+  });
+}
+
+/**
+ * Shows a timed "Export Successful" toast, or does nothing when `shouldNotify`
+ * is false - e.g. an obviously-intentional single-item download needs no
+ * confirmation beyond the browser's own download indicator.
+ * @param {boolean} shouldNotify
+ * @param {string} title
+ * @param {string} text
+ */
+function notifyExportSuccess(shouldNotify, title, text) {
+  if (!shouldNotify) return;
+  Swal.fire({ title, text, timer: 2000, showConfirmButton: false });
+}
+
+/**
  * Properties to exclude from GeoJSON export.
  * These are internal/style properties that shouldn't be included in exported files.
  */
@@ -677,8 +756,7 @@ const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
 /**
  * Exports map items to a GeoJSON file with color preservation.
  * @param {Object} options - Export options
- * @param {string} options.mode - Export mode: "all" (default), "single", or "strava"
- * @param {L.Layer} options.layer - Single layer to export (required when mode is "single")
+ * @param {string} options.mode - Export mode: "all" (default), "selection", or "strava"
  * @param {string} options.filePrefix - Prefix for the filename (defaults based on mode)
  * @param {string} options.successTitle - Success dialog title (defaults based on mode)
  * @param {string} options.successText - Success dialog text (defaults based on mode)
@@ -686,7 +764,7 @@ const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
 function exportGeoJson(options = {}) {
   const {
     mode = "all",
-    layer = null,
+    layers = null,
     filePrefix = null,
     successTitle = "Export Successful!",
     successText = null,
@@ -696,14 +774,11 @@ function exportGeoJson(options = {}) {
   let allLayers = [];
 
   // Collect layers based on mode
-  if (mode === "single") {
-    if (!layer) {
-      return Swal.fire({
-        title: "No Item Selected",
-        text: "Please select an item to export.",
-      });
+  if (mode === "selection") {
+    if (!layers || layers.length === 0) {
+      return alertNothingSelected();
     }
-    allLayers = [layer];
+    allLayers = layers;
   } else if (mode === "strava") {
     stravaActivitiesLayer.eachLayer((l) => {
       allLayers.push(l);
@@ -789,51 +864,54 @@ function exportGeoJson(options = {}) {
     features: features,
   };
 
+  const singleNamedItem = mode === "selection" ? getSingleNamedItem(allLayers) : null;
+
   // Determine filename prefix
   let finalFilePrefix = filePrefix;
   if (!finalFilePrefix) {
-    if (mode === "single") {
-      finalFilePrefix = layer.feature?.properties?.name || "Map_Export";
-    } else if (mode === "strava") {
-      finalFilePrefix = "Strava_Export";
-    } else {
-      finalFilePrefix = "Map_Export";
-    }
+    finalFilePrefix =
+      mode === "strava"
+        ? "Strava_Export"
+        : resolveExportFilePrefix(singleNamedItem, mode === "selection");
   }
 
-  // Generate filename with timestamp (except for single items with custom names)
-  const fileName =
-    mode === "single" && layer.feature?.properties?.name
-      ? `${finalFilePrefix}.geojson`
-      : generateTimestampedFilename(finalFilePrefix, "geojson");
+  const fileName = singleNamedItem
+    ? `${finalFilePrefix}.geojson`
+    : generateTimestampedFilename(finalFilePrefix, "geojson");
 
   // Download file
   downloadFile(fileName, JSON.stringify(geojsonDoc, null, 2));
 
-  // Show success message (only for strava mode, single mode is silent, all mode shows message)
-  if (mode === "all") {
-    Swal.fire({
-      title: successTitle,
-      text: successText || "All items have been exported to GeoJSON.",
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  } else if (mode === "strava") {
-    // Strava mode was silent in the original, so we keep it silent
-  }
-  // Single mode is silent (follows GPX pattern)
+  notifyExportSuccess(
+    mode === "all" || (mode === "selection" && allLayers.length > 1),
+    successTitle,
+    successText ||
+      (mode === "all"
+        ? "All items have been exported to GeoJSON."
+        : `${allLayers.length} selected items have been exported to GeoJSON.`),
+  );
 }
 
 // GPX
 // Specification: https://www.topografix.com/gpx/1/1/
 
+const GPX_HEADER = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"
+    xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"
+    xmlns:gpx_style="http://www.topografix.com/GPX/gpx_style/0/2"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.topografix.com/GPX/1/1 https://www.topografix.com/GPX/1/1/gpx.xsd http://www.topografix.com/GPX/gpx_style/0/2 https://www.topografix.com/GPX/gpx_style/0/2/gpx_style.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 https://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd">`;
+const GPX_FOOTER = "\n</gpx>";
+
 /**
- * Converts a Leaflet layer to a GPX string, supporting markers and paths with colors.
+ * Converts a single layer to a <trk> or <wpt> XML snippet, with no
+ * header/footer, so multiple snippets can be concatenated into one GPX
+ * document (see buildGpxContent).
  * Note: GPX has no polygon support; areas export as closed tracks and import as paths.
  * @param {L.Layer} layer - The layer to convert
- * @returns {string} The GPX file content as a string
+ * @returns {string} The GPX track/waypoint snippet, or "" if unsupported
  */
-function convertLayerToGpx(layer) {
+function convertLayerToGpxSnippet(layer) {
   const name = layer.feature?.properties?.name || "Exported Feature";
   const description = layer.feature?.properties?.description || "";
   const color = layer.feature?.properties?.color || DEFAULT_COLOR;
@@ -844,15 +922,6 @@ function convertLayerToGpx(layer) {
   const safeName = escapeXml(name);
   const safeDescription = escapeXml(description);
 
-  const header = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"
-    xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"
-    xmlns:gpx_style="http://www.topografix.com/GPX/gpx_style/0/2"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.topografix.com/GPX/1/1 https://www.topografix.com/GPX/1/1/gpx.xsd http://www.topografix.com/GPX/gpx_style/0/2 https://www.topografix.com/GPX/gpx_style/0/2/gpx_style.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 https://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd">`;
-
-  let content = "";
-
   if (layer instanceof L.Polygon) {
     let latlngs = layer.getLatLngs()[0];
 
@@ -862,7 +931,7 @@ function convertLayerToGpx(layer) {
     const pathPoints = closedLatLngs
       .map((p) => {
         let pt = `<trkpt lat="${p.lat}" lon="${p.lng}">`;
-        if (typeof p.alt !== "undefined" && p.alt !== null) {
+        if (typeof p.alt === "number") {
           pt += `<ele>${p.alt}</ele>`;
         }
         pt += `</trkpt>`;
@@ -870,7 +939,7 @@ function convertLayerToGpx(layer) {
       })
       .join("\n      ");
 
-    content = `
+    return `
   <trk>
     <name>${safeName}</name>
     <extensions>
@@ -892,7 +961,7 @@ function convertLayerToGpx(layer) {
     const pathPoints = latlngs
       .map((p) => {
         let pt = `<trkpt lat="${p.lat}" lon="${p.lng}">`;
-        if (typeof p.alt !== "undefined" && p.alt !== null) {
+        if (typeof p.alt === "number") {
           pt += `<ele>${p.alt}</ele>`;
         }
         pt += `</trkpt>`;
@@ -900,7 +969,7 @@ function convertLayerToGpx(layer) {
       })
       .join("\n      ");
 
-    content = `
+    return `
   <trk>
     <name>${safeName}</name>
     <extensions>
@@ -915,18 +984,69 @@ function convertLayerToGpx(layer) {
   </trk>`;
   } else if (layer instanceof L.Marker) {
     const latlng = layer.getLatLng();
+    const hasElevation = typeof latlng.alt === "number";
     const wptExtensions =
       `\n    <extensions>\n      <color>#FF${gpxColorHex}</color>` +
       (stravaId ? `\n      <stravaId>${stravaId}</stravaId>` : "") +
       `\n    </extensions>`;
-    content = `
-  <wpt lat="${latlng.lat}" lon="${latlng.lng}">
+    return `
+  <wpt lat="${latlng.lat}" lon="${latlng.lng}">${hasElevation ? `\n    <ele>${latlng.alt}</ele>` : ""}
     <name>${safeName}</name>${safeDescription ? `\n    <desc>${safeDescription}</desc>` : ""}${wptExtensions}
   </wpt>`;
   }
+  return "";
+}
 
-  const footer = "\n</gpx>";
-  return header + content + footer;
+/**
+ * Builds a single GPX document containing one <trk> or <wpt> element per
+ * layer - the same "one file, several entries" approach GeoJSON/KML export
+ * already use, so no zip/multi-file bundling is needed.
+ * The GPX 1.1 schema requires all <wpt> elements before any <trk>, so markers
+ * are grouped first while preserving each group's relative order.
+ * @param {Array} layers - The layers to convert
+ * @returns {string} The GPX file content as a string
+ */
+function buildGpxContent(layers) {
+  const markers = layers.filter((layer) => layer instanceof L.Marker);
+  const paths = layers.filter((layer) => !(layer instanceof L.Marker));
+  const orderedLayers = [...markers, ...paths];
+  return GPX_HEADER + orderedLayers.map(convertLayerToGpxSnippet).join("") + GPX_FOOTER;
+}
+
+/**
+ * Handles the export and download of the GPX file.
+ * @param {{layers?: Array}} [options] - Pass layers to export only a specific
+ *   subset (e.g. the current selection) instead of everything on the map.
+ */
+function exportGpx({ layers = null } = {}) {
+  if (layers && layers.length === 0) {
+    return alertNothingSelected();
+  }
+
+  const allLayers = layers || getAllExportableLayers();
+
+  if (allLayers.length === 0) {
+    return Swal.fire({
+      title: "No Data to Export",
+      text: "There are no items on the map to export.",
+    });
+  }
+
+  const singleNamedItem = getSingleNamedItem(layers);
+  const filePrefix = resolveExportFilePrefix(singleNamedItem, !!layers);
+  const fileName = singleNamedItem
+    ? `${filePrefix}.gpx`
+    : generateTimestampedFilename(filePrefix, "gpx");
+
+  downloadFile(fileName, buildGpxContent(allLayers));
+
+  notifyExportSuccess(
+    !layers || layers.length > 1,
+    "Export Successful!",
+    layers
+      ? `${layers.length} selected items have been exported to GPX.`
+      : "All items have been exported to GPX.",
+  );
 }
 
 // KML / KMZ
@@ -957,10 +1077,12 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
   const placemarkStart =
     `  <Placemark>\n` +
     `    <name>${safeName}</name>\n` +
-    (safeDescription ? `    <description>${safeDescription}</description>\n` : "") +
-    (stravaId
-      ? `    <ExtendedData>\n      <Data name="stravaId">\n        <value>${stravaId}</value>\n      </Data>\n    </ExtendedData>\n`
-      : "");
+    (safeDescription ? `    <description>${safeDescription}</description>\n` : "");
+
+  // KML 2.2's AbstractFeatureType schema requires Style before ExtendedData.
+  const extendedDataTag = stravaId
+    ? `    <ExtendedData>\n      <Data name="stravaId">\n        <value>${stravaId}</value>\n      </Data>\n    </ExtendedData>\n`
+    : "";
 
   const placemarkEnd = `  </Placemark>`;
 
@@ -998,7 +1120,7 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
       `      </LineStyle>\n` +
       `    </Style>\n`;
 
-    return placemarkStart + styleTag + geometryTag + placemarkEnd;
+    return placemarkStart + styleTag + extendedDataTag + geometryTag + placemarkEnd;
   }
 
   if (layer instanceof L.Marker) {
@@ -1016,30 +1138,10 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
       `      </IconStyle>\n` +
       `    </Style>\n`;
 
-    return placemarkStart + styleTag + pointTag + placemarkEnd;
+    return placemarkStart + styleTag + extendedDataTag + pointTag + placemarkEnd;
   }
 
   return null;
-}
-
-/**
- * Builds a complete, pretty-printed KML document string from a name and an array of placemarks.
- * @param {string} name - The name for the <Document>
- * @param {Array<string>} placemarks - An array of pre-formatted KML <Placemark> strings
- * @returns {string} The full KML document as a string
- */
-function buildKmlDocument(name, placemarks) {
-  const safeName = escapeXml(name);
-
-  return (
-    `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<kml xmlns="http://www.opengis.net/kml/2.2">\n` +
-    `<Document>\n` +
-    `  <name>${safeName}</name>\n` +
-    `${placemarks.join("\n")}\n` +
-    `</Document>\n` +
-    `</kml>`
-  );
 }
 
 /**
@@ -1059,13 +1161,15 @@ function buildKmlFolder(name, placemarks) {
 }
 
 /**
- * Builds a KML string containing all map data for export.
+ * Builds a KML string containing map data for export.
  * Uses Folder elements for maximum compatibility with Google Earth Web,
  * Google MyMaps, map.geo.admin.ch, and other KML viewers.
  * @param {string} docName - The name for the KML document
+ * @param {Array} [layers] - Specific layers to export; defaults to everything
+ *   on the map when omitted.
  * @returns {string|null} The KML content as a string, or null if no data
  */
-function buildKmlContent(docName) {
+function buildKmlContent(docName, layers = null) {
   const folders = [];
   let featureCounter = 0;
 
@@ -1073,7 +1177,7 @@ function buildKmlContent(docName) {
   const importedFeatures = [];
   const stravaActivities = [];
 
-  const allLayers = getAllExportableLayers();
+  const allLayers = layers || getAllExportableLayers();
 
   allLayers.forEach(function (layer) {
     const defaultName =
@@ -1128,13 +1232,24 @@ function buildKmlContent(docName) {
 
 /**
  * Handles the export and download of the KML file.
+ * @param {{layers?: Array}} [options] - Pass layers to export only a specific
+ *   subset (e.g. the current selection) instead of everything on the map.
  */
-function exportKml() {
-  const timestamp = generateTimestamp();
-  const fileName = `Map_Export_${timestamp}.kml`;
-  const docName = `Map Export ${timestamp}`;
+function exportKml({ layers = null } = {}) {
+  if (layers && layers.length === 0) {
+    return alertNothingSelected();
+  }
 
-  const kmlContent = buildKmlContent(docName);
+  const singleNamedItem = getSingleNamedItem(layers);
+
+  const timestamp = generateTimestamp();
+  const filePrefix = resolveExportFilePrefix(singleNamedItem, !!layers);
+  const fileName = singleNamedItem ? `${filePrefix}.kml` : `${filePrefix}_${timestamp}.kml`;
+  const docName = singleNamedItem
+    ? filePrefix
+    : `${layers ? "Selected" : "Map"} Export ${timestamp}`;
+
+  const kmlContent = buildKmlContent(docName, layers);
 
   if (!kmlContent) {
     return Swal.fire({
@@ -1152,12 +1267,13 @@ function exportKml() {
   document.body.removeChild(link);
   URL.revokeObjectURL(link.href);
 
-  Swal.fire({
-    title: "Export Successful!",
-    text: "All items have been exported to KML.",
-    timer: 2000,
-    showConfirmButton: false,
-  });
+  notifyExportSuccess(
+    !layers || layers.length > 1,
+    "Export Successful!",
+    layers
+      ? `${layers.length} selected items have been exported to KML.`
+      : "All items have been exported to KML.",
+  );
 }
 
 // 4. SHARING (URL-BASED)
@@ -1249,10 +1365,12 @@ async function gzipDecode(encoded) {
  * making it the dominant factor in URL length reduction. Short property names and omitted
  * defaults reduce the remaining JSON overhead before gzip is applied.
  *
+ * @param {Array} [layers] - Specific layers to include; defaults to everything
+ *   on the map when omitted.
  * @returns {{ v: number, f: Array }|null} Compact object, or null if no exportable layers
  */
-function buildCompactObject() {
-  const allLayers = getAllExportableLayers();
+function buildCompactObject(layers = null) {
+  const allLayers = layers || getAllExportableLayers();
   if (allLayers.length === 0) return null;
 
   const features = [];
@@ -1336,10 +1454,12 @@ function buildCompactObject() {
  * practical reasons and to avoid causing denial-of-service problems in inter-process communication."
  * See: https://chromium.googlesource.com/chromium/src/+/HEAD/docs/security/url_display_guidelines/url_display_guidelines.md#URL-Length
  *
+ * @param {Array} [layers] - Specific layers to include; defaults to everything
+ *   on the map when omitted.
  * @returns {Promise<string|null>} Encoded map state, or null if no data to share
  */
-async function encodeMapStateToUrl() {
-  const compact = buildCompactObject();
+async function encodeMapStateToUrl(layers = null) {
+  const compact = buildCompactObject(layers);
   if (!compact) return null;
   return gzipEncode(JSON.stringify(compact));
 }
@@ -1350,10 +1470,12 @@ async function encodeMapStateToUrl() {
  * The data parameter contains all markers, polylines, and polygons encoded using
  * Polyline encoding and gzip+base64url compression.
  *
+ * @param {Array} [layers] - Specific layers to include; defaults to everything
+ *   on the map when omitted.
  * @returns {Promise<string|null>} Full shareable URL with hash parameters, or null if no features exist
  */
-async function buildShareableUrl() {
-  const mapState = await encodeMapStateToUrl();
+async function buildShareableUrl(layers = null) {
+  const mapState = await encodeMapStateToUrl(layers);
   if (!mapState) return null;
 
   const center = map.getCenter();

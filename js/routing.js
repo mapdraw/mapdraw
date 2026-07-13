@@ -452,8 +452,15 @@ function initializeRouting() {
     directionsPanel.classList.toggle("collapsed");
   });
 
+  [startInput, viaInput, endInput].forEach((input) => {
+    input.addEventListener("click", () => {
+      if (penModeActive) exitPenMode();
+    });
+  });
+
   // Use search modal for start input
   attachSearchModalToInput(startInput, "Set Start Point", (latlng, label) => {
+    if (penModeActive) exitPenMode();
     currentStartLatLng = latlng;
     startInput.style.color = "var(--color-black)";
     if (startMarker) {
@@ -472,6 +479,7 @@ function initializeRouting() {
 
   // Use search modal for end input
   attachSearchModalToInput(endInput, "Set End Point", (latlng, label) => {
+    if (penModeActive) exitPenMode();
     currentEndLatLng = latlng;
     endInput.style.color = "var(--color-black)";
     if (endMarker) {
@@ -490,6 +498,7 @@ function initializeRouting() {
 
   // Use search modal for via input
   attachSearchModalToInput(viaInput, "Set Via Point", (latlng, label) => {
+    if (penModeActive) exitPenMode();
     currentViaLatLng = latlng;
     viaInput.style.color = "var(--color-black)";
     if (viaMarker) {
@@ -564,7 +573,7 @@ function initializeRouting() {
   /**
    * Clears all routing markers, inputs, and route path from the map.
    */
-  const clearRouting = () => {
+  const clearRouting = ({ skipUiUpdate = false } = {}) => {
     if (penModeActive) exitPenMode();
     if (routingControl) {
       routingControl.setWaypoints([]);
@@ -607,8 +616,10 @@ function initializeRouting() {
       drawnItems.removeLayer(currentRoutePath);
       map.removeLayer(currentRoutePath);
       currentRoutePath = null;
-      updateOverviewList();
-      updateDrawControlStates();
+      if (!skipUiUpdate) {
+        updateOverviewList();
+        updateDrawControlStates();
+      }
     }
     if (saveRouteBtn) saveRouteBtn.disabled = true;
 
@@ -623,6 +634,7 @@ function initializeRouting() {
    * Updates a routing point (start/via/end) with a new location and optional label.
    */
   const updateRoutingPoint = (latlng, type, label) => {
+    if (penModeActive) exitPenMode();
     const locationString = label || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
 
     if (type === "start") {
@@ -810,6 +822,7 @@ function initializeRouting() {
     if (penModeActive) exitPenMode();
     exitRoutePointSelectionMode();
     if (!mode) return;
+    deselectCurrentItem();
     if (mode === "start" && startMarker) {
       map.removeLayer(startMarker);
       startMarker = null;
@@ -822,6 +835,14 @@ function initializeRouting() {
       map.removeLayer(viaMarker);
       viaMarker = null;
     }
+    // Only guards against selecting some other, unrelated existing layer while
+    // placing route points - it was never meant to stop the route from
+    // selecting/highlighting itself, which is a normal and expected part of
+    // creating it via this flow.
+    window.app.activateMode("route-select", {
+      onCancel: exitRoutePointSelectionMode,
+      canSelect: (layer) => layer === currentRoutePath,
+    });
     routePointSelectionMode = mode;
     document.body.classList.add("route-point-select-mode");
     selectStartBtn.classList.toggle("active", mode === "start");
@@ -841,6 +862,7 @@ function initializeRouting() {
   };
 
   const exitRoutePointSelectionMode = () => {
+    window.app.deactivateMode("route-select");
     routePointSelectionMode = null;
     document.body.classList.remove("route-point-select-mode");
     selectStartBtn.classList.remove("active");
@@ -869,14 +891,22 @@ function initializeRouting() {
 
   const enterPenMode = () => {
     exitRoutePointSelectionMode();
+    deselectCurrentItem();
     clearRouting();
     penModeActive = true;
     penModeClickCount = 0;
     penModeBtn.classList.add("active");
     document.body.classList.add("pen-draw-mode");
+    // Same carve-out as route-select above: selecting the route being built
+    // is expected, selecting anything else while placing points is not.
+    window.app.activateMode("pen", {
+      onCancel: exitPenMode,
+      canSelect: (layer) => layer === currentRoutePath,
+    });
   };
 
   const exitPenMode = () => {
+    window.app.deactivateMode("pen");
     penModeActive = false;
     penModeClickCount = 0;
     penModeBtn.classList.remove("active");
@@ -1059,7 +1089,6 @@ function initializeRouting() {
         text: 'The route was simplified and added to the "Drawn Items" layer.',
         timer: 2500,
         showConfirmButton: false,
-        customClass: { popup: "swal-no-actions" },
       });
     } else {
       Swal.fire({
@@ -1068,7 +1097,6 @@ function initializeRouting() {
         text: 'The route has been added to the "Drawn Items" layer.',
         timer: 2500,
         showConfirmButton: false,
-        customClass: { popup: "swal-no-actions" },
       });
     }
   };
@@ -1098,7 +1126,4 @@ function initializeRouting() {
   window.app.saveRoute = saveRoute;
   window.app.redisplayCurrentRoute = redisplayCurrentRoute;
   window.app.updateRoutingPoint = updateRoutingPoint;
-  window.app.exitRoutePointSelectionMode = exitRoutePointSelectionMode;
-  window.app.exitPenMode = exitPenMode;
-  window.app.isPenModeActive = () => penModeActive;
 }

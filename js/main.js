@@ -92,8 +92,9 @@ function adjustInfoPanelNameHeight(textarea) {
  * when the user toggles between metric and imperial units.
  */
 function updateAllDynamicUnitDisplays() {
-  if (globallySelectedItem) {
-    showInfoPanel(globallySelectedItem);
+  const selected = getEffectiveSelectedLayer();
+  if (selected) {
+    showInfoPanel(selected);
   }
 
   if (window.app && typeof window.app.redisplayCurrentRoute === "function") {
@@ -199,6 +200,25 @@ function parseMapHash(hashString) {
   return null;
 }
 
+function closePanelMode(id, hide) {
+  hide();
+  window.app.deactivateMode(id, "panels");
+}
+
+/**
+ * The hide callback also serves as mode-manager's onCancel, so a panel
+ * closes the same way whether the user re-clicks its own button or
+ * another panel takes over.
+ */
+function togglePanelMode(id, isVisible, show, hide) {
+  if (isVisible()) {
+    closePanelMode(id, hide);
+  } else {
+    window.app.activateMode(id, { group: "panels", onCancel: hide });
+    show();
+  }
+}
+
 /**
  * Initializes the map and all its components (layers, controls, event handlers).
  */
@@ -268,16 +288,19 @@ async function initializeMap() {
         targetPanel.classList.add("active");
       }
 
-      if (targetPanelId === "overview-panel" && globallySelectedItem) {
-        if (window.expandCategoryForItem) {
-          window.expandCategoryForItem(globallySelectedItem);
-        }
-        const layerId = L.Util.stamp(globallySelectedItem);
-        const listItem = document.querySelector(
-          `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
-        );
-        if (listItem) {
-          listItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      if (targetPanelId === "overview-panel") {
+        const selectedForOverview = getEffectiveSelectedLayer();
+        if (selectedForOverview) {
+          if (window.expandCategoryForItem) {
+            window.expandCategoryForItem(selectedForOverview);
+          }
+          const layerId = L.Util.stamp(selectedForOverview);
+          const listItem = document.querySelector(
+            `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
+          );
+          if (listItem) {
+            listItem.scrollIntoView({ behavior: "auto", block: "nearest" });
+          }
         }
       }
 
@@ -347,6 +370,7 @@ async function initializeMap() {
     zoomControl: false,
     attributionControl: false,
     doubleClickZoom: true,
+    boxZoom: false,
     worldCopyJump: true,
   });
 
@@ -526,8 +550,12 @@ async function initializeMap() {
       L.DomEvent.on(link, "click", (e) => {
         L.DomEvent.stop(e);
         const panel = document.getElementById("custom-layers-panel");
-        const isVisible = panel.style.display === "block";
-        panel.style.display = isVisible ? "none" : "block";
+        togglePanelMode(
+          "layers-panel",
+          () => panel.style.display === "block",
+          () => (panel.style.display = "block"),
+          () => (panel.style.display = "none"),
+        );
       });
 
       return container;
@@ -795,6 +823,8 @@ async function initializeMap() {
       }
     }
 
+    window.app.refreshRectangleSelectionGroupMembers(e.layer);
+
     if (typeof e.layer.eachLayer !== "function") {
       return;
     }
@@ -881,7 +911,7 @@ async function initializeMap() {
         !layersButton.contains(event.target) &&
         !layersPanel.contains(event.target)
       ) {
-        layersPanel.style.display = "none";
+        closePanelMode("layers-panel", () => (layersPanel.style.display = "none"));
       }
 
       if (
@@ -891,7 +921,7 @@ async function initializeMap() {
         !downloadButton.contains(event.target) &&
         !downloadMenu.contains(event.target)
       ) {
-        downloadMenu.style.display = "none";
+        closePanelMode("download-menu", () => (downloadMenu.style.display = "none"));
       }
     },
     true,
@@ -907,22 +937,31 @@ async function initializeMap() {
       container.id = "elevation-button";
       container.title = "Select a path to show elevation";
       container.innerHTML = '<a href="#" role="button"></a>';
+      const hideElevationPanel = () => {
+        isElevationProfileVisible = false;
+        document.getElementById("elevation-div").style.visibility = "hidden";
+        window.elevationProfile.clearElevationProfile();
+        updateElevationToggleIconColor();
+      };
+
       L.DomEvent.on(container, "click", (ev) => {
         L.DomEvent.stop(ev);
         if (L.DomUtil.hasClass(container, "disabled")) return;
         const elevationDiv = document.getElementById("elevation-div");
-        isElevationProfileVisible =
-          elevationDiv.style.visibility === "hidden" || elevationDiv.style.visibility === "";
-        elevationDiv.style.visibility = isElevationProfileVisible ? "visible" : "hidden";
-        if (isElevationProfileVisible) {
-          if (selectedElevationPath) {
-            window.elevationProfile.clearElevationProfile();
-            addElevationProfileForLayer(selectedElevationPath);
-          }
-        } else {
-          window.elevationProfile.clearElevationProfile();
-        }
-        updateElevationToggleIconColor();
+        togglePanelMode(
+          "elevation-panel",
+          () => elevationDiv.style.visibility === "visible",
+          () => {
+            isElevationProfileVisible = true;
+            elevationDiv.style.visibility = "visible";
+            if (selectedElevationPath) {
+              window.elevationProfile.clearElevationProfile();
+              addElevationProfileForLayer(selectedElevationPath);
+            }
+            updateElevationToggleIconColor();
+          },
+          hideElevationPanel,
+        );
       });
       return container;
     },
@@ -941,11 +980,32 @@ async function initializeMap() {
       container.innerHTML =
         '<a href="#" role="button"></a>' +
         '<div class="download-submenu">' +
-        '<button id="download-gpx-single" disabled title="Select an item to download as GPX">GPX (Selected Item)</button>' +
-        '<button id="download-geojson-single" disabled title="Select an item to download as GeoJSON">GeoJSON (Selected Item)</button>' +
-        '<button id="download-geojson" title="Download everything as GeoJSON">GeoJSON (Everything)</button>' +
-        '<button id="download-kml" title="Download everything as KML">KML (Everything)</button>' +
-        '<button id="share-link" title="Copy share link for everything">Copy Share Link (Everything)</button>' +
+        '<div class="download-rows">' +
+        '<div class="download-row">' +
+        '<span class="download-row-label" title="">GeoJSON</span>' +
+        '<button id="download-geojson-selected" disabled title="Select an item to download as GeoJSON">Selected</button>' +
+        '<button id="download-geojson-all" title="Download everything as GeoJSON">All</button>' +
+        "</div>" +
+        '<div class="download-row">' +
+        '<span class="download-row-label" title="">GPX</span>' +
+        '<button id="download-gpx-selected" disabled title="Select an item to download as GPX">Selected</button>' +
+        '<button id="download-gpx-all" title="Download everything as GPX">All</button>' +
+        "</div>" +
+        '<div class="download-row" id="download-strava-row" style="display: none">' +
+        '<span class="download-row-label" title="">GPX</span>' +
+        '<button id="download-gpx-strava-original" title="Download the original GPX file from Strava">Original Strava</button>' +
+        "</div>" +
+        '<div class="download-row">' +
+        '<span class="download-row-label" title="">KML</span>' +
+        '<button id="download-kml-selected" disabled title="Select an item to download as KML">Selected</button>' +
+        '<button id="download-kml-all" title="Download everything as KML">All</button>' +
+        "</div>" +
+        '<div class="download-row">' +
+        '<span class="download-row-label" title="">Share Link</span>' +
+        '<button id="download-share-selected" disabled title="Select an item to copy a share link for">Selected</button>' +
+        '<button id="download-share-all" title="Copy a share link for everything">All</button>' +
+        "</div>" +
+        "</div>" +
         "</div>";
       const subMenu = container.querySelector(".download-submenu");
 
@@ -955,8 +1015,12 @@ async function initializeMap() {
         if (L.DomUtil.hasClass(container, "disabled")) {
           return;
         }
-        const isVisible = subMenu.style.display === "block";
-        subMenu.style.display = isVisible ? "none" : "block";
+        togglePanelMode(
+          "download-menu",
+          () => subMenu.style.display === "block",
+          () => (subMenu.style.display = "block"),
+          () => (subMenu.style.display = "none"),
+        );
       });
 
       // Sync download-button active highlight with submenu visibility
@@ -964,44 +1028,81 @@ async function initializeMap() {
         container.classList.toggle("active", subMenu.style.display === "block");
       }).observe(subMenu, { attributes: true, attributeFilter: ["style"] });
 
-      L.DomEvent.on(container.querySelector("#download-gpx-single"), "click", (e) => {
+      // GPX: always the local converter, bundled into one file when there's
+      // more than one layer. Fetching the original file(s) from Strava is a
+      // separate, explicit action - see the "Original Strava" button below.
+      L.DomEvent.on(container.querySelector("#download-gpx-selected"), "click", (e) => {
         L.DomEvent.stop(e);
-        // Only download from Strava for live Strava activities; imported items with 'stravaId' use internal GPX export.
-        if (globallySelectedItem && globallySelectedItem.pathType === "strava") {
-          const { stravaId, name } = globallySelectedItem.feature.properties;
+        exportGpx({ layers: getCurrentSelectionLayers() });
+        subMenu.style.display = "none";
+      });
+      L.DomEvent.on(container.querySelector("#download-gpx-all"), "click", (e) => {
+        L.DomEvent.stop(e);
+        exportGpx();
+        subMenu.style.display = "none";
+      });
+
+      // Original Strava: only shown when the whole selection is real Strava
+      // activities. A single one downloads immediately, same as before. For
+      // multiple, browsers only allow one script-triggered download per
+      // genuine click, so instead we list real, individually-clickable
+      // links - an actual anchor click bypasses that restriction entirely.
+      L.DomEvent.on(container.querySelector("#download-gpx-strava-original"), "click", (e) => {
+        L.DomEvent.stop(e);
+        const layers = getCurrentSelectionLayers();
+        subMenu.style.display = "none";
+        if (layers.length === 0) return;
+
+        if (layers.length === 1) {
+          const { stravaId, name } = layers[0].feature.properties;
           downloadOriginalStravaGpx(stravaId, name);
-          subMenu.style.display = "none";
-        } else {
-          if (!globallySelectedItem) return;
-          const name = globallySelectedItem.feature?.properties?.name || `Map_Export_${Date.now()}`;
-          const data = convertLayerToGpx(globallySelectedItem);
-          if (data) {
-            downloadFile(`${name}.gpx`, data);
-          }
-          subMenu.style.display = "none";
+          return;
         }
+
+        const links = layers
+          .map((layer, i) => {
+            const { stravaId, name } = layer.feature.properties;
+            const style = i === 0 ? "" : ' style="margin-top: 4px;"';
+            return `<li${style}><a href="${stravaGpxExportUrl(stravaId)}" target="_blank" rel="noopener noreferrer">${escapeXml(name)}</a></li>`;
+          })
+          .join("");
+        Swal.fire({
+          title: "Download Original Strava GPX Files",
+          html: `
+            <p style="text-align: left; margin: 0;">Click each link to download its original file from Strava:</p>
+            <ul style="margin: 4px 0; padding-left: 20px; text-align: left;">${links}</ul>
+          `,
+        });
       });
-      L.DomEvent.on(container.querySelector("#download-geojson-single"), "click", (e) => {
+
+      L.DomEvent.on(container.querySelector("#download-geojson-selected"), "click", (e) => {
         L.DomEvent.stop(e);
-        if (!globallySelectedItem) return;
-        exportGeoJson({ mode: "single", layer: globallySelectedItem });
+        exportGeoJson({ mode: "selection", layers: getCurrentSelectionLayers() });
         subMenu.style.display = "none";
       });
-      L.DomEvent.on(container.querySelector("#download-kml"), "click", (e) => {
-        L.DomEvent.stop(e);
-        exportKml();
-        subMenu.style.display = "none";
-      });
-      L.DomEvent.on(container.querySelector("#download-geojson"), "click", (e) => {
+      L.DomEvent.on(container.querySelector("#download-geojson-all"), "click", (e) => {
         L.DomEvent.stop(e);
         exportGeoJson();
         subMenu.style.display = "none";
       });
-      L.DomEvent.on(container.querySelector("#share-link"), "click", async (e) => {
+
+      L.DomEvent.on(container.querySelector("#download-kml-selected"), "click", (e) => {
         L.DomEvent.stop(e);
+        exportKml({ layers: getCurrentSelectionLayers() });
+        subMenu.style.display = "none";
+      });
+      L.DomEvent.on(container.querySelector("#download-kml-all"), "click", (e) => {
+        L.DomEvent.stop(e);
+        exportKml();
+        subMenu.style.display = "none";
+      });
+
+      // Share Link: shared copy/toast logic for both scopes - only the layer
+      // list (or null for "everything") differs.
+      const copyShareLinkForLayers = async (layers) => {
         let shareUrl;
         try {
-          shareUrl = await buildShareableUrl();
+          shareUrl = await buildShareableUrl(layers);
         } catch {
           Swal.fire({
             toast: true,
@@ -1045,6 +1146,15 @@ async function initializeMap() {
           }
         }
         subMenu.style.display = "none";
+      };
+
+      L.DomEvent.on(container.querySelector("#download-share-selected"), "click", async (e) => {
+        L.DomEvent.stop(e);
+        await copyShareLinkForLayers(getCurrentSelectionLayers());
+      });
+      L.DomEvent.on(container.querySelector("#download-share-all"), "click", async (e) => {
+        L.DomEvent.stop(e);
+        await copyShareLinkForLayers(null);
       });
       return container;
     },
@@ -1165,6 +1275,8 @@ async function initializeMap() {
 
   L.control.zoom({ position: "topleft" }).addTo(map);
 
+  window.app.initRectangleSelect(map);
+
   // Top-right button container
   // Fullscreen button
   const fullscreenBtn = document.getElementById("fullscreen-btn");
@@ -1218,10 +1330,6 @@ async function initializeMap() {
       e.preventDefault();
       deleteLayerImmediately(globallySelectedItem);
     }
-    if (e.key === "Escape") {
-      if (window.app.exitRoutePointSelectionMode) window.app.exitRoutePointSelectionMode();
-      if (window.app.exitPenMode) window.app.exitPenMode();
-    }
   });
 
   // Sidebar toggle button
@@ -1233,7 +1341,7 @@ async function initializeMap() {
     sidebarToggleBtn.classList.toggle("panels-visible");
     sidebarToggleBtn.classList.toggle("panels-hidden");
 
-    if (!panelContainer.classList.contains("hidden") && globallySelectedItem) {
+    if (!panelContainer.classList.contains("hidden") && getEffectiveSelectedLayer()) {
       adjustInfoPanelNameHeight(infoPanelName);
     }
   });
@@ -1335,6 +1443,33 @@ async function initializeMap() {
     };
   }
 
+  // A hidden marker has no marker.dragging (deleted by Leaflet on removal, recreated on
+  // add). leaflet-draw touches it unconditionally, throwing "Cannot read properties of
+  // undefined (reading 'enable'/'disable')" when Edit mode is entered while a marker is
+  // hidden, or when Save/Cancel is pressed while one is hidden. Paths/polygons don't use
+  // .dragging, so only markers need this guard.
+  if (L.EditToolbar && L.EditToolbar.Edit) {
+    const origEnableLayerEdit = L.EditToolbar.Edit.prototype._enableLayerEdit;
+    L.EditToolbar.Edit.prototype._enableLayerEdit = function (e) {
+      const layer = e.layer || e.target || e;
+      if (layer instanceof L.Marker && !layer.dragging) {
+        // Still back up the latlng even though we can't make it draggable yet -
+        // _backupLayer() only touches getLatLng(), never .dragging, so it's safe
+        // here. Without this, un-hiding the marker later (toggleLayerVisibility)
+        // makes it draggable with no backup taken, so Cancel can't revert it.
+        this._backupLayer(layer);
+        return;
+      }
+      origEnableLayerEdit.call(this, e);
+    };
+    const origDisableLayerEdit = L.EditToolbar.Edit.prototype._disableLayerEdit;
+    L.EditToolbar.Edit.prototype._disableLayerEdit = function (e) {
+      const layer = e.layer || e.target || e;
+      if (layer instanceof L.Marker && !layer.dragging) return;
+      origDisableLayerEdit.call(this, e);
+    };
+  }
+
   // Patch deprecated _flat method
   if (L.Polyline && L.LineUtil && L.LineUtil.isFlat) {
     L.Polyline._flat = L.LineUtil.isFlat;
@@ -1363,6 +1498,9 @@ async function initializeMap() {
   L.drawLocal.edit.toolbar.buttons.remove = "Delete";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No items to edit";
   L.drawLocal.edit.toolbar.buttons.removeDisabled = "No items to delete";
+  L.drawLocal.edit.toolbar.actions.clearAll.text = "Clear All (Drawn)";
+  L.drawLocal.edit.toolbar.actions.clearAll.title =
+    "Clear all drawn items (not imported files or Strava activities)";
 
   // Edit toolbar tooltips
   L.drawLocal.edit.handlers.edit.tooltip.text =
@@ -1393,6 +1531,30 @@ async function initializeMap() {
     },
   });
   map.addControl(drawControl);
+
+  const cancelDrawTools = () => {
+    drawControl._toolbars[L.DrawToolbar.TYPE].disable();
+    drawControl._toolbars[L.EditToolbar.TYPE].disable();
+  };
+
+  // Every toolbar button's click is hardwired by leaflet-draw to call
+  // handler.enable(), with no way to toggle it back off by clicking the
+  // same button again. Swap that one listener for a toggle version, using
+  // the exact (button, event, fn, context) leaflet-draw itself bound it
+  // with, so every draw/edit/delete tool can be toggled off the same way
+  // rectangle-select already can. Always "click", never "touchstart" -
+  // the _detectIOS patch above forces that regardless of device.
+  [L.DrawToolbar.TYPE, L.EditToolbar.TYPE].forEach((toolbarType) => {
+    Object.values(drawControl._toolbars[toolbarType]._modes).forEach(({ handler, button }) => {
+      L.DomEvent.off(button, "click", handler.enable, handler);
+      L.DomEvent.on(
+        button,
+        "click",
+        () => (handler.enabled() ? handler.disable() : handler.enable()),
+        handler,
+      );
+    });
+  });
 
   const ImportControl = L.Control.extend({
     options: { position: "topleft" },
@@ -1454,6 +1616,7 @@ async function initializeMap() {
     layer.pathType = "drawn";
     layer.feature = layer.feature || { properties: {} };
     layer.feature.properties.color = DEFAULT_COLOR;
+    layer.feature.properties.name = getDefaultLayerName(layer);
     drawnItems.addLayer(layer);
     editableLayers.addLayer(layer);
     layer.on("click", (ev) => {
@@ -1485,9 +1648,11 @@ async function initializeMap() {
 
   map.on(L.Draw.Event.DELETED, (e) => {
     e.layers.eachLayer((layer) => {
-      deleteLayerImmediately(layer);
+      deleteLayerImmediately(layer, { skipUiUpdate: true });
       layer.isDeletedFromToolbar = false;
     });
+    updateDrawControlStates();
+    updateOverviewList();
   });
 
   // Distance labels for drawing
@@ -1495,6 +1660,10 @@ async function initializeMap() {
   let totalDistance = 0;
 
   map.on(L.Draw.Event.DRAWSTART, function (e) {
+    // draw:created (which selects the newly-drawn shape) fires before
+    // draw:drawstop deactivates this mode, so selection must stay allowed
+    // throughout - unlike the delete/edit sub-modes below, which block it.
+    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools, canSelect: () => true });
     deselectCurrentItem();
     L.DomUtil.addClass(document.body, "leaflet-is-drawing");
     totalDistance = 0;
@@ -1526,6 +1695,7 @@ async function initializeMap() {
   });
 
   map.on(L.Draw.Event.DRAWSTOP, function () {
+    window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
     distanceLabels.forEach((label) => map.removeLayer(label));
     distanceLabels = [];
@@ -1541,14 +1711,8 @@ async function initializeMap() {
     }
   });
 
-  // Leaflet.draw handles Escape for draw tools internally, but not for edit/delete mode.
-  document.addEventListener("keyup", (e) => {
-    if (e.key !== "Escape") return;
-    const editToolbar = drawControl._toolbars[L.EditToolbar.TYPE];
-    if (editToolbar?.enabled()) editToolbar.disable();
-  });
-
   map.on(L.Draw.Event.DELETESTART, () => {
+    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
     isDeleteMode = true;
     deselectCurrentItem();
     editableLayers.eachLayer((layer) => {
@@ -1561,6 +1725,7 @@ async function initializeMap() {
   });
 
   map.on(L.Draw.Event.DELETESTOP, () => {
+    window.app.deactivateMode("draw-tools");
     isDeleteMode = false;
     updateDrawControlStates();
     editableLayers.eachLayer((layer) => {
@@ -1581,6 +1746,7 @@ async function initializeMap() {
   });
 
   map.on(L.Draw.Event.EDITSTART, () => {
+    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
     isEditMode = true;
     deselectCurrentItem();
     if (selectedPathOutline) map.removeLayer(selectedPathOutline);
@@ -1590,6 +1756,7 @@ async function initializeMap() {
   });
 
   map.on(L.Draw.Event.EDITSTOP, () => {
+    window.app.deactivateMode("draw-tools");
     isEditMode = false;
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
 

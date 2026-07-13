@@ -10,6 +10,16 @@ function escHtml(s) {
 }
 
 /**
+ * The single source of truth for what an unnamed item is called, by geometry
+ * type. Used everywhere a layer needs a name and has none yet.
+ * @param {L.Layer} layer - The Leaflet layer (Marker, Polygon, or Polyline)
+ * @returns {string} "Marker", "Area", or "Path"
+ */
+function getDefaultLayerName(layer) {
+  return layer instanceof L.Marker ? "Marker" : layer instanceof L.Polygon ? "Area" : "Path";
+}
+
+/**
  * Ensures the Google Maps API is loaded only once. Returns a promise that resolves
  * when the API is ready, handling concurrent load requests gracefully.
  * @returns {Promise<void>} Promise that resolves when the API is loaded
@@ -622,10 +632,7 @@ function createAndSaveMarker(lat, lon, name) {
     },
   };
 
-  // Add name if provided
-  if (markerName) {
-    newMarker.feature.properties.name = markerName;
-  }
+  newMarker.feature.properties.name = markerName || getDefaultLayerName(newMarker);
 
   drawnItems.addLayer(newMarker);
   editableLayers.addLayer(newMarker);

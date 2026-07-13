@@ -326,6 +326,21 @@ body.glass-mode .swal2-container /* in glass mode, SweetAlert uses the same styl
   font-family: "Roboto", sans-serif !important;
   /* Forcefully remove blue highlight of button on mobile */
   -webkit-tap-highlight-color: transparent !important;
+  /* App, not a document: no text selection by default. Inputs/textareas
+     are exempt regardless; real content opts back in below. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Selectable content: dialogs (credits popup renders inside one), the
+   JSON editor, and route/path details. */
+.swal2-html-container,
+.CodeMirror,
+#info-panel-details,
+#routing-summary-container,
+#directions-list {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 a {
@@ -363,43 +378,11 @@ select:focus {
   filter: grayscale(100%);
 }
 
-/* Unified icon styling */
-
-/* 1. Center all icons in their button containers using flexbox */
-.leaflet-control-custom a,
-.leaflet-control-locate a,
-.leaflet-control-layers-toggle,
-.leaflet-control-zoom a,
-.leaflet-draw-toolbar a,
-.tab-button /* Also apply to tab buttons */ {
-  display: flex !important;
-  justify-content: center;
-  align-items: center;
-}
-
-/* 2. Remove default background image from leaflet.draw icons */
-.leaflet-draw-toolbar a {
-  background-image: none !important;
-}
-
-/* Clear style for disabled draw buttons */
-.leaflet-draw-toolbar a.leaflet-disabled {
-  background-color: var(--background2-color) !important;
-  cursor: not-allowed;
-}
-/* Highlight icon in active draw tools and open toolbar panels */
-.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols,
-#layers-button.active .material-symbols,
-#download-button.active .material-symbols,
-#import-button.active .material-symbols {
-  color: var(--highlight-color);
-}
-
 /* Main container for all right-side panels */
 #main-right-container {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
-  right: calc(env(safe-area-inset-right) + 10px);
+  right: 10px;
   width: 340px;
   z-index: 1000;
   display: flex;
@@ -633,6 +616,14 @@ select:focus {
   position: absolute;
   left: 5px;
   bottom: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* "Mixed colors" indicator shown when a bulk selection has no common color */
+#info-panel-color-swatch .material-symbols {
+  font-size: var(--icon-size-16) !important;
 }
 
 /* Hide color swatch when picker is open */
@@ -867,7 +858,7 @@ select:focus {
 .overview-save-btn,
 .overview-header-visibility-btn,
 .overview-header-delete-btn,
-.overview-header-arrow,
+.overview-header-duplicate-btn,
 .overview-icon-spacer {
   width: 32px;
   display: flex;
@@ -875,7 +866,6 @@ select:focus {
   align-items: center;
   cursor: pointer;
   line-height: 1;
-  user-select: none;
   flex-shrink: 0;
   color: var(--text-color);
 }
@@ -884,12 +874,22 @@ select:focus {
   cursor: default;
 }
 
+.overview-header-arrow {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  color: var(--text-color);
+}
+
 .overview-visibility-btn .material-symbols,
 .overview-duplicate-btn .material-symbols,
 .overview-delete-btn .material-symbols,
 .overview-save-btn .material-symbols,
 .overview-header-visibility-btn .material-symbols,
 .overview-header-delete-btn .material-symbols,
+.overview-header-duplicate-btn .material-symbols,
 .overview-header-arrow .material-symbols {
   font-size: var(--icon-size-20) !important;
 }
@@ -905,7 +905,8 @@ select:focus {
 .overview-list-item:last-child {
   border-bottom: none !important;
 }
-.overview-list-item.selected {
+.overview-list-item.selected,
+.overview-list-item.rectangle-selected {
   background-color: var(--highlight-color);
 }
 
@@ -926,7 +927,6 @@ select:focus {
   display: flex;
   align-items: center;
   cursor: pointer;
-  user-select: none;
 }
 
 #overview-panel-list .overview-list-header:first-child {
@@ -1225,7 +1225,6 @@ select:focus {
   font-weight: normal;
   background-color: var(--background-color);
   cursor: pointer;
-  user-select: none;
   font-size: var(--font-size-12);
   border-bottom: 1px solid var(--border-color);
   box-sizing: border-box;
@@ -1587,7 +1586,6 @@ button.strava-button-secondary:not(:disabled) {
 /* Only apply pointer cursor to labels in items that contain a checkbox */
 #settings-panel .settings-control-item:has(input[type="checkbox"]) label {
   cursor: pointer;
-  user-select: none; /* Prevent text selection on click */
 }
 #settings-panel .settings-control-item input[type="checkbox"] {
   vertical-align: middle;
@@ -1832,11 +1830,6 @@ button.strava-button-secondary:not(:disabled) {
   fill: var(--text-color);
   font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
   font-size: var(--font-size-10);
-  /* Prevent text from being selected on drag */
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
 }
 
 .material-symbols.elevation-action-icon {
@@ -1863,8 +1856,8 @@ button.strava-button-secondary:not(:disabled) {
 /* Main popup container */
 .swal2-container {
   padding-top: calc(var(--swal2-container-padding) + env(safe-area-inset-top)) !important;
-  padding-left: calc(var(--swal2-container-padding) + env(safe-area-inset-left)) !important;
-  padding-right: calc(var(--swal2-container-padding) + env(safe-area-inset-right)) !important;
+  padding-left: var(--swal2-container-padding) !important;
+  padding-right: var(--swal2-container-padding) !important;
 }
 
 .swal2-popup {
@@ -1880,7 +1873,13 @@ button.strava-button-secondary:not(:disabled) {
   padding-bottom: 0 !important;
 }
 
-.swal-no-actions {
+/* Restores bottom padding whenever a normal (non-toast) popup hides its
+   actions row (no confirm/cancel/deny button - e.g. a timer-only dialog).
+   SweetAlert2 never removes .swal2-actions, it only sets its inline display
+   to "none", so we can detect that directly instead of adding a class to
+   every such call. Toasts are excluded - they carry .swal2-popup too, but
+   are compact by design and shouldn't get this extra padding. */
+.swal2-popup:not(.swal2-toast):has(.swal2-actions[style*="display: none"]) {
   padding-bottom: 10px !important;
 }
 
@@ -2184,7 +2183,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   overflow-y: auto;
   width: 300px;
   max-width: calc(100vw - 51px - 10px);
-  user-select: none;
 }
 
 /* Form content inside the panel */
@@ -2261,7 +2259,10 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   z-index: 4000;
 }
 
-/* Style for the download submenu */
+/* Style for the download submenu: one row per format (GPX/GeoJSON/KML/Share
+   Link), each with a label plus a "Selected" and an "All" button. overflow:
+   hidden clips everything inside to the outer border-radius, so individual
+   rows/buttons never need their own corner-rounding rules. */
 .leaflet-control-custom .download-submenu {
   background-color: var(--background-color);
   border: 1px solid var(--border-color);
@@ -2273,28 +2274,47 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   white-space: nowrap;
   z-index: 1000;
   color: var(--text-color) !important;
+  overflow: hidden;
 }
 
-.download-submenu button {
-  border-bottom: 1px solid var(--border-color) !important;
-  height: 30px !important;
+/* Rows share one grid so their label/button column boundaries always line
+   up, even though each row's button text (and thus natural width) differs -
+   the same alignment a <table> would give, without the border-radius
+   clipping issues a real table would bring. Each row is a real box (using
+   subgrid to inherit the parent's column tracks) rather than display:contents,
+   which has inconsistent rendering across browsers. */
+.download-rows {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
 }
 
-.download-submenu button:last-child {
-  border: none !important;
+.download-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.download-row:last-child {
+  border-bottom: none;
+}
+
+.download-row-label {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  font-size: var(--font-size-12);
 }
 
 .leaflet-control-custom .download-submenu button {
   background: none;
   border: none;
+  border-left: 1px solid var(--border-color);
   cursor: pointer;
-  display: block;
   font-size: var(--font-size-12);
   padding: 5px 10px;
-  text-align: left;
-  width: 100%;
   color: var(--text-color);
-  overflow: hidden !important;
+  height: 30px;
 }
 
 .download-submenu button:disabled {
@@ -2303,26 +2323,63 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   cursor: not-allowed;
 }
 
-/* Rounds the top corners of the first button */
-.download-submenu button:first-child {
-  border-top-left-radius: 7px;
-  border-top-right-radius: 7px;
+/* Strava-original row: its one button spans both button columns, since
+   there's no "All" counterpart. */
+#download-strava-row button {
+  grid-column: span 2;
 }
 
-/* Rounds the bottom corners of the last button */
-.download-submenu button:last-child {
-  border-bottom-left-radius: 7px;
-  border-bottom-right-radius: 7px;
+/* Only the button text is tinted with Strava's brand color, same treatment
+   as the Strava panel's own buttons and the info panel's Strava link - the
+   "GPX" label keeps the normal text color, like every other row's label. */
+#download-gpx-strava-original {
+  color: var(--strava-color);
 }
 
 /* Main ui layout */
 .leaflet-left {
-  left: calc(env(safe-area-inset-left) + 10px);
+  left: 10px;
   margin-top: calc(env(safe-area-inset-top) + 10px);
 }
 /* Prevent bottom-left controls from overlapping toolbar */
 .leaflet-bottom.leaflet-left {
   z-index: 500;
+}
+
+/* Unified icon styling */
+
+/* 1. Center all icons in their button containers using flexbox. Use ">"
+   (not a plain descendant selector) on .leaflet-control-custom so this
+   centers only the control's own icon link - not the nested
+   .leaflet-draw-actions menu items further below, which need left-aligned
+   text instead. */
+.leaflet-control-custom > a,
+.leaflet-control-locate a,
+.leaflet-control-layers-toggle,
+.leaflet-control-zoom a,
+.leaflet-draw-toolbar a,
+.tab-button /* Also apply to tab buttons */ {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 2. Remove default background image from leaflet.draw icons */
+.leaflet-draw-toolbar a {
+  background-image: none !important;
+}
+
+/* Clear style for disabled draw buttons */
+.leaflet-draw-toolbar a.leaflet-disabled {
+  background-color: var(--background2-color) !important;
+  cursor: not-allowed;
+}
+/* Highlight icon in active draw tools and open toolbar panels */
+.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols,
+#layers-button.active .material-symbols,
+#download-button.active .material-symbols,
+#import-button.active .material-symbols {
+  color: var(--highlight-color);
 }
 
 /* Toolbar styles */
@@ -2352,20 +2409,50 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   border-radius: 50px 50px 0 0 !important;
 }
 .leaflet-left > .leaflet-bar:last-child a,
-#map > div.leaflet-control-container > div.leaflet-top.leaflet-left > div:nth-child(6) {
+#map > div.leaflet-control-container > div.leaflet-top.leaflet-left > div:nth-child(7) {
   border-radius: 0 0 50px 50px !important;
 }
 
 .leaflet-touch .leaflet-draw-actions {
   left: 40px;
+}
+
+/* Stack action buttons vertically below the tool button, like the download
+   submenu, instead of leaflet-draw's default side-by-side bar. Width stays
+   shrink-to-fit (not fixed) so the menu takes no more horizontal space than
+   its own longest label needs - important on narrow mobile screens. */
+.leaflet-draw-actions {
   border: 1px solid var(--border-color) !important;
   border-radius: var(--border-radius);
   overflow: hidden;
 }
+.leaflet-draw-actions li {
+  display: block;
+}
+.leaflet-draw-actions li:first-child a,
+.leaflet-draw-actions li:last-child a {
+  border-radius: 0;
+}
 .leaflet-draw-actions a,
-.leaflet-draw-actions a:hover {
+.leaflet-draw-actions a:hover,
+.leaflet-draw-actions a:focus {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   background-color: var(--background-color);
   color: var(--text-color);
+  text-align: left;
+  border-left: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+.leaflet-draw-actions li:last-child a {
+  border-bottom: none !important;
+}
+.leaflet-draw-actions a.leaflet-disabled,
+.leaflet-draw-actions a.leaflet-disabled:hover {
+  color: var(--text-color);
+  background-color: var(--background2-color);
+  cursor: not-allowed;
 }
 
 /* Style for disabled custom buttons */
@@ -2377,6 +2464,19 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 .leaflet-control-custom.disabled .icon {
   fill: var(--icon-color) !important;
+}
+
+/* Rectangle select tool (marquee multi-select) */
+#rectangle-select-button.active .material-symbols {
+  color: var(--highlight-color);
+}
+/* Unlike leaflet-draw's own toolbars (whose actions list is a sibling of
+   .leaflet-bar), this one lives inside a .leaflet-bar control, so it also
+   picks up core Leaflet's ".leaflet-touch .leaflet-bar a" rule (width: 30px),
+   which outranks the general ".leaflet-draw-actions a" width rule above on
+   specificity - restate it here with an ID selector so it wins outright. */
+#rectangle-select-button .leaflet-draw-actions a {
+  width: 100%;
 }
 
 /* Border around the toolbar */
@@ -2424,7 +2524,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 #top-right-container {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 10px);
-  right: calc(env(safe-area-inset-right) + 10px);
+  right: 10px;
   z-index: 1001;
   display: flex;
   flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
@@ -2534,7 +2634,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   cursor: pointer;
   color: var(--text-color-secondary);
   flex-shrink: 0;
-  user-select: none;
   transition: color 0.15s;
 }
 
@@ -2551,7 +2650,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   cursor: pointer;
   color: var(--text-color-secondary);
   flex-shrink: 0;
-  user-select: none;
   transition: color 0.15s;
 }
 
@@ -2569,7 +2667,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   font-size: 18px;
   cursor: pointer;
   color: var(--text-color-secondary);
-  user-select: none;
   line-height: 1;
 }
 
@@ -2783,8 +2880,8 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 
 #map-attribution {
   position: absolute;
-  bottom: env(safe-area-inset-bottom, 0px);
-  right: env(safe-area-inset-right, 0px);
+  bottom: 0px;
+  right: 0px;
   z-index: 499; /* Below #bottom-left-credits (500) */
   font-size: 10px;
   padding: 2.5px 5px;
@@ -2928,6 +3025,13 @@ body.using-touch {
   }
 }
 
+/* Hide the leaflet draw tooltips while hovering topleft buttons or their
+   submenus (e.g. the download menu's rows/buttons aren't <a> tags, so this
+   has to match any hovered descendant, not just a:hover). */
+body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
+  display: none !important;
+}
+
 /* FONTS */
 /*
  * ███████╗ ██████╗ ███╗   ██╗████████╗███████╗
@@ -2950,7 +3054,7 @@ body.using-touch {
 /*
   Current icon subset — update this list when adding new icons, then regenerate the font.
   Paste it as-is into the URL below (replacing ICONS):
-  add,add_circle,autorenew,cabin,camping,cancel,category,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,mountain_flag,my_location,outdoor_grill,park,pedal_bike,playground,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
+  add,add_circle,autorenew,cabin,camping,cancel,category,chair,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,ink_selection,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,mountain_flag,my_location,outdoor_grill,park,pedal_bike,playground,question_mark,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
 
   To verify the list is complete, run in DevTools console (copies to clipboard):
   copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))
@@ -3028,24 +3132,13 @@ body.using-touch {
  * ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚══════╝╚══════╝
  */
 
-/* Applies styles for devices with a coarse pointer (e.g., a finger on a touchscreen). */
-@media (pointer: coarse) {
-  /* Fix the behavior where a long-press incorrectly selects UI text on touch devices */
-  * {
-    -webkit-user-select: none; /* Safari on iOS/iPadOS */
-    -moz-user-select: none; /* Firefox */
-    -ms-user-select: none; /* Internet Explorer/Edge */
-    user-select: none; /* Standard */
-  }
-}
-
 @media (max-width: 768px) {
   :root {
     --sheet-handle-height: 40px; /* sheet-handle haight plus its vertical margin */
     --swal2-html-container-padding: 16px 13px 5px;
     --mobile-main-right-container-visible-height: min(
       260px,
-      calc(100dvh - env(safe-area-inset-top) - 370px)
+      calc(100dvh - env(safe-area-inset-top) - 400px)
     );
     --mobile-main-right-container-top: calc(
       100vh - var(--mobile-main-right-container-visible-height)
@@ -3080,7 +3173,7 @@ body.using-touch {
     #offline-indicator {
       position: fixed;
       top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
-      right: calc(env(safe-area-inset-right) + 10px);
+      right: 10px;
       width: 190px;
       max-width: calc(100vw - 81px);
     }
@@ -3210,7 +3303,7 @@ body.using-touch {
     }
 
     /* Hide the info panel when no item is selected */
-    #info-panel:has(#info-panel-name[style*="display: none"]) {
+    #info-panel.no-selection {
       display: none;
     }
 
