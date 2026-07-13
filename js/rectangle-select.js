@@ -182,16 +182,6 @@
     });
   }
 
-  // --- Highlight: recolors the item itself, no separate outline layer ---
-
-  function applyHighlight(layer, highlightColor) {
-    applyLayerHighlight(layer, highlightColor);
-  }
-
-  function clearHighlight(layer) {
-    resetLayerStyle(layer);
-  }
-
   function syncOverviewHighlight() {
     const selectedIds = new Set(Array.from(selectedLayers, (layer) => L.Util.stamp(layer)));
     document
@@ -277,7 +267,7 @@
 
   // Applies a color to every selected layer's data. Doesn't touch the on-map
   // style - selected layers stay in the blue selection highlight until
-  // deselected, at which point clearHighlight() picks up the new color.
+  // deselected, at which point resetLayerStyle() picks up the new color.
   function applyBulkColor(hex) {
     selectedLayers.forEach((layer) => {
       layer.feature = layer.feature || {};
@@ -288,11 +278,11 @@
 
   function setSelection(newSet) {
     selectedLayers.forEach((layer) => {
-      if (!newSet.has(layer)) clearHighlight(layer);
+      if (!newSet.has(layer)) resetLayerStyle(layer);
     });
     const highlightColor = getHighlightColor();
     newSet.forEach((layer) => {
-      if (!selectedLayers.has(layer)) applyHighlight(layer, highlightColor);
+      if (!selectedLayers.has(layer)) applyLayerHighlight(layer, highlightColor);
     });
     selectedLayers.clear();
     newSet.forEach((layer) => selectedLayers.add(layer));
