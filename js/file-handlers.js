@@ -18,16 +18,24 @@
 
 /**
  * Checks whether a closed ring of [lng, lat, ele?] coordinates winds
- * clockwise, using the shoelace formula.
+ * clockwise, using the shoelace formula. Longitudes are unwrapped as the
+ * ring is walked - a >180 degree jump between consecutive vertices is
+ * treated as an antimeridian crossing rather than an actual half-world
+ * step - so the result stays correct for rings that cross +/-180 degrees.
  * @param {Array} ring - Closed ring coordinates (first and last equal)
  * @returns {boolean} True if the ring winds clockwise
  */
 function isRingClockwise(ring) {
   let sum = 0;
+  let x1 = ring[0][0];
   for (let i = 0; i < ring.length - 1; i++) {
-    const [x1, y1] = ring[i];
-    const [x2, y2] = ring[i + 1];
+    const y1 = ring[i][1];
+    const y2 = ring[i + 1][1];
+    let x2 = ring[i + 1][0];
+    if (x2 - x1 > 180) x2 -= 360;
+    else if (x2 - x1 < -180) x2 += 360;
     sum += (x2 - x1) * (y2 + y1);
+    x1 = x2;
   }
   return sum > 0;
 }
