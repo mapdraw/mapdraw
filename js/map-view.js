@@ -55,12 +55,19 @@ async function initMapView() {
 
   map = L.map("map", {
     center: [0, 0],
-    zoom: 2,
+    zoom: 4,
     zoomControl: false,
     attributionControl: false,
     doubleClickZoom: true,
     boxZoom: false,
-    worldCopyJump: true,
+    worldCopyJump: false, // Redundant with maxBounds
+    // Locked to a single world copy so every click and drawn point stays within ±180° longitude.
+    minZoom: 4,
+    maxBounds: [
+      [-90, -180],
+      [90, 180],
+    ],
+    maxBoundsViscosity: 1.0,
   });
 
   initAttribution();
