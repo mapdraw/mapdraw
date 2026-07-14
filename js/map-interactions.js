@@ -212,6 +212,20 @@ function initClickToDeselect() {
 }
 
 /**
+ * Delete/Backspace deletes the currently selected item, unless focus is in
+ * a text field.
+ */
+function initDeleteKeyShortcut() {
+  document.addEventListener("keydown", (e) => {
+    if (e.target.matches("input, textarea")) return;
+    if ((e.key === "Delete" || e.key === "Backspace") && globallySelectedItem) {
+      e.preventDefault();
+      deleteLayerImmediately(globallySelectedItem);
+    }
+  });
+}
+
+/**
  * Deselects the currently selected item and cleans up all associated UI elements
  * (outlines, elevation profile, info panel, etc.).
  */
