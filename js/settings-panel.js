@@ -5,6 +5,21 @@
 // line thickness, routing/elevation providers, and the about/legal/dev links.
 
 /**
+ * Updates currently displayed UI elements that show units (routing panel, info panel)
+ * when the user toggles between metric and imperial units.
+ */
+function updateAllDynamicUnitDisplays() {
+  const selected = getEffectiveSelectedLayer();
+  if (selected) {
+    showInfoPanel(selected);
+  }
+
+  if (window.app && typeof window.app.redisplayCurrentRoute === "function") {
+    window.app.redisplayCurrentRoute();
+  }
+}
+
+/**
  * Populates the settings panel with all its toggles, selects, and links.
  */
 function initSettingsPanel() {
