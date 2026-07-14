@@ -96,18 +96,14 @@ async function initApp() {
   useImperialUnits = localStorage.getItem("useImperialUnits") === "true";
 
   initInfoPanel();
-
   initTabNavigation();
 
   const baseMaps = await initMapView();
-
   initLayerControlPanel(baseMaps);
-
   initLocateControl();
 
-  // The scale bar is re-created on the imperial-units toggle (see settings
-  // panel below), so its setup stays inline here rather than in its own
-  // file, to keep both creation sites next to each other for now.
+  // Re-created in settings-panel.js's imperial-units toggle handler, so
+  // this initial creation stays inline here rather than in its own file.
   scaleControl = L.control
     .scale({
       position: "bottomleft",
@@ -117,7 +113,6 @@ async function initApp() {
     .addTo(map);
 
   L.control.zoom({ position: "topleft" }).addTo(map);
-
   window.app.initRectangleSelect(map);
 
   initTopButtons();
@@ -140,9 +135,7 @@ async function initApp() {
   initSettingsPanel();
 
   initCreditsTrigger();
-
   initPwaInstall();
-
   initBottomSheet();
 
   const uiContainers = [
@@ -166,6 +159,7 @@ async function initApp() {
   setTimeout(replaceDefaultIconsWithMaterialSymbols, 0);
   resetInfoPanel();
 
+  // Preload images so they appear instantly when needed later
   window.addEventListener(
     "load",
     () => {
@@ -180,6 +174,3 @@ async function initApp() {
 }
 
 document.addEventListener("DOMContentLoaded", initApp);
-
-// console.log("User Agent:", navigator.userAgent);
-// console.log("Leaflet Version:", L.version);
