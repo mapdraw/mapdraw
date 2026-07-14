@@ -343,11 +343,6 @@ function initLayerControlPanel(baseMaps) {
 
   customPanel.addEventListener("click", function (e) {
     if (e.target && e.target.classList.contains("leaflet-control-layers-selector")) {
-      if (L.DomUtil.hasClass(e.target, "leaflet-disabled-interaction")) {
-        L.DomEvent.stop(e);
-        return;
-      }
-
       const selectedLayerId = parseInt(e.target.dataset.layerId, 10);
       const isRadio = e.target.type === "radio";
 
@@ -369,11 +364,14 @@ function initLayerControlPanel(baseMaps) {
           if (L.Util.stamp(layer) === selectedLayerId) {
             if (e.target.checked) {
               map.addLayer(layer);
+              // Only "Drawn Items" can have active leaflet-draw editing to resume.
+              if (name === "DrawnItems") setGroupEditingEnabled(layer, true);
               onOverlayToggle({ type: "overlayadd", layer: layer });
               addOverlayAttribution(name);
               // Reapply z-index to ensure layer respects list order
               reapplyOverlayZIndex();
             } else {
+              if (name === "DrawnItems") setGroupEditingEnabled(layer, false);
               map.removeLayer(layer);
               onOverlayToggle({ type: "overlayremove", layer: layer });
               removeOverlayAttribution(name);

@@ -200,7 +200,8 @@ function initDrawTools() {
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
 
     editableLayers.eachLayer((layer) => {
-      if (!map.hasLayer(layer) && !layer.isManuallyHidden) {
+      // Skip if the whole "Drawn Items" category is hidden, not just this item.
+      if (map.hasLayer(drawnItems) && !map.hasLayer(layer) && !layer.isManuallyHidden) {
         map.addLayer(layer);
       }
       layer.isDeletedFromToolbar = false;

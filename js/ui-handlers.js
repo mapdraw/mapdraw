@@ -7,6 +7,22 @@
 // Persistent state for collapsed categories in the overview list
 const collapsedCategories = new Set();
 
+// Suspend/resume leaflet-draw editing around a layer's removal/re-add, so its edit
+// highlight and vertex handles survive - restricted to editableLayers members only.
+function setLayerEditingEnabled(layer, enabled) {
+  if (!layer || !layer.editing || !editableLayers.hasLayer(layer)) return;
+  if (enabled) {
+    if (isEditMode) layer.editing.enable();
+  } else {
+    layer.editing.disable();
+  }
+}
+
+// Same as above, applied to a whole group (category eye button, Layers panel checkbox).
+function setGroupEditingEnabled(layerGroup, enabled) {
+  layerGroup.eachLayer((layer) => setLayerEditingEnabled(layer, enabled));
+}
+
 /**
  * Toggles a layer's manual visibility flag and shows/hides it on the map accordingly,
  * respecting whether its parent category group is currently visible.
@@ -19,9 +35,7 @@ function toggleLayerVisibility(layerToToggle) {
   layerToToggle.isManuallyHidden = !layerToToggle.isManuallyHidden;
 
   if (layerToToggle.isManuallyHidden) {
-    // Disable editing before hiding (no-op if not editing) - otherwise a marker's edit
-    // highlight gets stuck once its icon is rebuilt on the next show.
-    if (layerToToggle.editing) layerToToggle.editing.disable();
+    setLayerEditingEnabled(layerToToggle, false);
 
     // Hide the layer and its potential outline
     map.removeLayer(layerToToggle);
@@ -59,8 +73,7 @@ function toggleLayerVisibility(layerToToggle) {
         if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
       }
 
-      // Resume editing, but only if Edit mode is still active
-      if (isEditMode && layerToToggle.editing) layerToToggle.editing.enable();
+      setLayerEditingEnabled(layerToToggle, true);
     }
   }
 
@@ -446,12 +459,14 @@ function updateOverviewList() {
           e.stopPropagation();
           const isRemoving = map.hasLayer(layerGroup);
           if (isRemoving) {
+            if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, false);
             map.removeLayer(layerGroup);
             if (key === "DrawnItems" && currentRoutePath) {
               map.removeLayer(currentRoutePath);
             }
           } else {
             map.addLayer(layerGroup);
+            if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, true);
             if (key === "DrawnItems" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
               map.addLayer(currentRoutePath);
             }

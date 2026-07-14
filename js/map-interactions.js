@@ -485,21 +485,6 @@ function updateDrawControlStates() {
       L.DomUtil.addClass(deleteControlContainer, "leaflet-disabled");
     }
   }
-
-  const layerSelectors = document.querySelectorAll(
-    "#custom-layers-panel .leaflet-control-layers-selector",
-  );
-  if (isEditMode || isDeleteMode) {
-    layerSelectors.forEach((selector) => {
-      L.DomUtil.addClass(selector, "leaflet-disabled-interaction");
-      selector.disabled = true;
-    });
-  } else {
-    layerSelectors.forEach((selector) => {
-      L.DomUtil.removeClass(selector, "leaflet-disabled-interaction");
-      selector.disabled = false;
-    });
-  }
 }
 /**
  * Deletes a layer and its associated data immediately from all groups and the UI.
