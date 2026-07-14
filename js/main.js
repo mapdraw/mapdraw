@@ -115,7 +115,7 @@ async function initApp() {
   L.control.zoom({ position: "topleft" }).addTo(map);
   window.app.initRectangleSelect(map);
 
-  initTopButtons();
+  initTopRightButtons();
   initDeleteKeyShortcut();
 
   window.elevationProfile.createElevationChart("elevation-div", useImperialUnits);

@@ -4,7 +4,7 @@
  * Wires up the mobile bottom-sheet drag handle (tap or swipe) to open/close
  * the right panel container. This toggles the same #main-right-container
  * "hidden" class and #sidebar-toggle-btn state as the desktop sidebar
- * toggle button in top-buttons.js - two separate input affordances (touch
+ * toggle button in top-right-buttons.js - two separate input affordances (touch
  * gesture vs. click) for the same panel, kept in separate files since they
  * live in different parts of the DOM and target different device contexts.
  */

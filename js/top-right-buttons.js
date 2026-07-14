@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
-// Top Buttons
+// Top Right Buttons
 // Wires up the fullscreen, sidebar toggle, POI finder, and search buttons.
 
 /**
  * Creates the fullscreen, sidebar toggle, POI finder, and search buttons.
  */
-function initTopButtons() {
+function initTopRightButtons() {
   // Fullscreen button
   const fullscreenBtn = document.getElementById("fullscreen-btn");
 
