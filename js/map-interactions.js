@@ -197,6 +197,21 @@ function syncSelectedDownloadButtonsState() {
 }
 
 /**
+ * Clicking empty map background (not a layer/marker/control) deselects the
+ * current item.
+ */
+function initClickToDeselect() {
+  map.on("click", (e) => {
+    if (
+      e.originalEvent.target.id === "map" ||
+      e.originalEvent.target.classList.contains("leaflet-container")
+    ) {
+      deselectCurrentItem();
+    }
+  });
+}
+
+/**
  * Deselects the currently selected item and cleans up all associated UI elements
  * (outlines, elevation profile, info panel, etc.).
  */
