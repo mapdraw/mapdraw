@@ -74,20 +74,6 @@ let map,
   scaleControl;
 
 /**
- * Adjusts the height of the info panel's name textarea to fit its content,
- * up to a maximum of approximately three lines.
- * @param {HTMLTextAreaElement} textarea - The textarea element to resize
- */
-function adjustInfoPanelNameHeight(textarea) {
-  const heightLimit = 75;
-
-  textarea.style.height = "auto";
-  textarea.style.height = `${Math.min(textarea.scrollHeight, heightLimit)}px`;
-  textarea.style.overflowY = textarea.scrollHeight > heightLimit ? "auto" : "hidden";
-  textarea.scrollTop = 0;
-}
-
-/**
  * Updates currently displayed UI elements that show units (routing panel, info panel)
  * when the user toggles between metric and imperial units.
  */
@@ -203,35 +189,7 @@ async function initApp() {
 
   useImperialUnits = localStorage.getItem("useImperialUnits") === "true";
 
-  infoPanel = document.getElementById("info-panel");
-  infoPanelName = document.getElementById("info-panel-name");
-  infoPanelDetails = document.getElementById("info-panel-details");
-  infoPanelStyleRow = document.getElementById("info-panel-style-row");
-  infoPanelColorSwatch = document.getElementById("info-panel-color-swatch");
-  infoPanelLayerName = document.getElementById("info-panel-layer-name");
-  colorPicker = document.getElementById("color-picker");
-
-  infoPanelName.addEventListener("blur", () => {
-    updateLayerName();
-    adjustInfoPanelNameHeight(infoPanelName);
-  });
-  infoPanelName.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      updateLayerName();
-      infoPanelName.blur();
-      e.preventDefault();
-    }
-  });
-
-  infoPanelName.addEventListener("input", () => adjustInfoPanelNameHeight(infoPanelName));
-
-  infoPanelColorSwatch.addEventListener("click", () => {
-    const isPickerVisible =
-      colorPicker.style.display === "grid" || colorPicker.style.display === "block";
-    colorPicker.style.display = isPickerVisible ? "none" : "grid";
-  });
-
-  populateColorPicker();
+  initInfoPanel();
 
   const tabButtons = document.querySelectorAll(".tab-button");
   const tabPanels = document.querySelectorAll(".tab-panel");
@@ -357,20 +315,6 @@ async function initApp() {
       showCreditsPopup();
     }
   });
-
-  const infoPanelObserver = new MutationObserver(() => {
-    if (infoPanelName) {
-      adjustInfoPanelNameHeight(infoPanelName);
-    }
-  });
-
-  infoPanelObserver.observe(infoPanel, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
-
-  document.addEventListener("penModeExited", () => adjustInfoPanelNameHeight(infoPanelName));
 
   initPwaInstall();
 
