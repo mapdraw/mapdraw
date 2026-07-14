@@ -407,10 +407,22 @@ select:focus {
   stroke-dasharray: none !important;
 }
 
-/* Round editing handles (vertex dots shown when editing shapes) */
+/* Path/area vertex + mid-segment handles (.leaflet-editing-middle-icon from leaflet-draw-patches.js) */
 .leaflet-editing-icon,
-.leaflet-middle-icon {
+.leaflet-editing-middle-icon {
   border-radius: 50%;
+  background-color: var(--color-white);
+  border: none;
+}
+
+.leaflet-editing-middle-icon {
+  opacity: 0.75 !important;
+}
+
+/* Drag highlight box around a marker in edit mode (overrides leaflet-draw's default pink) */
+.leaflet-edit-marker-selected {
+  background-color: transparent;
+  border-color: var(--highlight-color);
 }
 
 #sheet-handle {

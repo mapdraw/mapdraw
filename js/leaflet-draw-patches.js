@@ -61,3 +61,23 @@ if (L.EditToolbar && L.EditToolbar.Edit) {
 if (L.Polyline && L.LineUtil && L.LineUtil.isFlat) {
   L.Polyline._flat = L.LineUtil.isFlat;
 }
+
+// Mid-segment "add point" handles share the exact same classes as real vertex handles;
+// leaflet-draw tells them apart only by an inline opacity set on creation, giving CSS no
+// selector to target them separately. Tag them with a real .leaflet-editing-middle-icon class
+// instead, so they can be styled or annotated independently of real vertex handles.
+if (L.Edit && L.Edit.PolyVerticesEdit) {
+  const origCreateMiddleMarker = L.Edit.PolyVerticesEdit.prototype._createMiddleMarker;
+  L.Edit.PolyVerticesEdit.prototype._createMiddleMarker = function (marker1, marker2) {
+    origCreateMiddleMarker.call(this, marker1, marker2);
+    const marker = marker1._middleRight;
+    // On initial edit-mode entry the marker group isn't added to the map yet at this
+    // point (leaflet-draw does that right after _initMarkers() finishes), so the icon
+    // element doesn't exist until the marker's own "add" event fires.
+    if (marker._icon) {
+      L.DomUtil.addClass(marker._icon, "leaflet-editing-middle-icon");
+    } else {
+      marker.once("add", () => L.DomUtil.addClass(marker._icon, "leaflet-editing-middle-icon"));
+    }
+  };
+}

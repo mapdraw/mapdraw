@@ -501,6 +501,7 @@
         color: getHighlightColor(),
         weight: 4,
         dashArray: "6,6",
+        lineCap: "square",
         fillOpacity: 0.12,
         interactive: false,
       }).addTo(map);
