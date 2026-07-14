@@ -717,8 +717,8 @@ select:focus {
 }
 
 .tab-button {
-  flex: 1;
-  padding: 8px 5px; /* Reduced padding slightly to help with spacing */
+  flex: 1 1 auto; /* Size to content first, then share leftover space equally */
+  padding: 8px 3px;
   font-size: var(--font-size-14);
   font-weight: bold;
   cursor: pointer;
@@ -728,7 +728,7 @@ select:focus {
   outline: none;
   color: var(--text-color);
   min-width: 0;
-  display: flex; /* Use flexbox for alignment */
+  display: flex;
   justify-content: center;
   align-items: center;
   height: 35px;
@@ -736,6 +736,7 @@ select:focus {
 
 .tab-button.active {
   border-bottom-color: var(--background-color);
+  background-color: var(--background-color);
 }
 
 #tab-btn-overview {
@@ -749,31 +750,43 @@ select:focus {
 }
 
 #tab-btn-strava {
-  flex: 0 0 60px; /* Don't grow, fixed width */
   border-radius: 0;
   border-right: none;
 }
 
 #tab-btn-data {
-  flex: 0 0 40px;
-  padding: 8px;
+  flex: 0 0 34px; /* Don't grow, fixed width */
+  padding: 6px;
   border-radius: 0;
 }
 
-/* Settings icon button has fixed size */
 #tab-btn-settings {
-  flex: 0 0 40px; /* Don't grow, fixed width */
-  padding: 8px;
-  border-radius: 0 var(--border-radius) 0 0;
-  border-right: 1px solid var(--border-color);
+  flex: 0 0 34px; /* Don't grow, fixed width */
+  padding: 6px;
+  border-radius: 0;
 }
 
-.tab-button.active {
-  background-color: var(--background-color);
-}
-
+/* Credits icon button: not a .tab-button since it opens a modal instead of switching panels */
 #tab-btn-credits {
-  display: none; /* Hidden by default on desktop */
+  display: flex;
+  flex: 0 0 34px; /* Don't grow, fixed width */
+  padding: 6px;
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--background2-color);
+  outline: none;
+  color: var(--text-color);
+  min-width: 0;
+  justify-content: center;
+  align-items: center;
+  height: 35px;
+  border-radius: 0 var(--border-radius) 0 0;
+}
+
+#tab-btn-credits .material-symbols {
+  color: var(--text-color);
 }
 
 #tab-content {
@@ -1197,10 +1210,6 @@ select:focus {
   cursor: not-allowed;
 }
 
-#routing-info-icon {
-  margin-left: 5px;
-}
-
 /* Directions Panel Styles */
 #directions-panel {
   margin-top: 10px;
@@ -1611,11 +1620,11 @@ button.strava-button-secondary:not(:disabled) {
   font-size: var(--font-size-14);
 }
 
-/* Shared styles for all panel info icons */
-#strava-info-icon,
+/* Shared styles for all inline info icons (routing tab, settings panel) */
+#routing-info-icon,
 .settings-info-icon {
   cursor: pointer;
-  margin-left: 5px;
+  margin-left: 2px;
 }
 
 /* Styles for the info icon in the settings panel */
@@ -3367,8 +3376,12 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
       border-right: none;
     }
 
-    #tab-btn-settings {
+    /* Wider tap targets on mobile than the compact desktop size */
+    #tab-btn-settings,
+    #tab-btn-credits {
       border-right: none;
+      flex: 0 0 40px;
+      padding: 8px;
     }
 
     #tab-btn-data {
@@ -3407,25 +3420,6 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
       content: "keyboard_arrow_up";
     }
 
-    #tab-btn-credits {
-      display: flex;
-      flex: 0 0 40px;
-      padding: 8px;
-      font-size: var(--font-size-14);
-      font-weight: bold;
-      cursor: pointer;
-      border: 1px solid var(--border-color);
-      background-color: var(--background2-color);
-      border-right: none;
-      outline: none;
-      min-width: 0;
-      justify-content: center;
-      align-items: center;
-      height: 35px;
-    }
-    #tab-btn-credits .material-symbols {
-      color: var(--text-color);
-    }
     /* Mobile Bottom Sheet Styles End */
   }
 }
