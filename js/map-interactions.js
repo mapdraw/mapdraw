@@ -197,6 +197,35 @@ function syncSelectedDownloadButtonsState() {
 }
 
 /**
+ * Clicking empty map background (not a layer/marker/control) deselects the
+ * current item.
+ */
+function initClickToDeselect() {
+  map.on("click", (e) => {
+    if (
+      e.originalEvent.target.id === "map" ||
+      e.originalEvent.target.classList.contains("leaflet-container")
+    ) {
+      deselectCurrentItem();
+    }
+  });
+}
+
+/**
+ * Delete/Backspace deletes the currently selected item, unless focus is in
+ * a text field.
+ */
+function initDeleteKeyShortcut() {
+  document.addEventListener("keydown", (e) => {
+    if (e.target.matches("input, textarea")) return;
+    if ((e.key === "Delete" || e.key === "Backspace") && globallySelectedItem) {
+      e.preventDefault();
+      deleteLayerImmediately(globallySelectedItem);
+    }
+  });
+}
+
+/**
  * Deselects the currently selected item and cleans up all associated UI elements
  * (outlines, elevation profile, info panel, etc.).
  */

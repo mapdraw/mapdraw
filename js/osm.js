@@ -500,7 +500,7 @@ async function osmSubmitNode(latlng, tags) {
   }
 }
 
-function initializeOSM(settingsPanel) {
+function initOSM(settingsPanel) {
   const osmContainer = L.DomUtil.create(
     "div",
     "settings-control-item osm-profile-item",

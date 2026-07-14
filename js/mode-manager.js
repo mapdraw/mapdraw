@@ -79,3 +79,22 @@
   window.app.isAnyModeActive = isAnyModeActive;
   window.app.canSelectLayer = canSelectLayer;
 })();
+
+function closePanelMode(id, hide) {
+  hide();
+  window.app.deactivateMode(id, "panels");
+}
+
+/**
+ * The hide callback also serves as mode-manager's onCancel, so a panel
+ * closes the same way whether the user re-clicks its own button or
+ * another panel takes over.
+ */
+function togglePanelMode(id, isVisible, show, hide) {
+  if (isVisible()) {
+    closePanelMode(id, hide);
+  } else {
+    window.app.activateMode(id, { group: "panels", onCancel: hide });
+    show();
+  }
+}

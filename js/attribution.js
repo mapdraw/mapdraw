@@ -47,7 +47,7 @@ function updateMapAttribution() {
   document.getElementById("map-attribution").innerHTML = parts.join("");
 }
 
-function initMapAttribution() {
+function initAttribution() {
   const el = document.createElement("div");
   el.id = "map-attribution";
   document.getElementById("map").appendChild(el);

@@ -553,7 +553,7 @@ function downloadOriginalStravaGpx(activityId, activityName) {
 /**
  * Initializes the Strava integration.
  */
-function initializeStrava() {
+function initStrava() {
   stravaPanelContent = document.getElementById("strava-panel-content");
   sessionStorage.removeItem("strava_access_token");
 
