@@ -1,6 +1,23 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 /**
+ * Opens the credits popup for any click on a .js-show-credits element
+ * anywhere in the map container (delegated, so it works for elements added
+ * after load too).
+ */
+function initCreditsTrigger() {
+  map.getContainer().addEventListener("click", (e) => {
+    const creditsTrigger = e.target.closest(".js-show-credits");
+
+    if (creditsTrigger) {
+      e.preventDefault();
+      e.stopPropagation();
+      showCreditsPopup();
+    }
+  });
+}
+
+/**
  * Fetches the credits content from an HTML file and displays it in a SweetAlert modal.
  * @param {boolean} [isWelcome=false] - If true, shows as a first-visit welcome popup with
  *   a "Let's Go!" button. If false, shows as the standard credits popup with a "Close" button.

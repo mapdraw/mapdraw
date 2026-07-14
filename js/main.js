@@ -139,15 +139,7 @@ async function initApp() {
   initContextMenu(map);
   initSettingsPanel();
 
-  map.getContainer().addEventListener("click", (e) => {
-    const creditsTrigger = e.target.closest(".js-show-credits");
-
-    if (creditsTrigger) {
-      e.preventDefault();
-      e.stopPropagation();
-      showCreditsPopup();
-    }
-  });
+  initCreditsTrigger();
 
   initPwaInstall();
 
