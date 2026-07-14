@@ -159,18 +159,8 @@ async function initApp() {
   setTimeout(replaceDefaultIconsWithMaterialSymbols, 0);
   resetInfoPanel();
 
-  // Preload images so they appear instantly when needed later
-  window.addEventListener(
-    "load",
-    () => {
-      const creditsIcon = new Image();
-      creditsIcon.src = "/img/icon-1024x1024.png";
-
-      const stravaButton = new Image();
-      stravaButton.src = "/img/btn_strava_connect_with_orange.svg";
-    },
-    { once: true },
-  );
+  // Preload the credits popup's content so it appears instantly when needed later
+  window.addEventListener("load", prefetchCreditsHtml, { once: true });
 }
 
 document.addEventListener("DOMContentLoaded", initApp);

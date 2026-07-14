@@ -17,6 +17,38 @@ function initCreditsTrigger() {
   });
 }
 
+let creditsHtmlPromise = null;
+
+/**
+ * Fetches credits.html, caching the in-flight promise so concurrent/later
+ * callers (welcome popup, tab button, prefetch) share a single request.
+ */
+function getCreditsHtml() {
+  if (!creditsHtmlPromise) {
+    creditsHtmlPromise = fetch("/credits.html")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+      })
+      .catch((error) => {
+        creditsHtmlPromise = null;
+        throw error;
+      });
+  }
+  return creditsHtmlPromise;
+}
+
+/**
+ * Warms the credits.html cache and its logo image ahead of time so opening
+ * the popup later is instant.
+ */
+function prefetchCreditsHtml() {
+  getCreditsHtml().catch(() => {});
+  new Image().src = "/img/icon-1024x1024.png";
+}
+
 /**
  * Fetches the credits content from an HTML file and displays it in a SweetAlert modal.
  * @param {boolean} [isWelcome=false] - If true, shows as a first-visit welcome popup with
@@ -24,11 +56,7 @@ function initCreditsTrigger() {
  */
 async function showCreditsPopup(isWelcome = false) {
   try {
-    const response = await fetch("/credits.html");
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const creditsHtmlContent = await response.text();
+    const creditsHtmlContent = await getCreditsHtml();
 
     const swalContent = document.createElement("div");
     swalContent.innerHTML = creditsHtmlContent;
