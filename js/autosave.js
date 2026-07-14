@@ -120,10 +120,11 @@ async function restoreAutosave() {
 
       if (geomType === "Point") {
         const coords = feature.geometry.coordinates;
-        const latlng =
+        const latlng = (
           coords.length > 2
             ? L.latLng(coords[1], coords[0], coords[2])
-            : L.latLng(coords[1], coords[0]);
+            : L.latLng(coords[1], coords[0])
+        ).wrap();
         layer = L.marker(latlng, {
           icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
         });

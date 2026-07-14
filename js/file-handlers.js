@@ -327,7 +327,7 @@ function importGeoJsonToMap(geoJsonData, fileType) {
     pointToLayer: (feature, latlng) => {
       const color = resolveColor(feature.properties);
 
-      const marker = L.marker(latlng, {
+      const marker = L.marker(latlng.wrap(), {
         icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
       });
       marker.feature = feature;
