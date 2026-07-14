@@ -374,59 +374,8 @@ async function initApp() {
 
   initPwaInstall();
 
-  const sheetHandle = document.getElementById("sheet-handle");
-  if (sheetHandle) {
-    const panelContainer = document.getElementById("main-right-container");
-    const toggleButton = document.getElementById("sidebar-toggle-btn");
+  initBottomSheet();
 
-    const openSheet = () => {
-      panelContainer.classList.remove("hidden");
-      if (toggleButton) {
-        toggleButton.classList.add("panels-visible");
-        toggleButton.classList.remove("panels-hidden");
-      }
-    };
-
-    const closeSheet = () => {
-      panelContainer.classList.add("hidden");
-      if (toggleButton) {
-        toggleButton.classList.remove("panels-visible");
-        toggleButton.classList.add("panels-hidden");
-      }
-    };
-
-    sheetHandle.addEventListener("click", () => {
-      if (panelContainer.classList.contains("hidden")) {
-        openSheet();
-      } else {
-        closeSheet();
-      }
-    });
-
-    let touchStartY = 0;
-    const swipeThreshold = 50;
-
-    sheetHandle.addEventListener(
-      "touchstart",
-      (e) => {
-        touchStartY = e.changedTouches[0].clientY;
-      },
-      { passive: true },
-    );
-
-    sheetHandle.addEventListener("touchend", (e) => {
-      const touchEndY = e.changedTouches[0].clientY;
-      const deltaY = touchEndY - touchStartY;
-
-      if (deltaY > swipeThreshold) {
-        closeSheet();
-      }
-
-      if (deltaY < -swipeThreshold) {
-        openSheet();
-      }
-    });
-  }
   const uiContainers = [
     document.getElementById("main-right-container"),
     document.getElementById("top-right-container"),
