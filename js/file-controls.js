@@ -251,4 +251,23 @@ function initFileControls() {
 
   new ImportControl().addTo(map);
   downloadControl = new DownloadControl({ position: "topleft" }).addTo(map);
+
+  document.addEventListener(
+    "click",
+    function (event) {
+      const downloadMenu = document.querySelector(".download-submenu");
+      const downloadButton = document.getElementById("download-button");
+
+      if (
+        downloadMenu &&
+        downloadButton &&
+        downloadMenu.style.display === "block" &&
+        !downloadButton.contains(event.target) &&
+        !downloadMenu.contains(event.target)
+      ) {
+        closePanelMode("download-menu", () => (downloadMenu.style.display = "none"));
+      }
+    },
+    true,
+  );
 }
