@@ -3,7 +3,7 @@
 // Context Menu Module
 // This module handles the right-click context menu on the map,
 // providing options to copy coordinates, set routing points, and edit on OpenStreetMap.
-function initializeContextMenu(map) {
+function initContextMenu(map) {
   const showMapContextMenu = (e) => {
     // latlng stays unwrapped for popup positioning (avoids jumping across world copies).
     // wrappedLatlng normalizes longitude to ±180 for all display and action use.

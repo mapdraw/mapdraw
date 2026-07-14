@@ -4,7 +4,7 @@
  * Initializes the routing functionality including routing control, markers,
  * user input handlers, and provider configuration.
  */
-function initializeRouting() {
+function initRouting() {
   const ROUTING_MARKER_HINT = "Drag to move, long-press to remove";
   let routingControl,
     startMarker,

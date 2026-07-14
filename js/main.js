@@ -220,9 +220,9 @@ function togglePanelMode(id, isVisible, show, hide) {
 }
 
 /**
- * Initializes the map and all its components (layers, controls, event handlers).
+ * Initializes the app and all its components (map, layers, controls, event handlers).
  */
-async function initializeMap() {
+async function initApp() {
   // Verify that all required API keys from secrets.js are available
   if (
     typeof googleApiKey === "undefined" ||
@@ -374,7 +374,7 @@ async function initializeMap() {
     worldCopyJump: true,
   });
 
-  initMapAttribution();
+  initAttribution();
 
   // Create dedicated panes for overlay layers
   map.createPane("customLayersPane");
@@ -1712,12 +1712,12 @@ async function initializeMap() {
     updateDrawControlStates();
   });
 
-  initializeRouting();
-  initializeStrava();
-  initializeContextMenu(map);
+  initRouting();
+  initStrava();
+  initContextMenu(map);
   const settingsPanel = document.getElementById("settings-panel");
   if (settingsPanel) {
-    initializeOSM(settingsPanel);
+    initOSM(settingsPanel);
 
     const simplificationContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
     const labelGroup = L.DomUtil.create("div", "", simplificationContainer);
@@ -2179,7 +2179,7 @@ async function initializeMap() {
   );
 }
 
-document.addEventListener("DOMContentLoaded", initializeMap);
+document.addEventListener("DOMContentLoaded", initApp);
 
 // Offline indicator
 (function () {
