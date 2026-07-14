@@ -398,6 +398,56 @@ function updateElevationToggleIconColor() {
 }
 
 /**
+ * Creates the elevation panel toggle button, and adds it to the map disabled
+ * until a path/area is selected.
+ */
+function initElevationToggle() {
+  const ElevationToggleControl = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd: function (map) {
+      const container = L.DomUtil.create(
+        "div",
+        "leaflet-bar leaflet-control leaflet-control-custom",
+      );
+      container.id = "elevation-button";
+      container.title = "Select a path to show elevation";
+      container.innerHTML = '<a href="#" role="button"></a>';
+      const hideElevationPanel = () => {
+        isElevationProfileVisible = false;
+        document.getElementById("elevation-div").style.visibility = "hidden";
+        window.elevationProfile.clearElevationProfile();
+        updateElevationToggleIconColor();
+      };
+
+      L.DomEvent.on(container, "click", (ev) => {
+        L.DomEvent.stop(ev);
+        if (L.DomUtil.hasClass(container, "disabled")) return;
+        const elevationDiv = document.getElementById("elevation-div");
+        togglePanelMode(
+          "elevation-panel",
+          () => elevationDiv.style.visibility === "visible",
+          () => {
+            isElevationProfileVisible = true;
+            elevationDiv.style.visibility = "visible";
+            if (selectedElevationPath) {
+              window.elevationProfile.clearElevationProfile();
+              addElevationProfileForLayer(selectedElevationPath);
+            }
+            updateElevationToggleIconColor();
+          },
+          hideElevationPanel,
+        );
+      });
+      return container;
+    },
+  });
+
+  elevationToggleControl = new ElevationToggleControl({ position: "topleft" }).addTo(map);
+  L.DomUtil.addClass(elevationToggleControl.getContainer(), "disabled");
+  updateElevationToggleIconColor();
+}
+
+/**
  * Checks if a path already has elevation data.
  * @param {L.LatLng[]} latlngs - Path coordinates
  * @returns {boolean} True if at least 80% of points have elevation data with meaningful variance
