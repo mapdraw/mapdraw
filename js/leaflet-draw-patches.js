@@ -57,7 +57,11 @@ if (L.EditToolbar && L.EditToolbar.Edit) {
   };
 }
 
-// Patch deprecated _flat method
+// leaflet-draw's _defaultShape() calls L.Polyline._flat() on nearly every edit interaction
+// (vertex drag, click-to-delete, entering edit mode, ...). Leaflet still ships that method
+// for backwards compatibility, but it's just a wrapper that logs a console.warn on every
+// call before delegating to L.LineUtil.isFlat. Point it straight at isFlat to drop the warning
+// spam without changing behavior.
 if (L.Polyline && L.LineUtil && L.LineUtil.isFlat) {
   L.Polyline._flat = L.LineUtil.isFlat;
 }
@@ -79,5 +83,13 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
     } else {
       marker.once("add", () => L.DomUtil.addClass(marker._icon, "leaflet-editing-middle-icon"));
     }
+    // leaflet-draw reuses this same marker as the real vertex once it's dragged, clicked,
+    // or touch-moved (see the onDragStart closure inside _createMiddleMarker in
+    // leaflet.draw-src.js), restoring full opacity via setOpacity(1). Our CSS opacity on
+    // this class is !important, so without stripping the class the promoted vertex would
+    // stay stuck translucent forever instead of looking like a real point.
+    marker.once("dragstart click touchmove", () => {
+      L.DomUtil.removeClass(marker._icon, "leaflet-editing-middle-icon");
+    });
   };
 }
