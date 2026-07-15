@@ -87,6 +87,10 @@ function initDrawTools() {
 
   // Map event listeners
   map.on("draw:created", (e) => {
+    // path-extend.js has its own draw:created listener that takes over when
+    // the new path was snapped onto an existing one's endpoint, splicing the
+    // points onto that path instead of creating a separate item.
+    if (pathExtendTarget) return;
     const layer = e.layer;
     layer.pathType = "drawn";
     layer.feature = layer.feature || { properties: {} };
@@ -133,6 +137,7 @@ function initDrawTools() {
   // Distance labels for drawing
   let distanceLabels = [];
   let totalDistance = 0;
+  let distanceSeeded = false;
 
   map.on(L.Draw.Event.DRAWSTART, function (e) {
     // draw:created (which selects the newly-drawn shape) fires before
@@ -142,6 +147,7 @@ function initDrawTools() {
     deselectCurrentItem();
     L.DomUtil.addClass(document.body, "leaflet-is-drawing");
     totalDistance = 0;
+    distanceSeeded = false;
     distanceLabels.forEach((label) => map.removeLayer(label));
     distanceLabels = [];
 
@@ -149,6 +155,14 @@ function initDrawTools() {
       map.on("draw:drawvertex", function (evt) {
         const points = evt.layers.getLayers().map((l) => l.getLatLng());
         if (points.length < 2) return;
+
+        // path-extend.js may have snapped the first vertex onto an existing
+        // path's endpoint - if so, carry that path's own distance forward
+        // instead of restarting the running total at zero.
+        if (!distanceSeeded) {
+          if (pathExtendTarget) totalDistance = calculatePathDistance(pathExtendTarget.layer);
+          distanceSeeded = true;
+        }
 
         const prevPoint = points[points.length - 2];
         const newPoint = points[points.length - 1];

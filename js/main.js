@@ -64,6 +64,7 @@ let map,
   isElevationProfileVisible = false,
   drawControl,
   isEditMode = false,
+  pathExtendTarget = null,
   editControlContainer,
   deleteControlContainer,
   locateControl,
@@ -124,6 +125,7 @@ async function initApp() {
   document.getElementById("elevation-div").style.visibility = "hidden";
 
   initDrawTools();
+  initPathExtend();
   initFileControls();
   initElevationToggle();
   initClickToDeselect();

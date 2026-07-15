@@ -423,6 +423,29 @@ select:focus {
   opacity: 0.75 !important;
 }
 
+/* Existing path endpoints shown while drawing a new path (js/path-extend.js), before
+   one is clicked to start extending from it. Same shape/size as .leaflet-editing-icon,
+   just a different color so it reads as "not yet active". */
+.path-extend-endpoint {
+  border-radius: 50%;
+  background-color: var(--color-black);
+  border: none;
+}
+
+/* Distance labels shown while drawing polylines */
+.distance-label {
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: var(--font-size-12);
+  font-weight: bold;
+  color: white;
+  text-shadow:
+    -1px -1px 0 black,
+    1px -1px 0 black,
+    -1px 1px 0 black,
+    1px 1px 0 black;
+}
+
 /* Drag highlight box around a marker in edit mode (overrides leaflet-draw's default pink) */
 .leaflet-edit-marker-selected {
   background-color: transparent;
@@ -2520,19 +2543,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 }
 .locate-active .material-symbols {
   color: var(--color-white) !important;
-}
-
-/* Distance labels shown while drawing polylines */
-.distance-label {
-  pointer-events: none;
-  font-size: var(--font-size-12);
-  font-weight: bold;
-  color: white;
-  text-shadow:
-    -1px -1px 0 black,
-    1px -1px 0 black,
-    -1px 1px 0 black,
-    1px 1px 0 black;
 }
 
 /* TOP RIGHT */
