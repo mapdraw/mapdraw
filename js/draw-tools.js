@@ -135,9 +135,25 @@ function initDrawTools() {
   });
 
   // Distance labels for drawing
-  let distanceLabels = [];
+  let distanceLabels = []; // { marker, distance } - distance kept so units can re-render the text later
   let totalDistance = 0;
   let distanceSeeded = false;
+
+  function distanceLabelIcon(distance) {
+    return L.divIcon({
+      className: "distance-label",
+      html: formatDistance(distance),
+      iconSize: [60, 20],
+      iconAnchor: [30, -10],
+    });
+  }
+
+  // Called from settings-panel.js when the unit toggle changes, so labels
+  // already placed during an in-progress draw switch units too instead of
+  // only ones placed after the toggle.
+  refreshDistanceLabels = function () {
+    distanceLabels.forEach(({ marker, distance }) => marker.setIcon(distanceLabelIcon(distance)));
+  };
 
   map.on(L.Draw.Event.DRAWSTART, function (e) {
     // draw:created (which selects the newly-drawn shape) fires before
@@ -148,7 +164,7 @@ function initDrawTools() {
     L.DomUtil.addClass(document.body, "leaflet-is-drawing");
     totalDistance = 0;
     distanceSeeded = false;
-    distanceLabels.forEach((label) => map.removeLayer(label));
+    distanceLabels.forEach(({ marker }) => map.removeLayer(marker));
     distanceLabels = [];
 
     if (e.layerType === "polyline" || e.layerType === "polygon") {
@@ -168,17 +184,12 @@ function initDrawTools() {
         const newPoint = points[points.length - 1];
         totalDistance += prevPoint.distanceTo(newPoint);
 
-        const label = L.marker(newPoint, {
-          icon: L.divIcon({
-            className: "distance-label",
-            html: formatDistance(totalDistance),
-            iconSize: [60, 20],
-            iconAnchor: [30, -10],
-          }),
+        const marker = L.marker(newPoint, {
+          icon: distanceLabelIcon(totalDistance),
           interactive: false,
         }).addTo(map);
 
-        distanceLabels.push(label);
+        distanceLabels.push({ marker, distance: totalDistance });
       });
     }
   });
@@ -186,7 +197,7 @@ function initDrawTools() {
   map.on(L.Draw.Event.DRAWSTOP, function () {
     window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
-    distanceLabels.forEach((label) => map.removeLayer(label));
+    distanceLabels.forEach(({ marker }) => map.removeLayer(marker));
     distanceLabels = [];
     map.off("draw:drawvertex");
   });
