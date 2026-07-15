@@ -1,10 +1,14 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 /**
- * Lets a finished path be continued later. While the path draw tool is
- * active, every existing path's two endpoints are shown as dots; starting
- * the new path within a few pixels of one snaps onto it, and on finish the
- * new points are spliced onto that path instead of creating a separate item.
+ * Lets a finished path be continued later, and two paths be joined into one.
+ * While the path draw tool is active, every existing path's two endpoints
+ * are shown as dots. Snapping the first vertex onto one extends that path
+ * from there. Snapping any later vertex onto a *different* path's endpoint
+ * attaches the new segment to that path too, finishing the shape
+ * immediately - if both happen in the same session, the two existing paths
+ * become one, with the absorbed path's name/color discarded in favor of the
+ * path being extended.
  */
 
 const PATH_EXTEND_SNAP_RADIUS_PX = 20;
@@ -40,13 +44,24 @@ function pathExtendFindSnapTarget(latlng) {
   return closest;
 }
 
-// While hovering with no vertex placed yet, swap the "Click to start drawing
-// path" tooltip for one that reflects the snap that's about to happen.
+// While hovering, swap the tooltip for one reflecting the snap that's about
+// to happen: starting on an endpoint (no vertex placed yet), or - on any
+// later vertex - finishing on a *different* path's endpoint to join them.
 const origGetTooltipText = L.Draw.Polyline.prototype._getTooltipText;
 L.Draw.Polyline.prototype._getTooltipText = function () {
-  if (this._markers.length === 0 && this._currentLatLng) {
+  if (!this._currentLatLng) return origGetTooltipText.call(this);
+
+  if (this._markers.length === 0) {
     if (pathExtendFindSnapTarget(this._currentLatLng)) {
       return { text: "Click to extend this path" };
+    }
+  } else {
+    const snap = pathExtendFindSnapTarget(this._currentLatLng);
+    if (snap && (!pathExtendTarget || snap.layer !== pathExtendTarget.layer)) {
+      return {
+        text: "Click to connect to this path",
+        subtext: this.options.showLength ? this._getMeasurementString() : "",
+      };
     }
   }
   return origGetTooltipText.call(this);
@@ -91,15 +106,12 @@ function initPathExtend() {
     endpointMarkers = [];
   }
 
-  function handleDrawVertex(e) {
-    const markerCount = e.layers.getLayers().length;
-    const isNewVertex = markerCount > previousMarkerCount;
-    previousMarkerCount = markerCount;
-    if (pathExtendTarget || !isNewVertex || markerCount !== 1) return; // only snap on the session's first added vertex
-
-    const snap = pathExtendFindSnapTarget(e.layers.getLayers()[0].getLatLng());
-    if (!snap) return;
-
+  // First vertex of the session snapped onto an existing path's endpoint -
+  // start extending it: move the handle and the underlying polyline the
+  // user is drawing onto the exact endpoint, so the new path visibly starts
+  // from it, and give it the target path's own color instead of the tool's
+  // default.
+  function startExtending(snap, handler) {
     pathExtendTarget = { layer: snap.layer, end: snap.end };
 
     const matchedEndpoint = endpointMarkers.find(
@@ -108,9 +120,8 @@ function initPathExtend() {
     if (matchedEndpoint) {
       matchedEndpoint.marker.setIcon(endpointIcon(true));
       // The other end of this same path can't also be extended from this
-      // session, so drop it - but other paths' endpoints stay, in case a
-      // future "finish on another path's endpoint to connect them" feature
-      // wants them.
+      // session, so drop it - but other paths' endpoints stay, since
+      // finishing on one of those is exactly how connecting two paths works.
       endpointMarkers = endpointMarkers.filter((endpoint) => {
         if (endpoint.layer !== snap.layer || endpoint === matchedEndpoint) return true;
         map.removeLayer(endpoint.marker);
@@ -118,18 +129,61 @@ function initPathExtend() {
       });
     }
 
-    // Move both the handle and the underlying polyline the user is drawing
-    // onto the exact endpoint, so the new path visibly starts from it, and
-    // give it the target path's own color instead of the tool's default.
-    const handler = drawControl._toolbars[L.DrawToolbar.TYPE]._modes.polyline.handler;
     handler._markers[0].setLatLng(snap.latlng);
     handler._poly.setLatLngs([snap.latlng]);
     handler._poly.setStyle({ color: snap.layer.options.color });
   }
 
+  // A later vertex snapped onto a *different* path's endpoint (whether or
+  // not this session started with its own start snap) - snap it there and
+  // finish the shape immediately, so one click both places the point and
+  // completes the connection.
+  function finishByConnecting(snap, handler, lastMarkerIndex) {
+    pathExtendFinishTarget = { layer: snap.layer, end: snap.end };
+
+    handler._markers[lastMarkerIndex].setLatLng(snap.latlng);
+    const latlngs = handler._poly.getLatLngs();
+    latlngs[latlngs.length - 1] = snap.latlng;
+    handler._poly.setLatLngs(latlngs);
+
+    // _finishShape() disables the handler, which tears down its own
+    // _markers/_poly/_mouseMarker and unbinds their map listeners - it must
+    // not run synchronously here, since this call stack originated from one
+    // of those same listeners (_mouseMarker's mouseup -> _endPoint ->
+    // addVertex -> this draw:drawvertex event). Deferring lets that whole
+    // chain unwind first, the same way leaflet-draw's own _enableNewMarkers()
+    // defers rather than mutating handler state mid-dispatch.
+    setTimeout(() => handler._finishShape(), 0);
+  }
+
+  function handleDrawVertex(e) {
+    const markers = e.layers.getLayers();
+    const markerCount = markers.length;
+    const isNewVertex = markerCount > previousMarkerCount;
+    previousMarkerCount = markerCount;
+    if (!isNewVertex) return;
+
+    const latestLatLng = markers[markerCount - 1].getLatLng();
+    const handler = drawControl._toolbars[L.DrawToolbar.TYPE]._modes.polyline.handler;
+
+    if (markerCount === 1) {
+      // Only the very first vertex can start an extension - finishing
+      // doesn't make sense before anything has been drawn yet.
+      const snap = pathExtendFindSnapTarget(latestLatLng);
+      if (snap) startExtending(snap, handler);
+      return;
+    }
+
+    const snap = pathExtendFindSnapTarget(latestLatLng);
+    if (snap && (!pathExtendTarget || snap.layer !== pathExtendTarget.layer)) {
+      finishByConnecting(snap, handler, markerCount - 1);
+    }
+  }
+
   map.on(L.Draw.Event.DRAWSTART, (e) => {
     if (e.layerType !== "polyline") return;
     pathExtendTarget = null;
+    pathExtendFinishTarget = null;
     previousMarkerCount = 0;
     showEndpoints();
     map.on("draw:drawvertex", handleDrawVertex);
@@ -137,22 +191,48 @@ function initPathExtend() {
 
   map.on(L.Draw.Event.DRAWSTOP, () => {
     pathExtendTarget = null;
+    pathExtendFinishTarget = null;
     clearEndpoints();
     map.off("draw:drawvertex", handleDrawVertex);
   });
 
   map.on("draw:created", (e) => {
-    if (!pathExtendTarget || e.layerType !== "polyline") return;
-    const { layer: target, end } = pathExtendTarget;
+    if ((!pathExtendTarget && !pathExtendFinishTarget) || e.layerType !== "polyline") return;
+    const start = pathExtendTarget;
+    const finish = pathExtendFinishTarget;
     pathExtendTarget = null;
+    pathExtendFinishTarget = null;
 
-    const addedPoints = e.layer.getLatLngs().slice(1); // drop the point snapped onto target's endpoint
-    if (addedPoints.length === 0) return;
+    let drawnPoints = e.layer.getLatLngs();
+    if (start) drawnPoints = drawnPoints.slice(1); // drop the point snapped onto start's endpoint
+    if (finish) drawnPoints = drawnPoints.slice(0, -1); // drop the point snapped onto finish's endpoint
+    if (drawnPoints.length === 0 && !(start && finish)) return; // nothing drawn, and not directly joining two paths either
 
-    const existing = target.getLatLngs();
-    target.setLatLngs(
-      end === "end" ? [...existing, ...addedPoints] : [...addedPoints.reverse(), ...existing],
-    );
+    // Each existing path contributes its own points oriented purely around
+    // its own clicked endpoint, independent of which literal "start"/"end"
+    // that happened to be: the path being led INTO ends at its clicked
+    // point, the path being led OUT OF begins at its clicked point. The
+    // drawn points always run as-drawn in between, since they were drawn
+    // walking from the start side to the finish side regardless of orientation.
+    const leadIn = !start
+      ? []
+      : start.end === "end"
+        ? start.layer.getLatLngs()
+        : [...start.layer.getLatLngs()].reverse();
+    const leadOut = !finish
+      ? []
+      : finish.end === "start"
+        ? finish.layer.getLatLngs()
+        : [...finish.layer.getLatLngs()].reverse();
+
+    const target = start ? start.layer : finish.layer;
+    target.setLatLngs([...leadIn, ...drawnPoints, ...leadOut]);
+
+    if (start && finish) {
+      // Also prunes it out of any active rectangle-selection state, not just
+      // the layer groups - a plain removeLayer() wouldn't do that.
+      deleteLayerImmediately(finish.layer, { skipUiUpdate: true });
+    }
     // setLatLngs() swaps in a new latlngs array, but layer.editing (leaflet-draw's
     // per-layer edit handler) cached a reference to the old one at construction time
     // and only ever refreshes it on this event - without firing it, Edit mode would

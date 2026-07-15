@@ -88,9 +88,9 @@ function initDrawTools() {
   // Map event listeners
   map.on("draw:created", (e) => {
     // path-extend.js has its own draw:created listener that takes over when
-    // the new path was snapped onto an existing one's endpoint, splicing the
-    // points onto that path instead of creating a separate item.
-    if (pathExtendTarget) return;
+    // either end of the new path was snapped onto an existing path's
+    // endpoint, splicing/joining the points instead of creating a separate item.
+    if (pathExtendTarget || pathExtendFinishTarget) return;
     const layer = e.layer;
     layer.pathType = "drawn";
     layer.feature = layer.feature || { properties: {} };
