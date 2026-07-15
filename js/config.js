@@ -11,6 +11,15 @@ const OSM_CREATED_BY = "MapDraw"; // OSM changeset created_by tag
 
 const BREAKPOINT_MOBILE = 768; // Mobile breakpoint; matches style.css's @media (max-width: 768px)
 
+// Canonical world extent: the map's maxBounds (restricts panning) and every
+// tile layer's bounds option. Needs noWrap alongside it - without noWrap,
+// Leaflet wraps a tile's bounds into range before checking them, so bounds
+// alone won't reject repeats.
+const WORLD_BOUNDS = [
+  [-90, -180],
+  [90, 180],
+];
+
 // Core Application Colors
 const DEFAULT_COLOR = "#DC143C"; // Crimson
 const ROUTE_COLOR = "#FFD700"; // Gold

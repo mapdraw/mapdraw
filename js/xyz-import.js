@@ -139,7 +139,12 @@ const XyzImport = (function () {
    */
   function addXyzLayer(name, url, map, autoEnable = true) {
     const layerId = `xyz-custom-${layerIdCounter++}`;
-    const xyzLayer = L.tileLayer(url, { maxZoom: 19, pane: "customLayersPane" });
+    const xyzLayer = L.tileLayer(url, {
+      maxZoom: 19,
+      pane: "customLayersPane",
+      noWrap: true,
+      bounds: WORLD_BOUNDS,
+    });
     customXyzLayers[layerId] = {
       id: layerId,
       layer: xyzLayer,
@@ -189,7 +194,12 @@ const XyzImport = (function () {
     layersData.forEach((layerData) => {
       try {
         // Create XYZ tile layer
-        const xyzLayer = L.tileLayer(layerData.url, { maxZoom: 19, pane: "customLayersPane" });
+        const xyzLayer = L.tileLayer(layerData.url, {
+          maxZoom: 19,
+          pane: "customLayersPane",
+          noWrap: true,
+          bounds: WORLD_BOUNDS,
+        });
 
         // Store layer information
         customXyzLayers[layerData.id] = {

@@ -412,6 +412,8 @@ const WmsImport = (function () {
         pane: "customLayersPane",
         tileSize: 512,
         gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
+        noWrap: true,
+        bounds: WORLD_BOUNDS,
       });
 
       // Store layer information
@@ -598,6 +600,8 @@ const WmsImport = (function () {
           pane: "customLayersPane",
           tileSize: 512,
           gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
+          noWrap: true,
+          bounds: WORLD_BOUNDS,
         });
 
         // Store layer information

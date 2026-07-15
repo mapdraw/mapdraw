@@ -48,26 +48,20 @@ async function initMapView() {
   const baseMaps = Object.fromEntries(
     BASEMAP_CONFIG.map((b) => {
       if (!b.url) return [b.key, L.layerGroup()];
-      if (b.wms) return [b.key, L.tileLayer.wms(b.url, b.tileOptions)];
-      return [b.key, L.tileLayer(b.url, b.tileOptions)];
+      const tileOptions = { ...b.tileOptions, noWrap: true, bounds: WORLD_BOUNDS };
+      if (b.wms) return [b.key, L.tileLayer.wms(b.url, tileOptions)];
+      return [b.key, L.tileLayer(b.url, tileOptions)];
     }),
   );
 
   map = L.map("map", {
     center: [0, 0],
-    zoom: 4,
+    zoom: 2,
     zoomControl: false,
     attributionControl: false,
     doubleClickZoom: true,
     boxZoom: false,
-    worldCopyJump: false, // Redundant with maxBounds
-    // Locked to a single world copy so every click and drawn point stays within ±180° longitude.
-    minZoom: 4,
-    maxBounds: [
-      [-90, -180],
-      [90, 180],
-    ],
-    maxBoundsViscosity: 1.0,
+    maxBounds: WORLD_BOUNDS,
   });
 
   initAttribution();

@@ -24,7 +24,12 @@ function initLayerControlPanel(baseMaps) {
     ImportedFiles: importedItems,
     StravaActivities: stravaActivitiesLayer,
     FoundPlaces: poiMasterLayer,
-    ...Object.fromEntries(OVERLAY_CONFIG.map((o) => [o.key, L.tileLayer(o.url, o.tileOptions)])),
+    ...Object.fromEntries(
+      OVERLAY_CONFIG.map((o) => [
+        o.key,
+        L.tileLayer(o.url, { ...o.tileOptions, noWrap: true, bounds: WORLD_BOUNDS }),
+      ]),
+    ),
   };
 
   const LayersToggleControl = L.Control.extend({
