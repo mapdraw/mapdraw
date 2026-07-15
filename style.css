@@ -273,6 +273,10 @@ body.glass-mode .leaflet-popup-content a {
   text-decoration: underline;
 }
 
+body.glass-mode .leaflet-container {
+  background: var(--glass-bg);
+}
+
 /* LIGHT */
 /*
  *  _    ___ ___ _  _ _____
@@ -371,7 +375,7 @@ select:focus {
 }
 
 .leaflet-container {
-  background: var(--color-neutral-grey);
+  background: var(--background2-color);
 }
 
 .grayscale-tiles {
