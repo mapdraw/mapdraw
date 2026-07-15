@@ -16,3 +16,25 @@ L.Projection.SphericalMercator.unproject = function (point) {
   const latlng = originalUnproject.call(this, point);
   return L.latLng(latlng.lat, Math.max(-180, Math.min(180, latlng.lng)));
 };
+
+// Control.Scale measures maxWidth px starting at the container's left edge
+// (x=0). When noWrap's blank margin is at least maxWidth px wide (zoomed
+// out enough that the world is narrower than the viewport by at least
+// 2*maxWidth), both measurement points fall inside it and clamp to the
+// identical longitude, collapsing the measured distance to zero and
+// leaving the scale bar blank. Measure the same maxWidth centered on the
+// viewport instead - the map's own center is never in the blank margin,
+// so neither point clamps. distance() only depends on latitude and the
+// longitude delta between the two points, never their absolute position,
+// so this is identical to the original wherever it already worked.
+L.Control.Scale.prototype._update = function () {
+  const map = this._map;
+  const size = map.getSize();
+  const y = size.y / 2;
+  const halfWidth = this.options.maxWidth / 2;
+  const maxMeters = map.distance(
+    map.containerPointToLatLng([size.x / 2 - halfWidth, y]),
+    map.containerPointToLatLng([size.x / 2 + halfWidth, y]),
+  );
+  this._updateScales(maxMeters);
+};
