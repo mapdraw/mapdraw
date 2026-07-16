@@ -23,10 +23,10 @@ function initDrawTools() {
   L.drawLocal.draw.handlers.marker.tooltip.start = "Click to place marker";
 
   // Edit toolbar buttons
-  L.drawLocal.edit.toolbar.buttons.edit = "Edit";
-  L.drawLocal.edit.toolbar.buttons.remove = "Delete";
-  L.drawLocal.edit.toolbar.buttons.editDisabled = "No items to edit";
-  L.drawLocal.edit.toolbar.buttons.removeDisabled = "No items to delete";
+  L.drawLocal.edit.toolbar.buttons.edit = "Edit drawn items";
+  L.drawLocal.edit.toolbar.buttons.remove = "Delete drawn items";
+  L.drawLocal.edit.toolbar.buttons.editDisabled = "No drawn items to edit";
+  L.drawLocal.edit.toolbar.buttons.removeDisabled = "No drawn items to delete";
   L.drawLocal.edit.toolbar.actions.clearAll.text = "Clear All (Drawn)";
   L.drawLocal.edit.toolbar.actions.clearAll.title =
     "Clear all drawn items (not imported files or Strava activities)";
