@@ -676,10 +676,15 @@ function showInfoPanel(layer) {
         });
     };
   } else if (layer instanceof L.Polygon) {
-    const area = calculatePolygonArea(layer);
     const perimeter = calculatePathDistance(layer);
+    // A self-crossing ring makes the shoelace-based area figure meaningless
+    // (its lobes wind in opposite directions and partially cancel out instead
+    // of adding) - show that plainly instead of a silently wrong number.
+    const areaLine = isSelfIntersectingRing(layer.getLatLngs()[0])
+      ? "Self-intersecting shape"
+      : `Area: ${formatArea(calculatePolygonArea(layer))}`;
 
-    details = `Area: ${formatArea(area)}<br>Perimeter: ${formatDistance(perimeter)}`;
+    details = `${areaLine}<br>Perimeter: ${formatDistance(perimeter)}`;
   } else if (layer instanceof L.Polyline) {
     // Recalculate distance from geometry to ensure consistency with elevation panel
     const totalDistance = calculatePathDistance(layer);

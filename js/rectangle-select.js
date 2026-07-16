@@ -78,34 +78,8 @@
   }
 
   // --- Segment-aware hit-testing (so a box over the middle of a segment counts too) ---
-
-  function orientation(p, q, r) {
-    const val = (q.lng - p.lng) * (r.lat - q.lat) - (q.lat - p.lat) * (r.lng - q.lng);
-    if (Math.abs(val) < 1e-12) return 0;
-    return val > 0 ? 1 : 2;
-  }
-
-  function onSegment(p, q, r) {
-    return (
-      q.lng <= Math.max(p.lng, r.lng) &&
-      q.lng >= Math.min(p.lng, r.lng) &&
-      q.lat <= Math.max(p.lat, r.lat) &&
-      q.lat >= Math.min(p.lat, r.lat)
-    );
-  }
-
-  function segmentsIntersect(p1, q1, p2, q2) {
-    const o1 = orientation(p1, q1, p2);
-    const o2 = orientation(p1, q1, q2);
-    const o3 = orientation(p2, q2, p1);
-    const o4 = orientation(p2, q2, q1);
-    if (o1 !== o2 && o3 !== o4) return true;
-    if (o1 === 0 && onSegment(p1, p2, q1)) return true;
-    if (o2 === 0 && onSegment(p1, q2, q1)) return true;
-    if (o3 === 0 && onSegment(p2, p1, q2)) return true;
-    if (o4 === 0 && onSegment(p2, q1, q2)) return true;
-    return false;
-  }
+  // pointOrientation/onSegment/segmentsIntersect live in utils.js, shared with
+  // isSelfIntersectingRing().
 
   function segmentIntersectsBounds(p1, p2, bounds) {
     if (bounds.contains(p1) || bounds.contains(p2)) return true;
