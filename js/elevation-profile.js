@@ -12,6 +12,7 @@ let chartTargetDivId;
 let totalWidth, totalHeight; // Container dimensions
 let currentRealDistance = 0;
 let currentRawData = [];
+let currentSource = null;
 
 let verticalLine, hoverOverlay;
 
@@ -370,6 +371,7 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
   }
 
   currentRealDistance = realDistance || 0;
+  currentSource = source;
   const calculatedMaxDistance =
     currentRawData.length > 0 ? currentRawData[currentRawData.length - 1].distance : 0;
 
@@ -437,6 +439,7 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
 function clearElevationProfile() {
   currentRawData = [];
   currentRealDistance = 0;
+  currentSource = null;
 
   const summaryDiv = svg.select("#d3-summary-html");
   if (summaryDiv) {
@@ -464,6 +467,7 @@ function updateElevationChartUnits(isImperial) {
     drawElevationProfile(
       currentRawData.map((d) => d.latlng),
       currentRealDistance,
+      currentSource,
     );
   } else {
     updateChartLayout();
