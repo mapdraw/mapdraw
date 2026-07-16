@@ -61,6 +61,64 @@ function initDrawTools() {
   });
   map.addControl(drawControl);
 
+  // Info buttons (Edit and Path toolbars only - the only two with behavior that isn't already
+  // self-explanatory from their tooltips/button labels above)
+  addToolbarAction(L.EditToolbar, (handler) => handler instanceof L.EditToolbar.Edit, {
+    title: "Editing help",
+    text: "Info",
+    callback: () =>
+      Swal.fire({
+        title: "Editing help",
+        html: `
+<p style="text-align: left; margin: 0 0 18px 0">
+  Applies only to items in the <strong>Drawn Items</strong> layer!
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Points:</strong> Solid white dots are a path's or area's actual points. Drag to move,
+  click to remove.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Midpoints:</strong> Semi-transparent white dots between points. Drag or click one to
+  add a new point there.
+</p>
+<p style="text-align: left">
+  <strong>Markers:</strong> Drag to move.
+</p>
+`,
+        confirmButtonText: "Got it!",
+      }),
+  });
+  addToolbarAction(L.DrawToolbar, (handler) => handler.type === L.Draw.Polyline.TYPE, {
+    title: "Path drawing help",
+    text: "Info",
+    callback: () =>
+      Swal.fire({
+        title: "Path drawing help",
+        html: `
+<p style="text-align: left; margin: 0 0 18px 0">
+  Applies only to items in the <strong>Drawn Items</strong> layer!
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Draw a path:</strong> Click to place each point, then click the last point again (or
+  the Finish button) to complete it.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>End on an endpoint:</strong> Every visible existing path shows a black dot at each end
+  while drawing. Click one to connect your new path to it and finish immediately.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Start on an endpoint:</strong> Click a black dot as your very first point to extend
+  that path from there, keeping its name and color.
+</p>
+<p style="text-align: left">
+  <strong>Start and end on endpoints:</strong> Do both in the same drawing to merge two paths
+  into one. The path you started on keeps its name and color; the other is absorbed into it.
+</p>
+`,
+        confirmButtonText: "Got it!",
+      }),
+  });
+
   const cancelDrawTools = () => {
     drawControl._toolbars[L.DrawToolbar.TYPE].disable();
     drawControl._toolbars[L.EditToolbar.TYPE].disable();
