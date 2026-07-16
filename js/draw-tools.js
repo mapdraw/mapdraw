@@ -155,6 +155,16 @@ function initDrawTools() {
     distanceLabels.forEach(({ marker, distance }) => marker.setIcon(distanceLabelIcon(distance)));
   };
 
+  // Called from path-extend.js to show the extended path's pre-existing distance
+  // at the endpoint it's being extended from, the moment extension starts.
+  addDistanceLabel = function (latlng, distance) {
+    const marker = L.marker(latlng, {
+      icon: distanceLabelIcon(distance),
+      interactive: false,
+    }).addTo(map);
+    distanceLabels.push({ marker, distance });
+  };
+
   map.on(L.Draw.Event.DRAWSTART, function (e) {
     // draw:created (which selects the newly-drawn shape) fires before
     // draw:drawstop deactivates this mode, so selection must stay allowed

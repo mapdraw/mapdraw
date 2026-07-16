@@ -132,6 +132,7 @@ function initPathExtend() {
     handler._markers[0].setLatLng(snap.latlng);
     handler._poly.setLatLngs([snap.latlng]);
     handler._poly.setStyle({ color: snap.layer.options.color });
+    addDistanceLabel(snap.latlng, calculatePathDistance(snap.layer));
   }
 
   // A later vertex snapped onto a *different* path's endpoint (whether or
