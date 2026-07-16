@@ -612,9 +612,9 @@ select:focus {
   height: 20px;
   fill: var(--icon-color);
   margin-left: 6px;
-  flex-shrink: 0; /* Prevents the icon from shrinking if space is tight */
-  position: absolute;
-  transform: translateY(-5px);
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
 }
 
 #auth-callback-domain-copy-icon {
@@ -628,10 +628,19 @@ select:focus {
 
 #info-panel-edit-hint {
   font-size: var(--font-size-12);
-  color: var(--text-color);
+  color: var(--background-color);
+  background: var(--text-color);
+  border-radius: var(--border-radius);
+  padding: 4px 6px;
   margin-top: 5px;
+  width: 270px;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+body.glass-mode #info-panel-edit-hint {
+  background: var(--glass-btn-bg);
+  color: var(--color-white);
 }
 
 /* Style Row for Color Swatch and Layer Name */
@@ -684,17 +693,13 @@ select:focus {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  color: var(--strava-color);
+  background-color: var(--strava-color);
+  color: white;
   font-size: var(--font-size-12);
   font-weight: bold;
   margin-top: 5px;
   padding: 4px 8px;
   border-radius: var(--border-radius);
-  transition: background-color 0.2s ease-in-out;
-}
-
-#info-panel-strava-link:hover {
-  text-decoration: underline;
 }
 
 /* Color Picker Styles */
