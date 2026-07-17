@@ -358,10 +358,28 @@ function selectItem(layer) {
 
   if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
     if (layer.pathType !== "route") {
-      const overlayPane = document.querySelector(".leaflet-overlay-pane");
-      if (overlayPane) {
-        overlayPane.style.zIndex = 601;
-      }
+      // Raising the overlay pane above the marker pane (600) makes the selected
+      // path draw over unrelated markers - but the overlay pane is shared by
+      // every path on the map, and the marker pane also holds leaflet-draw's own
+      // vertex handles while a draw session is active. Applying it right away
+      // would bury an in-progress path/area's own points under every path line,
+      // unclickable, with no way to finish the shape - so defer the check by a
+      // tick. A selectItem() reached from an unrelated overview-panel click
+      // mid-draw still sees "leaflet-is-drawing" true then and correctly skips
+      // it; one reached from a draw session's own draw:created handler (which
+      // runs its selectItem() before the synchronous handler.disable() call
+      // that removes the class) sees it already gone and elevates normally.
+      setTimeout(() => {
+        // Also bail if the selection has already moved on by the time this runs
+        // (e.g. immediately reselected/deselected) - only the current selection
+        // should ever get elevated.
+        if (document.body.classList.contains("leaflet-is-drawing")) return;
+        if (globallySelectedItem !== layer) return;
+        const overlayPane = document.querySelector(".leaflet-overlay-pane");
+        if (overlayPane) {
+          overlayPane.style.zIndex = 601;
+        }
+      }, 0);
     }
 
     const { outline } = STYLE_CONFIG.path.highlight;
