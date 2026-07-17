@@ -247,4 +247,25 @@ function initPathExtend() {
     updateDrawControlStates();
     updateOverviewList();
   });
+
+  // If the path currently being extended (or the one a finish-snap already
+  // landed on) gets deleted through some other UI surface - e.g. the overview
+  // panel's own delete button, which isn't blocked while a draw session is
+  // active - before the session ends, extending/joining it no longer means
+  // anything. Cancel the whole draw outright instead of letting it finish
+  // onto a layer that's no longer tracked anywhere, which would silently
+  // drop the drawn points and select an orphaned layer.
+  editableLayers.on("layerremove", (e) => {
+    if (pathExtendTarget?.layer === e.layer || pathExtendFinishTarget?.layer === e.layer) {
+      drawControl._toolbars[L.DrawToolbar.TYPE].disable();
+      Swal.fire({
+        toast: true,
+        icon: "warning",
+        title: "Drawing Cancelled",
+        text: "The path you were extending was deleted.",
+        showConfirmButton: false,
+        timer: 3000,
+      });
+    }
+  });
 }
