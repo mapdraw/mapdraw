@@ -44,6 +44,15 @@ function pathExtendFindSnapTarget(latlng) {
   return closest;
 }
 
+// A snap only counts as a finish (joining onto a *different* path) when it
+// lands on a path other than the one already being extended this session -
+// snapping back onto the start path's own other endpoint doesn't finish
+// anything. Shared by the tooltip preview below and handleDrawVertex's actual
+// finish logic, so the two can't drift out of sync.
+function pathExtendIsValidFinishSnap(snap) {
+  return !!snap && (!pathExtendTarget || snap.layer !== pathExtendTarget.layer);
+}
+
 // While hovering, swap the tooltip for one reflecting the snap that's about
 // to happen: starting on an endpoint (no vertex placed yet), or - on any
 // later vertex - finishing on a *different* path's endpoint to join them.
@@ -57,7 +66,7 @@ L.Draw.Polyline.prototype._getTooltipText = function () {
     }
   } else {
     const snap = pathExtendFindSnapTarget(this._currentLatLng);
-    if (snap && (!pathExtendTarget || snap.layer !== pathExtendTarget.layer)) {
+    if (pathExtendIsValidFinishSnap(snap)) {
       return {
         text: "Click to connect to this path",
         subtext: this.options.showLength ? this._getMeasurementString() : "",
@@ -176,7 +185,7 @@ function initPathExtend() {
     }
 
     const snap = pathExtendFindSnapTarget(latestLatLng);
-    if (snap && (!pathExtendTarget || snap.layer !== pathExtendTarget.layer)) {
+    if (pathExtendIsValidFinishSnap(snap)) {
       finishByConnecting(snap, handler, markerCount - 1);
     }
   }
