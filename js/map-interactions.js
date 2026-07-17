@@ -396,7 +396,7 @@ function selectItem(layer) {
     applyLayerHighlight(layer, highlightColor);
 
     // Only enable elevation for polylines, not polygons
-    if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
+    if (isPathLayer(layer)) {
       enableElevationForPath(layer);
     }
   } else if (layer instanceof L.Marker) {

@@ -230,7 +230,7 @@
   // closed and reopening.
   function syncElevationWithSelection() {
     const singleLayer = getSingleSelectedLayer();
-    const isPath = singleLayer instanceof L.Polyline && !(singleLayer instanceof L.Polygon);
+    const isPath = isPathLayer(singleLayer);
     if (isPath && selectedElevationPath === singleLayer) return; // already showing this one
 
     const keepVisible = isElevationProfileVisible && isPath && selectedElevationPath !== null;

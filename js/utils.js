@@ -20,6 +20,16 @@ function getDefaultLayerName(layer) {
 }
 
 /**
+ * True for an actual path (a Polyline that isn't also a Polygon) - L.Polygon
+ * extends L.Polyline, so a plain instanceof check alone would also match areas.
+ * @param {L.Layer} layer - The Leaflet layer to check
+ * @returns {boolean}
+ */
+function isPathLayer(layer) {
+  return layer instanceof L.Polyline && !(layer instanceof L.Polygon);
+}
+
+/**
  * Ensures the Google Maps API is loaded only once. Returns a promise that resolves
  * when the API is ready, handling concurrent load requests gracefully.
  * @returns {Promise<void>} Promise that resolves when the API is loaded

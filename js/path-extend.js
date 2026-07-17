@@ -14,7 +14,7 @@
 const PATH_EXTEND_SNAP_RADIUS_PX = 20;
 
 function pathExtendIsExtendablePolyline(layer) {
-  return layer instanceof L.Polyline && !(layer instanceof L.Polygon) && map.hasLayer(layer);
+  return isPathLayer(layer) && map.hasLayer(layer);
 }
 
 function pathExtendEndpoints(layer) {
