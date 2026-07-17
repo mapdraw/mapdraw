@@ -103,12 +103,13 @@ function initDrawTools() {
   the Finish button) to complete it.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>End on an endpoint:</strong> Every visible existing path shows a black dot at each end
-  while drawing. Click one to connect your new path to it and finish immediately.
+  <strong>Start on an endpoint:</strong> Every visible existing path shows a black dot at each end
+  while drawing. Click one as your very first point to extend that path from there, keeping its
+  name and color.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Start on an endpoint:</strong> Click a black dot as your very first point to extend
-  that path from there, keeping its name and color.
+  <strong>End on an endpoint:</strong> Click one on any later point to connect your new path to
+  it and finish immediately.
 </p>
 <p style="text-align: left">
   <strong>Start and end on endpoints:</strong> Do both in the same drawing to merge two paths
