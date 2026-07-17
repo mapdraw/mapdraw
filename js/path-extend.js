@@ -115,6 +115,22 @@ function initPathExtend() {
     endpointMarkers = [];
   }
 
+  // Endpoint dots are a one-time snapshot taken by showEndpoints() - nothing else keeps
+  // them in sync if a layer's visibility changes mid-session (e.g. hiding its whole
+  // category from the layers panel). pathExtendFindSnapTarget() already excludes an
+  // invisible layer via its own map.hasLayer() check, so its dot would otherwise keep
+  // showing as if it were still snappable when it silently isn't. This fires for any
+  // layer removed from the map, whether directly or cascaded from a whole
+  // FeatureGroup being hidden (L.LayerGroup.onRemove calls map.removeLayer() on each
+  // of its own children), so it also catches an unrelated path being deleted mid-draw.
+  function handleLayerRemoved(e) {
+    endpointMarkers = endpointMarkers.filter((endpoint) => {
+      if (endpoint.layer !== e.layer) return true;
+      map.removeLayer(endpoint.marker);
+      return false;
+    });
+  }
+
   // First vertex of the session snapped onto an existing path's endpoint -
   // start extending it: move the handle and the underlying polyline the
   // user is drawing onto the exact endpoint, so the new path visibly starts
@@ -197,6 +213,7 @@ function initPathExtend() {
     previousMarkerCount = 0;
     showEndpoints();
     map.on("draw:drawvertex", handleDrawVertex);
+    map.on("layerremove", handleLayerRemoved);
   });
 
   map.on(L.Draw.Event.DRAWSTOP, () => {
@@ -204,6 +221,7 @@ function initPathExtend() {
     pathExtendFinishTarget = null;
     clearEndpoints();
     map.off("draw:drawvertex", handleDrawVertex);
+    map.off("layerremove", handleLayerRemoved);
   });
 
   map.on("draw:created", (e) => {
@@ -251,6 +269,12 @@ function initPathExtend() {
 
     if (target.feature && target.feature.properties) {
       target.feature.properties.totalDistance = calculatePathDistance(target);
+    }
+    // Mirrors draw-tools.js's own draw:created handler - if "Drawn Items" was hidden
+    // mid-draw (e.g. via the layers panel), the extended/joined result should be visible
+    // like a freshly drawn item would be, not left hidden inside a hidden category.
+    if (!map.hasLayer(drawnItems)) {
+      map.addLayer(drawnItems);
     }
     selectItem(target);
     updateDrawControlStates();
