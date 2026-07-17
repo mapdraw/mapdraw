@@ -967,12 +967,14 @@ body.glass-mode #info-panel-edit-hint {
   background-color: var(--highlight-color);
 }
 
-/* Blocks a row's select/visibility/delete/duplicate while drawing a path, area, or marker,
-   or while Edit/Delete mode is active - each conflicts with what's on the map right now (an
-   in-progress shape's own vertex handles, an actively edited layer, or path-extend.js mid-way
-   through extending a path). Edit/Delete mode's "map-is-editing" class lives on #map, not
-   <body> like "leaflet-is-drawing" does, hence :has(). Excludes .overview-list-empty-message,
-   the "No items on map" placeholder, which has no click listener to actually block.
+/* Blocks a row's select/visibility/delete/duplicate, and a category header's own
+   visibility/delete/duplicate, while drawing a path, area, or marker, or while Edit/Delete
+   mode is active - each conflicts with what's on the map right now (an in-progress shape's
+   own vertex handles, an actively edited layer, or path-extend.js mid-way through extending
+   a path). Edit/Delete mode's "map-is-editing" class lives on #map, not <body> like
+   "leaflet-is-drawing" does, hence :has(). Excludes .overview-list-empty-message, the
+   "No items on map" placeholder, which has no click listener to actually block. Doesn't
+   touch a header's own arrow/label - collapsing/expanding a category is harmless.
    cursor: not-allowed goes on the list itself, not the (now pointer-events: none) rows -
    an element excluded from hit-testing can't show its own cursor either, so it has to come
    from a still-interactive ancestor instead, showing through as the pointer passes to it. */
@@ -981,8 +983,20 @@ body:has(#map.map-is-editing) #overview-panel-list {
   cursor: not-allowed;
 }
 
-body.leaflet-is-drawing .overview-list-item:not(.overview-list-empty-message),
-body:has(#map.map-is-editing) .overview-list-item:not(.overview-list-empty-message) {
+body.leaflet-is-drawing
+  :is(
+    .overview-list-item,
+    .overview-header-visibility-btn,
+    .overview-header-delete-btn,
+    .overview-header-duplicate-btn
+  ):not(.overview-list-empty-message),
+body:has(#map.map-is-editing)
+  :is(
+    .overview-list-item,
+    .overview-header-visibility-btn,
+    .overview-header-delete-btn,
+    .overview-header-duplicate-btn
+  ):not(.overview-list-empty-message) {
   pointer-events: none;
   opacity: 0.5;
 }
