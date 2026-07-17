@@ -252,12 +252,7 @@ function initDrawTools() {
         const newPoint = points[points.length - 1];
         totalDistance += prevPoint.distanceTo(newPoint);
 
-        const marker = L.marker(newPoint, {
-          icon: distanceLabelIcon(totalDistance),
-          interactive: false,
-        }).addTo(map);
-
-        distanceLabels.push({ marker, distance: totalDistance });
+        addDistanceLabel(newPoint, totalDistance);
       });
     }
   });
