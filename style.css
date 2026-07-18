@@ -3465,7 +3465,7 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
 
     #sidebar-toggle-btn::before {
       font-family: "Material Symbols Outlined" !important;
-      font-size: var(--icon-size-24) !important;
+      font-size: var(--icon-size-20) !important;
       line-height: 1;
       color: var(--icon-color);
       font-variation-settings:
