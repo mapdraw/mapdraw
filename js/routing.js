@@ -452,6 +452,34 @@ function initRouting() {
     directionsPanel.classList.toggle("collapsed");
   });
 
+  const directionsCopyBtn = document.getElementById("directions-copy-btn");
+  directionsCopyBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const directionsText = Array.from(document.querySelectorAll("#directions-list .direction-item"))
+      .map((item) => item.textContent.trim())
+      .join("\n");
+    copyToClipboard(directionsText)
+      .then(() => {
+        Swal.fire({
+          toast: true,
+          icon: "success",
+          title: "Directions Copied!",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      })
+      .catch((err) => {
+        console.error("Could not copy directions: ", err);
+        Swal.fire({
+          toast: true,
+          icon: "error",
+          title: "Failed to Copy",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      });
+  });
+
   [startInput, viaInput, endInput].forEach((input) => {
     input.addEventListener("click", () => {
       if (penModeActive) exitPenMode();

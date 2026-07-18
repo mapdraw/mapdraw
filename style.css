@@ -1337,6 +1337,13 @@ body:has(#map.map-is-editing)
   content: "keyboard_arrow_up";
 }
 
+#directions-copy-btn {
+  margin-left: auto;
+  font-size: var(--icon-size-20) !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 #directions-list {
   list-style: none;
   padding: 0;
