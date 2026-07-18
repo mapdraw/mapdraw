@@ -423,6 +423,29 @@ select:focus {
   opacity: 0.75 !important;
 }
 
+/* Existing path endpoints shown while drawing a new path (js/path-extend.js), before
+   one is clicked to start extending from it. Same shape/size as .leaflet-editing-icon,
+   just a different color so it reads as "not yet active". */
+.path-extend-endpoint {
+  border-radius: 50%;
+  background-color: var(--color-black);
+  border: none;
+}
+
+/* Distance labels shown while drawing polylines */
+.distance-label {
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: var(--font-size-12);
+  font-weight: bold;
+  color: white;
+  text-shadow:
+    -1px -1px 0 black,
+    1px -1px 0 black,
+    -1px 1px 0 black,
+    1px 1px 0 black;
+}
+
 /* Drag highlight box around a marker in edit mode (overrides leaflet-draw's default pink) */
 .leaflet-edit-marker-selected {
   background-color: transparent;
@@ -589,9 +612,9 @@ select:focus {
   height: 20px;
   fill: var(--icon-color);
   margin-left: 6px;
-  flex-shrink: 0; /* Prevents the icon from shrinking if space is tight */
-  position: absolute;
-  transform: translateY(-5px);
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
 }
 
 #auth-callback-domain-copy-icon {
@@ -605,10 +628,19 @@ select:focus {
 
 #info-panel-edit-hint {
   font-size: var(--font-size-12);
-  color: var(--text-color);
+  color: var(--background-color);
+  background: var(--text-color);
+  border-radius: var(--border-radius);
+  padding: 4px 6px;
   margin-top: 5px;
+  width: 270px;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+body.glass-mode #info-panel-edit-hint {
+  background: var(--glass-btn-bg);
+  color: var(--color-white);
 }
 
 /* Style Row for Color Swatch and Layer Name */
@@ -661,17 +693,13 @@ select:focus {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  color: var(--strava-color);
+  background-color: var(--strava-color);
+  color: white;
   font-size: var(--font-size-12);
   font-weight: bold;
   margin-top: 5px;
   padding: 4px 8px;
   border-radius: var(--border-radius);
-  transition: background-color 0.2s ease-in-out;
-}
-
-#info-panel-strava-link:hover {
-  text-decoration: underline;
 }
 
 /* Color Picker Styles */
@@ -937,6 +965,40 @@ select:focus {
 .overview-list-item.selected,
 .overview-list-item.rectangle-selected {
   background-color: var(--highlight-color);
+}
+
+/* Blocks a row's select/visibility/delete/duplicate, and a category header's own
+   visibility/delete/duplicate, while drawing a path, area, or marker, or while Edit/Delete
+   mode is active - each conflicts with what's on the map right now (an in-progress shape's
+   own vertex handles, an actively edited layer, or path-extend.js mid-way through extending
+   a path). Edit/Delete mode's "map-is-editing" class lives on #map, not <body> like
+   "leaflet-is-drawing" does, hence :has(). Excludes .overview-list-empty-message, the
+   "No items on map" placeholder, which has no click listener to actually block. Doesn't
+   touch a header's own arrow/label - collapsing/expanding a category is harmless.
+   cursor: not-allowed goes on the list itself, not the (now pointer-events: none) rows -
+   an element excluded from hit-testing can't show its own cursor either, so it has to come
+   from a still-interactive ancestor instead, showing through as the pointer passes to it. */
+body.leaflet-is-drawing #overview-panel-list,
+body:has(#map.map-is-editing) #overview-panel-list {
+  cursor: not-allowed;
+}
+
+body.leaflet-is-drawing
+  :is(
+    .overview-list-item,
+    .overview-header-visibility-btn,
+    .overview-header-delete-btn,
+    .overview-header-duplicate-btn
+  ):not(.overview-list-empty-message),
+body:has(#map.map-is-editing)
+  :is(
+    .overview-list-item,
+    .overview-header-visibility-btn,
+    .overview-header-delete-btn,
+    .overview-header-duplicate-btn
+  ):not(.overview-list-empty-message) {
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 /* Styles for Overview Panel Group Headers */
@@ -2520,19 +2582,6 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 }
 .locate-active .material-symbols {
   color: var(--color-white) !important;
-}
-
-/* Distance labels shown while drawing polylines */
-.distance-label {
-  pointer-events: none;
-  font-size: var(--font-size-12);
-  font-weight: bold;
-  color: white;
-  text-shadow:
-    -1px -1px 0 black,
-    1px -1px 0 black,
-    -1px 1px 0 black,
-    1px 1px 0 black;
 }
 
 /* TOP RIGHT */

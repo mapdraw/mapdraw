@@ -20,6 +20,16 @@ function getDefaultLayerName(layer) {
 }
 
 /**
+ * True for an actual path (a Polyline that isn't also a Polygon) - L.Polygon
+ * extends L.Polyline, so a plain instanceof check alone would also match areas.
+ * @param {L.Layer} layer - The Leaflet layer to check
+ * @returns {boolean}
+ */
+function isPathLayer(layer) {
+  return layer instanceof L.Polyline && !(layer instanceof L.Polygon);
+}
+
+/**
  * Ensures the Google Maps API is loaded only once. Returns a promise that resolves
  * when the API is ready, handling concurrent load requests gracefully.
  * @returns {Promise<void>} Promise that resolves when the API is loaded
@@ -346,6 +356,73 @@ function calculatePolygonArea(polygon) {
   }
 
   return Math.abs(area);
+}
+
+// --- Segment-aware geometry helpers, shared by rectangle-select.js's hit-testing
+// and isSelfIntersectingRing() below. ---
+
+function pointOrientation(p, q, r) {
+  const val = (q.lng - p.lng) * (r.lat - q.lat) - (q.lat - p.lat) * (r.lng - q.lng);
+  if (Math.abs(val) < 1e-12) return 0;
+  return val > 0 ? 1 : 2;
+}
+
+function onSegment(p, q, r) {
+  return (
+    q.lng <= Math.max(p.lng, r.lng) &&
+    q.lng >= Math.min(p.lng, r.lng) &&
+    q.lat <= Math.max(p.lat, r.lat) &&
+    q.lat >= Math.min(p.lat, r.lat)
+  );
+}
+
+function segmentsIntersect(p1, q1, p2, q2) {
+  const o1 = pointOrientation(p1, q1, p2);
+  const o2 = pointOrientation(p1, q1, q2);
+  const o3 = pointOrientation(p2, q2, p1);
+  const o4 = pointOrientation(p2, q2, q1);
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+  if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+  if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+  if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+  return false;
+}
+
+/**
+ * Checks whether a polygon ring's edges cross each other (a "bowtie" shape),
+ * which makes the shoelace-based geodesicArea() figure meaningless - self-crossing
+ * lobes wind in opposite directions and partially cancel out in that single
+ * running sum instead of adding, understating the true combined area.
+ * @param {L.LatLng[]} latlngs - Ring vertices, as returned by polygon.getLatLngs()[0]
+ * @returns {boolean} True if any two non-adjacent edges cross
+ */
+function isSelfIntersectingRing(latlngs) {
+  if (!latlngs || latlngs.length < 4) return false;
+
+  // A closing point duplicating the first vertex (common in hand-written/pasted
+  // GeoJSON) would otherwise register as a zero-length edge and confuse the
+  // adjacency checks below - drop it so the ring is just its distinct vertices.
+  const first = latlngs[0];
+  const last = latlngs[latlngs.length - 1];
+  const ring = last.lat === first.lat && last.lng === first.lng ? latlngs.slice(0, -1) : latlngs;
+  const n = ring.length;
+  if (n < 4) return false;
+
+  // O(n^2) below - skip it for very large rings (e.g. huge imported/traced
+  // polygons) rather than block the UI; falls back to the pre-existing
+  // behavior of just showing the (possibly wrong, if self-intersecting) area.
+  if (n > 2000) return false;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      // Adjacent edges (including the wraparound pair) always share an endpoint -
+      // that's normal connectivity, not a self-intersection, so skip them.
+      if (j === i + 1 || (i === 0 && j === n - 1)) continue;
+      if (segmentsIntersect(ring[i], ring[(i + 1) % n], ring[j], ring[(j + 1) % n])) return true;
+    }
+  }
+  return false;
 }
 
 /**

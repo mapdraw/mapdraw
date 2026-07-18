@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // Leaflet.draw patches
-// Small, targeted fixes for leaflet-draw bugs/quirks. Each patch below
-// explains the specific problem it works around. Applied once at load time
-// since they patch shared prototypes, not any particular map instance.
+// Small, targeted fixes for leaflet-draw bugs/quirks, plus small extensions built the same
+// way (patching a shared prototype). Each one below explains what it works around or adds.
+// Applied once at load time, not per map instance.
 
 // Prevent polyline drawing tool from finishing on second tap on touch devices
 L.Draw.Polyline.prototype._onTouch = L.Util.falseFn;
@@ -91,5 +91,19 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
     marker.once("dragstart click touchmove", () => {
       L.DomUtil.removeClass(marker._icon, "leaflet-editing-middle-icon");
     });
+  };
+}
+
+// Injects an extra action button (styled like leaflet-draw's own Save/Cancel/Finish/Undo)
+// into a toolbar's actions row. ToolbarClass is L.DrawToolbar or L.EditToolbar; filter(handler)
+// decides which active handler - e.g. L.Draw.Polyline, L.EditToolbar.Edit - gets the button.
+function addToolbarAction(ToolbarClass, filter, { title, text, callback }) {
+  const origGetActions = ToolbarClass.prototype.getActions;
+  ToolbarClass.prototype.getActions = function (handler) {
+    const actions = origGetActions.call(this, handler);
+    if (filter(handler)) {
+      actions.push({ title, text, callback, context: this });
+    }
+    return actions;
   };
 }

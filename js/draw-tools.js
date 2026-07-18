@@ -23,10 +23,10 @@ function initDrawTools() {
   L.drawLocal.draw.handlers.marker.tooltip.start = "Click to place marker";
 
   // Edit toolbar buttons
-  L.drawLocal.edit.toolbar.buttons.edit = "Edit";
-  L.drawLocal.edit.toolbar.buttons.remove = "Delete";
-  L.drawLocal.edit.toolbar.buttons.editDisabled = "No items to edit";
-  L.drawLocal.edit.toolbar.buttons.removeDisabled = "No items to delete";
+  L.drawLocal.edit.toolbar.buttons.edit = "Edit drawn items";
+  L.drawLocal.edit.toolbar.buttons.remove = "Delete drawn items";
+  L.drawLocal.edit.toolbar.buttons.editDisabled = "No drawn items to edit";
+  L.drawLocal.edit.toolbar.buttons.removeDisabled = "No drawn items to delete";
   L.drawLocal.edit.toolbar.actions.clearAll.text = "Clear All (Drawn)";
   L.drawLocal.edit.toolbar.actions.clearAll.title =
     "Clear all drawn items (not imported files or Strava activities)";
@@ -61,6 +61,65 @@ function initDrawTools() {
   });
   map.addControl(drawControl);
 
+  // Info buttons (Edit and Path toolbars only - the only two with behavior that isn't already
+  // self-explanatory from their tooltips/button labels above)
+  addToolbarAction(L.EditToolbar, (handler) => handler instanceof L.EditToolbar.Edit, {
+    title: "Editing help",
+    text: "Info",
+    callback: () =>
+      Swal.fire({
+        title: "Editing help",
+        html: `
+<p style="text-align: left; margin: 0 0 18px 0">
+  Applies only to items in the <strong>Drawn Items</strong> layer!
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Points:</strong> Solid white dots are a path's or area's actual points. Drag to move,
+  click to remove.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Midpoints:</strong> Semi-transparent white dots between points. Drag or click one to
+  add a new point there.
+</p>
+<p style="text-align: left">
+  <strong>Markers:</strong> Drag to move.
+</p>
+`,
+        confirmButtonText: "Got it!",
+      }),
+  });
+  addToolbarAction(L.DrawToolbar, (handler) => handler.type === L.Draw.Polyline.TYPE, {
+    title: "Path drawing help",
+    text: "Info",
+    callback: () =>
+      Swal.fire({
+        title: "Path drawing help",
+        html: `
+<p style="text-align: left; margin: 0 0 18px 0">
+  Applies only to items in the <strong>Drawn Items</strong> layer!
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Draw a path:</strong> Click to place each point, then click the last point again (or
+  the Finish button) to complete it.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Start on an endpoint:</strong> Every visible existing path shows a black dot at each end
+  while drawing. Click one as your very first point to extend that path from there, keeping its
+  name and color.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>End on an endpoint:</strong> Click one on any later point to connect your new path to
+  it and finish immediately.
+</p>
+<p style="text-align: left">
+  <strong>Start and end on endpoints:</strong> Do both in the same drawing to merge two paths
+  into one. The path you started on keeps its name and color; the other is absorbed into it.
+</p>
+`,
+        confirmButtonText: "Got it!",
+      }),
+  });
+
   const cancelDrawTools = () => {
     drawControl._toolbars[L.DrawToolbar.TYPE].disable();
     drawControl._toolbars[L.EditToolbar.TYPE].disable();
@@ -87,6 +146,10 @@ function initDrawTools() {
 
   // Map event listeners
   map.on("draw:created", (e) => {
+    // path-extend.js has its own draw:created listener that takes over when
+    // either end of the new path was snapped onto an existing path's
+    // endpoint, splicing/joining the points instead of creating a separate item.
+    if (pathExtendTarget || pathExtendFinishTarget) return;
     const layer = e.layer;
     layer.pathType = "drawn";
     layer.feature = layer.feature || { properties: {} };
@@ -131,8 +194,35 @@ function initDrawTools() {
   });
 
   // Distance labels for drawing
-  let distanceLabels = [];
+  let distanceLabels = []; // { marker, distance } - distance kept so units can re-render the text later
   let totalDistance = 0;
+  let distanceSeeded = false;
+
+  function distanceLabelIcon(distance) {
+    return L.divIcon({
+      className: "distance-label",
+      html: formatDistance(distance),
+      iconSize: [60, 20],
+      iconAnchor: [30, -10],
+    });
+  }
+
+  // Called from settings-panel.js when the unit toggle changes, so labels
+  // already placed during an in-progress draw switch units too instead of
+  // only ones placed after the toggle.
+  refreshDistanceLabels = function () {
+    distanceLabels.forEach(({ marker, distance }) => marker.setIcon(distanceLabelIcon(distance)));
+  };
+
+  // Called from path-extend.js to show the extended path's pre-existing distance
+  // at the endpoint it's being extended from, the moment extension starts.
+  addDistanceLabel = function (latlng, distance) {
+    const marker = L.marker(latlng, {
+      icon: distanceLabelIcon(distance),
+      interactive: false,
+    }).addTo(map);
+    distanceLabels.push({ marker, distance });
+  };
 
   map.on(L.Draw.Event.DRAWSTART, function (e) {
     // draw:created (which selects the newly-drawn shape) fires before
@@ -142,7 +232,8 @@ function initDrawTools() {
     deselectCurrentItem();
     L.DomUtil.addClass(document.body, "leaflet-is-drawing");
     totalDistance = 0;
-    distanceLabels.forEach((label) => map.removeLayer(label));
+    distanceSeeded = false;
+    distanceLabels.forEach(({ marker }) => map.removeLayer(marker));
     distanceLabels = [];
 
     if (e.layerType === "polyline" || e.layerType === "polygon") {
@@ -150,21 +241,19 @@ function initDrawTools() {
         const points = evt.layers.getLayers().map((l) => l.getLatLng());
         if (points.length < 2) return;
 
+        // path-extend.js may have snapped the first vertex onto an existing
+        // path's endpoint - if so, carry that path's own distance forward
+        // instead of restarting the running total at zero.
+        if (!distanceSeeded) {
+          if (pathExtendTarget) totalDistance = calculatePathDistance(pathExtendTarget.layer);
+          distanceSeeded = true;
+        }
+
         const prevPoint = points[points.length - 2];
         const newPoint = points[points.length - 1];
         totalDistance += prevPoint.distanceTo(newPoint);
 
-        const label = L.marker(newPoint, {
-          icon: L.divIcon({
-            className: "distance-label",
-            html: formatDistance(totalDistance),
-            iconSize: [60, 20],
-            iconAnchor: [30, -10],
-          }),
-          interactive: false,
-        }).addTo(map);
-
-        distanceLabels.push(label);
+        addDistanceLabel(newPoint, totalDistance);
       });
     }
   });
@@ -172,7 +261,7 @@ function initDrawTools() {
   map.on(L.Draw.Event.DRAWSTOP, function () {
     window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
-    distanceLabels.forEach((label) => map.removeLayer(label));
+    distanceLabels.forEach(({ marker }) => map.removeLayer(marker));
     distanceLabels = [];
     map.off("draw:drawvertex");
   });

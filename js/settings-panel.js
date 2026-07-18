@@ -5,8 +5,8 @@
 // line thickness, routing/elevation providers, and the about/legal/dev links.
 
 /**
- * Updates currently displayed UI elements that show units (routing panel, info panel)
- * when the user toggles between metric and imperial units.
+ * Updates currently displayed UI elements that show units (routing panel, info panel,
+ * in-progress draw distance labels) when the user toggles between metric and imperial units.
  */
 function updateAllDynamicUnitDisplays() {
   const selected = getEffectiveSelectedLayer();
@@ -17,6 +17,8 @@ function updateAllDynamicUnitDisplays() {
   if (window.app && typeof window.app.redisplayCurrentRoute === "function") {
     window.app.redisplayCurrentRoute();
   }
+
+  refreshDistanceLabels();
 }
 
 /**

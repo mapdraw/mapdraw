@@ -41,7 +41,7 @@ function getCreditsHtml() {
 }
 
 /**
- * Warms the credits.html cache and its logo image ahead of time so opening
+ * Warms the credits.html cache and its icon image ahead of time so opening
  * the popup later is instant.
  */
 function prefetchCreditsHtml() {

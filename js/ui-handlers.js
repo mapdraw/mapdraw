@@ -676,10 +676,15 @@ function showInfoPanel(layer) {
         });
     };
   } else if (layer instanceof L.Polygon) {
-    const area = calculatePolygonArea(layer);
     const perimeter = calculatePathDistance(layer);
+    // A self-crossing ring makes the shoelace-based area figure meaningless
+    // (its lobes wind in opposite directions and partially cancel out instead
+    // of adding) - show that plainly instead of a silently wrong number.
+    const areaLine = isSelfIntersectingRing(layer.getLatLngs()[0])
+      ? "Self-intersecting shape"
+      : `Area: ${formatArea(calculatePolygonArea(layer))}`;
 
-    details = `Area: ${formatArea(area)}<br>Perimeter: ${formatDistance(perimeter)}`;
+    details = `${areaLine}<br>Perimeter: ${formatDistance(perimeter)}`;
   } else if (layer instanceof L.Polyline) {
     // Recalculate distance from geometry to ensure consistency with elevation panel
     const totalDistance = calculatePathDistance(layer);
@@ -708,18 +713,15 @@ function showInfoPanel(layer) {
     case "geojson":
     case "kmz":
       // Check if this is a Strava activity that was imported
-      if (layer.feature?.properties?.stravaId) {
-        layerTypeName = "Imported Item (Strava Activity)";
-        editHint.innerHTML = "To edit geometry, duplicate activity in <b>Contents</b> tab.";
-      } else {
-        layerTypeName = "Imported Item";
-        editHint.innerHTML = "To edit geometry, duplicate item in <b>Contents</b> tab.";
-      }
+      layerTypeName = layer.feature?.properties?.stravaId
+        ? "Imported Item (Strava Activity)"
+        : "Imported Item";
+      editHint.innerHTML = "To edit geometry, duplicate in <b>Contents</b>&nbsp;tab.";
       editHint.style.display = "block";
       break;
     case "route":
       layerTypeName = "Drawn Item (Route)";
-      editHint.innerHTML = "To edit geometry, save route in <b>Routing</b> tab.";
+      editHint.innerHTML = "To edit geometry, save route in <b>Routing</b>&nbsp;tab.";
       editHint.style.display = "block";
       break;
     case "strava":
@@ -727,7 +729,7 @@ function showInfoPanel(layer) {
       layerTypeName = `Strava Activity ${activityType ? `(${activityType})` : ""}`.trim();
 
       // Show the editing hint
-      editHint.innerHTML = "To edit geometry, duplicate activity in <b>Contents</b> tab.";
+      editHint.innerHTML = "To edit geometry, duplicate in <b>Contents</b>&nbsp;tab.";
       editHint.style.display = "block";
       break;
   }
