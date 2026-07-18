@@ -61,14 +61,14 @@ function initDrawTools() {
   });
   map.addControl(drawControl);
 
-  // Info buttons (Edit and Path toolbars only - the only two with behavior that isn't already
+  // Help buttons (Edit and Path toolbars only - the only two with behavior that isn't already
   // self-explanatory from their tooltips/button labels above)
   addToolbarAction(L.EditToolbar, (handler) => handler instanceof L.EditToolbar.Edit, {
-    title: "Editing help",
-    text: "Info",
+    title: "Editing Help",
+    text: "Help",
     callback: () =>
       Swal.fire({
-        title: "Editing help",
+        title: "Editing Help",
         html: `
 <p style="text-align: left; margin: 0 0 18px 0">
   Applies only to items in the <strong>Drawn Items</strong> layer!
@@ -89,11 +89,11 @@ function initDrawTools() {
       }),
   });
   addToolbarAction(L.DrawToolbar, (handler) => handler.type === L.Draw.Polyline.TYPE, {
-    title: "Path drawing help",
-    text: "Info",
+    title: "Path Drawing Help",
+    text: "Help",
     callback: () =>
       Swal.fire({
-        title: "Path drawing help",
+        title: "Path Drawing Help",
         html: `
 <p style="text-align: left; margin: 0 0 18px 0">
   Applies only to items in the <strong>Drawn Items</strong> layer!

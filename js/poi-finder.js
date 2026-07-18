@@ -408,7 +408,7 @@ async function showPoiFinder() {
       <div class="poi-category-row">
         <span class="material-symbols poi-cat-icon" style="color:${cat.color}">${cat.icon}</span>
         <span class="poi-cat-name">${cat.name}</span>
-        ${cat.isCustom ? '<span id="poi-custom-info-btn" class="settings-info-icon material-symbols" title="What\'s this?">info</span>' : ""}
+        ${cat.isCustom ? '<span id="poi-custom-info-btn" class="settings-info-icon material-symbols" title="What\'s this?">help</span>' : ""}
         <span id="poi-status-${cat.id}" class="poi-cat-status">${renderStatus(isLoading, count, cat.id)}</span>
         <span id="poi-vis-${cat.id}" class="poi-vis-btn material-symbols${count === 0 ? " poi-vis-hidden" : ""}" data-category="${cat.id}" title="Toggle visibility">${isVisible ? "visibility" : "visibility_off"}</span>
         <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Search for current view">${isLoading ? "autorenew" : "search"}</span>

@@ -38,7 +38,7 @@ function initSettingsPanel() {
   label.htmlFor = "simplification-toggle";
   label.innerText = "Path & Area Simplification";
   const infoIcon = L.DomUtil.create("span", "settings-info-icon", labelGroup);
-  infoIcon.innerHTML = '<span class="material-symbols">info</span>';
+  infoIcon.innerHTML = '<span class="material-symbols">help</span>';
   infoIcon.title = "What's this?";
   const checkbox = L.DomUtil.create("input", "", simplificationContainer);
   checkbox.type = "checkbox";

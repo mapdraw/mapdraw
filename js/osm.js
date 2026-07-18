@@ -516,7 +516,7 @@ function initOSM(settingsPanel) {
   osmLabel.innerText = "OpenStreetMap Profile";
 
   const osmInfoIcon = L.DomUtil.create("span", "settings-info-icon", osmLabelGroup);
-  osmInfoIcon.innerHTML = '<span class="material-symbols">info</span>';
+  osmInfoIcon.innerHTML = '<span class="material-symbols">help</span>';
   osmInfoIcon.title = "What's this?";
   L.DomEvent.on(osmInfoIcon, "click", () => {
     Swal.fire({
