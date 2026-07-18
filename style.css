@@ -3163,6 +3163,9 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
     "wght" 400,
     "GRAD" 0,
     "opsz" 24 !important;
+  /* Fixes blurry icons on macOS (Safari and Chrome). */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .material-symbols-fill {
