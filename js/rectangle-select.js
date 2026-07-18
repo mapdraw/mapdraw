@@ -295,8 +295,8 @@
   }
 
   // Reconciles the selection against reality: drops any layer that got deleted
-  // through some other path (an overview panel row button, a whole category
-  // cleared, the GeoJSON data-editor replacing everything, etc.) instead of
+  // through some other path (a whole category cleared - e.g. reloading Strava
+  // activities - or the GeoJSON data-editor replacing everything) instead of
   // nuking the whole selection over one stale entry, and only exits the tool
   // once there's genuinely nothing left on the map to select.
   // skipUiUpdate defers the hasAnyItems()/exitSelectMode() check - callers
@@ -311,25 +311,12 @@
     if (!hasAnyItems()) exitSelectMode();
   }
 
-  // Called whenever any layer's visibility changes through any path (our own
-  // bulk action, or the overview panel's own row button). Unlike delete/duplicate,
-  // visibility doesn't change a layer's identity, so we keep the tool and
-  // selection active - just refresh the button states so they can't go stale
-  // relative to what actually happened. Runs unconditionally (not gated on
-  // whether `layer` itself is selected) since that's the simplest way to keep
-  // the Hide/Show label - which reflects whichever selected layers are
-  // currently visible - always in sync, regardless of which layer changed.
-  function refreshIfTracked(layer) {
-    if (!isActive || !isLayerStillTracked(layer)) return;
-    updateActionButtonsState();
-  }
-
-  // Called whenever a whole layer-group's visibility is toggled (the overview
-  // panel's category header, or the layers panel checkbox) - neither goes
-  // through toggleLayerVisibility() for each individual item, so refreshIfTracked
-  // never fires for them on its own. Kept as an unconditional refresh so the
-  // button states can't drift from a category-wide change, even though none
-  // of today's button states happen to depend on the candidate set.
+  // Called whenever a whole layer-group's visibility is toggled via the layers
+  // panel checkbox (the overview panel's own category header is blocked while
+  // this tool is active, same as its rows - see the "rectangle-select-active"
+  // rule in style.css). Kept as an unconditional refresh so the button states
+  // can't drift from a category-wide change, even though none of today's
+  // button states happen to depend on the candidate set.
   function refreshGroupMembers(group) {
     if (!group || typeof group.hasLayer !== "function" || !isActive) return;
     updateActionButtonsState();
@@ -386,6 +373,7 @@
     isActive = true;
     window.app.activateMode("select", { onCancel: exitSelectMode });
     button.classList.add("active");
+    document.body.classList.add("rectangle-select-active");
     map.dragging.disable();
     document.addEventListener("touchstart", preventTouchScroll, { passive: false });
     actionsList.style.display = "block";
@@ -400,6 +388,7 @@
     isActive = false;
     spacePanActive = false;
     button.classList.remove("active");
+    document.body.classList.remove("rectangle-select-active");
     map.dragging.enable();
     document.removeEventListener("touchstart", preventTouchScroll);
     actionsList.style.display = "none";
@@ -652,14 +641,14 @@
 
   window.app = window.app || {};
   window.app.initRectangleSelect = initRectangleSelect;
-  window.app.notifyRectangleSelectionVisibilityChange = refreshIfTracked;
   window.app.refreshRectangleSelectionGroupMembers = refreshGroupMembers;
   // Called whenever a layer we're tracking gets deleted or duplicated through a
-  // different path (e.g. the overview panel's own row buttons). The specific
-  // layer isn't needed beyond triggering a reconcile - updateDrawControlStates()
-  // (called by every mutation path, including this one's caller) would catch it
-  // moments later regardless, but pruning immediately here means the tool's own
-  // UI never shows stale state even for one intermediate render.
+  // different path (e.g. a Strava activity reload clearing stravaActivitiesLayer,
+  // or the GeoJSON data-editor replacing everything). The specific layer isn't
+  // needed beyond triggering a reconcile - updateDrawControlStates() (called by
+  // every mutation path, including this one's caller) would catch it moments
+  // later regardless, but pruning immediately here means the tool's own UI
+  // never shows stale state even for one intermediate render.
   window.app.pruneRectangleSelection = pruneSelection;
   window.app.getRectangleSelectionCount = () => selectedLayers.size;
   window.app.getRectangleSelectionSingleLayer = getSingleSelectedLayer;

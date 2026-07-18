@@ -78,8 +78,6 @@ function toggleLayerVisibility(layerToToggle) {
       setLayerEditingEnabled(layerToToggle, true);
     }
   }
-
-  window.app.notifyRectangleSelectionVisibilityChange(layerToToggle);
 }
 
 /**
