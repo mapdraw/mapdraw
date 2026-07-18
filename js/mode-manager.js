@@ -2,7 +2,7 @@
 
 // Mode Manager
 // Tracks, per independent group, which single exclusive thing is currently
-// active - a map-interaction mode (draw/edit/delete tool, rectangle-select,
+// active - a map-interaction mode (draw/edit tool, rectangle-select,
 // pen mode, route-point picking) in the "tools" group (the default), or an
 // overlay panel (layers/downloads/elevation) in the "panels" group. Within
 // a group, activating one cancels whichever other one in that same group

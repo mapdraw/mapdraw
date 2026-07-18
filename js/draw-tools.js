@@ -3,7 +3,7 @@
 /**
  * Sets leaflet-draw's locale strings, creates drawControl, patches its
  * toolbar buttons to toggle off on a second click, and wires up all
- * draw/edit/delete map event listeners.
+ * draw/edit map event listeners.
  */
 function initDrawTools() {
   // Path
@@ -24,21 +24,15 @@ function initDrawTools() {
 
   // Edit toolbar buttons
   L.drawLocal.edit.toolbar.buttons.edit = "Edit drawn items";
-  L.drawLocal.edit.toolbar.buttons.remove = "Delete drawn items";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No drawn items to edit";
-  L.drawLocal.edit.toolbar.buttons.removeDisabled = "No drawn items to delete";
-  L.drawLocal.edit.toolbar.actions.clearAll.text = "Clear All (Drawn)";
-  L.drawLocal.edit.toolbar.actions.clearAll.title =
-    "Clear all drawn items (not imported files or Strava activities)";
 
   // Edit toolbar tooltips
   L.drawLocal.edit.handlers.edit.tooltip.text =
     "Drag handles or markers to edit<br>Click cancel to undo";
   L.drawLocal.edit.handlers.edit.tooltip.subtext = "";
-  L.drawLocal.edit.handlers.remove.tooltip.text = "Click an item to delete<br>Click cancel to undo";
 
   drawControl = new L.Control.Draw({
-    edit: { featureGroup: editableLayers },
+    edit: { featureGroup: editableLayers, remove: false },
     draw: {
       polyline: {
         shapeOptions: { ...STYLE_CONFIG.path.default, color: DEFAULT_COLOR },
@@ -129,7 +123,7 @@ function initDrawTools() {
   // handler.enable(), with no way to toggle it back off by clicking the
   // same button again. Swap that one listener for a toggle version, using
   // the exact (button, event, fn, context) leaflet-draw itself bound it
-  // with, so every draw/edit/delete tool can be toggled off the same way
+  // with, so every draw/edit tool can be toggled off the same way
   // rectangle-select already can. Always "click", never "touchstart" -
   // the _detectIOS patch above forces that regardless of device.
   [L.DrawToolbar.TYPE, L.EditToolbar.TYPE].forEach((toolbarType) => {
@@ -183,15 +177,6 @@ function initDrawTools() {
     updateDrawControlStates();
   });
 
-  map.on(L.Draw.Event.DELETED, (e) => {
-    e.layers.eachLayer((layer) => {
-      deleteLayerImmediately(layer, { skipUiUpdate: true });
-      layer.isDeletedFromToolbar = false;
-    });
-    updateDrawControlStates();
-    updateOverviewList();
-  });
-
   // Distance labels for drawing
   let distanceLabels = []; // { marker, distance } - distance kept so units can re-render the text later
   let totalDistance = 0;
@@ -240,10 +225,11 @@ function initDrawTools() {
   map.on(L.Draw.Event.DRAWSTART, function (e) {
     // draw:created (which selects the newly-drawn shape) fires before
     // draw:drawstop deactivates this mode, so selection must stay allowed
-    // throughout - unlike the delete/edit sub-modes below, which block it.
+    // throughout - unlike the edit sub-mode below, which blocks it.
     window.app.activateMode("draw-tools", { onCancel: cancelDrawTools, canSelect: () => true });
     deselectCurrentItem();
     L.DomUtil.addClass(document.body, "leaflet-is-drawing");
+    window.app.setDrawnItemsCheckboxLocked(true);
     totalDistance = 0;
     distanceSeeded = false;
     distanceLabels.forEach(({ marker }) => map.removeLayer(marker));
@@ -274,47 +260,10 @@ function initDrawTools() {
   map.on(L.Draw.Event.DRAWSTOP, function () {
     window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
+    window.app.setDrawnItemsCheckboxLocked(false);
     distanceLabels.forEach(({ marker }) => map.removeLayer(marker));
     distanceLabels = [];
     map.off("draw:drawvertex");
-  });
-
-  map.on(L.Draw.Event.DELETESTART, () => {
-    window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
-    isDeleteMode = true;
-    deselectCurrentItem({ skipControlUpdate: true });
-    editableLayers.eachLayer((layer) => {
-      if (map.hasLayer(layer)) {
-        layer.on("click", onFeatureClickToDelete);
-      }
-    });
-    L.DomUtil.addClass(map.getContainer(), "map-is-editing");
-    updateDrawControlStates();
-  });
-
-  map.on(L.Draw.Event.DELETESTOP, () => {
-    window.app.deactivateMode("draw-tools");
-    isDeleteMode = false;
-    updateDrawControlStates();
-    // Same leaflet-draw _checkDisabled race as EDITSTOP below - Delete shares the same
-    // parent EditToolbar, so its own disable() triggers the exact same post-hoc overwrite.
-    queueMicrotask(updateDrawControlStates);
-    editableLayers.eachLayer((layer) => {
-      layer.off("click", onFeatureClickToDelete);
-    });
-    L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
-
-    editableLayers.eachLayer((layer) => {
-      // Skip if the whole "Drawn Items" category is hidden, not just this item.
-      if (map.hasLayer(drawnItems) && !map.hasLayer(layer) && !layer.isManuallyHidden) {
-        map.addLayer(layer);
-      }
-      layer.isDeletedFromToolbar = false;
-    });
-
-    if (globallySelectedItem) {
-      selectItem(globallySelectedItem);
-    }
   });
 
   map.on(L.Draw.Event.EDITSTART, () => {
@@ -325,6 +274,7 @@ function initDrawTools() {
     itemBeingEdited = globallySelectedItem;
     deselectCurrentItem({ skipControlUpdate: true });
     L.DomUtil.addClass(map.getContainer(), "map-is-editing");
+    window.app.setDrawnItemsCheckboxLocked(true);
     updateDrawControlStates();
   });
 
@@ -332,6 +282,7 @@ function initDrawTools() {
     window.app.deactivateMode("draw-tools");
     isEditMode = false;
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
+    window.app.setDrawnItemsCheckboxLocked(false);
 
     const itemToReselect = itemBeingEdited;
     itemBeingEdited = null;

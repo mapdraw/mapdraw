@@ -146,6 +146,10 @@ function initLayerControlPanel(baseMaps) {
 
   customPanel.innerHTML = formContent;
 
+  // Referenced by setDrawnItemsCheckboxLocked below, once the rest of this function's
+  // helpers (activateOverlay, onOverlayToggle) it depends on are defined.
+  const drawnItemsCheckbox = customPanel.querySelector('input[data-layer-name="DrawnItems"]');
+
   const wmsImportBtn = document.getElementById("wms-import-btn");
   if (wmsImportBtn) {
     wmsImportBtn.addEventListener("click", (e) => {
@@ -346,6 +350,33 @@ function initLayerControlPanel(baseMaps) {
 
   const onOverlayToggle = window.onOverlayToggle;
 
+  // Shared by the checkbox click handler below and setDrawnItemsCheckboxLocked's
+  // forced-visible behavior, so the two can't drift out of sync.
+  function activateOverlay(name, layer) {
+    map.addLayer(layer);
+    // Only "Drawn Items" can have active leaflet-draw editing to resume.
+    if (name === "DrawnItems") setGroupEditingEnabled(layer, true);
+    onOverlayToggle({ type: "overlayadd", layer: layer });
+    addOverlayAttribution(name);
+    // Reapply z-index to ensure layer respects list order
+    reapplyOverlayZIndex();
+  }
+
+  // Locked for the duration of any draw or Edit session (draw-tools.js) - path-extend.js's
+  // endpoint dots and leaflet-draw's own vertex handles are added straight to the map/layer,
+  // independent of this checkbox, so toggling "Drawn Items" off and back on mid-session would
+  // desync them, since nothing re-adds them when the group toggles back on. Also force it
+  // visible right when a session starts if it was hidden, since drawing/editing with it
+  // hidden would leave the very thing being drawn/edited invisible.
+  window.app.setDrawnItemsCheckboxLocked = (locked) => {
+    if (locked && !map.hasLayer(drawnItems)) {
+      if (drawnItemsCheckbox) drawnItemsCheckbox.checked = true;
+      activateOverlay("DrawnItems", drawnItems);
+      if (typeof updateOverviewList === "function") updateOverviewList();
+    }
+    if (drawnItemsCheckbox) drawnItemsCheckbox.disabled = locked;
+  };
+
   customPanel.addEventListener("click", function (e) {
     if (e.target && e.target.classList.contains("leaflet-control-layers-selector")) {
       const selectedLayerId = parseInt(e.target.dataset.layerId, 10);
@@ -368,13 +399,7 @@ function initLayerControlPanel(baseMaps) {
           const layer = allOverlayMaps[name];
           if (L.Util.stamp(layer) === selectedLayerId) {
             if (e.target.checked) {
-              map.addLayer(layer);
-              // Only "Drawn Items" can have active leaflet-draw editing to resume.
-              if (name === "DrawnItems") setGroupEditingEnabled(layer, true);
-              onOverlayToggle({ type: "overlayadd", layer: layer });
-              addOverlayAttribution(name);
-              // Reapply z-index to ensure layer respects list order
-              reapplyOverlayZIndex();
+              activateOverlay(name, layer);
             } else {
               if (name === "DrawnItems") setGroupEditingEnabled(layer, false);
               map.removeLayer(layer);

@@ -1129,11 +1129,6 @@ function replaceDefaultIconsWithMaterialSymbols() {
     editButton.innerHTML = '<span class="material-symbols">edit</span>';
   }
 
-  const deleteButton = document.querySelector(".leaflet-draw-edit-remove");
-  if (deleteButton) {
-    deleteButton.innerHTML = '<span class="material-symbols">delete</span>';
-  }
-
   const importButton = document.getElementById("import-button");
   if (importButton) {
     importButton.querySelector("a").innerHTML = '<span class="material-symbols">folder_open</span>';

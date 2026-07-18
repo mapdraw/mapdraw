@@ -962,11 +962,11 @@ body.glass-mode #info-panel-edit-hint {
 }
 
 /* Blocks a row's select/visibility/delete/duplicate, and a category header's own
-   visibility/delete/duplicate, while drawing a path, area, or marker, while Edit/Delete
+   visibility/delete/duplicate, while drawing a path, area, or marker, while Edit
    mode is active, or while the rectangle-select tool is active - each conflicts with what's
    on the map right now (an in-progress shape's own vertex handles, an actively edited layer,
    path-extend.js mid-way through extending a path, or a row's click reaching the normal
-   single-item selectItem() instead of the marquee selection). Edit/Delete mode's
+   single-item selectItem() instead of the marquee selection). Edit mode's
    "map-is-editing" class lives on #map, not <body> like "leaflet-is-drawing" and
    "rectangle-select-active" do, hence :has(). Excludes .overview-list-empty-message, the
    "No items on map" placeholder, which has no click listener to actually block. Doesn't
@@ -3212,7 +3212,7 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
     --swal2-html-container-padding: 16px 13px 5px;
     --mobile-main-right-container-visible-height: min(
       260px,
-      calc(100dvh - env(safe-area-inset-top) - 400px)
+      calc(100dvh - env(safe-area-inset-top) - 370px)
     );
     --mobile-main-right-container-top: calc(
       100vh - var(--mobile-main-right-container-visible-height)

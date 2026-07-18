@@ -6,7 +6,7 @@
 // overview panel), then bulk duplicate/delete/recolor them. The selection
 // state itself (this module's own Set) stays fully separate from the app's
 // normal single-item selection (globallySelectedItem) - entering select mode
-// clears the latter (same convention as draw/edit/delete modes) - but the info
+// clears the latter (same convention as draw/edit modes) - but the info
 // panel and elevation profile are shared: a single rect-selected item shows
 // info and enables elevation exactly like a normal selection does (see
 // map-interactions.js), while a multi-item selection gets its own dedicated

@@ -476,15 +476,14 @@ function setButtonAvailability(elementId, enabled, enabledTitle, disabledTitle) 
 }
 
 /**
- * Updates the state of edit/delete controls and layer toggles based on available layers
- * and current edit/delete mode status.
+ * Updates the state of edit controls and layer toggles based on available layers
+ * and current edit mode status.
  */
 function updateDrawControlStates() {
   if (!drawControl) return;
   window.app?.pruneRectangleSelection?.();
   if (!editControlContainer) {
     editControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit-edit");
-    deleteControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit-remove");
   }
 
   const hasLayers = window.app?.hasAnyItems?.() ?? false;
@@ -527,13 +526,6 @@ function updateDrawControlStates() {
       : canEditSelection
         ? "Edit selected drawn item"
         : "Select a drawn item to edit";
-  }
-  if (deleteControlContainer) {
-    if (hasEditableLayers) {
-      L.DomUtil.removeClass(deleteControlContainer, "leaflet-disabled");
-    } else {
-      L.DomUtil.addClass(deleteControlContainer, "leaflet-disabled");
-    }
   }
 }
 /**
@@ -587,17 +579,3 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
   updateDrawControlStates();
   updateOverviewList();
 }
-
-/**
- * Click handler for features during delete mode. Visually hides the layer
- * while keeping it in editableLayers for Leaflet.Draw to manage.
- */
-const onFeatureClickToDelete = function (e) {
-  if (this === globallySelectedItem) {
-    deselectCurrentItem();
-  }
-
-  map.removeLayer(this);
-  this.isDeletedFromToolbar = true;
-  L.DomEvent.stop(e);
-};
