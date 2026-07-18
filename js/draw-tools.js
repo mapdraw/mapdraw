@@ -167,7 +167,6 @@ function initDrawTools() {
     if (!map.hasLayer(drawnItems)) {
       map.addLayer(drawnItems);
     }
-    updateDrawControlStates();
     updateOverviewList();
   });
 
@@ -224,6 +223,20 @@ function initDrawTools() {
     distanceLabels.push({ marker, distance });
   };
 
+  // EDITSTOP reselects whatever was being edited, but only after a short delay (below).
+  // Anything that establishes a new selection state before that delay elapses - a different
+  // tool starting (e.g. clicking Path right after Edit, which leaflet-draw's own toolbar
+  // exclusivity auto-stops before draw:drawstart even fires), or simply clicking a different
+  // item - must cancel it, or the stale reselect lands on top of that newer state. Exposed so
+  // selectItem()/deselectCurrentItem() (map-interactions.js) can cancel it on every call,
+  // rather than every present and future tool-start handler having to remember to.
+  let pendingReselectTimer = null;
+  function cancelPendingReselect() {
+    clearTimeout(pendingReselectTimer);
+    pendingReselectTimer = null;
+  }
+  window.app.cancelPendingReselect = cancelPendingReselect;
+
   map.on(L.Draw.Event.DRAWSTART, function (e) {
     // draw:created (which selects the newly-drawn shape) fires before
     // draw:drawstop deactivates this mode, so selection must stay allowed
@@ -269,7 +282,7 @@ function initDrawTools() {
   map.on(L.Draw.Event.DELETESTART, () => {
     window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
     isDeleteMode = true;
-    deselectCurrentItem();
+    deselectCurrentItem({ skipControlUpdate: true });
     editableLayers.eachLayer((layer) => {
       if (map.hasLayer(layer)) {
         layer.on("click", onFeatureClickToDelete);
@@ -283,6 +296,9 @@ function initDrawTools() {
     window.app.deactivateMode("draw-tools");
     isDeleteMode = false;
     updateDrawControlStates();
+    // Same leaflet-draw _checkDisabled race as EDITSTOP below - Delete shares the same
+    // parent EditToolbar, so its own disable() triggers the exact same post-hoc overwrite.
+    queueMicrotask(updateDrawControlStates);
     editableLayers.eachLayer((layer) => {
       layer.off("click", onFeatureClickToDelete);
     });
@@ -304,9 +320,10 @@ function initDrawTools() {
   map.on(L.Draw.Event.EDITSTART, () => {
     window.app.activateMode("draw-tools", { onCancel: cancelDrawTools });
     isEditMode = true;
-    deselectCurrentItem();
-    if (selectedPathOutline) map.removeLayer(selectedPathOutline);
-    if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);
+    // Captured before deselecting so leaflet-draw-patches.js's _enableLayerEdit guard
+    // still knows which layer to give vertex handles to.
+    itemBeingEdited = globallySelectedItem;
+    deselectCurrentItem({ skipControlUpdate: true });
     L.DomUtil.addClass(map.getContainer(), "map-is-editing");
     updateDrawControlStates();
   });
@@ -316,10 +333,11 @@ function initDrawTools() {
     isEditMode = false;
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
 
-    if (globallySelectedItem) {
-      const itemToReselect = globallySelectedItem;
-      deselectCurrentItem();
-      setTimeout(() => {
+    const itemToReselect = itemBeingEdited;
+    itemBeingEdited = null;
+    if (itemToReselect) {
+      pendingReselectTimer = setTimeout(() => {
+        pendingReselectTimer = null;
         selectItem(itemToReselect);
         if (itemToReselect instanceof L.Marker) {
           itemToReselect.setZIndexOffset(1000);
@@ -327,5 +345,10 @@ function initDrawTools() {
       }, 50);
     }
     updateDrawControlStates();
+    // leaflet-draw's own _checkDisabled() runs after us in this same synchronous
+    // chain (via _handlerDeactivated) and only knows hasLayers, not selection - it
+    // would otherwise leave the edit button looking enabled for the ~50ms until the
+    // reselect above actually runs. Re-assert once that chain has unwound.
+    queueMicrotask(updateDrawControlStates);
   });
 }

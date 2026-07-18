@@ -229,7 +229,11 @@ function initDeleteKeyShortcut() {
  * Deselects the currently selected item and cleans up all associated UI elements
  * (outlines, elevation profile, info panel, etc.).
  */
-function deselectCurrentItem() {
+function deselectCurrentItem({ skipControlUpdate = false } = {}) {
+  // Any deselection - explicit or as part of selecting something else - invalidates a
+  // pending "reselect the item that was just being edited" timer (draw-tools.js), so it
+  // never overwrites whatever the selection state actually is by the time it fires.
+  window.app?.cancelPendingReselect?.();
   if (window.mapInteractions) window.mapInteractions.hideElevationMarker();
 
   if (temporarySearchMarker) {
@@ -272,6 +276,7 @@ function deselectCurrentItem() {
   syncSelectedDownloadButtonsState();
 
   resetInfoPanel();
+  if (!skipControlUpdate) updateDrawControlStates();
 }
 
 /**
@@ -321,6 +326,10 @@ function enableElevationForPath(layer) {
  */
 function selectItem(layer) {
   if (!window.app?.canSelectLayer?.(layer)) return;
+  // Unconditional (unlike deselectCurrentItem() below, which only runs when something else
+  // was already selected) - a fresh selection with nothing previously selected is exactly the
+  // gap a pending post-edit reselect (draw-tools.js) could otherwise land in.
+  window.app?.cancelPendingReselect?.();
   if (globallySelectedItem && globallySelectedItem !== layer) {
     const keepElevation =
       isElevationProfileVisible &&
@@ -328,7 +337,7 @@ function selectItem(layer) {
       !(globallySelectedItem instanceof L.Polygon) &&
       layer instanceof L.Polyline &&
       !(layer instanceof L.Polygon);
-    deselectCurrentItem();
+    deselectCurrentItem({ skipControlUpdate: true });
     if (keepElevation) isElevationProfileVisible = true;
   }
   globallySelectedItem = layer;
@@ -443,6 +452,7 @@ function selectItem(layer) {
   }
 
   updateElevationToggleIconColor();
+  updateDrawControlStates();
 }
 
 /**
@@ -473,7 +483,7 @@ function updateDrawControlStates() {
   if (!drawControl) return;
   window.app?.pruneRectangleSelection?.();
   if (!editControlContainer) {
-    editControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit");
+    editControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit-edit");
     deleteControlContainer = drawControl.getContainer().querySelector(".leaflet-draw-edit-remove");
   }
 
@@ -493,13 +503,35 @@ function updateDrawControlStates() {
   );
 
   const hasEditableLayers = editableLayers.getLayers().length > 0;
+  // Single-item edit mode - Edit only ever gives handles to the selected item
+  // (leaflet-draw-patches.js), so the button should look inert without a valid selection too.
+  // While a session is active, EDITSTART has already deselected globallySelectedItem, so check
+  // itemBeingEdited instead - otherwise the button shows active (blue) and disabled (transparent)
+  // at once as soon as Edit mode starts.
+  const relevantSelection = isEditMode ? itemBeingEdited : globallySelectedItem;
+  // editableLayers.hasLayer() already implies hasEditableLayers - no need to check both.
+  const canEditSelection = relevantSelection && editableLayers.hasLayer(relevantSelection);
 
-  if (editControlContainer && deleteControlContainer) {
-    if (hasEditableLayers) {
+  if (editControlContainer) {
+    if (canEditSelection) {
       L.DomUtil.removeClass(editControlContainer, "leaflet-disabled");
-      L.DomUtil.removeClass(deleteControlContainer, "leaflet-disabled");
     } else {
       L.DomUtil.addClass(editControlContainer, "leaflet-disabled");
+    }
+    // _checkDisabled() (leaflet-draw's own toggle) only reacts to layeradd/layerremove and
+    // only knows "any layers exist", not selection - own the title here too so all three
+    // states (nothing to edit / nothing selected / editing one item) get their own message
+    // instead of leaflet-draw's stale "Edit layers", a leftover from before single-item edit.
+    editControlContainer.title = !hasEditableLayers
+      ? L.drawLocal.edit.toolbar.buttons.editDisabled
+      : canEditSelection
+        ? "Edit selected drawn item"
+        : "Select a drawn item to edit";
+  }
+  if (deleteControlContainer) {
+    if (hasEditableLayers) {
+      L.DomUtil.removeClass(deleteControlContainer, "leaflet-disabled");
+    } else {
       L.DomUtil.addClass(deleteControlContainer, "leaflet-disabled");
     }
   }

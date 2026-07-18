@@ -57,6 +57,30 @@ if (L.EditToolbar && L.EditToolbar.Edit) {
   };
 }
 
+// Single-item edit mode. Two patches, both required together:
+//  1. _enableLayerEdit normally runs once per layer in editableLayers (via featureGroup.eachLayer
+//     in addHooks()), giving every one of them vertex handles - that's what makes Edit mode
+//     crash-prone with hundreds of items. Restrict it to the one layer that was selected when
+//     Edit mode was entered, captured into itemBeingEdited by draw-tools.js (EDITSTART deselects
+//     globallySelectedItem before this runs, so that global is already null by the time we'd check it).
+//  2. _hasAvailableLayers is leaflet-draw's own gate for whether enable() proceeds at all - it
+//     normally only checks whether editableLayers is non-empty. Without also requiring a valid
+//     selection here, clicking Edit with nothing selected would still start a session, just one
+//     where patch 1 gives handles to nobody. A selected layer that's a featureGroup member
+//     already implies the group is non-empty, so this fully replaces the original check.
+if (L.EditToolbar && L.EditToolbar.Edit) {
+  const origEnableLayerEdit = L.EditToolbar.Edit.prototype._enableLayerEdit;
+  L.EditToolbar.Edit.prototype._enableLayerEdit = function (e) {
+    const layer = e.layer || e.target || e;
+    if (layer !== itemBeingEdited) return;
+    origEnableLayerEdit.call(this, e);
+  };
+
+  L.EditToolbar.Edit.prototype._hasAvailableLayers = function () {
+    return !!globallySelectedItem && this._featureGroup.hasLayer(globallySelectedItem);
+  };
+}
+
 // leaflet-draw's _defaultShape() calls L.Polyline._flat() on nearly every edit interaction
 // (vertex drag, click-to-delete, entering edit mode, ...). Leaflet still ships that method
 // for backwards compatibility, but it's just a wrapper that logs a console.warn on every

@@ -277,7 +277,6 @@ function initPathExtend() {
       map.addLayer(drawnItems);
     }
     selectItem(target);
-    updateDrawControlStates();
     updateOverviewList();
   });
 

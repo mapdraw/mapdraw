@@ -9,10 +9,12 @@ const collapsedCategories = new Set();
 
 // Suspend/resume leaflet-draw editing around a layer's removal/re-add, so its edit
 // highlight and vertex handles survive - restricted to editableLayers members only.
+// Single-item edit mode - only itemBeingEdited ever gets vertex handles, so re-enabling
+// must stay limited to it too, or hide/show during an edit session hands handles to every layer.
 function setLayerEditingEnabled(layer, enabled) {
   if (!layer || !layer.editing || !editableLayers.hasLayer(layer)) return;
   if (enabled) {
-    if (isEditMode) layer.editing.enable();
+    if (isEditMode && layer === itemBeingEdited) layer.editing.enable();
   } else {
     layer.editing.disable();
   }
@@ -199,7 +201,6 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
     editableLayers.addLayer(newLayer);
     if (!skipUiUpdate) {
       updateOverviewList();
-      updateDrawControlStates();
       selectItem(newLayer);
     }
   }

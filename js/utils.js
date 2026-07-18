@@ -720,7 +720,6 @@ function createAndSaveMarker(lat, lon, name) {
   });
 
   selectItem(newMarker);
-  updateDrawControlStates();
   updateOverviewList();
 
   return newMarker;
