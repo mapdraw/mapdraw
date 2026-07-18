@@ -409,6 +409,11 @@ function isSelfIntersectingRing(latlngs) {
   const n = ring.length;
   if (n < 4) return false;
 
+  // O(n^2) below - skip it for very large rings (e.g. huge imported/traced
+  // polygons) rather than block the UI; falls back to the pre-existing
+  // behavior of just showing the (possibly wrong, if self-intersecting) area.
+  if (n > 2000) return false;
+
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       // Adjacent edges (including the wraparound pair) always share an endpoint -
