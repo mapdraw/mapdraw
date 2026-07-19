@@ -194,7 +194,7 @@ function initSettingsPanel() {
     STYLE_CONFIG.path.default.weight = lineThickness;
     STYLE_CONFIG.path.highlight.weight = lineThickness;
     localStorage.setItem("lineThickness", lineThickness);
-    [drawnItems, importedItems, stravaActivitiesLayer].forEach((group) => {
+    Object.values(displayLayerGroups).forEach((group) => {
       group.eachLayer((layer) => {
         if (layer instanceof L.Polyline || layer instanceof L.GeoJSON) {
           layer.setStyle({ weight: lineThickness });

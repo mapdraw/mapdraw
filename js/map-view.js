@@ -162,6 +162,11 @@ async function initMapView() {
   importedItems = new L.FeatureGroup().addTo(map);
   editableLayers = new L.FeatureGroup();
   stravaActivitiesLayer = L.featureGroup().addTo(map);
+  displayLayerGroups = {
+    drawn: drawnItems,
+    imported: importedItems,
+    strava: stravaActivitiesLayer,
+  };
 
   // Initialize POI finder first so we can add it to layer control
   initPoiFinder();

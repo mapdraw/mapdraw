@@ -49,7 +49,7 @@ function toggleLayerVisibility(layerToToggle) {
     // Show the layer (if its parent group is on the map)
     // Check if any of its parent groups are on the map
     let isParentVisible = false;
-    [drawnItems, stravaActivitiesLayer, importedItems].forEach((group) => {
+    Object.values(displayLayerGroups).forEach((group) => {
       if (group.hasLayer(layerToToggle) && map.hasLayer(group)) {
         isParentVisible = true;
       } else {

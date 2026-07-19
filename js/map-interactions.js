@@ -553,7 +553,7 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
     deselectCurrentItem();
   }
 
-  [drawnItems, importedItems, stravaActivitiesLayer].forEach((group) => {
+  Object.values(displayLayerGroups).forEach((group) => {
     if (group.hasLayer(layer)) {
       group.removeLayer(layer);
     } else {
