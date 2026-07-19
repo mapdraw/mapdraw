@@ -248,7 +248,7 @@ function createOverviewListItem(layer) {
   const duplicateBtn = document.createElement("span");
   if (layer !== currentRoutePath) {
     duplicateBtn.className = "overview-duplicate-btn";
-    duplicateBtn.innerHTML = '<span class="material-symbols">content_copy</span>';
+    duplicateBtn.innerHTML = '<span class="material-symbols">add_to_photos</span>';
     duplicateBtn.title = "Duplicate";
     duplicateBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -532,7 +532,7 @@ function updateOverviewList() {
       dupBtnSlot.className = "overview-header-duplicate-btn";
       if (layerGroup) {
         const dupBtn = document.createElement("span");
-        dupBtn.innerHTML = '<span class="material-symbols">content_copy</span>';
+        dupBtn.innerHTML = '<span class="material-symbols">add_to_photos</span>';
         dupBtn.title = `Duplicate all ${label}`;
         dupBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -610,6 +610,19 @@ function updateOverviewList() {
 }
 
 /**
+ * Shows the info panel's edit hint as a clickable pill that performs the given action.
+ */
+function setEditHint(icon, text, onClick) {
+  const editHint = document.getElementById("info-panel-edit-hint");
+  editHint.innerHTML = `${text}<span class="material-symbols">${icon}</span>`;
+  editHint.onclick = (e) => {
+    e.stopPropagation();
+    onClick();
+  };
+  editHint.style.display = "block";
+}
+
+/**
  * Displays the info panel with details about the selected layer.
  * @param {L.Layer} layer - The selected layer
  */
@@ -636,6 +649,7 @@ function showInfoPanel(layer) {
 
   // Hide hint and Strava link by default
   editHint.style.display = "none";
+  editHint.onclick = null;
   stravaLink.style.display = "none";
 
   if (layer instanceof L.Marker) {
@@ -715,21 +729,16 @@ function showInfoPanel(layer) {
       layerTypeName = layer.feature?.properties?.stravaId
         ? "Imported Item (Strava Activity)"
         : "Imported Item";
-      editHint.innerHTML = "To edit geometry, duplicate in <b>Contents</b>&nbsp;tab.";
-      editHint.style.display = "block";
+      setEditHint("add_to_photos", "Duplicate to edit", () => duplicateLayer(layer));
       break;
     case "route":
       layerTypeName = "Drawn Item (Route)";
-      editHint.innerHTML = "To edit geometry, save route in <b>Routing</b>&nbsp;tab.";
-      editHint.style.display = "block";
+      setEditHint("save", "Save to edit", () => window.app.saveRoute());
       break;
     case "strava":
       const activityType = layer.feature.properties.type || "";
       layerTypeName = `Strava Activity ${activityType ? `(${activityType})` : ""}`.trim();
-
-      // Show the editing hint
-      editHint.innerHTML = "To edit geometry, duplicate in <b>Contents</b>&nbsp;tab.";
-      editHint.style.display = "block";
+      setEditHint("add_to_photos", "Duplicate to edit", () => duplicateLayer(layer));
       break;
   }
   infoPanelLayerName.textContent = layerTypeName;
@@ -773,7 +782,9 @@ function resetInfoPanelDetailsStyle(text) {
   infoPanelDetails.title = "";
 
   // Hide the hint and Strava link
-  document.getElementById("info-panel-edit-hint").style.display = "none";
+  const editHint = document.getElementById("info-panel-edit-hint");
+  editHint.style.display = "none";
+  editHint.onclick = null;
   document.getElementById("info-panel-strava-link").style.display = "none";
 }
 
