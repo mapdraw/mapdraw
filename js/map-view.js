@@ -160,8 +160,14 @@ async function initMapView() {
 
   drawnItems = new L.FeatureGroup().addTo(map);
   importedItems = new L.FeatureGroup().addTo(map);
-  editableLayers = new L.FeatureGroup();
   stravaActivitiesLayer = L.featureGroup().addTo(map);
+  editableLayers = new L.FeatureGroup(); // leaflet-draw's edit-toolbar tracking group, not added to the map itself
+
+  // What's on-map for display purposes. rectangle-select.js's getAllGroups()
+  // keeps its own separate list (editableLayers instead of drawnItems) for a
+  // different concern - whether a selected layer still exists at all
+  // (isLayerStillTracked/hasAnyItems) rather than what's currently displayed -
+  // so it isn't merged into this registry.
   displayLayerGroups = {
     drawn: drawnItems,
     imported: importedItems,
