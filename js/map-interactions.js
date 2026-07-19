@@ -249,6 +249,9 @@ function deselectCurrentItem({ skipControlUpdate = false } = {}) {
     map.removeLayer(selectedMarkerOutline);
     selectedMarkerOutline = null;
   }
+  // While editing, distance labels belong to EDITSTART/EDITSTOP, not selection -
+  // an incidental deselect (e.g. clicking empty map) shouldn't clear them.
+  if (!isEditMode) hideDistanceLabels();
 
   if (!globallySelectedItem) return;
 
@@ -366,6 +369,10 @@ function selectItem(layer) {
   syncSelectedDownloadButtonsState();
 
   if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
+    if (map.hasLayer(layer) && !isEditMode) {
+      showDistanceLabelsFor(layer);
+    }
+
     if (layer.pathType !== "route") {
       // Raising the overlay pane above the marker pane (600) makes the selected
       // path draw over unrelated markers - but the overlay pane is shared by
