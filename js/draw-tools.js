@@ -284,7 +284,10 @@ function initDrawTools() {
 
     const itemToReselect = itemBeingEdited;
     itemBeingEdited = null;
-    if (itemToReselect) {
+    // Not tracked anymore if this EDITSTOP was forced by the layerremove guard
+    // below (the item was deleted out from under an active edit session) -
+    // reselecting it would resurrect a detached, no-longer-on-the-map layer.
+    if (itemToReselect && editableLayers.hasLayer(itemToReselect)) {
       pendingReselectTimer = setTimeout(() => {
         pendingReselectTimer = null;
         selectItem(itemToReselect);
@@ -299,5 +302,19 @@ function initDrawTools() {
     // would otherwise leave the edit button looking enabled for the ~50ms until the
     // reselect above actually runs. Re-assert once that chain has unwound.
     queueMicrotask(updateDrawControlStates);
+  });
+
+  // If the item currently being edited gets removed through some other UI surface -
+  // e.g. the Data editor's Apply button, which isn't blocked while Edit mode is
+  // active (unlike the overview panel) - leaflet-draw's own vertex handles are torn
+  // down (_disableLayerEdit reacts to the layer's removal) but the toolbar itself
+  // has no idea the session is over: EDITSTOP never fires, so isEditMode/the
+  // "Drawn Items" checkbox lock/the overview-panel lock/mode-manager's active mode
+  // (which blocks all selection) would otherwise stay stuck until a page reload.
+  // Mirrors path-extend.js's own layerremove guard for the equivalent draw-mode case.
+  editableLayers.on("layerremove", (e) => {
+    if (e.layer === itemBeingEdited) {
+      drawControl._toolbars[L.EditToolbar.TYPE].disable();
+    }
   });
 }

@@ -13,10 +13,11 @@ if (L.Toolbar) {
   L.Toolbar.prototype._detectIOS = () => false;
 }
 
-// _checkDisabled listens to featureGroup layerremove. In delete mode, _removeLayer moves layers
-// from featureGroup to _deletedLayers, firing layerremove mid-session and wrongly disabling buttons.
-// Guard it with enabled() (_activeMode !== null); patch _handlerDeactivated to call it after the
-// mode ends — save() fires no layerremove so _checkDisabled would never run to fix state otherwise.
+// _checkDisabled listens to featureGroup layerremove, wrongly disabling buttons on any
+// mid-session removal (e.g. the item being edited getting deleted out from under Edit
+// mode - see draw-tools.js). Guard it with enabled() (_activeMode !== null); patch
+// _handlerDeactivated to call it after the mode ends — save() fires no layerremove so
+// _checkDisabled would never run to fix state otherwise.
 if (L.EditToolbar) {
   const origCheckDisabled = L.EditToolbar.prototype._checkDisabled;
   L.EditToolbar.prototype._checkDisabled = function () {
