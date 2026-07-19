@@ -155,8 +155,6 @@ function initDrawTools() {
       L.DomEvent.stopPropagation(ev);
       selectItem(layer);
     });
-    if (e.layerType === "polyline" || e.layerType === "polygon") {
-    }
     selectItem(layer);
     if (!map.hasLayer(drawnItems)) {
       map.addLayer(drawnItems);
