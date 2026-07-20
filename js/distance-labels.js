@@ -58,11 +58,12 @@ function distanceLabelIcon(html, heightPx, verticalOffset = DISTANCE_LABEL_VERTI
 }
 
 // A dedicated pane above the selected-path outline (which can reach z-index 601,
-// see map-interactions.js), so labels always render on top.
+// see map-interactions.js), so labels always render on top. 651 rather than
+// Leaflet's own 650, to avoid tying with its built-in tooltipPane.
 function ensureDistanceLabelPane() {
   if (!map.getPane("distanceLabelPane")) {
     map.createPane("distanceLabelPane");
-    map.getPane("distanceLabelPane").style.zIndex = 650;
+    map.getPane("distanceLabelPane").style.zIndex = 651;
   }
 }
 
