@@ -3,11 +3,12 @@
 /**
  * Zoom-adaptive distance/area labels for a path or area, shown while drawing,
  * selected, or being edited. Each end gets a label - "0" at the start, the
- * total at the finish. A closed ring's start and finish are the same point,
- * so it gets one combined start/total label there instead, plus a separate
- * label for its surface area at the shape's center. Extra labels are placed
- * at round distances (1/10/100/1,000/10,000 km or mi) along the way, with the
- * step chosen from the current zoom so on-screen spacing stays roughly constant.
+ * total at the finish - combined into one when they land on (or near) the same
+ * point, whether that's a closed ring's start/finish or an open path that just
+ * happens to end near where it began; a ring also gets a separate label for its
+ * surface area at the shape's center. Extra labels are placed at round distances
+ * (1/10/100/1,000/10,000 km or mi) along the way, with the step chosen from the
+ * current zoom so on-screen spacing stays roughly constant.
  */
 
 const DISTANCE_LABEL_MIN_PIXEL_GAP = 100;
@@ -20,8 +21,9 @@ const DISTANCE_LABEL_MIN_VISIBLE_PIXELS = 50;
 const DISTANCE_LABEL_VERTICAL_OFFSET_PX = 15;
 // A label's default height is one line; the combined ring label below is two.
 const DISTANCE_LABEL_LINE_HEIGHT_PX = 20;
-// How close (px) an interval label may sit to a start/end marker before it's
-// dropped as a collision - see dropDistanceLabelsNearEndpoints() below.
+// How close (px) two labels may sit before they're treated as colliding - either an
+// interval label near a start/end marker (dropDistanceLabelsNearEndpoints() below),
+// or an open path's own start and end markers (placeDistanceLabelEndpoints() below).
 const DISTANCE_LABEL_ENDPOINT_OVERLAP_MARGIN_PX = 40;
 const METERS_PER_KM = 1000;
 const METERS_PER_MILE = 1609.344;
@@ -44,14 +46,14 @@ function formatDistanceLabelInterval(meters) {
   return `${Math.round(meters / unitMeters)} ${unitLabel}`;
 }
 
-function distanceLabelIcon(html, heightPx) {
+function distanceLabelIcon(html, heightPx, verticalOffset = DISTANCE_LABEL_VERTICAL_OFFSET_PX) {
   return L.divIcon({
     className: "distance-label",
     html,
     iconSize: [60, heightPx],
     // Bottom line's own center, not the box's - keeps it on the point even
     // when extra lines are stacked above (e.g. the combined start+total label).
-    iconAnchor: [30, heightPx - 10 + DISTANCE_LABEL_VERTICAL_OFFSET_PX],
+    iconAnchor: [30, heightPx - DISTANCE_LABEL_LINE_HEIGHT_PX / 2 + verticalOffset],
   });
 }
 
@@ -72,10 +74,11 @@ function placeDistanceLabel(
   distanceForFilter,
   html,
   heightPx = DISTANCE_LABEL_LINE_HEIGHT_PX,
+  verticalOffset = DISTANCE_LABEL_VERTICAL_OFFSET_PX,
 ) {
   ensureDistanceLabelPane();
   const marker = L.marker(latlng, {
-    icon: distanceLabelIcon(html, heightPx),
+    icon: distanceLabelIcon(html, heightPx, verticalOffset),
     interactive: false,
     pane: "distanceLabelPane",
   }).addTo(map);
@@ -195,21 +198,38 @@ function dropDistanceLabelsNearEndpoints(totalDistance, isClosedRing, margin) {
   });
 }
 
-// A ring's start and "end" are the exact same point, so it gets one combined
-// two-line label there instead of two, plus a surface-area label at its center.
-// A path's two ends are always genuinely different points, so it gets one label each.
-function placeDistanceLabelEndpoints(points, totalDistance, isClosedRing) {
-  if (isClosedRing) {
-    const html = `${formatDistance(totalDistance)}<br>${formatDistanceLabelInterval(0)}`;
-    placeDistanceLabel(points[0], 0, html, DISTANCE_LABEL_LINE_HEIGHT_PX * 2);
+// A ring's start and "end" are the exact same point, so it always gets one combined
+// two-line label there instead of two, plus a surface-area label at its center. An
+// open path's two ends usually land far apart and get one label each - but when they
+// fall within `margin` of each other on screen (e.g. a loop walked with the path tool
+// rather than closed into an area), it gets the same combined label instead, at their
+// midpoint rather than one specific end - unlike a ring, neither end is more "the"
+// point here, they just happen to land close together.
+function placeDistanceLabelEndpoints(points, totalDistance, isClosedRing, margin) {
+  const start = points[0];
+  const end = points[points.length - 1];
+  const openPathEndsCoincide = !isClosedRing && start.distanceTo(end) < margin;
 
+  if (isClosedRing || openPathEndsCoincide) {
+    const html = `${formatDistance(totalDistance)}<br>${formatDistanceLabelInterval(0)}`;
+    // A ring's anchor is a real vertex, nudged up like any other label so it clears
+    // its own vertex handle. An open path's midpoint is empty space with no handle
+    // to clear, so it sits centered on it with no offset instead.
+    const anchor = isClosedRing
+      ? start
+      : L.latLng((start.lat + end.lat) / 2, (start.lng + end.lng) / 2);
+    const verticalOffset = isClosedRing ? DISTANCE_LABEL_VERTICAL_OFFSET_PX : 0;
+    placeDistanceLabel(anchor, 0, html, DISTANCE_LABEL_LINE_HEIGHT_PX * 2, verticalOffset);
+  } else {
+    placeDistanceLabel(start, 0, formatDistanceLabelInterval(0));
+    placeDistanceLabel(end, totalDistance, formatDistance(totalDistance));
+  }
+
+  if (isClosedRing) {
     const areaText = isSelfIntersectingRing(points)
       ? "Self-intersecting shape"
       : formatArea(calculatePolygonArea(distanceLabelSource));
     placeDistanceLabel(distanceLabelSource.getBounds().getCenter(), totalDistance, areaText);
-  } else {
-    placeDistanceLabel(points[0], 0, formatDistanceLabelInterval(0));
-    placeDistanceLabel(points[points.length - 1], totalDistance, formatDistance(totalDistance));
   }
 }
 
@@ -243,7 +263,7 @@ function refreshDistanceLabels() {
   const bounds = map.getBounds().pad(0.25);
   walkDistanceLabels(points, cumulative, stepMeters, bounds);
   dropDistanceLabelsNearEndpoints(totalDistance, isClosedRing, overlapMargin);
-  placeDistanceLabelEndpoints(points, totalDistance, isClosedRing);
+  placeDistanceLabelEndpoints(points, totalDistance, isClosedRing, overlapMargin);
 }
 
 /**
