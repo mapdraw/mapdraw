@@ -214,12 +214,12 @@ function placeDistanceLabelEndpoints(points, totalDistance, isClosedRing) {
 /**
  * Recomputes and redraws every currently-shown distance label from scratch,
  * using whatever showDistanceLabelsFor() is currently tracking. Safe to call
- * on its own (view change, edit, unit toggle) without re-establishing the
- * moveend/edit listeners set up by showDistanceLabelsFor().
+ * on its own (view change, edit, unit/setting toggle) without re-establishing
+ * the moveend/edit listeners set up by showDistanceLabelsFor().
  */
 function refreshDistanceLabels() {
   clearDistanceLabelMarkers();
-  if (!distanceLabelSource) return;
+  if (!distanceLabelsEnabled || !distanceLabelSource) return;
   // A real layer may have been hidden since last shown - caught immediately by the
   // layerremove listener below, but also guarded here for e.g. the next moveend.
   if (!Array.isArray(distanceLabelSource) && !map.hasLayer(distanceLabelSource)) return;
@@ -245,14 +245,15 @@ function refreshDistanceLabels() {
 }
 
 /**
- * Starts showing stepped distance labels for `source` (an L.Polyline/L.Polygon,
- * or a plain array of L.LatLng for an in-progress draw), replacing whatever
- * was shown before. Recomputes on every map pan/zoom.
+ * Starts tracking `source` (an L.Polyline/L.Polygon, or a plain array of
+ * L.LatLng for an in-progress draw) for distance labels, replacing whatever
+ * was tracked before, and recomputing on every pan/zoom/vertex-edit/visibility
+ * change. Tracking itself ignores distanceLabelsEnabled - refreshDistanceLabels()
+ * is the actual rendering gate, so re-enabling the setting shows this instantly.
  * @param {L.Polyline|L.Polygon|L.LatLng[]} source
  */
 function showDistanceLabelsFor(source) {
   hideDistanceLabels();
-  if (!distanceLabelsEnabled) return;
   distanceLabelSource = source;
   distanceLabelMoveEndHandler = refreshDistanceLabels;
   map.on("moveend", distanceLabelMoveEndHandler);
@@ -308,16 +309,12 @@ function hideDistanceLabels() {
   distanceLabelSource = null;
 }
 
-/** Called by settings-panel.js's toggle. Applies immediately to whatever's selected. */
+/**
+ * Called by settings-panel.js's toggle. Applies immediately to whatever's
+ * currently tracked - selected, being drawn, or being edited.
+ */
 function setDistanceLabelsEnabled(enabled) {
   distanceLabelsEnabled = enabled;
   localStorage.setItem("distanceLabelsEnabled", enabled);
-  if (!enabled) {
-    hideDistanceLabels();
-  } else if (
-    globallySelectedItem instanceof L.Polyline ||
-    globallySelectedItem instanceof L.Polygon
-  ) {
-    showDistanceLabelsFor(globallySelectedItem);
-  }
+  refreshDistanceLabels();
 }
