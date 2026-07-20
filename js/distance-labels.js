@@ -1,11 +1,13 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 /**
- * Zoom-adaptive distance/area labels for a path or area, while drawing, selected,
- * or being edited. Labels sit at round distances (1/10/100/1,000/10,000 km or mi)
- * instead of one per vertex, with the step chosen from zoom so on-screen spacing
- * stays roughly constant. An area's total is shown at its start (where it's
- * actually true); its surface area gets its own label at the shape's center.
+ * Zoom-adaptive distance/area labels for a path or area, shown while drawing,
+ * selected, or being edited. Each end gets a label - "0" at the start, the
+ * total at the finish. A closed ring's start and finish are the same point,
+ * so it gets one combined start/total label there instead, plus a separate
+ * label for its surface area at the shape's center. Extra labels are placed
+ * at round distances (1/10/100/1,000/10,000 km or mi) along the way, with the
+ * step chosen from the current zoom so on-screen spacing stays roughly constant.
  */
 
 const DISTANCE_LABEL_MIN_PIXEL_GAP = 100;
