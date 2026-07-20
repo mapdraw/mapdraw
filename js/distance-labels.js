@@ -6,10 +6,12 @@
  * total at the finish - combined into one when they land on (or near) the same
  * point, whether that's a closed ring's start/finish or an open path that just
  * happens to end near where it began; a ring also gets a separate label for its
- * surface area at the shape's center, unless that would overlap the start/total
- * label (a small polygon zoomed well out). Extra labels are placed at round distances
- * (1/10/100 km or mi, scaling up by 10x as needed for a longer path) along the way,
- * with the step chosen from the current zoom so on-screen spacing stays roughly constant.
+ * surface area at the shape's center - generally the more sought-after figure for a
+ * polygon than its perimeter, so if the two would overlap, the start/total label is
+ * the one dropped instead (with the reverse priority everywhere else: intervals defer
+ * to endpoints). Extra labels are placed at round distances (1/10/100 km or mi, scaling
+ * up by 10x as needed for a longer path) along the way, with the step chosen from the
+ * current zoom so on-screen spacing stays roughly constant.
  */
 
 const DISTANCE_LABEL_MIN_PIXEL_GAP = 100;
@@ -20,9 +22,9 @@ const DISTANCE_LABEL_MIN_VISIBLE_PIXELS = 50;
 // Nudges labels up off the point itself, so they don't sit directly on a vertex
 // handle during draw/edit.
 const DISTANCE_LABEL_VERTICAL_OFFSET_PX = 15;
-// Every label - interval, single endpoint, the two-line combined start+total, the area
-// label - renders and gets overlap-tested as this same square, so there's exactly one
-// box shape to reason about instead of one per label type/line-count.
+// Every label - interval, single endpoint, the combined start+total, the area label -
+// renders and gets overlap-tested as this same square, so there's exactly one box
+// shape to reason about instead of one per label type/line-count.
 const DISTANCE_LABEL_SIZE_PX = 60;
 const METERS_PER_KM = 1000;
 const METERS_PER_MILE = 1609.344;
@@ -151,9 +153,10 @@ function segmentCrossesBounds(prev, next, bounds) {
   );
 }
 
-// Walks the path once, placing a label at every multiple of stepMeters crossed.
-// Segments outside the viewport are skipped in O(1) so cost stays bounded to the
-// visible portion, even for a path far longer than what's on screen.
+// Walks the path once, placing a label at every multiple of stepMeters crossed. Every
+// segment is checked in O(1), but a segment outside the viewport skips the interpolation
+// and label placement below - so that more expensive work stays bounded to what's
+// actually on screen, even for a path far longer than what's visible.
 function walkDistanceLabels(points, cumulative, stepMeters, bounds) {
   let nextMultiple = stepMeters;
 
@@ -202,16 +205,19 @@ function dropDistanceLabelsNearEndpoints(protectionBoundsList) {
   });
 }
 
-// A ring's start and "end" are the exact same point, so it always gets one combined
-// two-line label there instead of two, plus a surface-area label at its center. An
-// open path's two ends usually land far apart and get one label each - but when their
-// actual label boxes would overlap on screen (e.g. a loop walked with the path tool
-// rather than closed into an area), it gets the same combined label instead, at their
-// midpoint rather than one specific end - unlike a ring, neither end is more "the"
-// point here, they just happen to land close together. openPathEndsCoincide/mergedAnchor/
-// areaCenter are decided once by refreshDistanceLabels() below and reused as-is here,
-// rather than re-derived from points, so its interval-label protection boxes
-// (dropDistanceLabelsNearEndpoints above) always match exactly what actually gets drawn below.
+// A ring's start and "end" are the exact same point, so it gets one combined label
+// there instead of two - dropped entirely in favor of the area label if the two would
+// overlap (areaOverlapsStart below). An open path's two ends usually land far apart and
+// get one label each - but when their actual label boxes would overlap on screen (e.g. a
+// loop walked with the path tool rather than closed into an area), it gets the same
+// combined label instead, at their midpoint rather than one specific end - unlike a ring,
+// neither end is more "the" point here, they just happen to land close together.
+// openPathEndsCoincide/mergedAnchor/areaCenter/areaOverlapsStart are all decided once by
+// refreshDistanceLabels() below, before its interval-label pass runs, and reused as-is
+// here, so its interval-label protection boxes (dropDistanceLabelsNearEndpoints above)
+// always match exactly what actually gets drawn below. noIntervalLabelsVisible is decided
+// the opposite way around - from that pass's own outcome, after it's run - and only
+// affects the combined label's text content (see combinedHtml below), not any box.
 function placeDistanceLabelEndpoints(
   points,
   totalDistance,
@@ -219,27 +225,33 @@ function placeDistanceLabelEndpoints(
   openPathEndsCoincide,
   mergedAnchor,
   areaCenter,
+  areaOverlapsStart,
+  noIntervalLabelsVisible,
 ) {
   const start = points[0];
   const end = points[points.length - 1];
+  // The "0" line only earns its place when an interval label is around for it to
+  // distinguish this from - with none visible, the total alone is the only figure
+  // worth showing.
+  const combinedHtml = noIntervalLabelsVisible
+    ? formatDistance(totalDistance)
+    : `${formatDistance(totalDistance)}<br>${formatDistanceLabelInterval(0)}`;
 
-  if (isClosedRing || openPathEndsCoincide) {
-    const html = `${formatDistance(totalDistance)}<br>${formatDistanceLabelInterval(0)}`;
-    // A ring's anchor is its start vertex. An open path's is the midpoint between its
-    // two real endpoints - empty space, but close enough to both real vertex handles
-    // (that closeness is what triggered the merge) to need the same clearance from them.
-    const anchor = isClosedRing ? start : mergedAnchor;
-    placeDistanceLabel(anchor, html);
-  } else {
-    placeDistanceLabel(start, formatDistanceLabelInterval(0));
-    placeDistanceLabel(end, formatDistance(totalDistance));
-  }
-
-  if (isClosedRing && areaCenter) {
+  if (isClosedRing) {
+    // Suppressed in favor of the area label below when the two would overlap - a
+    // ring's area is generally the more sought-after figure than its perimeter.
+    if (!areaOverlapsStart) placeDistanceLabel(start, combinedHtml);
     const areaText = isSelfIntersectingRing(points)
       ? "Self-intersecting shape"
       : formatArea(calculatePolygonArea(distanceLabelSource));
     placeDistanceLabel(areaCenter, areaText);
+  } else if (openPathEndsCoincide) {
+    // The midpoint is empty space, but close enough to both real vertex handles
+    // (that closeness is what triggered the merge) to need the same clearance from them.
+    placeDistanceLabel(mergedAnchor, combinedHtml);
+  } else {
+    placeDistanceLabel(start, formatDistanceLabelInterval(0));
+    placeDistanceLabel(end, formatDistance(totalDistance));
   }
 }
 
@@ -279,24 +291,23 @@ function refreshDistanceLabels() {
         (points[0].lng + points[points.length - 1].lng) / 2,
       )
     : null;
-  // Only a ring gets a separate area label (see placeDistanceLabelEndpoints below) - and
-  // only when it wouldn't overlap the start/total label right next to it (e.g. a small
-  // polygon zoomed well out); otherwise it's simply not shown, same as an interval label
-  // near an endpoint, until zooming in separates them again.
-  let areaCenter = isClosedRing ? distanceLabelSource.getBounds().getCenter() : null;
-  if (areaCenter && distanceLabelScreenBounds(areaCenter).intersects(startBounds)) {
-    areaCenter = null;
-  }
+  // Only a ring gets a separate area label (see placeDistanceLabelEndpoints below) - it's
+  // generally the more sought-after figure for a polygon than its perimeter, so when the
+  // two would overlap, the start/total label is the one suppressed instead - the
+  // opposite priority from how an interval label defers to either of them.
+  const areaCenter = isClosedRing ? distanceLabelSource.getBounds().getCenter() : null;
+  const areaBounds = areaCenter ? distanceLabelScreenBounds(areaCenter) : null;
+  const areaOverlapsStart = isClosedRing && areaBounds.intersects(startBounds);
   // The real box(es) placeDistanceLabelEndpoints() below will actually draw: a ring's
-  // start box plus its separate area-label box (if shown), an open path's two individual
-  // boxes, or - once those two would already overlap each other - the single combined box
-  // at their midpoint instead. Interval labels are dropped against these directly, so the
-  // protection always matches what's actually on screen instead of the two boxes that no
-  // longer get drawn once merged.
+  // area box, plus its start box too unless the two overlap; an open path's two
+  // individual boxes; or - once those two would already overlap each other - the single
+  // combined box at their midpoint instead. Interval labels are dropped against these
+  // directly, so the protection always matches what's actually on screen instead of a
+  // box for a label that no longer gets drawn.
   const protectionBounds = isClosedRing
-    ? areaCenter
-      ? [startBounds, distanceLabelScreenBounds(areaCenter)]
-      : [startBounds]
+    ? areaOverlapsStart
+      ? [areaBounds]
+      : [startBounds, areaBounds]
     : openPathEndsCoincide
       ? [distanceLabelScreenBounds(mergedAnchor)]
       : [startBounds, endBounds];
@@ -305,6 +316,10 @@ function refreshDistanceLabels() {
   const bounds = map.getBounds().pad(0.25);
   walkDistanceLabels(points, cumulative, stepMeters, bounds);
   dropDistanceLabelsNearEndpoints(protectionBounds);
+  // No interval label survived to be confused with - a ring's area label is never at
+  // risk of that mix-up (it reads nothing like a distance), so its presence doesn't
+  // factor in here.
+  const noIntervalLabelsVisible = distanceLabelMarkers.length === 0;
   placeDistanceLabelEndpoints(
     points,
     totalDistance,
@@ -312,6 +327,8 @@ function refreshDistanceLabels() {
     openPathEndsCoincide,
     mergedAnchor,
     areaCenter,
+    areaOverlapsStart,
+    noIntervalLabelsVisible,
   );
 }
 
