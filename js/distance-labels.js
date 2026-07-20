@@ -24,7 +24,7 @@ const DISTANCE_LABEL_LINE_HEIGHT_PX = 20;
 // How close (px) two labels may sit before they're treated as colliding - either an
 // interval label near a start/end marker (dropDistanceLabelsNearEndpoints() below),
 // or an open path's own start and end markers (placeDistanceLabelEndpoints() below).
-const DISTANCE_LABEL_ENDPOINT_OVERLAP_MARGIN_PX = 40;
+const DISTANCE_LABEL_ENDPOINT_OVERLAP_MARGIN_PX = 100;
 const METERS_PER_KM = 1000;
 const METERS_PER_MILE = 1609.344;
 
