@@ -16,13 +16,18 @@ const DISTANCE_LABEL_MIN_VISIBLE_PIXELS = 50;
 // Nudges labels up off the point itself, so they don't sit directly on a vertex
 // handle during draw/edit.
 const DISTANCE_LABEL_VERTICAL_OFFSET_PX = 15;
+// How close (px) an interval label may sit to a start/end marker before it's
+// dropped as a collision - see dropDistanceLabelsNearEndpoints() below.
+const DISTANCE_LABEL_ENDPOINT_OVERLAP_MARGIN_PX = 40;
 const METERS_PER_KM = 1000;
 const METERS_PER_MILE = 1609.344;
 
-let distanceLabelMarkers = []; // { marker, distance } - distance kept so unit toggles can re-render the text
+let distanceLabelMarkers = []; // { marker, distance } - distance feeds the overlap filter below
 let distanceLabelSource = null; // an L.Polyline/L.Polygon, or a plain array of L.LatLng (in-progress draw)
 let distanceLabelMoveEndHandler = null;
 let distanceLabelVisibilityHandler = null;
+let distanceLabelEditDragHandler = null;
+let distanceLabelEditVertexHandler = null;
 // Read directly by settings-panel.js for its toggle's initial checked state - not just
 // "false" so any pre-existing value (or none, for users who've never touched it) defaults on.
 let distanceLabelsEnabled = localStorage.getItem("distanceLabelsEnabled") !== "false";
@@ -229,7 +234,7 @@ function refreshDistanceLabels() {
   // Too small on screen to be worth labeling at all, regardless of real-world length.
   if (totalDistance / metersPerPx < DISTANCE_LABEL_MIN_VISIBLE_PIXELS) return;
 
-  const overlapMargin = metersPerPx * 40;
+  const overlapMargin = metersPerPx * DISTANCE_LABEL_ENDPOINT_OVERLAP_MARGIN_PX;
   const stepMeters = computeDistanceLabelStepMeters(metersPerPx);
   const bounds = map.getBounds().pad(0.25);
   walkDistanceLabels(points, cumulative, stepMeters, bounds);
@@ -251,12 +256,23 @@ function showDistanceLabelsFor(source) {
   map.on("moveend", distanceLabelMoveEndHandler);
 
   // Reacts immediately to a real layer's own visibility toggling (its eye icon or
-  // its category's checkbox - both fire these events, even cascaded from a group).
+  // its category's checkbox - both fire these events, even cascaded from a group),
+  // and, while under active Edit, to its vertices changing (editdrag per drag frame,
+  // draw:editvertex per add/remove/drop). Safe to arm unconditionally - leaflet-draw
+  // only ever fires either for the one layer actually being edited.
   if (!Array.isArray(source)) {
     distanceLabelVisibilityHandler = (e) => {
       if (e.layer === distanceLabelSource) refreshDistanceLabels();
     };
     map.on("layeradd layerremove", distanceLabelVisibilityHandler);
+
+    distanceLabelEditDragHandler = refreshDistanceLabels;
+    source.on("editdrag", distanceLabelEditDragHandler);
+
+    distanceLabelEditVertexHandler = (e) => {
+      if (e.poly === distanceLabelSource) refreshDistanceLabels();
+    };
+    map.on(L.Draw.Event.EDITVERTEX, distanceLabelEditVertexHandler);
   }
 
   refreshDistanceLabels();
@@ -278,6 +294,14 @@ function hideDistanceLabels() {
   if (distanceLabelVisibilityHandler) {
     map.off("layeradd layerremove", distanceLabelVisibilityHandler);
     distanceLabelVisibilityHandler = null;
+  }
+  if (distanceLabelEditDragHandler) {
+    distanceLabelSource.off("editdrag", distanceLabelEditDragHandler);
+    distanceLabelEditDragHandler = null;
+  }
+  if (distanceLabelEditVertexHandler) {
+    map.off(L.Draw.Event.EDITVERTEX, distanceLabelEditVertexHandler);
+    distanceLabelEditVertexHandler = null;
   }
   distanceLabelSource = null;
 }

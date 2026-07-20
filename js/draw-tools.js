@@ -237,13 +237,10 @@ function initDrawTools() {
     window.app.setDrawnItemsCheckboxLocked(true);
     updateDrawControlStates();
 
-    // Markers have no vertices to show distances along.
+    // Markers have no vertices to show distances along. showDistanceLabelsFor() itself
+    // stays live for the rest of the edit session - no extra wiring needed here.
     if (itemBeingEdited instanceof L.Polyline) {
       showDistanceLabelsFor(itemBeingEdited);
-      // editdrag fires per drag frame; draw:editvertex fires once a vertex is
-      // added/removed/dropped. Both are needed to keep labels live throughout edit.
-      itemBeingEdited.on("editdrag", refreshDistanceLabels);
-      map.on(L.Draw.Event.EDITVERTEX, refreshDistanceLabels);
     }
   });
 
@@ -255,8 +252,6 @@ function initDrawTools() {
     hideDistanceLabels();
 
     const itemToReselect = itemBeingEdited;
-    itemToReselect?.off("editdrag", refreshDistanceLabels);
-    map.off(L.Draw.Event.EDITVERTEX, refreshDistanceLabels);
     itemBeingEdited = null;
     // Not tracked anymore if this EDITSTOP was forced by the layerremove guard
     // below (the item was deleted out from under an active edit session) -
