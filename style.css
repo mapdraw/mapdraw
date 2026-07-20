@@ -429,6 +429,9 @@ select:focus {
 /* Distance/area labels shown on a path or area while drawing, selected, or being edited */
 .distance-label {
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
   text-align: center;
   font-size: var(--font-size-12);

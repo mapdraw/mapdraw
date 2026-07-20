@@ -6,9 +6,10 @@
  * total at the finish - combined into one when they land on (or near) the same
  * point, whether that's a closed ring's start/finish or an open path that just
  * happens to end near where it began; a ring also gets a separate label for its
- * surface area at the shape's center. Extra labels are placed at round distances
- * (1/10/100/1,000/10,000 km or mi) along the way, with the step chosen from the
- * current zoom so on-screen spacing stays roughly constant.
+ * surface area at the shape's center, unless that would overlap the start/total
+ * label (a small polygon zoomed well out). Extra labels are placed at round distances
+ * (1/10/100 km or mi, scaling up by 10x as needed for a longer path) along the way,
+ * with the step chosen from the current zoom so on-screen spacing stays roughly constant.
  */
 
 const DISTANCE_LABEL_MIN_PIXEL_GAP = 100;
@@ -19,15 +20,10 @@ const DISTANCE_LABEL_MIN_VISIBLE_PIXELS = 50;
 // Nudges labels up off the point itself, so they don't sit directly on a vertex
 // handle during draw/edit.
 const DISTANCE_LABEL_VERTICAL_OFFSET_PX = 15;
-// A label's default height is one line; the combined ring label below is two.
-const DISTANCE_LABEL_LINE_HEIGHT_PX = 20;
-// Actual rendered width of a label's box (its CSS is nowrap/no-reflow, so this is fixed
-// regardless of text length).
-const DISTANCE_LABEL_WIDTH_PX = 60;
-// Width used for the overlap test only (distanceLabelScreenBounds() below), wider than
-// the box actually rendered - a cheap safety margin for text that runs past it (e.g. a
-// long round-trip distance) without measuring real rendered text width.
-const DISTANCE_LABEL_OVERLAP_WIDTH_PX = 80;
+// Every label - interval, single endpoint, the two-line combined start+total, the area
+// label - renders and gets overlap-tested as this same square, so there's exactly one
+// box shape to reason about instead of one per label type/line-count.
+const DISTANCE_LABEL_SIZE_PX = 60;
 const METERS_PER_KM = 1000;
 const METERS_PER_MILE = 1609.344;
 
@@ -49,31 +45,28 @@ function formatDistanceLabelInterval(meters) {
   return `${Math.round(meters / unitMeters)} ${unitLabel}`;
 }
 
-function distanceLabelIcon(html, heightPx, verticalOffset = DISTANCE_LABEL_VERTICAL_OFFSET_PX) {
+function distanceLabelIcon(html) {
   return L.divIcon({
     className: "distance-label",
     html,
-    iconSize: [DISTANCE_LABEL_WIDTH_PX, heightPx],
-    // Bottom line's own center, not the box's - keeps it on the point even
-    // when extra lines are stacked above (e.g. the combined start+total label).
+    iconSize: [DISTANCE_LABEL_SIZE_PX, DISTANCE_LABEL_SIZE_PX],
     iconAnchor: [
-      DISTANCE_LABEL_WIDTH_PX / 2,
-      heightPx - DISTANCE_LABEL_LINE_HEIGHT_PX / 2 + verticalOffset,
+      DISTANCE_LABEL_SIZE_PX / 2,
+      DISTANCE_LABEL_SIZE_PX / 2 + DISTANCE_LABEL_VERTICAL_OFFSET_PX,
     ],
   });
 }
 
-// The on-screen rectangle a label of the given height/offset would occupy at latlng,
-// in container-pixel space - mirrors distanceLabelIcon()'s own anchor math (widened
-// per DISTANCE_LABEL_OVERLAP_WIDTH_PX above), so two labels can be tested for real box
+// The on-screen square a label at latlng would occupy in container-pixel space - mirrors
+// distanceLabelIcon()'s own anchor math exactly, so two labels can be tested for real box
 // overlap instead of a fixed path-distance margin.
-function distanceLabelScreenBounds(latlng, heightPx, verticalOffset) {
+function distanceLabelScreenBounds(latlng) {
   const anchor = L.point(
-    DISTANCE_LABEL_OVERLAP_WIDTH_PX / 2,
-    heightPx - DISTANCE_LABEL_LINE_HEIGHT_PX / 2 + verticalOffset,
+    DISTANCE_LABEL_SIZE_PX / 2,
+    DISTANCE_LABEL_SIZE_PX / 2 + DISTANCE_LABEL_VERTICAL_OFFSET_PX,
   );
   const topLeft = map.latLngToContainerPoint(latlng).subtract(anchor);
-  return L.bounds(topLeft, topLeft.add([DISTANCE_LABEL_OVERLAP_WIDTH_PX, heightPx]));
+  return L.bounds(topLeft, topLeft.add([DISTANCE_LABEL_SIZE_PX, DISTANCE_LABEL_SIZE_PX]));
 }
 
 // A dedicated pane above the selected-path outline (which can reach z-index 601,
@@ -86,15 +79,10 @@ function ensureDistanceLabelPane() {
   }
 }
 
-function placeDistanceLabel(
-  latlng,
-  html,
-  heightPx = DISTANCE_LABEL_LINE_HEIGHT_PX,
-  verticalOffset = DISTANCE_LABEL_VERTICAL_OFFSET_PX,
-) {
+function placeDistanceLabel(latlng, html) {
   ensureDistanceLabelPane();
   const marker = L.marker(latlng, {
-    icon: distanceLabelIcon(html, heightPx, verticalOffset),
+    icon: distanceLabelIcon(html),
     interactive: false,
     pane: "distanceLabelPane",
   }).addTo(map);
@@ -199,19 +187,14 @@ function walkDistanceLabels(points, cumulative, stepMeters, bounds) {
   }
 }
 
-// Drops an interval label whose actual box would overlap a start/total marker's -
-// only while it's really overlapping, not the whole step, so it doesn't stay hidden
-// long after passing it. A ring's combined marker only needs the start side protected.
-function dropDistanceLabelsNearEndpoints(startBounds, endBounds, isClosedRing) {
+// Drops an interval label whose actual box would overlap any of the given endpoint
+// label boxes - only while it's really overlapping, not the whole step, so it doesn't
+// stay hidden long after passing it.
+function dropDistanceLabelsNearEndpoints(protectionBoundsList) {
   distanceLabelMarkers = distanceLabelMarkers.filter((marker) => {
-    const labelBounds = distanceLabelScreenBounds(
-      marker.getLatLng(),
-      DISTANCE_LABEL_LINE_HEIGHT_PX,
-      DISTANCE_LABEL_VERTICAL_OFFSET_PX,
-    );
-    const overlapsStart = labelBounds.intersects(startBounds);
-    const overlapsEnd = !isClosedRing && labelBounds.intersects(endBounds);
-    if (overlapsStart || overlapsEnd) {
+    const labelBounds = distanceLabelScreenBounds(marker.getLatLng());
+    const overlaps = protectionBoundsList.some((bounds) => labelBounds.intersects(bounds));
+    if (overlaps) {
       map.removeLayer(marker);
       return false;
     }
@@ -225,32 +208,38 @@ function dropDistanceLabelsNearEndpoints(startBounds, endBounds, isClosedRing) {
 // actual label boxes would overlap on screen (e.g. a loop walked with the path tool
 // rather than closed into an area), it gets the same combined label instead, at their
 // midpoint rather than one specific end - unlike a ring, neither end is more "the"
-// point here, they just happen to land close together.
-function placeDistanceLabelEndpoints(points, totalDistance, isClosedRing, startBounds, endBounds) {
+// point here, they just happen to land close together. openPathEndsCoincide/mergedAnchor/
+// areaCenter are decided once by refreshDistanceLabels() below and reused as-is here,
+// rather than re-derived from points, so its interval-label protection boxes
+// (dropDistanceLabelsNearEndpoints above) always match exactly what actually gets drawn below.
+function placeDistanceLabelEndpoints(
+  points,
+  totalDistance,
+  isClosedRing,
+  openPathEndsCoincide,
+  mergedAnchor,
+  areaCenter,
+) {
   const start = points[0];
   const end = points[points.length - 1];
-  const openPathEndsCoincide = !isClosedRing && startBounds.intersects(endBounds);
 
   if (isClosedRing || openPathEndsCoincide) {
     const html = `${formatDistance(totalDistance)}<br>${formatDistanceLabelInterval(0)}`;
-    // A ring's anchor is a real vertex, nudged up like any other label so it clears
-    // its own vertex handle. An open path's midpoint is empty space with no handle
-    // to clear, so it sits centered on it with no offset instead.
-    const anchor = isClosedRing
-      ? start
-      : L.latLng((start.lat + end.lat) / 2, (start.lng + end.lng) / 2);
-    const verticalOffset = isClosedRing ? DISTANCE_LABEL_VERTICAL_OFFSET_PX : 0;
-    placeDistanceLabel(anchor, html, DISTANCE_LABEL_LINE_HEIGHT_PX * 2, verticalOffset);
+    // A ring's anchor is its start vertex. An open path's is the midpoint between its
+    // two real endpoints - empty space, but close enough to both real vertex handles
+    // (that closeness is what triggered the merge) to need the same clearance from them.
+    const anchor = isClosedRing ? start : mergedAnchor;
+    placeDistanceLabel(anchor, html);
   } else {
     placeDistanceLabel(start, formatDistanceLabelInterval(0));
     placeDistanceLabel(end, formatDistance(totalDistance));
   }
 
-  if (isClosedRing) {
+  if (isClosedRing && areaCenter) {
     const areaText = isSelfIntersectingRing(points)
       ? "Self-intersecting shape"
       : formatArea(calculatePolygonArea(distanceLabelSource));
-    placeDistanceLabel(distanceLabelSource.getBounds().getCenter(), areaText);
+    placeDistanceLabel(areaCenter, areaText);
   }
 }
 
@@ -279,24 +268,51 @@ function refreshDistanceLabels() {
   // Too small on screen to be worth labeling at all, regardless of real-world length.
   if (totalDistance / metersPerPx < DISTANCE_LABEL_MIN_VISIBLE_PIXELS) return;
 
-  // A ring's start always ends up as the taller 2-line combined label (see
-  // placeDistanceLabelEndpoints below) - known upfront, unlike an open path's
-  // possible merge, so its protection box can match the real box exactly.
-  const startBounds = distanceLabelScreenBounds(
-    points[0],
-    isClosedRing ? DISTANCE_LABEL_LINE_HEIGHT_PX * 2 : DISTANCE_LABEL_LINE_HEIGHT_PX,
-    DISTANCE_LABEL_VERTICAL_OFFSET_PX,
-  );
-  const endBounds = distanceLabelScreenBounds(
-    points[points.length - 1],
-    DISTANCE_LABEL_LINE_HEIGHT_PX,
-    DISTANCE_LABEL_VERTICAL_OFFSET_PX,
-  );
+  const startBounds = distanceLabelScreenBounds(points[0]);
+  const endBounds = distanceLabelScreenBounds(points[points.length - 1]);
+  const openPathEndsCoincide = !isClosedRing && startBounds.intersects(endBounds);
+  // Only computed when actually needed below - an open path's own midpoint, where its
+  // merged label (see placeDistanceLabelEndpoints below) actually gets drawn.
+  const mergedAnchor = openPathEndsCoincide
+    ? L.latLng(
+        (points[0].lat + points[points.length - 1].lat) / 2,
+        (points[0].lng + points[points.length - 1].lng) / 2,
+      )
+    : null;
+  // Only a ring gets a separate area label (see placeDistanceLabelEndpoints below) - and
+  // only when it wouldn't overlap the start/total label right next to it (e.g. a small
+  // polygon zoomed well out); otherwise it's simply not shown, same as an interval label
+  // near an endpoint, until zooming in separates them again.
+  let areaCenter = isClosedRing ? distanceLabelSource.getBounds().getCenter() : null;
+  if (areaCenter && distanceLabelScreenBounds(areaCenter).intersects(startBounds)) {
+    areaCenter = null;
+  }
+  // The real box(es) placeDistanceLabelEndpoints() below will actually draw: a ring's
+  // start box plus its separate area-label box (if shown), an open path's two individual
+  // boxes, or - once those two would already overlap each other - the single combined box
+  // at their midpoint instead. Interval labels are dropped against these directly, so the
+  // protection always matches what's actually on screen instead of the two boxes that no
+  // longer get drawn once merged.
+  const protectionBounds = isClosedRing
+    ? areaCenter
+      ? [startBounds, distanceLabelScreenBounds(areaCenter)]
+      : [startBounds]
+    : openPathEndsCoincide
+      ? [distanceLabelScreenBounds(mergedAnchor)]
+      : [startBounds, endBounds];
+
   const stepMeters = computeDistanceLabelStepMeters(metersPerPx);
   const bounds = map.getBounds().pad(0.25);
   walkDistanceLabels(points, cumulative, stepMeters, bounds);
-  dropDistanceLabelsNearEndpoints(startBounds, endBounds, isClosedRing);
-  placeDistanceLabelEndpoints(points, totalDistance, isClosedRing, startBounds, endBounds);
+  dropDistanceLabelsNearEndpoints(protectionBounds);
+  placeDistanceLabelEndpoints(
+    points,
+    totalDistance,
+    isClosedRing,
+    openPathEndsCoincide,
+    mergedAnchor,
+    areaCenter,
+  );
 }
 
 /**
