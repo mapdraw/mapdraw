@@ -442,6 +442,8 @@ select:focus {
     1px -1px 0 black,
     -1px 1px 0 black,
     1px 1px 0 black;
+  /* DEBUG: outlines the label's actual rendered box */
+  /* outline: 1px solid red; */
 }
 
 /* Drag highlight box around a marker in edit mode (overrides leaflet-draw's default pink) */
