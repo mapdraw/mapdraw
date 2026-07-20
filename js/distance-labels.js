@@ -5,13 +5,15 @@
  * selected, or being edited. Each end gets a label - "0" at the start, the
  * total at the finish - combined into one when they land on (or near) the same
  * point, whether that's a closed ring's start/finish or an open path that just
- * happens to end near where it began; a ring also gets a separate label for its
- * surface area at the shape's center - generally the more sought-after figure for a
- * polygon than its perimeter, so if the two would overlap, the start/total label is
- * the one dropped instead (with the reverse priority everywhere else: intervals defer
- * to endpoints). Extra labels are placed at round distances (1/10/100 km or mi, scaling
- * up by 10x as needed for a longer path) along the way, with the step chosen from the
- * current zoom so on-screen spacing stays roughly constant.
+ * happens to end near where it began; that combined label drops the "0" down to
+ * just the total whenever there's no interval label nearby for it to distinguish
+ * itself from. A ring also gets a separate label for its surface area at the
+ * shape's center - generally the more sought-after figure for a polygon than its
+ * perimeter, so if the two would overlap, the start/total label is the one dropped
+ * instead (with the reverse priority everywhere else: intervals defer to endpoints).
+ * Extra labels are placed at round distances (1/10/100 km or mi, scaling up by 10x
+ * as needed for a longer path) along the way, with the step chosen from the current
+ * zoom so on-screen spacing stays roughly constant.
  */
 
 const DISTANCE_LABEL_MIN_PIXEL_GAP = 100;
@@ -47,26 +49,20 @@ function formatDistanceLabelInterval(meters) {
   return `${Math.round(meters / unitMeters)} ${unitLabel}`;
 }
 
-function distanceLabelIcon(html) {
+function distanceLabelIcon(html, verticalOffset = DISTANCE_LABEL_VERTICAL_OFFSET_PX) {
   return L.divIcon({
     className: "distance-label",
     html,
     iconSize: [DISTANCE_LABEL_SIZE_PX, DISTANCE_LABEL_SIZE_PX],
-    iconAnchor: [
-      DISTANCE_LABEL_SIZE_PX / 2,
-      DISTANCE_LABEL_SIZE_PX / 2 + DISTANCE_LABEL_VERTICAL_OFFSET_PX,
-    ],
+    iconAnchor: [DISTANCE_LABEL_SIZE_PX / 2, DISTANCE_LABEL_SIZE_PX / 2 + verticalOffset],
   });
 }
 
 // The on-screen square a label at latlng would occupy in container-pixel space - mirrors
 // distanceLabelIcon()'s own anchor math exactly, so two labels can be tested for real box
 // overlap instead of a fixed path-distance margin.
-function distanceLabelScreenBounds(latlng) {
-  const anchor = L.point(
-    DISTANCE_LABEL_SIZE_PX / 2,
-    DISTANCE_LABEL_SIZE_PX / 2 + DISTANCE_LABEL_VERTICAL_OFFSET_PX,
-  );
+function distanceLabelScreenBounds(latlng, verticalOffset = DISTANCE_LABEL_VERTICAL_OFFSET_PX) {
+  const anchor = L.point(DISTANCE_LABEL_SIZE_PX / 2, DISTANCE_LABEL_SIZE_PX / 2 + verticalOffset);
   const topLeft = map.latLngToContainerPoint(latlng).subtract(anchor);
   return L.bounds(topLeft, topLeft.add([DISTANCE_LABEL_SIZE_PX, DISTANCE_LABEL_SIZE_PX]));
 }
@@ -81,10 +77,10 @@ function ensureDistanceLabelPane() {
   }
 }
 
-function placeDistanceLabel(latlng, html) {
+function placeDistanceLabel(latlng, html, verticalOffset = DISTANCE_LABEL_VERTICAL_OFFSET_PX) {
   ensureDistanceLabelPane();
   const marker = L.marker(latlng, {
-    icon: distanceLabelIcon(html),
+    icon: distanceLabelIcon(html, verticalOffset),
     interactive: false,
     pane: "distanceLabelPane",
   }).addTo(map);
@@ -246,9 +242,12 @@ function placeDistanceLabelEndpoints(
       : formatArea(calculatePolygonArea(distanceLabelSource));
     placeDistanceLabel(areaCenter, areaText);
   } else if (openPathEndsCoincide) {
-    // The midpoint is empty space, but close enough to both real vertex handles
-    // (that closeness is what triggered the merge) to need the same clearance from them.
-    placeDistanceLabel(mergedAnchor, combinedHtml);
+    // No offset: unlike every other label here, there's no single vertex directly
+    // below this anchor to nudge clear of - the midpoint has two real vertex handles
+    // around it, at whatever relative position they happen to be in, so a fixed upward
+    // nudge isn't guaranteed to clear both (it can even move toward one while moving
+    // away from the other). Centered is the neutral choice that doesn't favor either.
+    placeDistanceLabel(mergedAnchor, combinedHtml, 0);
   } else {
     placeDistanceLabel(start, formatDistanceLabelInterval(0));
     placeDistanceLabel(end, formatDistance(totalDistance));
@@ -309,7 +308,7 @@ function refreshDistanceLabels() {
       ? [areaBounds]
       : [startBounds, areaBounds]
     : openPathEndsCoincide
-      ? [distanceLabelScreenBounds(mergedAnchor)]
+      ? [distanceLabelScreenBounds(mergedAnchor, 0)]
       : [startBounds, endBounds];
 
   const stepMeters = computeDistanceLabelStepMeters(metersPerPx);
