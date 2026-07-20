@@ -206,8 +206,12 @@ function initDrawTools() {
         // the first vertex once pathExtendTarget is set; nothing to show before that.
         if (newPoints.length < 2) return;
         // Extending an existing path: prepend its points so its labels stay visible.
+        // newPoints[0] is the marker path-extend.js snapped onto that same path's
+        // endpoint - already the lead-in's own last point - so drop it to avoid a
+        // zero-length segment at the join (mirrors path-extend.js's own draw:created
+        // handler, which slices its drawnPoints the same way for the final shape).
         const points = pathExtendTarget
-          ? [...pathExtendLeadInPoints(pathExtendTarget), ...newPoints]
+          ? [...pathExtendLeadInPoints(pathExtendTarget), ...newPoints.slice(1)]
           : newPoints;
         showDistanceLabelsFor(points);
       });

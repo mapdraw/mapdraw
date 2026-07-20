@@ -18,6 +18,8 @@ const DISTANCE_LABEL_MIN_VISIBLE_PIXELS = 50;
 // Nudges labels up off the point itself, so they don't sit directly on a vertex
 // handle during draw/edit.
 const DISTANCE_LABEL_VERTICAL_OFFSET_PX = 15;
+// A label's default height is one line; the combined ring label below is two.
+const DISTANCE_LABEL_LINE_HEIGHT_PX = 20;
 // How close (px) an interval label may sit to a start/end marker before it's
 // dropped as a collision - see dropDistanceLabelsNearEndpoints() below.
 const DISTANCE_LABEL_ENDPOINT_OVERLAP_MARGIN_PX = 40;
@@ -65,7 +67,12 @@ function ensureDistanceLabelPane() {
 // distanceForFilter is this label's own distance value for the near-endpoint
 // filter below, not necessarily what html displays (e.g. the combined
 // start+total label shows two numbers but filters against distance 0).
-function placeDistanceLabel(latlng, distanceForFilter, html, heightPx = 20) {
+function placeDistanceLabel(
+  latlng,
+  distanceForFilter,
+  html,
+  heightPx = DISTANCE_LABEL_LINE_HEIGHT_PX,
+) {
   ensureDistanceLabelPane();
   const marker = L.marker(latlng, {
     icon: distanceLabelIcon(html, heightPx),
@@ -80,19 +87,11 @@ function clearDistanceLabelMarkers() {
   distanceLabelMarkers = [];
 }
 
-// Like calculatePathDistance()'s own flattening, but without closing a polygon's
-// ring back to its first vertex - getDistanceLabelClosingSegment() below adds
-// that length to the total separately, without walking it for interval labels.
-function getDistanceLabelLayerPoints(layer) {
-  let latlngs = layer.getLatLngs();
-  while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-    latlngs = latlngs[0];
-  }
-  return latlngs;
-}
-
+// Unlike calculatePathDistance() in utils.js, this doesn't close a polygon's ring
+// back to its first vertex - getDistanceLabelClosingSegment() below adds that
+// length to the total separately, without walking it for interval labels.
 function getDistanceLabelSourcePoints(source) {
-  return Array.isArray(source) ? source : getDistanceLabelLayerPoints(source);
+  return Array.isArray(source) ? source : flattenRingPoints(source.getLatLngs());
 }
 
 /** Length of a polygon's closing edge (last vertex back to first) - 0 for anything else. */
@@ -165,6 +164,9 @@ function walkDistanceLabels(points, cumulative, stepMeters, bounds) {
 
     const segLength = segEndAbs - segStartAbs;
     while (nextMultiple <= segEndAbs) {
+      // Always true under exact arithmetic - the continue and bounds-skip branches
+      // above both guarantee nextMultiple is already >= this segment's start. Kept
+      // as a guard against float drift between two independently-computed values.
       if (nextMultiple >= segStartAbs) {
         const fraction = segLength === 0 ? 0 : (nextMultiple - segStartAbs) / segLength;
         const latlng = L.latLng(
@@ -199,7 +201,7 @@ function dropDistanceLabelsNearEndpoints(totalDistance, isClosedRing, margin) {
 function placeDistanceLabelEndpoints(points, totalDistance, isClosedRing) {
   if (isClosedRing) {
     const html = `${formatDistance(totalDistance)}<br>${formatDistanceLabelInterval(0)}`;
-    placeDistanceLabel(points[0], 0, html, 40);
+    placeDistanceLabel(points[0], 0, html, DISTANCE_LABEL_LINE_HEIGHT_PX * 2);
 
     const areaText = isSelfIntersectingRing(points)
       ? "Self-intersecting shape"

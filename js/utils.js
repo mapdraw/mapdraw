@@ -291,16 +291,27 @@ function generateTimestampedFilename(baseName, extension) {
 }
 
 /**
+ * Unwraps a layer's getLatLngs() down to its outermost ring/path's own flat array
+ * of L.LatLng, stripping the extra nesting Leaflet uses for multi-geometries and
+ * polygons with holes. Only the first (outer) ring is kept.
+ * @param {L.LatLng[]} latlngs - Return value of layer.getLatLngs()
+ * @returns {L.LatLng[]}
+ */
+function flattenRingPoints(latlngs) {
+  while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
+    latlngs = latlngs[0];
+  }
+  return latlngs;
+}
+
+/**
  * Calculates the total distance of a path in meters.
  * @param {L.Polyline | L.Polygon} path - The layer to measure
  * @returns {number} Total distance in meters
  */
 function calculatePathDistance(path) {
   if (!(path instanceof L.Polyline) && !(path instanceof L.Polygon)) return 0;
-  let latlngs = path.getLatLngs();
-  while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-    latlngs = latlngs[0];
-  }
+  const latlngs = flattenRingPoints(path.getLatLngs());
   if (latlngs.length < 2) return 0;
 
   let cumulativeDistance = 0;
