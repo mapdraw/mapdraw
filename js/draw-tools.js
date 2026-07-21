@@ -175,37 +175,6 @@ function initDrawTools() {
     updateDrawControlStates();
   });
 
-  // Distance labels for drawing
-  let distanceLabels = []; // { marker, distance } - distance kept so units can re-render the text later
-  let totalDistance = 0;
-  let distanceSeeded = false;
-
-  function distanceLabelIcon(distance) {
-    return L.divIcon({
-      className: "distance-label",
-      html: formatDistance(distance),
-      iconSize: [60, 20],
-      iconAnchor: [30, -10],
-    });
-  }
-
-  // Called from settings-panel.js when the unit toggle changes, so labels
-  // already placed during an in-progress draw switch units too instead of
-  // only ones placed after the toggle.
-  refreshDistanceLabels = function () {
-    distanceLabels.forEach(({ marker, distance }) => marker.setIcon(distanceLabelIcon(distance)));
-  };
-
-  // Called from path-extend.js to show the extended path's pre-existing distance
-  // at the endpoint it's being extended from, the moment extension starts.
-  addDistanceLabel = function (latlng, distance) {
-    const marker = L.marker(latlng, {
-      icon: distanceLabelIcon(distance),
-      interactive: false,
-    }).addTo(map);
-    distanceLabels.push({ marker, distance });
-  };
-
   // EDITSTOP reselects whatever was being edited, but only after a short delay (below).
   // Anything that establishes a new selection state before that delay elapses - a different
   // tool starting (e.g. clicking Path right after Edit, which leaflet-draw's own toolbar
@@ -228,29 +197,23 @@ function initDrawTools() {
     deselectCurrentItem();
     L.DomUtil.addClass(document.body, "leaflet-is-drawing");
     window.app.setDrawnItemsCheckboxLocked(true);
-    totalDistance = 0;
-    distanceSeeded = false;
-    distanceLabels.forEach(({ marker }) => map.removeLayer(marker));
-    distanceLabels = [];
+    hideDistanceLabels();
 
     if (e.layerType === "polyline" || e.layerType === "polygon") {
       map.on("draw:drawvertex", function (evt) {
-        const points = evt.layers.getLayers().map((l) => l.getLatLng());
-        if (points.length < 2) return;
-
-        // path-extend.js may have snapped the first vertex onto an existing
-        // path's endpoint - if so, carry that path's own distance forward
-        // instead of restarting the running total at zero.
-        if (!distanceSeeded) {
-          if (pathExtendTarget) totalDistance = calculatePathDistance(pathExtendTarget.layer);
-          distanceSeeded = true;
-        }
-
-        const prevPoint = points[points.length - 2];
-        const newPoint = points[points.length - 1];
-        totalDistance += prevPoint.distanceTo(newPoint);
-
-        addDistanceLabel(newPoint, totalDistance);
+        const newPoints = evt.layers.getLayers().map((l) => l.getLatLng());
+        // path-extend.js's own listener (bound after this one) seeds the label for
+        // the first vertex once pathExtendTarget is set; nothing to show before that.
+        if (newPoints.length < 2) return;
+        // Extending an existing path: prepend its points so its labels stay visible.
+        // newPoints[0] is the marker path-extend.js snapped onto that same path's
+        // endpoint - already the lead-in's own last point - so drop it to avoid a
+        // zero-length segment at the join (mirrors path-extend.js's own draw:created
+        // handler, which slices its drawnPoints the same way for the final shape).
+        const points = pathExtendTarget
+          ? [...pathExtendLeadInPoints(pathExtendTarget), ...newPoints.slice(1)]
+          : newPoints;
+        showDistanceLabelsFor(points);
       });
     }
   });
@@ -259,8 +222,11 @@ function initDrawTools() {
     window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
     window.app.setDrawnItemsCheckboxLocked(false);
-    distanceLabels.forEach(({ marker }) => map.removeLayer(marker));
-    distanceLabels = [];
+    // Only clear if the draw was cancelled - a finished shape's draw:created already
+    // handed the labels off to it via selectItem(), which fires before this.
+    if (isDistanceLabelSourceInProgress()) {
+      hideDistanceLabels();
+    }
     map.off("draw:drawvertex");
   });
 
@@ -274,6 +240,12 @@ function initDrawTools() {
     L.DomUtil.addClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(true);
     updateDrawControlStates();
+
+    // Markers have no vertices to show distances along. showDistanceLabelsFor() itself
+    // stays live for the rest of the edit session - no extra wiring needed here.
+    if (itemBeingEdited instanceof L.Polyline) {
+      showDistanceLabelsFor(itemBeingEdited);
+    }
   });
 
   map.on(L.Draw.Event.EDITSTOP, () => {
@@ -281,6 +253,7 @@ function initDrawTools() {
     isEditMode = false;
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(false);
+    hideDistanceLabels();
 
     const itemToReselect = itemBeingEdited;
     itemBeingEdited = null;

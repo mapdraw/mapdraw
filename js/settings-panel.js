@@ -6,7 +6,7 @@
 
 /**
  * Updates currently displayed UI elements that show units (routing panel, info panel,
- * in-progress draw distance labels) when the user toggles between metric and imperial units.
+ * distance/area labels on the map) when the user toggles between metric and imperial units.
  */
 function updateAllDynamicUnitDisplays() {
   const selected = getEffectiveSelectedLayer();
@@ -145,6 +145,21 @@ function initSettingsPanel() {
   });
 
   L.DomEvent.on(imperialUnitsContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
+
+  const distanceLabelsContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
+  const distanceLabelsLabel = L.DomUtil.create("label", "", distanceLabelsContainer);
+  distanceLabelsLabel.htmlFor = "distance-labels-toggle";
+  distanceLabelsLabel.innerText = "Distance Labels";
+  const distanceLabelsCheckbox = L.DomUtil.create("input", "", distanceLabelsContainer);
+  distanceLabelsCheckbox.type = "checkbox";
+  distanceLabelsCheckbox.id = "distance-labels-toggle";
+  distanceLabelsCheckbox.checked = distanceLabelsEnabled;
+
+  L.DomEvent.on(distanceLabelsCheckbox, "change", (e) => {
+    setDistanceLabelsEnabled(e.target.checked);
+  });
+
+  L.DomEvent.on(distanceLabelsContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
 
   const forceDesktopLayoutContainer = L.DomUtil.create(
     "div",

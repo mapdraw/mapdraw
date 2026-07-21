@@ -53,6 +53,15 @@ function pathExtendIsValidFinishSnap(snap) {
   return !!snap && (!pathExtendTarget || snap.layer !== pathExtendTarget.layer);
 }
 
+// Orients an existing path's points to lead INTO the snapped endpoint (reversed if
+// that endpoint was the path's own start). Reused by draw-tools.js's live labels
+// and below for splicing paths - reversing this result gives "lead out of" instead.
+function pathExtendLeadInPoints(target) {
+  return target.end === "end"
+    ? target.layer.getLatLngs()
+    : [...target.layer.getLatLngs()].reverse();
+}
+
 // While hovering, swap the tooltip for one reflecting the snap that's about
 // to happen: starting on an endpoint (no vertex placed yet), or - on any
 // later vertex - finishing on a *different* path's endpoint to join them.
@@ -157,7 +166,9 @@ function initPathExtend() {
     handler._markers[0].setLatLng(snap.latlng);
     handler._poly.setLatLngs([snap.latlng]);
     handler._poly.setStyle({ color: snap.layer.options.color });
-    addDistanceLabel(snap.latlng, calculatePathDistance(snap.layer));
+    // Seeds labels with the existing path so they show right away, not just once a
+    // new segment is drawn - draw-tools.js takes over from the second vertex on.
+    showDistanceLabelsFor(pathExtendLeadInPoints(pathExtendTarget));
   }
 
   // A later vertex snapped onto a *different* path's endpoint (whether or
@@ -242,16 +253,8 @@ function initPathExtend() {
     // point, the path being led OUT OF begins at its clicked point. The
     // drawn points always run as-drawn in between, since they were drawn
     // walking from the start side to the finish side regardless of orientation.
-    const leadIn = !start
-      ? []
-      : start.end === "end"
-        ? start.layer.getLatLngs()
-        : [...start.layer.getLatLngs()].reverse();
-    const leadOut = !finish
-      ? []
-      : finish.end === "start"
-        ? finish.layer.getLatLngs()
-        : [...finish.layer.getLatLngs()].reverse();
+    const leadIn = start ? pathExtendLeadInPoints(start) : [];
+    const leadOut = finish ? [...pathExtendLeadInPoints(finish)].reverse() : [];
 
     const target = start ? start.layer : finish.layer;
     target.setLatLngs([...leadIn, ...drawnPoints, ...leadOut]);

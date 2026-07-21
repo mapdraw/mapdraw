@@ -426,18 +426,27 @@ select:focus {
   border: none;
 }
 
-/* Distance labels shown while drawing polylines */
+/* Distance/area labels shown on a path or area while drawing, selected, or being edited */
 .distance-label {
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
+  text-align: center;
   font-size: var(--font-size-12);
   font-weight: bold;
   color: white;
+  /* Mitigates blur from Leaflet's sub-pixel marker positioning. */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   text-shadow:
     -1px -1px 0 black,
     1px -1px 0 black,
     -1px 1px 0 black,
     1px 1px 0 black;
+  /* DEBUG: outlines the label's actual rendered box */
+  /* outline: 1px solid red; */
 }
 
 /* Drag highlight box around a marker in edit mode (overrides leaflet-draw's default pink) */
