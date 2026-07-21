@@ -208,11 +208,11 @@ function dropDistanceLabelsNearEndpoints(protectionBoundsList) {
 // loop walked with the path tool rather than closed into an area), it gets the same
 // combined label instead, at their midpoint rather than one specific end - unlike a ring,
 // neither end is more "the" point here, they just happen to land close together.
-// openPathEndsCoincide/mergedAnchor/areaCenter/areaOverlapsStart are all decided once by
-// refreshDistanceLabels() below, before its interval-label pass runs, and reused as-is
-// here, so its interval-label protection boxes (dropDistanceLabelsNearEndpoints above)
-// always match exactly what actually gets drawn below. noIntervalLabelsVisible is decided
-// the opposite way around - from that pass's own outcome, after it's run - and only
+// openPathEndsCoincide/mergedAnchor/areaCenter/areaOverlapsStart/isSelfIntersecting are all
+// decided once by refreshDistanceLabels() below, before its interval-label pass runs, and
+// reused as-is here, so its interval-label protection boxes (dropDistanceLabelsNearEndpoints
+// above) always match exactly what actually gets drawn below. noIntervalLabelsVisible is
+// decided the opposite way around - from that pass's own outcome, after it's run - and only
 // affects the combined label's text content (see combinedHtml below), not any box.
 function placeDistanceLabelEndpoints(
   points,
@@ -222,6 +222,7 @@ function placeDistanceLabelEndpoints(
   mergedAnchor,
   areaCenter,
   areaOverlapsStart,
+  isSelfIntersecting,
   noIntervalLabelsVisible,
 ) {
   const start = points[0];
@@ -237,7 +238,7 @@ function placeDistanceLabelEndpoints(
     // Suppressed in favor of the area label below when the two would overlap - a
     // ring's area is generally the more sought-after figure than its perimeter.
     if (!areaOverlapsStart) placeDistanceLabel(start, combinedHtml);
-    const areaText = isSelfIntersectingRing(points)
+    const areaText = isSelfIntersecting
       ? "Self-intersecting shape"
       : formatArea(calculatePolygonArea(distanceLabelSource));
     placeDistanceLabel(areaCenter, areaText);
@@ -294,7 +295,15 @@ function refreshDistanceLabels() {
   // generally the more sought-after figure for a polygon than its perimeter, so when the
   // two would overlap, the start/total label is the one suppressed instead - the
   // opposite priority from how an interval label defers to either of them.
-  const areaCenter = isClosedRing ? distanceLabelSource.getCenter() : null;
+  // A self-intersecting ring's lobes wind in opposite directions and partially cancel in
+  // getCenter()'s signed-area centroid math, which can throw the result far outside the
+  // shape entirely - the bounding-box center is a duller but stable fallback for that case.
+  const isSelfIntersecting = isClosedRing && isSelfIntersectingRing(points);
+  const areaCenter = isClosedRing
+    ? isSelfIntersecting
+      ? distanceLabelSource.getBounds().getCenter()
+      : distanceLabelSource.getCenter()
+    : null;
   const areaBounds = areaCenter ? distanceLabelScreenBounds(areaCenter) : null;
   const areaOverlapsStart = isClosedRing && areaBounds.intersects(startBounds);
   // The real box(es) placeDistanceLabelEndpoints() below will actually draw: a ring's
@@ -327,6 +336,7 @@ function refreshDistanceLabels() {
     mergedAnchor,
     areaCenter,
     areaOverlapsStart,
+    isSelfIntersecting,
     noIntervalLabelsVisible,
   );
 }
