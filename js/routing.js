@@ -1158,9 +1158,34 @@ function initRouting() {
     }
   };
 
+  /**
+   * Switches the active routing provider and re-requests the current route
+   * with the same waypoints and travel profile, instead of clearing it.
+   */
+  const switchRoutingProvider = (newProvider) => {
+    const waypoints = routingControl ? routingControl.getWaypoints() : [];
+    setupRoutingControl(newProvider);
+
+    const config = PROVIDER_CONFIG[newProvider];
+    if (config) {
+      const selectedProfile = document.querySelector(
+        "#routing-profile-selector .profile-btn.active",
+      ).dataset.profile;
+      const apiProfile = config.profiles[selectedProfile] || config.profiles["driving"];
+      routingControl.getRouter().options.profile = config.profileFormatter(apiProfile);
+    }
+
+    const validWaypoints = waypoints.filter((wp) => wp.latLng);
+    if (validWaypoints.length > 1) {
+      shouldFitBounds = false;
+      routingControl.setWaypoints(validWaypoints);
+    }
+  };
+
   window.app = window.app || {};
   window.app.setupRoutingControl = setupRoutingControl;
   window.app.clearRouting = clearRouting;
+  window.app.switchRoutingProvider = switchRoutingProvider;
   window.app.saveRoute = saveRoute;
   window.app.redisplayCurrentRoute = redisplayCurrentRoute;
   window.app.updateRoutingPoint = updateRoutingPoint;

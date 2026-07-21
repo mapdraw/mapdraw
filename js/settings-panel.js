@@ -235,8 +235,7 @@ function initSettingsPanel() {
   L.DomEvent.on(routingProviderSelect, "change", (e) => {
     const newProvider = e.target.value;
     localStorage.setItem("routingProvider", newProvider);
-    window.app.clearRouting();
-    window.app.setupRoutingControl(newProvider);
+    window.app.switchRoutingProvider(newProvider);
     Swal.fire({
       toast: true,
       icon: "info",
