@@ -263,7 +263,7 @@ function createOverviewListItem(layer) {
   // Delete button
   const deleteBtn = document.createElement("span");
   deleteBtn.className = "overview-delete-btn";
-  deleteBtn.innerHTML = '<span class="material-symbols">delete</span>';
+  deleteBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
   deleteBtn.title = layer === currentRoutePath ? "Clear the current route" : "Delete";
   deleteBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -489,7 +489,7 @@ function updateOverviewList() {
       delBtnSlot.className = "overview-header-delete-btn";
       if (layerGroup) {
         const delBtn = document.createElement("span");
-        delBtn.innerHTML = '<span class="material-symbols">delete</span>';
+        delBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
         delBtn.title = `Clear all ${label}`;
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
