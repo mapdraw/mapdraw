@@ -294,7 +294,7 @@ function refreshDistanceLabels() {
   // generally the more sought-after figure for a polygon than its perimeter, so when the
   // two would overlap, the start/total label is the one suppressed instead - the
   // opposite priority from how an interval label defers to either of them.
-  const areaCenter = isClosedRing ? distanceLabelSource.getBounds().getCenter() : null;
+  const areaCenter = isClosedRing ? distanceLabelSource.getCenter() : null;
   const areaBounds = areaCenter ? distanceLabelScreenBounds(areaCenter) : null;
   const areaOverlapsStart = isClosedRing && areaBounds.intersects(startBounds);
   // The real box(es) placeDistanceLabelEndpoints() below will actually draw: a ring's
