@@ -36,6 +36,7 @@ function initRouting() {
   const PROVIDER_CONFIG = {
     mapbox: {
       router: mapboxRouter,
+      displayName: "Mapbox",
       profiles: {
         driving: "driving",
         bike: "cycling",
@@ -45,6 +46,7 @@ function initRouting() {
     },
     osrm: {
       router: osrmRouter,
+      displayName: "OSRM",
       profiles: {
         driving: "driving",
         bike: "bike",
@@ -53,6 +55,8 @@ function initRouting() {
       profileFormatter: (profile) => profile,
     },
   };
+
+  const getCurrentRoutingProvider = () => localStorage.getItem("routingProvider") || "mapbox";
 
   const clearRouteLine = (preserveViaMarkers = false) => {
     if (currentRoutePath) {
@@ -89,7 +93,7 @@ function initRouting() {
 
     const selectedProfile = document.querySelector("#routing-profile-selector .profile-btn.active")
       .dataset.profile;
-    const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
+    const currentProvider = getCurrentRoutingProvider();
 
     const config = PROVIDER_CONFIG[currentProvider];
     if (!config) {
@@ -114,9 +118,8 @@ function initRouting() {
    * Sets waypoints on the routing control and logs the provider being used.
    */
   const setWaypointsAndLog = (waypoints) => {
-    const providerMap = { mapbox: "Mapbox", osrm: "OSRM" };
-    const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
-    const providerDisplayName = providerMap[currentProvider] || currentProvider;
+    const currentProvider = getCurrentRoutingProvider();
+    const providerDisplayName = PROVIDER_CONFIG[currentProvider]?.displayName || currentProvider;
     console.log(`Fetching route from: ${providerDisplayName}`);
     routingControl.setWaypoints(waypoints);
   };
@@ -259,12 +262,20 @@ function initRouting() {
               const m = Math.floor((seconds % 3600) / 60);
               let parts = [];
               if (h > 0) parts.push(h + " h");
-              if (m > 0 || h === 0) parts.push(m + " m");
+              if (m > 0 || h === 0) parts.push(m + " min");
               return parts.join(" ");
             }
             const formattedTime = formatDuration(route.summary.totalTime);
 
-            summaryContainer.innerHTML = `<b>Distance:</b> ${distanceDisplay} &nbsp;&nbsp; <b>Time:</b> ${formattedTime}`;
+            const currentProvider = getCurrentRoutingProvider();
+            const providerDisplayName =
+              PROVIDER_CONFIG[currentProvider]?.displayName || currentProvider;
+
+            const itemStyle = "display: inline-block; white-space: nowrap; margin: 0 4px;";
+            summaryContainer.innerHTML =
+              `<span style="${itemStyle}">Distance: ${distanceDisplay}</span>` +
+              `<span style="${itemStyle}">Time: ${formattedTime}</span>` +
+              `<span style="${itemStyle}">Source: ${providerDisplayName}</span>`;
             summaryContainer.style.display = "block";
           }
 
@@ -397,8 +408,7 @@ function initRouting() {
     };
   }
 
-  const savedProvider = localStorage.getItem("routingProvider") || "mapbox";
-  setupRoutingControl(savedProvider);
+  setupRoutingControl(getCurrentRoutingProvider());
 
   const routingPanelContainer = document.getElementById("routing-panel");
   L.DomEvent.disableClickPropagation(routingPanelContainer);
@@ -433,7 +443,7 @@ function initRouting() {
       profileButtons.forEach((btn) => btn.classList.remove("active"));
       button.classList.add("active");
 
-      const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
+      const currentProvider = getCurrentRoutingProvider();
       const config = PROVIDER_CONFIG[currentProvider];
       if (config) {
         const apiProfile = config.profiles[button.dataset.profile] || config.profiles["driving"];
