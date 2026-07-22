@@ -78,15 +78,28 @@ function simplifyPath(coordinates, type, config) {
 }
 
 /**
- * Simplifies a layer that's currently in leaflet-draw Edit mode and rebuilds its vertex
- * handles to match. Must only be called once the layer's own editing handler is active
- * (layer.editing.enable() has already run) - callers driven by EDITSTART need to defer
- * past leaflet-draw's own synchronous backup/enable sequence first, see draw-tools.js.
- * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
- * @param {object} [config] - Simplification config; defaults to pathSimplificationConfig
- * @returns {boolean} Whether the geometry was actually simplified
+ * Extracts a layer's current ring/points as plain [lng, lat(, alt)] coordinate arrays,
+ * the format simplifyPath() expects.
+ * @param {L.Polygon|L.Polyline} layer
+ * @returns {Array} Coordinates array
  */
-function applySimplificationToEditingLayer(layer, config = pathSimplificationConfig) {
+function _getEditingLayerCoords(layer) {
+  const ring = layer instanceof L.Polygon ? layer.getLatLngs()[0] : layer.getLatLngs();
+  return ring.map((latlng) =>
+    latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
+  );
+}
+
+/**
+ * Applies simplified coordinates to a layer that's currently in leaflet-draw Edit mode and
+ * rebuilds its vertex handles to match. Must only be called once the layer's own editing
+ * handler is active (layer.editing.enable() has already run) - callers driven by EDITSTART
+ * need to defer past leaflet-draw's own synchronous backup/enable sequence first, see
+ * draw-tools.js.
+ * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
+ * @param {Array} coords - New coordinates in [lng, lat(, alt)] format
+ */
+function _applyCoordsToEditingLayer(layer, coords) {
   const isPolygon = layer instanceof L.Polygon;
   // leaflet-draw's vertex handles hold a direct reference to this exact array, captured
   // once when editing.enable() first ran and never resynced except on Cancel - mutate it
@@ -94,15 +107,8 @@ function applySimplificationToEditingLayer(layer, config = pathSimplificationCon
   // layer.setLatLngs(), which would replace the array and desync the handles from the
   // layer's actual geometry, both this session and every future edit session on it.
   const ring = isPolygon ? layer.getLatLngs()[0] : layer.getLatLngs();
-  const coords = ring.map((latlng) =>
-    latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
-  );
-
-  const result = simplifyPath(coords, isPolygon ? "Polygon" : "LineString", config);
-  if (!result.simplified) return false;
-
   ring.length = 0;
-  for (const c of result.coords) {
+  for (const c of coords) {
     ring.push(c.length === 3 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]));
   }
   layer._bounds = L.latLngBounds(ring);
@@ -112,5 +118,35 @@ function applySimplificationToEditingLayer(layer, config = pathSimplificationCon
   // its vertex-drag handlers) in the draw:edited event - without it, a save with no manual
   // vertex edits would skip draw-tools.js's draw:edited handler and leave totalDistance stale.
   layer.edited = true;
+  // Unlike a manual vertex drag, this geometry change doesn't fire the drag events distance
+  // labels normally stay live from, so they need an explicit refresh to match the new points.
+  if (layer instanceof L.Polyline) showDistanceLabelsFor(layer);
+}
+
+/**
+ * Simplifies a layer that's currently in leaflet-draw Edit mode. Must only be called once
+ * the layer's own editing handler is active (layer.editing.enable() has already run) -
+ * callers driven by EDITSTART need to defer past leaflet-draw's own synchronous
+ * backup/enable sequence first, see draw-tools.js.
+ * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
+ * @param {object} [config] - Simplification config; defaults to pathSimplificationConfig
+ * @returns {boolean} Whether the geometry was actually simplified
+ */
+function applySimplificationToEditingLayer(layer, config = pathSimplificationConfig) {
+  const coords = _getEditingLayerCoords(layer);
+  // Refreshed unconditionally at the start of every edit session (this runs exactly once
+  // per EDITSTART, before any other simplification call) so a later tolerance adjustment
+  // can always re-derive from full detail, regardless of what this or a previous session
+  // already simplified away.
+  layer._simplifyBaseline = coords;
+
+  const result = simplifyPath(
+    coords,
+    layer instanceof L.Polygon ? "Polygon" : "LineString",
+    config,
+  );
+  if (!result.simplified) return false;
+
+  _applyCoordsToEditingLayer(layer, result.coords);
   return true;
 }

@@ -256,12 +256,7 @@ function initDrawTools() {
       const layerToSimplify = itemBeingEdited;
       setTimeout(() => {
         if (itemBeingEdited !== layerToSimplify) return; // session ended/changed already
-        if (applySimplificationToEditingLayer(layerToSimplify)) {
-          // Unlike a manual vertex drag, this geometry change doesn't fire the drag
-          // events the labels normally stay live from (see comment above), so they
-          // need an explicit refresh to match the new point count.
-          showDistanceLabelsFor(layerToSimplify);
-        }
+        applySimplificationToEditingLayer(layerToSimplify);
       }, 0);
     }
   });
