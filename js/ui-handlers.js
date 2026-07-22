@@ -574,6 +574,9 @@ function setEditHint(icon, text, onClick) {
  * @param {L.Layer} layer - The selected layer
  */
 function showInfoPanel(layer) {
+  // Don't clobber the simplification slider shown here during Edit mode.
+  if (isEditMode) return;
+
   // Style adjustments for when an item is selected
   infoPanel.classList.remove("no-selection");
   infoPanelName.style.display = "block";
@@ -762,6 +765,8 @@ function resetInfoPanel() {
  */
 function showMultiSelectInfoPanel(count, commonColor) {
   if (!infoPanel) return;
+  // Don't clobber the simplification slider shown here during Edit mode.
+  if (isEditMode) return;
   infoPanel.classList.remove("no-selection");
   resetInfoPanelDetailsStyle(`${count} items selected`);
 
