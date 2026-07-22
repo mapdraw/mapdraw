@@ -86,7 +86,7 @@ function toggleLayerVisibility(layerToToggle) {
  * @param {L.Layer} layerToDuplicate - The layer to duplicate
  * @param {{skipUiUpdate?: boolean}} [options] - Pass skipUiUpdate when duplicating
  *   many layers in a row, so the caller can select/refresh once at the end
- *   instead of doing it - and popping a simplification toast - per layer.
+ *   instead of doing it per layer.
  * @returns {L.Layer|undefined} The newly created layer, or undefined if it couldn't be duplicated
  */
 function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
@@ -111,35 +111,8 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
         latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
       );
 
-    let coordsToUse = originalCoords;
-    let simplificationHappened = false;
-
-    // Apply simplification if enabled
-    if (enablePathSimplification) {
-      const simplifiedResult = simplifyPath(originalCoords, "Polygon", pathSimplificationConfig);
-
-      // Check if the polygon was actually simplified
-      if (simplifiedResult.simplified) {
-        coordsToUse = simplifiedResult.coords;
-        simplificationHappened = true;
-      }
-    }
-
-    // Show a notification if simplification occurred (skipped in bulk mode -
-    // popping one toast per item would spam the screen for a large selection)
-    if (simplificationHappened && !skipUiUpdate) {
-      Swal.fire({
-        toast: true,
-        icon: "info",
-        title: "Area Optimized",
-        text: "The duplicated area was simplified for better performance.",
-        showConfirmButton: false,
-        timer: 3000,
-      });
-    }
-
     newLayer = L.polygon(
-      coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
+      originalCoords.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
       { ...STYLE_CONFIG.path.default, color: color },
     );
   } else if (layerToDuplicate instanceof L.Polyline) {
@@ -149,34 +122,8 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
         latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
       );
 
-    let coordsToUse = originalCoords;
-    let simplificationHappened = false;
-
-    if (enablePathSimplification) {
-      const simplifiedResult = simplifyPath(originalCoords, "LineString", pathSimplificationConfig);
-
-      // Check if the path was actually simplified
-      if (simplifiedResult.simplified) {
-        coordsToUse = simplifiedResult.coords;
-        simplificationHappened = true;
-      }
-    }
-
-    // Show a notification if simplification occurred (skipped in bulk mode -
-    // popping one toast per item would spam the screen for a large selection)
-    if (simplificationHappened && !skipUiUpdate) {
-      Swal.fire({
-        toast: true,
-        icon: "info",
-        title: "Path Optimized",
-        text: "The duplicated path was simplified for better performance.",
-        showConfirmButton: false,
-        timer: 3000,
-      });
-    }
-
     newLayer = L.polyline(
-      coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
+      originalCoords.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
       { ...STYLE_CONFIG.path.default, color: color },
     );
     newFeature.properties.totalDistance = calculatePathDistance(newLayer);
