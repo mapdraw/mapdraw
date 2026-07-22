@@ -76,3 +76,41 @@ function simplifyPath(coordinates, type, config) {
 
   return { simplified: overallSimplified, coords: newCoordinates };
 }
+
+/**
+ * Simplifies a layer that's currently in leaflet-draw Edit mode and rebuilds its vertex
+ * handles to match. Must only be called once the layer's own editing handler is active
+ * (layer.editing.enable() has already run) - callers driven by EDITSTART need to defer
+ * past leaflet-draw's own synchronous backup/enable sequence first, see draw-tools.js.
+ * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
+ * @param {object} [config] - Simplification config; defaults to pathSimplificationConfig
+ * @returns {boolean} Whether the geometry was actually simplified
+ */
+function applySimplificationToEditingLayer(layer, config = pathSimplificationConfig) {
+  const isPolygon = layer instanceof L.Polygon;
+  // leaflet-draw's vertex handles hold a direct reference to this exact array, captured
+  // once when editing.enable() first ran and never resynced except on Cancel - mutate it
+  // in place (mirroring leaflet-draw's own _spliceLatLngs) rather than calling
+  // layer.setLatLngs(), which would replace the array and desync the handles from the
+  // layer's actual geometry, both this session and every future edit session on it.
+  const ring = isPolygon ? layer.getLatLngs()[0] : layer.getLatLngs();
+  const coords = ring.map((latlng) =>
+    latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
+  );
+
+  const result = simplifyPath(coords, isPolygon ? "Polygon" : "LineString", config);
+  if (!result.simplified) return false;
+
+  ring.length = 0;
+  for (const c of result.coords) {
+    ring.push(c.length === 3 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]));
+  }
+  layer._bounds = L.latLngBounds(ring);
+  layer.redraw();
+  layer.editing.updateMarkers();
+  // leaflet-draw's own Save handler only includes layers with this flag (normally set by
+  // its vertex-drag handlers) in the draw:edited event - without it, a save with no manual
+  // vertex edits would skip draw-tools.js's draw:edited handler and leave totalDistance stale.
+  layer.edited = true;
+  return true;
+}

@@ -245,6 +245,24 @@ function initDrawTools() {
     // stays live for the rest of the edit session - no extra wiring needed here.
     if (itemBeingEdited instanceof L.Polyline) {
       showDistanceLabelsFor(itemBeingEdited);
+
+      // Auto-simplify a complex path/area's vertex count as soon as it's editable.
+      // Deferred to the next tick: leaflet-draw backs up this layer's pre-edit geometry
+      // (for Cancel) and enables its editing handler synchronously right after this
+      // EDITSTART handler returns, as part of the same enable() call chain (see
+      // L.EditToolbar.Edit.prototype.enable in leaflet.draw-src.js). Simplifying here
+      // directly would corrupt that backup, and layer.editing wouldn't exist yet for
+      // updateMarkers() to call.
+      const layerToSimplify = itemBeingEdited;
+      setTimeout(() => {
+        if (itemBeingEdited !== layerToSimplify) return; // session ended/changed already
+        if (applySimplificationToEditingLayer(layerToSimplify)) {
+          // Unlike a manual vertex drag, this geometry change doesn't fire the drag
+          // events the labels normally stay live from (see comment above), so they
+          // need an explicit refresh to match the new point count.
+          showDistanceLabelsFor(layerToSimplify);
+        }
+      }, 0);
     }
   });
 
