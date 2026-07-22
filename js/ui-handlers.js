@@ -643,18 +643,20 @@ function showInfoPanel(layer) {
     const areaLine = isSelfIntersectingRing(layer.getLatLngs()[0])
       ? "Self-intersecting shape"
       : `Area: ${formatArea(calculatePolygonArea(layer))}`;
+    const pointCount = layer.getLatLngs()[0].length;
 
-    details = `${areaLine}<br>Perimeter: ${formatDistance(perimeter)}`;
+    details = `${areaLine}<br>Perimeter: ${formatDistance(perimeter)}<br>Points: ${pointCount}`;
   } else if (layer instanceof L.Polyline) {
     // Recalculate distance from geometry to ensure consistency with elevation panel
     const totalDistance = calculatePathDistance(layer);
+    const pointCount = layer.getLatLngs().length;
 
     // Update the cached property
     if (layer.feature && layer.feature.properties) {
       layer.feature.properties.totalDistance = totalDistance;
     }
 
-    details = `Length: ${formatDistance(totalDistance)}`;
+    details = `Length: ${formatDistance(totalDistance)}<br>Points: ${pointCount}`;
   }
 
   infoPanelName.value = name;
