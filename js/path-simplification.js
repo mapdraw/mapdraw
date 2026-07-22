@@ -186,12 +186,14 @@ function setSimplificationTolerance(layer, tolerance) {
 let _simplifySliderLockHandler = null;
 
 /**
- * Minimal proof of the live-resimplify mechanism: a plain range input in the info panel's
- * details area while a complex item is being edited, live-updating vertex handles as it's
- * dragged. Only native-control theming (accent-color/cursor, for visual consistency with
- * the rest of the app) was added here; real placement/layout - the actual "simplify-active"
- * info-panel state - is deliberately deferred to a later step. This only proves
- * setSimplificationTolerance() works end to end.
+ * Shows a range input in the info panel's details area while a complex item is being
+ * edited, live-updating vertex handles as it's dragged (see .simplify-panel* in style.css
+ * for its styling). Content is rebuilt fresh into #info-panel-details each session rather
+ * than toggling pre-existing markup - the existing no-selection-removal mechanism already
+ * makes the panel visible on both desktop and mobile, and nothing else can write into it
+ * while an edit session is active (selection is blocked), so there was no need to build a
+ * persistent state around the content. The "simplify-active" class marks the panel as being
+ * in this mode explicitly, independent of "no-selection".
  *
  * The slider's minimum is clamped to whatever applySimplificationToEditingLayer() already
  * applied, never lower - the whole reason for auto-simplifying on entry is to cap how many
@@ -220,17 +222,17 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
     : "Simplify points";
 
   infoPanel.classList.remove("no-selection");
-  // #info-panel-details is a row flexbox (for its normal single-line content); wrap in a
-  // column so this stacks instead of cramming side by side - the only styling this
-  // proof-of-mechanism step invests in.
+  infoPanel.classList.add("simplify-active");
+  // #info-panel-details is a row flexbox (for its normal single-line content); .simplify-panel
+  // switches it to a column so this stacks instead of cramming side by side.
   details.innerHTML = `
-    <div style="display: flex; flex-direction: column; gap: 4px; width: 100%">
+    <div class="simplify-panel">
       <div>${introText}</div>
-      <div style="display: flex; align-items: center; gap: 6px; width: 100%">
-        <span id="simplify-slider-current"></span>
-        <input id="simplify-slider" type="range" min="${minValue}" max="${maxValue}" value="${minValue}" style="flex: 1; accent-color: var(--highlight-color); cursor: pointer" />
+      <div class="simplify-panel-row">
+        <span id="simplify-slider-current" class="simplify-panel-count"></span>
+        <input id="simplify-slider" type="range" class="simplify-panel-slider" min="${minValue}" max="${maxValue}" value="${minValue}" />
       </div>
-      <div id="simplify-slider-lock-message" style="display: none"></div>
+      <div id="simplify-slider-lock-message" class="simplify-panel-lock-message"></div>
     </div>
   `;
 
@@ -255,18 +257,20 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
   // the live "current" count without ever re-enabling the slider.
   _simplifySliderLockHandler = () => {
     slider.disabled = true;
-    lockMessage.textContent = "Locked after a manual point edit";
-    lockMessage.style.display = "block";
+    lockMessage.textContent = "Locked after a manual point edit"; // shown via the :empty CSS rule
     updateCurrent();
   };
   map.on(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
 }
 
-/** Tears down the proof-of-mechanism slider from showSimplificationSlider(). */
+/** Tears down the slider from showSimplificationSlider(). */
 function hideSimplificationSlider() {
   if (_simplifySliderLockHandler) {
     map.off(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
     _simplifySliderLockHandler = null;
   }
+  // resetInfoPanel() doesn't know about this class - it would otherwise leak onto every
+  // future selection until the app is reloaded.
+  document.getElementById("info-panel")?.classList.remove("simplify-active");
   resetInfoPanel();
 }

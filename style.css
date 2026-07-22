@@ -720,6 +720,38 @@ body.glass-mode #info-panel-edit-hint {
   box-sizing: border-box;
 }
 
+/* Simplification slider shown in #info-panel-details while editing a path/area -
+   see showSimplificationSlider() in js/path-simplification.js */
+.simplify-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.simplify-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.simplify-panel-count {
+  min-width: 20px;
+  text-align: right;
+  font-size: var(--font-size-14);
+}
+
+.simplify-panel-slider {
+  flex: 1;
+  cursor: pointer;
+  accent-color: var(--highlight-color);
+}
+
+.simplify-panel-lock-message:empty {
+  display: none;
+}
+
 /* Color Picker Styles */
 #color-picker {
   display: none; /* Hidden by default, JS toggles to 'grid' */
