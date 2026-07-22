@@ -202,7 +202,7 @@ function initDrawTools() {
     if (e.layerType === "polyline" || e.layerType === "polygon") {
       // Matches leaflet-draw's own shapeOptions.color above - keeps the in-progress
       // vertex handles (style.css) the same color the shape will get once created.
-      document.documentElement.style.setProperty("--edit-handle-color", DEFAULT_COLOR);
+      document.documentElement.style.setProperty("--active-item-color", DEFAULT_COLOR);
       map.on("draw:drawvertex", function (evt) {
         const newPoints = evt.layers.getLayers().map((l) => l.getLatLng());
         // path-extend.js's own listener (bound after this one) seeds the label for
@@ -225,7 +225,7 @@ function initDrawTools() {
     window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
     window.app.setDrawnItemsCheckboxLocked(false);
-    document.documentElement.style.removeProperty("--edit-handle-color");
+    document.documentElement.style.removeProperty("--active-item-color");
     // Only clear if the draw was cancelled - a finished shape's draw:created already
     // handed the labels off to it via selectItem(), which fires before this.
     if (isDistanceLabelSourceInProgress()) {
@@ -271,7 +271,7 @@ function initDrawTools() {
     isEditMode = false;
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(false);
-    document.documentElement.style.removeProperty("--edit-handle-color");
+    document.documentElement.style.removeProperty("--active-item-color");
     hideDistanceLabels();
     hideSimplificationSlider();
 

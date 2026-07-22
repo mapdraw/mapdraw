@@ -77,7 +77,7 @@ if (L.EditToolbar && L.EditToolbar.Edit) {
     origEnableLayerEdit.call(this, e);
     // Color the vertex/mid-segment handles (style.css) to match the item being edited.
     document.documentElement.style.setProperty(
-      "--edit-handle-color",
+      "--active-item-color",
       layer.feature.properties.color,
     );
   };
