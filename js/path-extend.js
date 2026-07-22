@@ -166,6 +166,7 @@ function initPathExtend() {
     handler._markers[0].setLatLng(snap.latlng);
     handler._poly.setLatLngs([snap.latlng]);
     handler._poly.setStyle({ color: snap.layer.options.color });
+    document.documentElement.style.setProperty("--edit-handle-color", snap.layer.options.color);
     // Seeds labels with the existing path so they show right away, not just once a
     // new segment is drawn - draw-tools.js takes over from the second vertex on.
     showDistanceLabelsFor(pathExtendLeadInPoints(pathExtendTarget));

@@ -75,6 +75,11 @@ if (L.EditToolbar && L.EditToolbar.Edit) {
     const layer = e.layer || e.target || e;
     if (layer !== itemBeingEdited) return;
     origEnableLayerEdit.call(this, e);
+    // Color the vertex/mid-segment handles (style.css) to match the item being edited.
+    document.documentElement.style.setProperty(
+      "--edit-handle-color",
+      layer.feature.properties.color,
+    );
   };
 
   L.EditToolbar.Edit.prototype._hasAvailableLayers = function () {

@@ -405,24 +405,47 @@ select:focus {
   stroke-dasharray: none !important;
 }
 
-/* Path/area vertex + mid-segment handles (.leaflet-editing-middle-icon from leaflet-draw-patches.js) */
-.leaflet-editing-icon,
-.leaflet-editing-middle-icon {
+/* Vertex handle shown while drawing or editing a path/area. Colored to match the item via
+   --edit-handle-color (set in draw-tools.js/leaflet-draw-patches.js/path-extend.js), falling
+   back to black if it's ever unset. */
+.leaflet-editing-icon {
   border-radius: 50%;
-  background-color: var(--color-white);
+  background-color: var(--edit-handle-color, var(--color-black));
+  opacity: 1 !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-left: -10px !important;
+  margin-top: -10px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
   border: none;
 }
 
+/* Mid-segment "add point" handle (tagged by leaflet-draw-patches.js). Same coloring as
+   .leaflet-editing-icon; opacity is forced because leaflet-draw itself sets these to 0.6. */
 .leaflet-editing-middle-icon {
-  opacity: 0.75 !important;
+  border-radius: 50%;
+  background-color: var(--edit-handle-color, var(--color-black));
+  opacity: 1 !important;
+  width: 10px !important;
+  height: 10px !important;
+  margin-left: -5px !important;
+  margin-top: -5px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
+  border: none;
 }
 
-/* Existing path endpoints shown while drawing a new path (js/path-extend.js), before
-   one is clicked to start extending from it. Same shape/size as .leaflet-editing-icon,
-   just a different color so it reads as "not yet active". */
+/* Existing path endpoint shown while drawing a new path (js/path-extend.js), before it's
+   clicked to start extending from it. Same shape/size as .leaflet-editing-icon, always
+   black so it reads as "not yet active". */
 .path-extend-endpoint {
   border-radius: 50%;
   background-color: var(--color-black);
+  opacity: 1 !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-left: -10px !important;
+  margin-top: -10px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
   border: none;
 }
 

@@ -68,12 +68,12 @@ function initDrawTools() {
   Applies only to items in the <strong>Drawn Items</strong> layer!
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Points:</strong> Solid white dots are a path's or area's actual points. Drag to move,
-  click to remove.
+  <strong>Points:</strong> A path's or area's actual points, shown larger. Drag to move, click to
+  remove.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Midpoints:</strong> Semi-transparent white dots between points. Drag or click one to
-  add a new point there.
+  <strong>Midpoints:</strong> Smaller points shown between them. Drag or click one to add a new
+  point there.
 </p>
 <p style="text-align: left">
   <strong>Markers:</strong> Drag to move.
@@ -97,13 +97,13 @@ function initDrawTools() {
   the Finish button) to complete it.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Start on an endpoint:</strong> Every visible existing path shows a black dot at each end
-  while drawing. Click one as your very first point to extend that path from there, keeping its
-  name and color.
+  <strong>Start on an endpoint:</strong> Every visible existing path shows a black point at each
+  end while drawing. Click one as your very first point to extend that path from there, keeping
+  its name and color.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>End on an endpoint:</strong> Click one on any later point to connect your new path to
-  it and finish immediately.
+  <strong>End on an endpoint:</strong> Click one of those black points at any later point in your
+  drawing to connect your new path to it and finish immediately.
 </p>
 <p style="text-align: left">
   <strong>Start and end on endpoints:</strong> Do both in the same drawing to merge two paths
@@ -200,6 +200,9 @@ function initDrawTools() {
     hideDistanceLabels();
 
     if (e.layerType === "polyline" || e.layerType === "polygon") {
+      // Matches leaflet-draw's own shapeOptions.color above - keeps the in-progress
+      // vertex handles (style.css) the same color the shape will get once created.
+      document.documentElement.style.setProperty("--edit-handle-color", DEFAULT_COLOR);
       map.on("draw:drawvertex", function (evt) {
         const newPoints = evt.layers.getLayers().map((l) => l.getLatLng());
         // path-extend.js's own listener (bound after this one) seeds the label for
@@ -222,6 +225,7 @@ function initDrawTools() {
     window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
     window.app.setDrawnItemsCheckboxLocked(false);
+    document.documentElement.style.removeProperty("--edit-handle-color");
     // Only clear if the draw was cancelled - a finished shape's draw:created already
     // handed the labels off to it via selectItem(), which fires before this.
     if (isDistanceLabelSourceInProgress()) {
@@ -267,6 +271,7 @@ function initDrawTools() {
     isEditMode = false;
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(false);
+    document.documentElement.style.removeProperty("--edit-handle-color");
     hideDistanceLabels();
     hideSimplificationSlider();
 
