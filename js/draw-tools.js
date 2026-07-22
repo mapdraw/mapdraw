@@ -256,7 +256,8 @@ function initDrawTools() {
       const layerToSimplify = itemBeingEdited;
       setTimeout(() => {
         if (itemBeingEdited !== layerToSimplify) return; // session ended/changed already
-        applySimplificationToEditingLayer(layerToSimplify);
+        const wasAutoSimplified = applySimplificationToEditingLayer(layerToSimplify);
+        showSimplificationSlider(layerToSimplify, wasAutoSimplified);
       }, 0);
     }
   });
@@ -267,6 +268,7 @@ function initDrawTools() {
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(false);
     hideDistanceLabels();
+    hideSimplificationSlider();
 
     const itemToReselect = itemBeingEdited;
     itemBeingEdited = null;

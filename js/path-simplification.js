@@ -13,6 +13,9 @@ const pathSimplificationConfig = {
   MIN_POINTS: 100,
 };
 
+// Tolerance represented by one integer step of the simplification slider's range input.
+const SLIDER_TOLERANCE_STEP = 0.00001;
+
 /**
  * Simplifies a geometry's coordinates using the simplify.js library and provided configuration.
  * @param {Array} coordinates - Array of coordinates in [lng, lat] format
@@ -60,8 +63,16 @@ function simplifyPath(coordinates, type, config) {
     // LineString and Polygon are both single arrays of coordinates
     // Polygon is treated as a closed LineString for simplification purposes
     const result = simplifySinglePath(coordinates);
-    overallSimplified = result.simplified;
-    newCoordinates = result.coords;
+    if (type === "Polygon" && result.coords.length < 3) {
+      // Douglas-Peucker treats the ring as an open line, so it can degenerate to just the
+      // first/last point (2) - a "polygon" with fewer than 3 points has zero area and isn't
+      // a valid shape. Treat that as "can't simplify any further" rather than produce one.
+      overallSimplified = false;
+      newCoordinates = coordinates;
+    } else {
+      overallSimplified = result.simplified;
+      newCoordinates = result.coords;
+    }
   } else if (type === "MultiLineString") {
     newCoordinates = coordinates.map((line) => {
       const result = simplifySinglePath(line);
@@ -149,4 +160,113 @@ function applySimplificationToEditingLayer(layer, config = pathSimplificationCon
 
   _applyCoordsToEditingLayer(layer, result.coords);
   return true;
+}
+
+/**
+ * Re-simplifies a layer already in Edit mode at an arbitrary tolerance, always re-deriving
+ * from its pristine baseline (see applySimplificationToEditingLayer) so repeated adjustments
+ * - in either direction - never compound on top of an already-reduced point set. A no-op if
+ * no baseline was captured yet (layer isn't actually being edited).
+ * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
+ * @param {number} tolerance - Simplify.js tolerance in decimal degrees
+ */
+function setSimplificationTolerance(layer, tolerance) {
+  const baseline = layer._simplifyBaseline;
+  if (!baseline) return;
+
+  const result = simplifyPath(baseline, layer instanceof L.Polygon ? "Polygon" : "LineString", {
+    TOLERANCE: tolerance,
+    MIN_POINTS: 0, // a manual adjustment should apply regardless of the auto-simplify threshold
+  });
+  _applyCoordsToEditingLayer(layer, result.coords);
+}
+
+// Tracks the EDITVERTEX listener registered by showSimplificationSlider(), so
+// hideSimplificationSlider() can remove it - see the lock comment below for why one exists.
+let _simplifySliderLockHandler = null;
+
+/**
+ * Minimal proof of the live-resimplify mechanism: a plain range input in the info panel's
+ * details area while a complex item is being edited, live-updating vertex handles as it's
+ * dragged. Only native-control theming (accent-color/cursor, for visual consistency with
+ * the rest of the app) was added here; real placement/layout - the actual "simplify-active"
+ * info-panel state - is deliberately deferred to a later step. This only proves
+ * setSimplificationTolerance() works end to end.
+ *
+ * The slider's minimum is clamped to whatever applySimplificationToEditingLayer() already
+ * applied, never lower - the whole reason for auto-simplifying on entry is to cap how many
+ * vertex handles get rendered, so letting the slider go back toward the full original while
+ * they're all still live on screen would undo that protection entirely.
+ * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
+ * @param {boolean} wasAutoSimplified - Return value of the applySimplificationToEditingLayer()
+ *   call that just ran for this session
+ */
+function showSimplificationSlider(layer, wasAutoSimplified) {
+  const infoPanel = document.getElementById("info-panel");
+  const details = document.getElementById("info-panel-details");
+  if (!infoPanel || !details) return;
+
+  const isPolygon = layer instanceof L.Polygon;
+  const countPoints = () => (isPolygon ? layer.getLatLngs()[0].length : layer.getLatLngs().length);
+  const minValue = wasAutoSimplified
+    ? Math.round(pathSimplificationConfig.TOLERANCE / SLIDER_TOLERANCE_STEP)
+    : 0;
+  const maxValue = 1000;
+
+  // Line 1 always says something - it's the only indication, when nothing was auto-simplified,
+  // that this slider has anything to do with simplification at all.
+  const introText = wasAutoSimplified
+    ? `Auto-simplified from ${layer._simplifyBaseline.length} to ${countPoints()} points`
+    : "Simplify points";
+
+  infoPanel.classList.remove("no-selection");
+  // #info-panel-details is a row flexbox (for its normal single-line content); wrap in a
+  // column so this stacks instead of cramming side by side - the only styling this
+  // proof-of-mechanism step invests in.
+  details.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 4px; width: 100%">
+      <div>${introText}</div>
+      <div style="display: flex; align-items: center; gap: 6px; width: 100%">
+        <span id="simplify-slider-current"></span>
+        <input id="simplify-slider" type="range" min="${minValue}" max="${maxValue}" value="${minValue}" style="flex: 1; accent-color: var(--highlight-color); cursor: pointer" />
+      </div>
+      <div id="simplify-slider-lock-message" style="display: none"></div>
+    </div>
+  `;
+
+  const currentSpan = document.getElementById("simplify-slider-current");
+  const slider = document.getElementById("simplify-slider");
+  const lockMessage = document.getElementById("simplify-slider-lock-message");
+
+  const updateCurrent = () => {
+    currentSpan.textContent = countPoints();
+  };
+  updateCurrent();
+
+  slider.addEventListener("input", (e) => {
+    setSimplificationTolerance(layer, Number(e.target.value) * SLIDER_TOLERANCE_STEP);
+    updateCurrent();
+  });
+
+  // setSimplificationTolerance() always re-derives from the pristine baseline, so a slider
+  // move after a manual vertex edit (drag, mid-point add, or delete - EDITVERTEX covers all
+  // three) would silently overwrite it. Lock instead of allowing that; keeps re-firing
+  // harmlessly (just re-asserts the same locked state) so further manual edits still update
+  // the live "current" count without ever re-enabling the slider.
+  _simplifySliderLockHandler = () => {
+    slider.disabled = true;
+    lockMessage.textContent = "Locked after a manual point edit";
+    lockMessage.style.display = "block";
+    updateCurrent();
+  };
+  map.on(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
+}
+
+/** Tears down the proof-of-mechanism slider from showSimplificationSlider(). */
+function hideSimplificationSlider() {
+  if (_simplifySliderLockHandler) {
+    map.off(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
+    _simplifySliderLockHandler = null;
+  }
+  resetInfoPanel();
 }
