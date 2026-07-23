@@ -19,7 +19,7 @@ const SLIDER_TOLERANCE_STEP = 0.00001;
 
 /**
  * Simplifies a geometry's coordinates using the simplify.js library and provided configuration.
- * @param {Array} coordinates - Array of coordinates in [lng, lat] format
+ * @param {Array} coordinates - Array of coordinates in [lng, lat] or [lng, lat, alt] format
  * @param {string} type - Geometry type ('LineString', 'Polygon', or 'MultiLineString')
  * @param {object} config - Configuration object with TOLERANCE and MIN_POINTS properties
  * @returns {{simplified: boolean, coords: Array}} Object with simplification flag and resulting coordinates
