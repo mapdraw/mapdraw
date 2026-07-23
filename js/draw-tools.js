@@ -30,9 +30,8 @@ function initDrawTools() {
   L.drawLocal.edit.toolbar.buttons.edit = "Edit drawn items";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No drawn items to edit";
 
-  // Edit toolbar tooltips
-  L.drawLocal.edit.handlers.edit.tooltip.text =
-    "Drag handles or markers to edit<br>Click cancel to undo";
+  // Edit toolbar tooltip - text is set per session in EDITSTART below, since only
+  // the single selected item is ever edited and its type determines the wording.
   L.drawLocal.edit.handlers.edit.tooltip.subtext = "";
 
   drawControl = new L.Control.Draw({
@@ -253,6 +252,15 @@ function initDrawTools() {
     // Captured before deselecting so leaflet-draw-patches.js's _enableLayerEdit guard
     // still knows which layer to give vertex handles to.
     itemBeingEdited = globallySelectedItem;
+    // leaflet-draw reads this text into its tooltip synchronously right after this
+    // event finishes firing (L.EditToolbar.Edit.prototype.enable), so it's set fresh
+    // per session rather than once at init - only the selected item is ever edited.
+    L.drawLocal.edit.handlers.edit.tooltip.text =
+      itemBeingEdited instanceof L.Marker
+        ? "Drag marker to move<br>Click cancel to undo"
+        : itemBeingEdited instanceof L.Polygon
+          ? "Drag points to edit area<br>Click cancel to undo"
+          : "Drag points to edit path<br>Click cancel to undo";
     deselectCurrentItem({ skipControlUpdate: true });
     L.DomUtil.addClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(true);
