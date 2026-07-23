@@ -216,7 +216,6 @@ function initFileControls() {
       link.innerHTML = "";
       const input = L.DomUtil.create("input", "hidden", container);
       input.type = "file";
-      input.accept = ".geojson,.json,.gpx,.kml,.kmz";
       input.style.display = "none";
 
       L.DomEvent.on(link, "click", (e) => {
@@ -242,6 +241,11 @@ function initFileControls() {
           importKmlFile(file);
         } else if (fileNameLower.endsWith(".kmz")) {
           importKmzFile(file);
+        } else {
+          Swal.fire({
+            title: "Unsupported File Type",
+            text: "Please select a GeoJSON, GPX, KML, or KMZ file.",
+          });
         }
         e.target.value = "";
       });
