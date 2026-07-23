@@ -168,6 +168,7 @@ function initDrawTools() {
         const newDistance = calculatePathDistance(layer);
         if (layer.feature && layer.feature.properties) {
           layer.feature.properties.totalDistance = newDistance;
+          if (layer._wasAutoSimplified) layer.feature.properties.simplified = true;
         }
         if (globallySelectedItem === layer) selectItem(layer);
       }
@@ -260,7 +261,15 @@ function initDrawTools() {
       const layerToSimplify = itemBeingEdited;
       setTimeout(() => {
         if (itemBeingEdited !== layerToSimplify) return; // session ended/changed already
-        const wasAutoSimplified = applySimplificationToEditingLayer(layerToSimplify);
+        // Already auto-simplified once and saved: that saved geometry is now the
+        // authoritative version, with no more-original data left to re-derive from, so
+        // MIN_POINTS is forced unreachable here. applySimplificationToEditingLayer() still
+        // captures _simplifyBaseline for the manual slider below either way.
+        const config = layerToSimplify.feature?.properties?.simplified
+          ? { ...pathSimplificationConfig, MIN_POINTS: Infinity }
+          : pathSimplificationConfig;
+        const wasAutoSimplified = applySimplificationToEditingLayer(layerToSimplify, config);
+        layerToSimplify._wasAutoSimplified = wasAutoSimplified;
         showSimplificationSlider(layerToSimplify, wasAutoSimplified);
       }, 0);
     }

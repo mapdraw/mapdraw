@@ -28,22 +28,7 @@ function buildDataEditorGeoJSON() {
 
       applyFullPrecisionCoordinates(layer, geojson);
 
-      const color = layer.feature?.properties?.color || DEFAULT_COLOR;
-
-      const filteredProperties = Object.keys(geojson.properties || {}).reduce((acc, key) => {
-        if (!GEOJSON_EXPORT_EXCLUDED_PROPERTIES.includes(key)) {
-          acc[key] = geojson.properties[key];
-        }
-        return acc;
-      }, {});
-
-      geojson.properties = { ...filteredProperties, pathType: layer.pathType || "drawn" };
-
-      if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-        geojson.properties.stroke = color;
-      } else if (layer instanceof L.Marker) {
-        geojson.properties["marker-color"] = color;
-      }
+      geojson.properties = { ...geojson.properties, pathType: layer.pathType || "drawn" };
 
       features.push({
         type: "Feature",

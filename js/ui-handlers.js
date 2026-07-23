@@ -131,11 +131,15 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
 
   if (newLayer) {
     // Keep only essential properties (name, color) - discard all source-specific metadata
-    // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths
+    // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths.
+    // simplified is the one exception: the coordinates above are copied verbatim from the
+    // source, so if they were already reduced by auto-simplify, that's still just as true
+    // for this copy - carrying the flag over avoids re-triggering it on the copy's first edit.
     const cleanProperties = {
       name: newFeature.properties.name,
       color: newFeature.properties.color || DEFAULT_COLOR,
     };
+    if (newFeature.properties.simplified) cleanProperties.simplified = true;
     newLayer.feature = { properties: cleanProperties };
     newLayer.pathType = "drawn";
     newLayer.on("click", (ev) => {
