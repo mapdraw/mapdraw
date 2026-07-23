@@ -13,7 +13,8 @@ const pathSimplificationConfig = {
   MIN_POINTS: 100,
 };
 
-// Tolerance represented by one integer step of the simplification slider's range input.
+// Degrees per slider-position unit; anchors tolerance at the slider's min/max only (see
+// sliderValueToTolerance) - steps in between are non-linear.
 const SLIDER_TOLERANCE_STEP = 0.00001;
 
 /**
@@ -66,9 +67,14 @@ function simplifyPath(coordinates, type, config) {
     if (type === "Polygon" && result.coords.length < 3) {
       // Douglas-Peucker treats the ring as an open line, so it can degenerate to just the
       // first/last point (2) - a "polygon" with fewer than 3 points has zero area and isn't
-      // a valid shape. Treat that as "can't simplify any further" rather than produce one.
-      overallSimplified = false;
-      newCoordinates = coordinates;
+      // a valid shape. Fall back to a first/middle/last triangle instead of the full
+      // unsimplified input, so a tiny/dense polygon still ends up reduced.
+      newCoordinates = [
+        coordinates[0],
+        coordinates[Math.floor(coordinates.length / 2)],
+        coordinates[coordinates.length - 1],
+      ];
+      overallSimplified = newCoordinates.length < coordinates.length;
     } else {
       overallSimplified = result.simplified;
       newCoordinates = result.coords;
@@ -245,10 +251,43 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
   };
   updateCurrent();
 
-  slider.addEventListener("input", (e) => {
-    setSimplificationTolerance(layer, Number(e.target.value) * SLIDER_TOLERANCE_STEP);
-    updateCurrent();
-  });
+  // Point count drops fast at low tolerance and flattens at high tolerance, so map slider
+  // position to tolerance exponentially instead of linearly.
+  // minValue is 0 when nothing was auto-simplified - floor to 1 step, since 0 as the curve's
+  // base makes the formula below divide by zero.
+  const minTolerance = (minValue > 0 ? minValue : 1) * SLIDER_TOLERANCE_STEP;
+  const maxTolerance = maxValue * SLIDER_TOLERANCE_STEP;
+  const sliderValueToTolerance = (value) => {
+    if (value <= minValue) return minValue * SLIDER_TOLERANCE_STEP; // exact 0 when minValue is 0
+    const t = (value - minValue) / (maxValue - minValue);
+    return minTolerance * Math.pow(maxTolerance / minTolerance, t);
+  };
+
+  // If even the max tolerance wouldn't remove any more points than are already showing, the
+  // whole slider is a no-op - lock it immediately instead of leaving it draggable with
+  // nothing to show for it (matches the manual-edit lock below).
+  const maxTolerantCount = simplifyPath(
+    layer._simplifyBaseline,
+    isPolygon ? "Polygon" : "LineString",
+    { TOLERANCE: maxTolerance, MIN_POINTS: 0 },
+  ).coords.length;
+
+  if (maxTolerantCount === countPoints()) {
+    slider.disabled = true;
+    lockMessage.textContent = "Already fully simplified";
+  } else {
+    const updateMaxMessage = () => {
+      lockMessage.textContent =
+        Number(slider.value) >= maxValue ? "Already at maximum simplification" : "";
+    };
+    updateMaxMessage();
+
+    slider.addEventListener("input", (e) => {
+      setSimplificationTolerance(layer, sliderValueToTolerance(Number(e.target.value)));
+      updateCurrent();
+      updateMaxMessage();
+    });
+  }
 
   // setSimplificationTolerance() always re-derives from the pristine baseline, so a slider
   // move after a manual vertex edit (drag, mid-point add, or delete - EDITVERTEX covers all

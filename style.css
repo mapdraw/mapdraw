@@ -745,6 +745,11 @@ body.glass-mode #info-panel-edit-hint {
 
 /* Simplification slider shown in #info-panel-details while editing a path/area -
    see showSimplificationSlider() in js/path-simplification.js */
+/* Prevents shrink-to-content width, which would resize the slider as the lock message changes. */
+#info-panel.simplify-active #info-panel-details {
+  width: 100%;
+}
+
 .simplify-panel {
   display: flex;
   flex-direction: column;
