@@ -6,6 +6,10 @@
  * draw/edit map event listeners.
  */
 function initDrawTools() {
+  // Tracks the moveend/zoomend listener registered by EDITSTART below, so EDITSTOP can
+  // remove it - see the LOD-handles comment there for what it does.
+  let editHandleResyncHandler = null;
+
   // Path
   L.drawLocal.draw.toolbar.buttons.polyline = "Draw path";
   L.drawLocal.draw.handlers.polyline.tooltip.start = "Click to start drawing path";
@@ -68,15 +72,23 @@ function initDrawTools() {
   Applies only to items in the <strong>Drawn Items</strong> layer!
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Markers:</strong> Drag to move.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
   <strong>Points:</strong> A path's or area's actual points, shown larger. Drag to move, click to
   remove.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Midpoints:</strong> Smaller points shown between them. Drag or click one to add a new
-  point there.
+  <strong>Midpoints:</strong> Smaller points shown between a path's or area's points. Drag or
+  click one to add a new point there.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Simplify slider:</strong> Shown in the info panel whenever you edit a path or area.
+  Drag it to remove more or fewer points.
 </p>
 <p style="text-align: left">
-  <strong>Markers:</strong> Drag to move.
+  <strong>Large imports:</strong> On a dense path or area, points and midpoints only show up
+  once you're zoomed in close enough. If none appear, check the info panel - it'll say so.
 </p>
 `,
         confirmButtonText: "Got it!",
@@ -271,6 +283,28 @@ function initDrawTools() {
         const wasAutoSimplified = applySimplificationToEditingLayer(layerToSimplify, config);
         layerToSimplify._wasAutoSimplified = wasAutoSimplified;
         showSimplificationSlider(layerToSimplify, wasAutoSimplified);
+
+        // Re-syncs the LOD vertex/mid-segment handles (leaflet-draw-patches.js's
+        // syncEditHandles) as the view changes - they're only ever live near the current
+        // viewport, at a close enough zoom. Skipped entirely for a layer with no ring dense
+        // enough to need LOD in the first place (isEditLodActive), so an ordinary
+        // hand-drawn path/area's handles are never touched by any of this. Must stay inside
+        // this deferred callback along with the auto-simplify above - layer.editing (and its
+        // _verticesHandlers) doesn't exist until leaflet-draw's own synchronous enable() chain
+        // finishes, right after EDITSTART returns.
+        if (layerToSimplify.editing._verticesHandlers.some(isEditLodActive)) {
+          editHandleResyncHandler = () => {
+            for (const handler of layerToSimplify.editing._verticesHandlers) {
+              if (isEditLodActive(handler)) {
+                syncEditHandles(handler._markers, handler._markerGroup);
+                // Debug: replace the line above with these two to log live/total handle counts:
+                //   const liveCount = syncEditHandles(handler._markers, handler._markerGroup);
+                //   console.log(`Edit handles: ${liveCount} live out of ~${handler._markers.length * 2}`);
+              }
+            }
+          };
+          map.on("moveend zoomend", editHandleResyncHandler);
+        }
       }, 0);
     }
   });
@@ -281,6 +315,10 @@ function initDrawTools() {
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(false);
     document.documentElement.style.removeProperty("--active-item-color");
+    if (editHandleResyncHandler) {
+      map.off("moveend zoomend", editHandleResyncHandler);
+      editHandleResyncHandler = null;
+    }
     hideDistanceLabels();
     hideSimplificationSlider();
 

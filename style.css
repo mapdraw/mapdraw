@@ -780,6 +780,21 @@ body.glass-mode #info-panel-edit-hint {
   display: none;
 }
 
+/* Matches .poi-cat-msg--info's warning look (yellow bg, black text). */
+.simplify-zoom-hint {
+  padding: 8px 10px;
+  border-radius: var(--border-radius);
+  background: var(--color-yellow);
+  color: var(--color-black);
+  font-size: var(--font-size-14);
+  line-height: 20px;
+  text-align: center;
+}
+
+.simplify-zoom-hint:empty {
+  display: none;
+}
+
 /* Color Picker Styles */
 #color-picker {
   display: none; /* Hidden by default, JS toggles to 'grid' */

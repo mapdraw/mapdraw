@@ -22,9 +22,14 @@ const SLIDER_TOLERANCE_STEP = 0.00001;
  * @param {Array} coordinates - Array of coordinates in [lng, lat] or [lng, lat, alt] format
  * @param {string} type - Geometry type ('LineString', 'Polygon', or 'MultiLineString')
  * @param {object} config - Configuration object with TOLERANCE and MIN_POINTS properties
+ * @param {string|null} [logLabel] - Prefix for the console.log below - override for a call that's
+ *   only checking a hypothetical result (e.g. showSimplificationSlider's max-tolerance probe),
+ *   so it doesn't read like a simplification was actually applied to the layer. Pass null to
+ *   suppress the log entirely (e.g. setSimplificationTolerance's per-tick slider calls, where
+ *   it would otherwise fire dozens of times per drag).
  * @returns {{simplified: boolean, coords: Array}} Object with simplification flag and resulting coordinates
  */
-function simplifyPath(coordinates, type, config) {
+function simplifyPath(coordinates, type, config, logLabel = "Path simplified") {
   let overallSimplified = false;
   let newCoordinates;
 
@@ -41,9 +46,8 @@ function simplifyPath(coordinates, type, config) {
     const simplifiedPoints = simplify(points, config.TOLERANCE, true);
 
     if (simplifiedPoints.length < pathCoords.length) {
-      console.log(
-        `Path segment simplified: ${pathCoords.length} -> ${simplifiedPoints.length} points`,
-      );
+      if (logLabel)
+        console.log(`${logLabel}: ${pathCoords.length} -> ${simplifiedPoints.length} points`);
 
       // If original had altitude, restore it using the index
       if (hasAltitude) {
@@ -180,16 +184,25 @@ function setSimplificationTolerance(layer, tolerance) {
   const baseline = layer._simplifyBaseline;
   if (!baseline) return;
 
-  const result = simplifyPath(baseline, layer instanceof L.Polygon ? "Polygon" : "LineString", {
-    TOLERANCE: tolerance,
-    MIN_POINTS: 0, // a manual adjustment should apply regardless of the auto-simplify threshold
-  });
+  const result = simplifyPath(
+    baseline,
+    layer instanceof L.Polygon ? "Polygon" : "LineString",
+    {
+      TOLERANCE: tolerance,
+      MIN_POINTS: 0, // a manual adjustment should apply regardless of the auto-simplify threshold
+    },
+    null, // fires on every slider tick - would otherwise spam the console during a single drag
+  );
   _applyCoordsToEditingLayer(layer, result.coords);
 }
 
 // Tracks the EDITVERTEX listener registered by showSimplificationSlider(), so
 // hideSimplificationSlider() can remove it - see the lock comment below for why one exists.
 let _simplifySliderLockHandler = null;
+
+// Tracks the moveend/zoomend listener that keeps the "zoom in to see edit points" hint current
+// - see showSimplificationSlider() below for why one exists.
+let _simplifyZoomHintHandler = null;
 
 /**
  * Shows a range input in the info panel's details area while a complex item is being
@@ -205,6 +218,12 @@ let _simplifySliderLockHandler = null;
  * applied, never lower - the whole reason for auto-simplifying on entry is to cap how many
  * vertex handles get rendered, so letting the slider go back toward the full original while
  * they're all still live on screen would undo that protection entirely.
+ *
+ * Also detaches every ring's vertex/mid-segment handles and skips rebuilding them entirely
+ * while the slider is being dragged (harmless for an ordinary layer, and skips real work for
+ * one under leaflet-draw-patches.js's level-of-detail system), rebuilding once for real on
+ * release; and shows a "zoom in to see edit points" hint specifically for a layer with at
+ * least one ring dense enough for that system to be active (isEditLodActive).
  * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
  * @param {boolean} wasAutoSimplified - Return value of the applySimplificationToEditingLayer()
  *   call that just ran for this session
@@ -233,6 +252,7 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
   // switches it to a column so this stacks instead of cramming side by side.
   details.innerHTML = `
     <div class="simplify-panel">
+      <div id="simplify-zoom-hint" class="simplify-zoom-hint"></div>
       <div>${introText}</div>
       <div class="simplify-panel-row">
         <span id="simplify-slider-current" class="simplify-panel-count"></span>
@@ -245,6 +265,7 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
   const currentSpan = document.getElementById("simplify-slider-current");
   const slider = document.getElementById("simplify-slider");
   const lockMessage = document.getElementById("simplify-slider-lock-message");
+  const zoomHint = document.getElementById("simplify-zoom-hint");
 
   const updateCurrent = () => {
     currentSpan.textContent = countPoints();
@@ -270,6 +291,7 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
     layer._simplifyBaseline,
     isPolygon ? "Polygon" : "LineString",
     { TOLERANCE: maxTolerance, MIN_POINTS: 0 },
+    "Max-simplification probe (not applied)",
   ).coords.length;
 
   if (maxTolerantCount === countPoints()) {
@@ -287,6 +309,60 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
       updateCurrent();
       updateMaxMessage();
     });
+
+    // Vertex/mid-segment handles (leaflet-draw-patches.js's LOD system) are pure visual noise
+    // while dragging this slider, but rebuilding them every tick still isn't free - a fresh
+    // marker object gets constructed for every point on every "input" event regardless of how
+    // many end up visible. Detaching each ring's marker group for the drag's duration skips
+    // the DOM/icon cost (the LOD _initMarkers patch sees the group already detached and leaves
+    // it that way); reattaching once on release shows the final, filtered result in one shot
+    // instead of on every intermediate tick.
+    // Deliberately NOT gated by isEditLodActive - that reflects the *current* point
+    // count, which can cross the LOD threshold in either direction mid-drag (e.g. dragged past
+    // it, then eased back under it before releasing). Detach/reattach must stay unconditional
+    // and symmetric regardless of where the ring ends up, or a release that lands below the
+    // threshold skips reattaching entirely and leaves the group permanently hidden.
+    const setHandleGroupsAttached = (attached) => {
+      for (const handler of layer.editing._verticesHandlers) {
+        const isAttached = map.hasLayer(handler._markerGroup);
+        if (attached && !isAttached) map.addLayer(handler._markerGroup);
+        else if (!attached && isAttached) map.removeLayer(handler._markerGroup);
+      }
+    };
+    slider.addEventListener("pointerdown", () => {
+      setHandleGroupsAttached(false);
+      // Detaching the group only skips the DOM/icon cost - _applyCoordsToEditingLayer()
+      // still calls layer.editing.updateMarkers() on every tick, which still reconstructs a
+      // fresh marker *object* for every point still remaining, even with nowhere to attach
+      // them. That's real cost while a lot of points are still left (e.g. early in a drag
+      // toward more aggressive simplification, before the count has dropped much yet).
+      // Shadowing this instance's updateMarkers with a no-op skips that reconstruction
+      // entirely; deleting the shadow on release restores leaflet-draw's real one.
+      layer.editing.updateMarkers = () => {};
+    });
+    // Not "change": a range input only fires that when the committed value differs from where
+    // it was when the interaction started - dragging away and back to the exact same value
+    // (e.g. all the way right then back to minValue) nets to "no change" and never fires it at
+    // all, leaving the group detached permanently. pointerup fires on every release regardless.
+    slider.addEventListener("pointerup", () => {
+      delete layer.editing.updateMarkers;
+      layer.editing.updateMarkers(); // one real rebuild, into the still-detached group
+      setHandleGroupsAttached(true);
+    });
+  }
+
+  // Below EDIT_HANDLE_MIN_ZOOM, LOD-active rings (leaflet-draw-patches.js) show no handles at
+  // all - without this, that just looks like the feature is broken rather than a "zoom in"
+  // affordance. Only shown for layers actually under LOD; an ordinary small path's handles are
+  // always visible regardless of zoom, so it'd never need this hint.
+  if (layer.editing._verticesHandlers.some(isEditLodActive)) {
+    const updateZoomHint = () => {
+      zoomHint.textContent =
+        map.getZoom() < EDIT_HANDLE_MIN_ZOOM ? "Zoom in to see edit points" : "";
+    };
+    updateZoomHint();
+    _simplifyZoomHintHandler = updateZoomHint;
+    map.on("moveend zoomend", _simplifyZoomHintHandler);
   }
 
   // setSimplificationTolerance() always re-derives from the pristine baseline, so a slider
@@ -307,6 +383,10 @@ function hideSimplificationSlider() {
   if (_simplifySliderLockHandler) {
     map.off(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
     _simplifySliderLockHandler = null;
+  }
+  if (_simplifyZoomHintHandler) {
+    map.off("moveend zoomend", _simplifyZoomHintHandler);
+    _simplifyZoomHintHandler = null;
   }
   // resetInfoPanel() doesn't know about this class - it would otherwise leak onto every
   // future selection until the app is reloaded.

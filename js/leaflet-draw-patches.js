@@ -105,22 +105,127 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
   L.Edit.PolyVerticesEdit.prototype._createMiddleMarker = function (marker1, marker2) {
     origCreateMiddleMarker.call(this, marker1, marker2);
     const marker = marker1._middleRight;
-    // On initial edit-mode entry the marker group isn't added to the map yet at this
-    // point (leaflet-draw does that right after _initMarkers() finishes), so the icon
-    // element doesn't exist until the marker's own "add" event fires.
-    if (marker._icon) {
-      L.DomUtil.addClass(marker._icon, "leaflet-editing-middle-icon");
-    } else {
-      marker.once("add", () => L.DomUtil.addClass(marker._icon, "leaflet-editing-middle-icon"));
-    }
-    // leaflet-draw reuses this same marker as the real vertex once it's dragged, clicked,
-    // or touch-moved (see the onDragStart closure inside _createMiddleMarker in
-    // leaflet.draw-src.js), restoring full opacity via setOpacity(1). Our CSS opacity on
-    // this class is !important, so without stripping the class the promoted vertex would
+    const addMiddleClass = () => L.DomUtil.addClass(marker._icon, "leaflet-editing-middle-icon");
+    // Persistent, not once(): Marker._removeIcon() nulls _icon on every removal, and
+    // DivIcon.createIcon() builds a brand-new element whenever the old one is gone - so the
+    // LOD system above (which repeatedly adds/removes this same marker as it scrolls in and
+    // out of view) means a fresh, unclassed icon gets created on every re-add, not just the
+    // first. Re-run this every time, not only once, or it renders full-size after the first
+    // hide/show cycle.
+    if (marker._icon) addMiddleClass();
+    marker.on("add", addMiddleClass);
+    // leaflet-draw reuses this same marker as the real vertex once it's dragged, clicked, or
+    // touch-moved (see the onDragStart closure inside _createMiddleMarker in
+    // leaflet.draw-src.js) - a one-time, permanent transition, so both stop the class from
+    // reapplying on any future LOD re-add and strip it immediately for this one. Our CSS
+    // opacity on this class is !important, so without stripping it the promoted vertex would
     // stay stuck translucent forever instead of looking like a real point.
     marker.once("dragstart click touchmove", () => {
+      marker.off("add", addMiddleClass);
       L.DomUtil.removeClass(marker._icon, "leaflet-editing-middle-icon");
     });
+  };
+}
+
+// Level-of-detail vertex/mid-segment handles for dense paths/areas: above
+// EDIT_LOD_POINT_THRESHOLD points, a handle only stays on the map while zoomed in enough and
+// on/near screen to actually be usable, so rendering cost scales with what's on screen instead
+// of with the path's total point count. Below the threshold, a ring behaves exactly like stock
+// leaflet-draw - ordinary hand-drawn paths/areas are nowhere near the threshold, so they're
+// unaffected either way.
+//
+// This file loads before the map instance exists (see index.html's script order), so unlike
+// the patches above, everything below only ever reads the global `map` when called, never at
+// load time. The moveend/zoomend listener that keeps handles in sync as the view changes lives
+// in draw-tools.js's EDITSTART/EDITSTOP instead, for that same reason.
+const EDIT_HANDLE_MIN_ZOOM = 15; // TODO tune by feel
+const EDIT_HANDLE_VIEWPORT_BUFFER = 0.25; // matches distance-labels.js's own pad() convention
+const EDIT_LOD_POINT_THRESHOLD = 100; // TODO tune by feel
+
+function editHandleEligible(latlng) {
+  return (
+    map.getZoom() >= EDIT_HANDLE_MIN_ZOOM &&
+    map.getBounds().pad(EDIT_HANDLE_VIEWPORT_BUFFER).contains(latlng)
+  );
+}
+
+// A mid-segment handle sits at the midpoint of its two neighboring vertices - after
+// simplification those can be far enough apart that the midpoint itself falls outside the
+// viewport even while the segment between them clearly crosses it. Checking the segment
+// (segmentCrossesBounds, from distance-labels.js) instead of just the midpoint's own
+// coordinate keeps it in sync with the vertices around it.
+function editMidpointEligible(vertexA, vertexB) {
+  return (
+    map.getZoom() >= EDIT_HANDLE_MIN_ZOOM &&
+    segmentCrossesBounds(vertexA, vertexB, map.getBounds().pad(EDIT_HANDLE_VIEWPORT_BUFFER))
+  );
+}
+
+// Whether a ring is dense enough for LOD to apply at all - draw-tools.js's resync listener and
+// path-simplification.js's slider both use this to leave a small ring's handles alone entirely,
+// matching the threshold the _initMarkers patch below gates on.
+function isEditLodActive(handler) {
+  return handler._markers.length >= EDIT_LOD_POINT_THRESHOLD;
+}
+
+// Adds or removes a single handle from its live group to match whether it's currently
+// eligible. Eligibility is computed by the caller, since vertices and midpoints use different
+// rules (see editMidpointEligible above).
+function toggleEditHandleVisibility(marker, group, eligible) {
+  const isShown = group.hasLayer(marker);
+  if (eligible && !isShown) group.addLayer(marker);
+  else if (!eligible && isShown) group.removeLayer(marker);
+}
+
+// Applies current eligibility to every vertex and its _middleRight mid-segment marker - each
+// mid-segment marker is reachable from exactly one vertex this way, since its other neighbor
+// sees the same object as its _middleLeft. Returns how many ended up live. Shared by the
+// _initMarkers patch below and draw-tools.js's resync listener, so both stay in sync by
+// construction instead of by keeping two copies of this logic aligned by hand.
+function syncEditHandles(markers, group) {
+  let liveCount = 0;
+  for (const marker of markers) {
+    const vertexEligible = editHandleEligible(marker.getLatLng());
+    toggleEditHandleVisibility(marker, group, vertexEligible);
+    if (vertexEligible) liveCount++;
+
+    const mid = marker._middleRight;
+    if (!mid) continue;
+    const midEligible = editMidpointEligible(marker.getLatLng(), marker._next.getLatLng());
+    toggleEditHandleVisibility(mid, group, midEligible);
+    if (midEligible) liveCount++;
+  }
+  return liveCount;
+}
+
+if (L.Edit && L.Edit.PolyVerticesEdit) {
+  // _initMarkers() runs when Edit mode starts (group not yet on the map - already cheap) and
+  // again on every later updateMarkers() call - auto-simplify, every slider tick - where the
+  // group is normally already attached. There, filtering markers out after creating them is
+  // too late: _createMarker's addLayer() already paid the full DOM/icon cost the instant the
+  // group is live. Detaching the group first (if attached), creating at no cost, filtering
+  // while still detached, then reattaching once - only the eligible subset ever pays that cost.
+  const origInitMarkers = L.Edit.PolyVerticesEdit.prototype._initMarkers;
+  L.Edit.PolyVerticesEdit.prototype._initMarkers = function () {
+    // _defaultShape() is this ring's current point array. Checked before creation, not after,
+    // so the detach-first optimization below still applies on the very rebuild that would
+    // otherwise pay full DOM cost for every point.
+    if (this._defaultShape().length < EDIT_LOD_POINT_THRESHOLD) {
+      origInitMarkers.call(this);
+      return;
+    }
+
+    const polyMap = this._poly._map;
+    const wasAttached = !!(polyMap && this._markerGroup && polyMap.hasLayer(this._markerGroup));
+    if (wasAttached) polyMap.removeLayer(this._markerGroup);
+
+    origInitMarkers.call(this);
+    syncEditHandles(this._markers, this._markerGroup);
+    // Debug: replace the line above with these two to log live/total handle counts:
+    //   const liveCount = syncEditHandles(this._markers, this._markerGroup);
+    //   console.log(`Edit handles: ${liveCount} live out of ~${this._markers.length * 2}`);
+
+    if (wasAttached) polyMap.addLayer(this._markerGroup);
   };
 }
 
