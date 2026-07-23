@@ -248,7 +248,7 @@ const WmsImport = (function () {
               </span>
               ${
                 layer.abstract
-                  ? `<span class="material-symbols wms-layer-info-icon" data-layer-index="${index}" style="font-size: var(--icon-size-20); cursor: pointer; user-select: none;">info</span>`
+                  ? `<span class="material-symbols wms-layer-info-icon" data-layer-index="${index}" style="font-size: var(--icon-size-20); cursor: pointer; user-select: none;">help</span>`
                   : ""
               }
             </div>
