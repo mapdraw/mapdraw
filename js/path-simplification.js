@@ -344,11 +344,15 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
     // it was when the interaction started - dragging away and back to the exact same value
     // (e.g. all the way right then back to minValue) nets to "no change" and never fires it at
     // all, leaving the group detached permanently. pointerup fires on every release regardless.
-    slider.addEventListener("pointerup", () => {
+    // pointercancel (second finger joining as a pinch, OS-interrupted touch) must run the same
+    // restore - the browser fires one or the other, never both, so this can't double-run.
+    const restoreHandleGroups = () => {
       delete layer.editing.updateMarkers;
       layer.editing.updateMarkers(); // one real rebuild, into the still-detached group
       setHandleGroupsAttached(true);
-    });
+    };
+    slider.addEventListener("pointerup", restoreHandleGroups);
+    slider.addEventListener("pointercancel", restoreHandleGroups);
   }
 
   // Below EDIT_HANDLE_MIN_ZOOM, LOD-active rings (leaflet-draw-patches.js) show no handles at
