@@ -138,7 +138,7 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
 // the patches above, everything below only ever reads the global `map` when called, never at
 // load time. The moveend/zoomend listener that keeps handles in sync as the view changes lives
 // in draw-tools.js's EDITSTART/EDITSTOP instead, for that same reason.
-const EDIT_HANDLE_MIN_ZOOM = 16;
+const EDIT_HANDLE_MIN_ZOOM = 15;
 const EDIT_HANDLE_VIEWPORT_BUFFER = 0.25; // matches distance-labels.js's own pad() convention
 const EDIT_LOD_POINT_THRESHOLD = 100;
 const EDIT_HANDLE_DEBUG = false; // set true to log live/total handle counts at both syncEditHandles call sites
