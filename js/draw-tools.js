@@ -86,8 +86,9 @@ function initDrawTools() {
   Drag it to remove more or fewer points.
 </p>
 <p style="text-align: left">
-  <strong>Large imports:</strong> On a dense path or area, points and midpoints only show up
-  once you're zoomed in close enough. If none appear, check the info panel - it'll say so.
+  <strong>Dense paths/areas:</strong> On a path or area with a lot of points, points and
+  midpoints only show up once you're zoomed in close enough. If none appear, check the info
+  panel - it'll say so.
 </p>
 `,
         confirmButtonText: "Got it!",
