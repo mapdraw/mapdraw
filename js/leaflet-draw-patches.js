@@ -127,7 +127,7 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
   };
 }
 
-// Level-of-detail vertex/mid-segment handles for dense paths/areas: above
+// Level-of-detail vertex/mid-segment handles for dense paths/areas: at or above
 // EDIT_LOD_POINT_THRESHOLD points, a handle only stays on the map while zoomed in enough and
 // on/near screen to actually be usable, so rendering cost scales with what's on screen instead
 // of with the path's total point count. Below the threshold, a ring behaves exactly like stock

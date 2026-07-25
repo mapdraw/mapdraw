@@ -34,7 +34,7 @@ function simplifyPath(coordinates, type, config, logLabel = "Path simplified") {
   let newCoordinates;
 
   const simplifySinglePath = (pathCoords) => {
-    if (pathCoords.length <= config.MIN_POINTS) {
+    if (pathCoords.length < config.MIN_POINTS) {
       return { simplified: false, coords: pathCoords };
     }
 
