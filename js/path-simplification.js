@@ -9,8 +9,8 @@
  * Tolerance is in decimal degrees (~0.00005° ≈ 5.5m at equator).
  */
 const pathSimplificationConfig = {
-  TOLERANCE: 0.00015,
-  MIN_POINTS: 100,
+  TOLERANCE: 0.00015, // Douglas-Peucker distance tolerance, in decimal degrees
+  MIN_POINTS: 100, // auto-simplify's point-count threshold; the manual slider always bypasses it (MIN_POINTS: 0)
 };
 
 // Degrees per slider-position unit; anchors tolerance at the slider's min/max only (see
