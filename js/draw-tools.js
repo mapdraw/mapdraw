@@ -180,7 +180,7 @@ function initDrawTools() {
         const newDistance = calculatePathDistance(layer);
         if (layer.feature && layer.feature.properties) {
           layer.feature.properties.totalDistance = newDistance;
-          if (layer._wasAutoSimplified) layer.feature.properties.simplified = true;
+          if (layer._wasSimplified) layer.feature.properties.simplified = true;
         }
         if (globallySelectedItem === layer) selectItem(layer);
       }
@@ -290,7 +290,6 @@ function initDrawTools() {
           ? { ...pathSimplificationConfig, MIN_POINTS: Infinity }
           : pathSimplificationConfig;
         const wasAutoSimplified = applySimplificationToEditingLayer(layerToSimplify, config);
-        layerToSimplify._wasAutoSimplified = wasAutoSimplified;
         showSimplificationSlider(layerToSimplify, wasAutoSimplified);
 
         // Re-syncs the LOD vertex/mid-segment handles (leaflet-draw-patches.js's
