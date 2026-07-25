@@ -180,7 +180,26 @@ function initDrawTools() {
         const newDistance = calculatePathDistance(layer);
         if (layer.feature && layer.feature.properties) {
           layer.feature.properties.totalDistance = newDistance;
-          if (layer._wasSimplified) layer.feature.properties.simplified = true;
+          // Single place that decides the simplified flag, computed fresh from the current
+          // geometry rather than accumulated during the session - see _simplifyBaseline in
+          // path-simplification.js for what "entering already simplified" vs "entering
+          // unsimplified" means here.
+          if (layer._simplifyBaseline) {
+            const currentCount =
+              layer instanceof L.Polygon ? layer.getLatLngs()[0].length : layer.getLatLngs().length;
+            if (layer.feature.properties.simplified) {
+              // Was already simplified entering this session: stay protected from
+              // auto-simplify unless manual edits grew it back past the point where that
+              // protection actually matters.
+              if (currentCount >= pathSimplificationConfig.MIN_POINTS) {
+                delete layer.feature.properties.simplified;
+              }
+            } else if (currentCount < layer._simplifyBaseline.length) {
+              // Entered unsimplified (baseline is full detail): only mark it simplified if
+              // this session actually reduced it below that baseline.
+              layer.feature.properties.simplified = true;
+            }
+          }
         }
         if (globallySelectedItem === layer) selectItem(layer);
       }

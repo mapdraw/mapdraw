@@ -120,9 +120,6 @@ function _applyCoordsToEditingLayer(layer, coords) {
   // layer.setLatLngs(), which would replace the array and desync the handles from the
   // layer's actual geometry, both this session and every future edit session on it.
   const ring = isPolygon ? layer.getLatLngs()[0] : layer.getLatLngs();
-  // Single source of truth for "was this layer actually reduced this session" - covers both
-  // the auto pass and every manual slider tick, since both apply coords through here.
-  if (coords.length < ring.length) layer._wasSimplified = true;
   ring.length = 0;
   for (const c of coords) {
     ring.push(c.length === 3 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]));
@@ -149,9 +146,6 @@ function _applyCoordsToEditingLayer(layer, coords) {
  * @returns {boolean} Whether the geometry was actually simplified
  */
 function applySimplificationToEditingLayer(layer, config = pathSimplificationConfig) {
-  // Runs exactly once per EDITSTART (see draw-tools.js), before any manual slider tick can
-  // reach _applyCoordsToEditingLayer - the right point to clear last session's flag.
-  layer._wasSimplified = false;
   const coords = _getEditingLayerCoords(layer);
   // Refreshed unconditionally at the start of every edit session (this runs exactly once
   // per EDITSTART, before any other simplification call) so a later tolerance adjustment
