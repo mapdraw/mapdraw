@@ -192,9 +192,9 @@ function setSimplificationTolerance(layer, tolerance) {
 // hideSimplificationSlider() can remove it - see the lock comment below for why one exists.
 let _simplifySliderLockHandler = null;
 
-// Tracks the moveend/zoomend listener that keeps the "zoom in to see edit points" hint current
-// - see showSimplificationSlider() below for why one exists.
-let _simplifyZoomHintHandler = null;
+// Tracks the moveend/zoomend/EDITVERTEX listener that keeps LOD handles and the "zoom in to
+// see edit points" hint current - see showSimplificationSlider() for why one handler owns both.
+let _simplifyLodHandler = null;
 
 /**
  * Shows a range input in the info panel's details area while a complex item is being
@@ -214,8 +214,9 @@ let _simplifyZoomHintHandler = null;
  * Also detaches every ring's vertex/mid-segment handles and skips rebuilding them entirely
  * while the slider is being dragged (harmless for an ordinary layer, and skips real work for
  * one under leaflet-draw-patches.js's level-of-detail system), rebuilding once for real on
- * release; and shows a "zoom in to see edit points" hint specifically for a layer with at
- * least one ring dense enough for that system to be active (isEditLodActive).
+ * release. For the rest of the session, this is also the one place keeping those LOD handles -
+ * and a "zoom in to see edit points" hint for a layer with at least one dense-enough ring - in
+ * sync with pan/zoom and manual vertex edits.
  * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
  * @param {boolean} wasAutoSimplified - Return value of the applySimplificationToEditingLayer()
  *   call that just ran for this session
@@ -263,6 +264,31 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
     currentSpan.textContent = countPoints();
   };
   updateCurrent();
+
+  // Everything that can change LOD state this session - pan/zoom, EDITVERTEX, a slider release
+  // via restoreHandleGroups below - funnels through here, so the actual handles
+  // (refreshEditHandles) and the "zoom in to see edit points" hint are always computed
+  // together and can't drift apart.
+  const updateLodDisplay = () => {
+    refreshEditHandles(layer);
+    const lodActive = layer.editing._verticesHandlers.some(isEditLodActive);
+    zoomHint.textContent =
+      lodActive && map.getZoom() < EDIT_HANDLE_MIN_ZOOM ? "Zoom in to see edit points" : "";
+  };
+  updateLodDisplay();
+  // EDITVERTEX fires synchronously from inside leaflet-draw's own marker click/drag handling
+  // (_fireEdit in leaflet.draw-src.js), while that same marker can still have its own listener
+  // queued for the same event (e.g. the middle-marker icon cleanup in
+  // leaflet-draw-patches.js) - refreshEditHandles removing it here would null its icon out
+  // from under that listener. Defer a tick so those finish first; moveend/zoomend share this
+  // handler too for simplicity, though they're never at risk. _simplifyBaseline guards against
+  // hideSimplificationSlider() already having torn the session down by the time this fires.
+  _simplifyLodHandler = () =>
+    setTimeout(() => {
+      if (layer._simplifyBaseline) updateLodDisplay();
+    }, 0);
+  map.on("moveend zoomend", _simplifyLodHandler);
+  map.on(L.Draw.Event.EDITVERTEX, _simplifyLodHandler);
 
   // Point count drops fast at low tolerance and flattens at high tolerance, so map slider
   // position to tolerance exponentially instead of linearly.
@@ -342,23 +368,13 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
       delete layer.editing.updateMarkers;
       layer.editing.updateMarkers(); // one real rebuild, into the still-detached group
       setHandleGroupsAttached(true);
+      // The rebuild above may have crossed the LOD threshold either way - refresh the hint to
+      // match (refreshEditHandles itself is a no-op here; updateMarkers() already synced the
+      // handles).
+      updateLodDisplay();
     };
     slider.addEventListener("pointerup", restoreHandleGroups);
     slider.addEventListener("pointercancel", restoreHandleGroups);
-  }
-
-  // Below EDIT_HANDLE_MIN_ZOOM, LOD-active rings (leaflet-draw-patches.js) show no handles at
-  // all - without this, that just looks like the feature is broken rather than a "zoom in"
-  // affordance. Only shown for layers actually under LOD; an ordinary small path's handles are
-  // always visible regardless of zoom, so it'd never need this hint.
-  if (layer.editing._verticesHandlers.some(isEditLodActive)) {
-    const updateZoomHint = () => {
-      zoomHint.textContent =
-        map.getZoom() < EDIT_HANDLE_MIN_ZOOM ? "Zoom in to see edit points" : "";
-    };
-    updateZoomHint();
-    _simplifyZoomHintHandler = updateZoomHint;
-    map.on("moveend zoomend", _simplifyZoomHintHandler);
   }
 
   // setSimplificationTolerance() always re-derives from the pristine baseline, so a slider
@@ -383,9 +399,10 @@ function hideSimplificationSlider(layer) {
     map.off(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
     _simplifySliderLockHandler = null;
   }
-  if (_simplifyZoomHintHandler) {
-    map.off("moveend zoomend", _simplifyZoomHintHandler);
-    _simplifyZoomHintHandler = null;
+  if (_simplifyLodHandler) {
+    map.off("moveend zoomend", _simplifyLodHandler);
+    map.off(L.Draw.Event.EDITVERTEX, _simplifyLodHandler);
+    _simplifyLodHandler = null;
   }
   // Backstop for the pointerdown shadow in showSimplificationSlider(): Escape can end the
   // session without pointerup/pointercancel ever firing to clean it up.

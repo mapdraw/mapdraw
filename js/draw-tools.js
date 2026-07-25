@@ -6,10 +6,6 @@
  * draw/edit map event listeners.
  */
 function initDrawTools() {
-  // Tracks the moveend/zoomend listener registered by EDITSTART below, so EDITSTOP can
-  // remove it - see the LOD-handles comment there for what it does.
-  let editHandleResyncHandler = null;
-
   // Path
   L.drawLocal.draw.toolbar.buttons.polyline = "Draw path";
   L.drawLocal.draw.handlers.polyline.tooltip.start = "Click to start drawing path";
@@ -180,23 +176,21 @@ function initDrawTools() {
         const newDistance = calculatePathDistance(layer);
         if (layer.feature && layer.feature.properties) {
           layer.feature.properties.totalDistance = newDistance;
-          // Single place that decides the simplified flag, computed fresh from the current
-          // geometry rather than accumulated during the session - see _simplifyBaseline in
-          // path-simplification.js for what "entering already simplified" vs "entering
-          // unsimplified" means here.
+          // Single source for the simplified flag - recomputed fresh here each save from
+          // current point count vs. _simplifyBaseline (path-simplification.js), instead of
+          // accumulated during the session.
           if (layer._simplifyBaseline) {
             const currentCount =
               layer instanceof L.Polygon ? layer.getLatLngs()[0].length : layer.getLatLngs().length;
             if (layer.feature.properties.simplified) {
-              // Was already simplified entering this session: stay protected from
-              // auto-simplify unless manual edits grew it back past the point where that
-              // protection actually matters.
+              // Already simplified entering: stay protected until it's dense enough again
+              // (>= MIN_POINTS) for that protection to actually matter.
               if (currentCount >= pathSimplificationConfig.MIN_POINTS) {
                 delete layer.feature.properties.simplified;
               }
             } else if (currentCount < layer._simplifyBaseline.length) {
-              // Entered unsimplified (baseline is full detail): only mark it simplified if
-              // this session actually reduced it below that baseline.
+              // Entered unsimplified (baseline is full detail): flag it only if this session
+              // actually shrank it below that baseline.
               layer.feature.properties.simplified = true;
             }
           }
@@ -309,31 +303,10 @@ function initDrawTools() {
           ? { ...pathSimplificationConfig, MIN_POINTS: Infinity }
           : pathSimplificationConfig;
         const wasAutoSimplified = applySimplificationToEditingLayer(layerToSimplify, config);
+        // Also keeps the LOD vertex/mid-segment handles (leaflet-draw-patches.js's
+        // refreshEditHandles) synced for the rest of the session - see
+        // showSimplificationSlider for why it owns that instead of a listener here.
         showSimplificationSlider(layerToSimplify, wasAutoSimplified);
-
-        // Re-syncs the LOD vertex/mid-segment handles (leaflet-draw-patches.js's
-        // syncEditHandles) as the view changes - they're only ever live near the current
-        // viewport, at a close enough zoom. Skipped entirely for a layer with no ring dense
-        // enough to need LOD in the first place (isEditLodActive), so an ordinary
-        // hand-drawn path/area's handles are never touched by any of this. Must stay inside
-        // this deferred callback along with the auto-simplify above - layer.editing (and its
-        // _verticesHandlers) doesn't exist until leaflet-draw's own synchronous enable() chain
-        // finishes, right after EDITSTART returns.
-        if (layerToSimplify.editing._verticesHandlers.some(isEditLodActive)) {
-          editHandleResyncHandler = () => {
-            for (const handler of layerToSimplify.editing._verticesHandlers) {
-              if (isEditLodActive(handler)) {
-                const liveCount = syncEditHandles(handler._markers, handler._markerGroup);
-                if (EDIT_HANDLE_DEBUG) {
-                  console.log(
-                    `Edit handles: ${liveCount} live out of ~${handler._markers.length * 2}`,
-                  );
-                }
-              }
-            }
-          };
-          map.on("moveend zoomend", editHandleResyncHandler);
-        }
       }, 0);
     }
   });
@@ -344,10 +317,6 @@ function initDrawTools() {
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(false);
     document.documentElement.style.removeProperty("--active-item-color");
-    if (editHandleResyncHandler) {
-      map.off("moveend zoomend", editHandleResyncHandler);
-      editHandleResyncHandler = null;
-    }
     hideDistanceLabels();
     hideSimplificationSlider(itemBeingEdited);
 

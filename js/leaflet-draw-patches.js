@@ -181,8 +181,8 @@ function toggleEditHandleVisibility(marker, group, eligible) {
 // Applies current eligibility to every vertex and its _middleRight mid-segment marker - each
 // mid-segment marker is reachable from exactly one vertex this way, since its other neighbor
 // sees the same object as its _middleLeft. Returns how many ended up live. Shared by the
-// _initMarkers patch below and draw-tools.js's resync listener, so both stay in sync by
-// construction instead of by keeping two copies of this logic aligned by hand.
+// _initMarkers patch below and refreshEditHandles below, so both stay in sync by construction
+// instead of by keeping two copies of this logic aligned by hand.
 function syncEditHandles(markers, group) {
   let liveCount = 0;
   for (const marker of markers) {
@@ -197,6 +197,20 @@ function syncEditHandles(markers, group) {
     if (midEligible) liveCount++;
   }
   return liveCount;
+}
+
+// Re-syncs every LOD-active ring's handles on a layer to the current viewport - the only place
+// this happens outside a full _initMarkers rebuild, which pan/zoom and a manual vertex edit
+// never trigger on their own. Only caller is showSimplificationSlider
+// (path-simplification.js), which runs every Polyline/Polygon edit session.
+function refreshEditHandles(layer) {
+  for (const handler of layer.editing._verticesHandlers) {
+    if (!isEditLodActive(handler)) continue;
+    const liveCount = syncEditHandles(handler._markers, handler._markerGroup);
+    if (EDIT_HANDLE_DEBUG) {
+      console.log(`Edit handles: ${liveCount} live out of ~${handler._markers.length * 2}`);
+    }
+  }
 }
 
 if (L.Edit && L.Edit.PolyVerticesEdit) {
