@@ -20,7 +20,7 @@ const SLIDER_TOLERANCE_STEP = 0.00001;
 /**
  * Simplifies a geometry's coordinates using the simplify.js library and provided configuration.
  * @param {Array} coordinates - Array of coordinates in [lng, lat] or [lng, lat, alt] format
- * @param {string} type - Geometry type ('LineString', 'Polygon', or 'MultiLineString')
+ * @param {string} type - Geometry type ('LineString' or 'Polygon')
  * @param {object} config - Configuration object with TOLERANCE and MIN_POINTS properties
  * @param {string|null} [logLabel] - Prefix for the console.log below - override for a call that's
  *   only checking a hypothetical result (e.g. showSimplificationSlider's max-tolerance probe),
@@ -83,14 +83,6 @@ function simplifyPath(coordinates, type, config, logLabel = "Path simplified") {
       overallSimplified = result.simplified;
       newCoordinates = result.coords;
     }
-  } else if (type === "MultiLineString") {
-    newCoordinates = coordinates.map((line) => {
-      const result = simplifySinglePath(line);
-      if (result.simplified) {
-        overallSimplified = true;
-      }
-      return result.coords;
-    });
   } else {
     return { simplified: false, coords: coordinates };
   }
