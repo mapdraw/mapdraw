@@ -387,6 +387,9 @@ function hideSimplificationSlider(layer) {
     map.off("moveend zoomend", _simplifyZoomHintHandler);
     _simplifyZoomHintHandler = null;
   }
+  // Backstop for the pointerdown shadow in showSimplificationSlider(): Escape can end the
+  // session without pointerup/pointercancel ever firing to clean it up.
+  delete layer.editing.updateMarkers;
   // Only needed while the slider can re-derive from it - once the session ends there's no
   // more use for it until the next edit re-populates it, so don't hold onto the full-res
   // array for the rest of the layer's lifetime.
