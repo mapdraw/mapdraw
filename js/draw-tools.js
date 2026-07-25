@@ -199,6 +199,9 @@ function initDrawTools() {
       }
     });
     updateDrawControlStates();
+    // Also what keeps the GeoJSON Editor tab (data-editor.js) live if it's open - see
+    // updateOverviewList()'s own doc comment for why.
+    updateOverviewList();
   });
 
   // EDITSTOP reselects whatever was being edited, but only after a short delay (below).

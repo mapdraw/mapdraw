@@ -4,11 +4,15 @@
  * GEOJSON EDITOR
  *
  * Desktop-only tab that shows all current map features as editable GeoJSON.
- * Auto-refreshes when the map changes. Supports applying edited JSON back to the map.
+ * Supports applying edited JSON back to the map.
  *
  * - pathType is serialized into each feature so drawn vs. imported items survive a round-trip.
  * - Apply validates JSON, GeoJSON structure, and geometry before clearing the map.
  * - isDirty blocks auto-refresh while the user has unsaved edits in the editor.
+ * - While the tab is open, auto-refresh only fires when something mutates the overview list's
+ *   DOM (i.e. calls updateOverviewList()) or the info panel's color swatch - not on every map
+ *   change. Opening the tab or clicking Reset always refreshes regardless, since those rebuild
+ *   directly from current layer state rather than relying on either being caught.
  */
 
 const CM_THEME_LIGHT = "eclipse";

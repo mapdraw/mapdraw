@@ -287,7 +287,10 @@ function createOverviewListItem(layer) {
 }
 
 /**
- * Populates or updates the overview list with all items on the map, grouped by type.
+ * Populates or updates the overview list with all items on the map, grouped by type. Rebuilds
+ * the list's DOM unconditionally, which is also what data-editor.js's MutationObserver relies
+ * on to know the map's data changed - any caller of this is implicitly keeping the GeoJSON
+ * Editor tab live too.
  */
 function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
