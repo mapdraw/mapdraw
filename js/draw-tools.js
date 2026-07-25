@@ -331,7 +331,7 @@ function initDrawTools() {
       editHandleResyncHandler = null;
     }
     hideDistanceLabels();
-    hideSimplificationSlider();
+    hideSimplificationSlider(itemBeingEdited);
 
     const itemToReselect = itemBeingEdited;
     itemBeingEdited = null;

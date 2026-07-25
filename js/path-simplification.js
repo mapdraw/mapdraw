@@ -382,8 +382,11 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
   map.on(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
 }
 
-/** Tears down the slider from showSimplificationSlider(). */
-function hideSimplificationSlider() {
+/**
+ * Tears down the slider from showSimplificationSlider().
+ * @param {L.Polygon|L.Polyline} layer - The layer that was being edited
+ */
+function hideSimplificationSlider(layer) {
   if (_simplifySliderLockHandler) {
     map.off(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
     _simplifySliderLockHandler = null;
@@ -392,6 +395,10 @@ function hideSimplificationSlider() {
     map.off("moveend zoomend", _simplifyZoomHintHandler);
     _simplifyZoomHintHandler = null;
   }
+  // Only needed while the slider can re-derive from it - once the session ends there's no
+  // more use for it until the next edit re-populates it, so don't hold onto the full-res
+  // array for the rest of the layer's lifetime.
+  delete layer._simplifyBaseline;
   // resetInfoPanel() doesn't know about this class - it would otherwise leak onto every
   // future selection until the app is reloaded.
   document.getElementById("info-panel")?.classList.remove("simplify-active");
