@@ -138,9 +138,10 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
 // the patches above, everything below only ever reads the global `map` when called, never at
 // load time. The moveend/zoomend listener that keeps handles in sync as the view changes lives
 // in draw-tools.js's EDITSTART/EDITSTOP instead, for that same reason.
-const EDIT_HANDLE_MIN_ZOOM = 15; // TODO tune by feel
+const EDIT_HANDLE_MIN_ZOOM = 16;
 const EDIT_HANDLE_VIEWPORT_BUFFER = 0.25; // matches distance-labels.js's own pad() convention
-const EDIT_LOD_POINT_THRESHOLD = 100; // TODO tune by feel
+const EDIT_LOD_POINT_THRESHOLD = 100;
+const EDIT_HANDLE_DEBUG = false; // set true to log live/total handle counts at both syncEditHandles call sites
 
 function editHandleEligible(latlng) {
   return (
@@ -220,10 +221,10 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
     if (wasAttached) polyMap.removeLayer(this._markerGroup);
 
     origInitMarkers.call(this);
-    syncEditHandles(this._markers, this._markerGroup);
-    // Debug: replace the line above with these two to log live/total handle counts:
-    //   const liveCount = syncEditHandles(this._markers, this._markerGroup);
-    //   console.log(`Edit handles: ${liveCount} live out of ~${this._markers.length * 2}`);
+    const liveCount = syncEditHandles(this._markers, this._markerGroup);
+    if (EDIT_HANDLE_DEBUG) {
+      console.log(`Edit handles: ${liveCount} live out of ~${this._markers.length * 2}`);
+    }
 
     if (wasAttached) polyMap.addLayer(this._markerGroup);
   };

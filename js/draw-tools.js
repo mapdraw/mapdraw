@@ -304,10 +304,12 @@ function initDrawTools() {
           editHandleResyncHandler = () => {
             for (const handler of layerToSimplify.editing._verticesHandlers) {
               if (isEditLodActive(handler)) {
-                syncEditHandles(handler._markers, handler._markerGroup);
-                // Debug: replace the line above with these two to log live/total handle counts:
-                //   const liveCount = syncEditHandles(handler._markers, handler._markerGroup);
-                //   console.log(`Edit handles: ${liveCount} live out of ~${handler._markers.length * 2}`);
+                const liveCount = syncEditHandles(handler._markers, handler._markerGroup);
+                if (EDIT_HANDLE_DEBUG) {
+                  console.log(
+                    `Edit handles: ${liveCount} live out of ~${handler._markers.length * 2}`,
+                  );
+                }
               }
             }
           };
