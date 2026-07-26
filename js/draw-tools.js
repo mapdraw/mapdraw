@@ -176,24 +176,6 @@ function initDrawTools() {
         const newDistance = calculatePathDistance(layer);
         if (layer.feature && layer.feature.properties) {
           layer.feature.properties.totalDistance = newDistance;
-          // Single source for the simplified flag - recomputed fresh here each save from
-          // current point count vs. _simplifyBaseline (path-simplification.js), instead of
-          // accumulated during the session.
-          if (layer._simplifyBaseline) {
-            const currentCount =
-              layer instanceof L.Polygon ? layer.getLatLngs()[0].length : layer.getLatLngs().length;
-            if (layer.feature.properties.simplified) {
-              // Already simplified entering: stay protected until it's dense enough again
-              // (>= MIN_POINTS) for that protection to actually matter.
-              if (currentCount >= pathSimplificationConfig.MIN_POINTS) {
-                delete layer.feature.properties.simplified;
-              }
-            } else if (currentCount < layer._simplifyBaseline.length) {
-              // Entered unsimplified (baseline is full detail): flag it only if this session
-              // actually shrank it below that baseline.
-              layer.feature.properties.simplified = true;
-            }
-          }
         }
         if (globallySelectedItem === layer) selectItem(layer);
       }
@@ -288,28 +270,21 @@ function initDrawTools() {
     if (itemBeingEdited instanceof L.Polyline) {
       showDistanceLabelsFor(itemBeingEdited);
 
-      // Auto-simplify a complex path/area's vertex count as soon as it's editable.
-      // Deferred to the next tick: leaflet-draw backs up this layer's pre-edit geometry
-      // (for Cancel) and enables its editing handler synchronously right after this
-      // EDITSTART handler returns, as part of the same enable() call chain (see
-      // L.EditToolbar.Edit.prototype.enable in leaflet.draw-src.js). Simplifying here
-      // directly would corrupt that backup, and layer.editing wouldn't exist yet for
-      // updateMarkers() to call.
-      const layerToSimplify = itemBeingEdited;
+      // Deferred to the next tick: leaflet-draw enables this layer's editing handler
+      // synchronously right after this EDITSTART handler returns, as part of the same
+      // enable() call chain (see L.EditToolbar.Edit.prototype.enable in
+      // leaflet.draw-src.js) - showSimplificationSlider() needs layer.editing to
+      // already exist for its LOD handle sync.
+      const editedLayer = itemBeingEdited;
       setTimeout(() => {
-        if (itemBeingEdited !== layerToSimplify) return; // session ended/changed already
-        // Already auto-simplified once and saved: that saved geometry is now the
-        // authoritative version, with no more-original data left to re-derive from, so
-        // MIN_POINTS is forced unreachable here. applySimplificationToEditingLayer() still
-        // captures _simplifyBaseline for the manual slider below either way.
-        const config = layerToSimplify.feature?.properties?.simplified
-          ? { ...pathSimplificationConfig, MIN_POINTS: Infinity }
-          : pathSimplificationConfig;
-        const wasAutoSimplified = applySimplificationToEditingLayer(layerToSimplify, config);
+        if (itemBeingEdited !== editedLayer) return; // session ended/changed already
+        // Captured fresh every session so the manual slider can always re-derive from
+        // full detail, regardless of what a previous session already reduced it to.
+        editedLayer._simplifyBaseline = _getEditingLayerCoords(editedLayer);
         // Also keeps the LOD vertex/mid-segment handles (leaflet-draw-patches.js's
         // refreshEditHandles) synced for the rest of the session - see
         // showSimplificationSlider for why it owns that instead of a listener here.
-        showSimplificationSlider(layerToSimplify, wasAutoSimplified);
+        showSimplificationSlider(editedLayer);
       }, 0);
     }
   });

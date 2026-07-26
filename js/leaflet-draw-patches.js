@@ -162,9 +162,9 @@ function editMidpointEligible(vertexA, vertexB) {
   );
 }
 
-// Whether a ring is dense enough for LOD to apply at all - draw-tools.js's resync listener and
-// path-simplification.js's slider both use this to leave a small ring's handles alone entirely,
-// matching the threshold the _initMarkers patch below gates on.
+// Whether a ring is dense enough for LOD to apply at all - path-simplification.js's slider uses
+// this to leave a small ring's handles alone entirely, matching the threshold the _initMarkers
+// patch below gates on.
 function isEditLodActive(handler) {
   return handler._markers.length >= EDIT_LOD_POINT_THRESHOLD;
 }
@@ -215,8 +215,8 @@ function refreshEditHandles(layer) {
 
 if (L.Edit && L.Edit.PolyVerticesEdit) {
   // _initMarkers() runs when Edit mode starts (group not yet on the map - already cheap) and
-  // again on every later updateMarkers() call - auto-simplify, every slider tick - where the
-  // group is normally already attached. There, filtering markers out after creating them is
+  // again on every later updateMarkers() call (every slider tick), where the group is normally
+  // already attached. There, filtering markers out after creating them is
   // too late: _createMarker's addLayer() already paid the full DOM/icon cost the instant the
   // group is live. Detaching the group first (if attached), creating at no cost, filtering
   // while still detached, then reattaching once - only the eligible subset ever pays that cost.

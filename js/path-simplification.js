@@ -4,24 +4,15 @@
 // Reduces the number of points in a path/area geometry using the simplify.js
 // library (Douglas-Peucker). Used on demand for items in the Drawn Items layer.
 
-/**
- * Simplification settings for paths and areas.
- * Tolerance is in decimal degrees (~0.00005° ≈ 5.5m at equator).
- */
-const pathSimplificationConfig = {
-  TOLERANCE: 0.00015, // Douglas-Peucker distance tolerance, in decimal degrees
-  MIN_POINTS: 100, // auto-simplify's point-count threshold; the manual slider always bypasses it (MIN_POINTS: 0)
-};
-
 // Degrees per slider-position unit; anchors tolerance at the slider's min/max only (see
 // sliderValueToTolerance) - steps in between are non-linear.
 const SLIDER_TOLERANCE_STEP = 0.00001;
 
 /**
- * Simplifies a geometry's coordinates using the simplify.js library and provided configuration.
+ * Simplifies a geometry's coordinates using the simplify.js library at the given tolerance.
  * @param {Array} coordinates - Array of coordinates in [lng, lat] or [lng, lat, alt] format
  * @param {string} type - Geometry type ('LineString' or 'Polygon')
- * @param {object} config - Configuration object with TOLERANCE and MIN_POINTS properties
+ * @param {number} tolerance - Simplify.js tolerance in decimal degrees
  * @param {string|null} [logLabel] - Prefix for the console.log below - override for a call that's
  *   only checking a hypothetical result (e.g. showSimplificationSlider's max-tolerance probe),
  *   so it doesn't read like a simplification was actually applied to the layer. Pass null to
@@ -29,21 +20,17 @@ const SLIDER_TOLERANCE_STEP = 0.00001;
  *   it would otherwise fire dozens of times per drag).
  * @returns {{simplified: boolean, coords: Array}} Object with simplification flag and resulting coordinates
  */
-function simplifyPath(coordinates, type, config, logLabel = "Path simplified") {
+function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified") {
   let overallSimplified = false;
   let newCoordinates;
 
   const simplifySinglePath = (pathCoords) => {
-    if (pathCoords.length < config.MIN_POINTS) {
-      return { simplified: false, coords: pathCoords };
-    }
-
     // Check if coordinates have altitude data (3D coordinates)
     const hasAltitude = pathCoords.some((c) => c.length === 3 && c[2] !== undefined);
 
     // Add index to each point so we can track which ones are kept after simplification
     const points = pathCoords.map((c, i) => ({ x: c[0], y: c[1], idx: i }));
-    const simplifiedPoints = simplify(points, config.TOLERANCE, true);
+    const simplifiedPoints = simplify(points, tolerance, true);
 
     if (simplifiedPoints.length < pathCoords.length) {
       if (logLabel)
@@ -137,36 +124,8 @@ function _applyCoordsToEditingLayer(layer, coords) {
 }
 
 /**
- * Simplifies a layer that's currently in leaflet-draw Edit mode. Must only be called once
- * the layer's own editing handler is active (layer.editing.enable() has already run) -
- * callers driven by EDITSTART need to defer past leaflet-draw's own synchronous
- * backup/enable sequence first, see draw-tools.js.
- * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
- * @param {object} [config] - Simplification config; defaults to pathSimplificationConfig
- * @returns {boolean} Whether the geometry was actually simplified
- */
-function applySimplificationToEditingLayer(layer, config = pathSimplificationConfig) {
-  const coords = _getEditingLayerCoords(layer);
-  // Refreshed unconditionally at the start of every edit session (this runs exactly once
-  // per EDITSTART, before any other simplification call) so a later tolerance adjustment
-  // can always re-derive from full detail, regardless of what this or a previous session
-  // already simplified away.
-  layer._simplifyBaseline = coords;
-
-  const result = simplifyPath(
-    coords,
-    layer instanceof L.Polygon ? "Polygon" : "LineString",
-    config,
-  );
-  if (!result.simplified) return false;
-
-  _applyCoordsToEditingLayer(layer, result.coords);
-  return true;
-}
-
-/**
  * Re-simplifies a layer already in Edit mode at an arbitrary tolerance, always re-deriving
- * from its pristine baseline (see applySimplificationToEditingLayer) so repeated adjustments
+ * from its pristine baseline (captured at EDITSTART in draw-tools.js) so repeated adjustments
  * - in either direction - never compound on top of an already-reduced point set. A no-op if
  * no baseline was captured yet (layer isn't actually being edited).
  * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
@@ -179,10 +138,7 @@ function setSimplificationTolerance(layer, tolerance) {
   const result = simplifyPath(
     baseline,
     layer instanceof L.Polygon ? "Polygon" : "LineString",
-    {
-      TOLERANCE: tolerance,
-      MIN_POINTS: 0, // a manual adjustment should apply regardless of the auto-simplify threshold
-    },
+    tolerance,
     null, // fires on every slider tick - would otherwise spam the console during a single drag
   );
   _applyCoordsToEditingLayer(layer, result.coords);
@@ -206,11 +162,6 @@ let _simplifyLodHandler = null;
  * persistent state around the content. The "simplify-active" class marks the panel as being
  * in this mode explicitly, independent of "no-selection".
  *
- * The slider's minimum is clamped to whatever applySimplificationToEditingLayer() already
- * applied, never lower - the whole reason for auto-simplifying on entry is to cap how many
- * vertex handles get rendered, so letting the slider go back toward the full original while
- * they're all still live on screen would undo that protection entirely.
- *
  * Also detaches every ring's vertex/mid-segment handles and skips rebuilding them entirely
  * while the slider is being dragged (harmless for an ordinary layer, and skips real work for
  * one under leaflet-draw-patches.js's level-of-detail system), rebuilding once for real on
@@ -218,26 +169,16 @@ let _simplifyLodHandler = null;
  * and a "zoom in to see edit points" hint for a layer with at least one dense-enough ring - in
  * sync with pan/zoom and manual vertex edits.
  * @param {L.Polygon|L.Polyline} layer - The layer currently being edited
- * @param {boolean} wasAutoSimplified - Return value of the applySimplificationToEditingLayer()
- *   call that just ran for this session
  */
-function showSimplificationSlider(layer, wasAutoSimplified) {
+function showSimplificationSlider(layer) {
   const infoPanel = document.getElementById("info-panel");
   const details = document.getElementById("info-panel-details");
   if (!infoPanel || !details) return;
 
   const isPolygon = layer instanceof L.Polygon;
   const countPoints = () => (isPolygon ? layer.getLatLngs()[0].length : layer.getLatLngs().length);
-  const minValue = wasAutoSimplified
-    ? Math.round(pathSimplificationConfig.TOLERANCE / SLIDER_TOLERANCE_STEP)
-    : 0;
   const maxValue = 1000;
-
-  // Line 1 always says something - it's the only indication, when nothing was auto-simplified,
-  // that this slider has anything to do with simplification at all.
-  const introText = wasAutoSimplified
-    ? `Auto-simplified from ${layer._simplifyBaseline.length} to ${countPoints()} points`
-    : "Simplify points";
+  const introText = "Simplify points";
 
   infoPanel.classList.remove("no-selection");
   infoPanel.classList.add("simplify-active");
@@ -249,7 +190,7 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
       <div>${introText}</div>
       <div class="simplify-panel-row">
         <span id="simplify-slider-current" class="simplify-panel-count"></span>
-        <input id="simplify-slider" type="range" class="simplify-panel-slider" min="${minValue}" max="${maxValue}" value="${minValue}" />
+        <input id="simplify-slider" type="range" class="simplify-panel-slider" min="0" max="${maxValue}" value="0" />
       </div>
       <div id="simplify-slider-lock-message" class="simplify-panel-lock-message"></div>
     </div>
@@ -291,14 +232,13 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
   map.on(L.Draw.Event.EDITVERTEX, _simplifyLodHandler);
 
   // Point count drops fast at low tolerance and flattens at high tolerance, so map slider
-  // position to tolerance exponentially instead of linearly.
-  // minValue is 0 when nothing was auto-simplified - floor to 1 step, since 0 as the curve's
-  // base makes the formula below divide by zero.
-  const minTolerance = (minValue > 0 ? minValue : 1) * SLIDER_TOLERANCE_STEP;
+  // position to tolerance exponentially instead of linearly. minTolerance floors to 1 step
+  // instead of 0, since 0 as the curve's base makes the formula below divide by zero.
+  const minTolerance = SLIDER_TOLERANCE_STEP;
   const maxTolerance = maxValue * SLIDER_TOLERANCE_STEP;
   const sliderValueToTolerance = (value) => {
-    if (value <= minValue) return minValue * SLIDER_TOLERANCE_STEP; // exact 0 when minValue is 0
-    const t = (value - minValue) / (maxValue - minValue);
+    if (value <= 0) return 0;
+    const t = value / maxValue;
     return minTolerance * Math.pow(maxTolerance / minTolerance, t);
   };
 
@@ -308,7 +248,7 @@ function showSimplificationSlider(layer, wasAutoSimplified) {
   const maxTolerantCount = simplifyPath(
     layer._simplifyBaseline,
     isPolygon ? "Polygon" : "LineString",
-    { TOLERANCE: maxTolerance, MIN_POINTS: 0 },
+    maxTolerance,
     "Max-simplification probe (not applied)",
   ).coords.length;
 

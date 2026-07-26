@@ -273,10 +273,6 @@ function initPathExtend() {
 
     if (target.feature && target.feature.properties) {
       target.feature.properties.totalDistance = calculatePathDistance(target);
-      // The splice above just added points that were never run through auto-simplify,
-      // regardless of whether target itself was previously simplified - let a later Edit
-      // session re-evaluate it from scratch.
-      delete target.feature.properties.simplified;
     }
     // Mirrors draw-tools.js's own draw:created handler - if "Drawn Items" was hidden
     // mid-draw (e.g. via the layers panel), the extended/joined result should be visible

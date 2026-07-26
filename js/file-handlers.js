@@ -743,7 +743,6 @@ function notifyExportSuccess(shouldNotify, title, text) {
 const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
   "color",
   "totalDistance",
-  "simplified",
   "stroke-width",
   "stroke-opacity",
   "fill",

@@ -24,7 +24,7 @@ MapDraw is a simple, powerful web-based editor for creating, viewing, and managi
 - **OpenStreetMap Contributions:** Sign in with your OpenStreetMap account to leave notes or add missing places directly to the map.
 - **Custom WMS & XYZ Layers:** Import map layers from any WMS-compatible service or XYZ tile URL. Browse available layers, add them to your map as overlays, and reorder them with drag-and-drop. Your layers are saved locally and persist between sessions.
 - **POI Finder:** Search for points of interest (parks, restaurants, viewpoints, etc.) in the current map view using OpenStreetMap data, and save them directly to your map.
-- **Path & Area Simplification:** Complex paths and areas are automatically simplified for smoother performance when editing, with a slider to fine-tune the level of detail further.
+- **Path & Area Simplification:** While editing a path or area, use a slider to reduce its point count for smoother performance and easier editing.
 - **Autosave:** Your work is automatically saved locally in your browser every few seconds and restored when you return, so you never lose your progress.
 - **GeoJSON Editor:** View and edit all map features as raw GeoJSON in a built-in code editor powered by CodeMirror, with syntax highlighting, line numbers, code folding, and live inline error detection. Apply changes directly back to the map.
 

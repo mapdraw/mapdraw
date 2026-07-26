@@ -44,7 +44,6 @@ function _serializeLayersForAutosave() {
       if (src.stravaId) props.stravaId = src.stravaId;
       if (src.type) props.type = src.type; // Strava activity type (Ride, Run, etc.)
       props.pathType = layer.pathType || "drawn";
-      if (src.simplified) props.simplified = src.simplified;
 
       geojson.properties = props;
       geojson.type = "Feature";
