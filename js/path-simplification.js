@@ -18,12 +18,9 @@ const SLIDER_TOLERANCE_STEP = 0.00001;
  *   so it doesn't read like a simplification was actually applied to the layer. Pass null to
  *   suppress the log entirely (e.g. setSimplificationTolerance's per-tick slider calls, where
  *   it would otherwise fire dozens of times per drag).
- * @returns {{simplified: boolean, coords: Array}} Object with simplification flag and resulting coordinates
+ * @returns {Array} Resulting coordinates
  */
 function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified") {
-  let overallSimplified = false;
-  let newCoordinates;
-
   const simplifySinglePath = (pathCoords) => {
     const hasAltitude = pathCoords.some((c) => c.length === 3 && c[2] !== undefined);
 
@@ -31,49 +28,40 @@ function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified"
     const points = pathCoords.map((c, i) => ({ x: c[0], y: c[1], idx: i }));
     const simplifiedPoints = simplify(points, tolerance, true);
 
-    if (simplifiedPoints.length < pathCoords.length) {
-      if (logLabel)
-        console.log(`${logLabel}: ${pathCoords.length} -> ${simplifiedPoints.length} points`);
+    if (simplifiedPoints.length === pathCoords.length) return pathCoords;
 
-      // If original had altitude, restore it using the index
-      if (hasAltitude) {
-        const simplifiedWithAlt = simplifiedPoints.map((p) => {
-          const originalCoord = pathCoords[p.idx];
-          return originalCoord.length === 3 ? [p.x, p.y, originalCoord[2]] : [p.x, p.y];
-        });
-        return { simplified: true, coords: simplifiedWithAlt };
-      }
+    if (logLabel)
+      console.log(`${logLabel}: ${pathCoords.length} -> ${simplifiedPoints.length} points`);
 
-      return { simplified: true, coords: simplifiedPoints.map((p) => [p.x, p.y]) };
+    // If original had altitude, restore it using the index
+    if (hasAltitude) {
+      return simplifiedPoints.map((p) => {
+        const originalCoord = pathCoords[p.idx];
+        return originalCoord.length === 3 ? [p.x, p.y, originalCoord[2]] : [p.x, p.y];
+      });
     }
 
-    return { simplified: false, coords: pathCoords };
+    return simplifiedPoints.map((p) => [p.x, p.y]);
   };
 
-  if (type === "LineString" || type === "Polygon") {
-    // LineString and Polygon are both single arrays of coordinates
-    // Polygon is treated as a closed LineString for simplification purposes
-    const result = simplifySinglePath(coordinates);
-    if (type === "Polygon" && result.coords.length < 3) {
-      // Douglas-Peucker treats the ring as an open line, so it can degenerate to just the
-      // first/last point (2) - a "polygon" with fewer than 3 points has zero area and isn't
-      // a valid shape. Fall back to a first/middle/last triangle instead of the full
-      // unsimplified input, so a tiny/dense polygon still ends up reduced.
-      newCoordinates = [
-        coordinates[0],
-        coordinates[Math.floor(coordinates.length / 2)],
-        coordinates[coordinates.length - 1],
-      ];
-      overallSimplified = newCoordinates.length < coordinates.length;
-    } else {
-      overallSimplified = result.simplified;
-      newCoordinates = result.coords;
-    }
-  } else {
-    return { simplified: false, coords: coordinates };
+  if (type !== "LineString" && type !== "Polygon") return coordinates;
+
+  // LineString and Polygon are both single arrays of coordinates
+  // Polygon is treated as a closed LineString for simplification purposes
+  const newCoordinates = simplifySinglePath(coordinates);
+  if (type === "Polygon" && newCoordinates.length < 3) {
+    // Douglas-Peucker treats the ring as an open line, so it can degenerate to just the
+    // first/last point (2) - a "polygon" with fewer than 3 points has zero area and isn't
+    // a valid shape. Fall back to a first/middle/last triangle instead of the full
+    // unsimplified input, so a tiny/dense polygon still ends up reduced.
+    return [
+      coordinates[0],
+      coordinates[Math.floor(coordinates.length / 2)],
+      coordinates[coordinates.length - 1],
+    ];
   }
 
-  return { simplified: overallSimplified, coords: newCoordinates };
+  return newCoordinates;
 }
 
 /**
@@ -135,13 +123,13 @@ function setSimplificationTolerance(layer, tolerance) {
   const baseline = layer._simplifyBaseline;
   if (!baseline) return;
 
-  const result = simplifyPath(
+  const coords = simplifyPath(
     baseline,
     layer instanceof L.Polygon ? "Polygon" : "LineString",
     tolerance,
     null, // fires on every slider tick - would otherwise spam the console during a single drag
   );
-  _applyCoordsToEditingLayer(layer, result.coords);
+  _applyCoordsToEditingLayer(layer, coords);
 }
 
 // Tracks the EDITVERTEX listener registered by showSimplificationSlider(), so
@@ -250,7 +238,7 @@ function showSimplificationSlider(layer) {
     isPolygon ? "Polygon" : "LineString",
     maxTolerance,
     "Max-simplification probe (not applied)",
-  ).coords.length;
+  ).length;
 
   // Read by _simplifySliderLockHandler below so a later manual edit doesn't overwrite this
   // message with "Locked after a manual point edit" - that would misreport *why* the slider
