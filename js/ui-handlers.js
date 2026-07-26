@@ -641,7 +641,7 @@ function showInfoPanel(layer) {
     const areaLine = isSelfIntersectingRing(layer.getLatLngs()[0])
       ? "Self-intersecting shape"
       : `Area: ${formatArea(calculatePolygonArea(layer))}`;
-    const pointCount = layer.getLatLngs()[0].length;
+    const pointCount = flattenRingPoints(layer.getLatLngs()).length;
 
     details = `${areaLine}<br>Perimeter: ${formatDistance(perimeter)}<br>Points: ${pointCount}`;
   } else if (layer instanceof L.Polyline) {
