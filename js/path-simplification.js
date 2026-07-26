@@ -25,7 +25,6 @@ function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified"
   let newCoordinates;
 
   const simplifySinglePath = (pathCoords) => {
-    // Check if coordinates have altitude data (3D coordinates)
     const hasAltitude = pathCoords.some((c) => c.length === 3 && c[2] !== undefined);
 
     // Add index to each point so we can track which ones are kept after simplification
@@ -84,10 +83,7 @@ function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified"
  * @returns {Array} Coordinates array
  */
 function _getEditingLayerCoords(layer) {
-  const ring = layer instanceof L.Polygon ? layer.getLatLngs()[0] : layer.getLatLngs();
-  return ring.map((latlng) =>
-    latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
-  );
+  return flattenRingPoints(layer.getLatLngs()).map(latLngToCoord);
 }
 
 /**
@@ -100,13 +96,13 @@ function _getEditingLayerCoords(layer) {
  * @param {Array} coords - New coordinates in [lng, lat(, alt)] format
  */
 function _applyCoordsToEditingLayer(layer, coords) {
-  const isPolygon = layer instanceof L.Polygon;
   // leaflet-draw's vertex handles hold a direct reference to this exact array, captured
   // once when editing.enable() first ran and never resynced except on Cancel - mutate it
   // in place (mirroring leaflet-draw's own _spliceLatLngs) rather than calling
   // layer.setLatLngs(), which would replace the array and desync the handles from the
   // layer's actual geometry, both this session and every future edit session on it.
-  const ring = isPolygon ? layer.getLatLngs()[0] : layer.getLatLngs();
+  // flattenRingPoints() returns that same live array, not a copy.
+  const ring = flattenRingPoints(layer.getLatLngs());
   ring.length = 0;
   for (const c of coords) {
     ring.push(c.length === 3 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]));
@@ -120,7 +116,11 @@ function _applyCoordsToEditingLayer(layer, coords) {
   layer.edited = true;
   // Unlike a manual vertex drag, this geometry change doesn't fire the drag events distance
   // labels normally stay live from, so they need an explicit refresh to match the new points.
-  if (layer instanceof L.Polyline) showDistanceLabelsFor(layer);
+  // refreshDistanceLabels() (not showDistanceLabelsFor()): this runs on every slider tick,
+  // and distanceLabelSource is already this exact layer for the whole edit session (set by
+  // EDITSTART in draw-tools.js) - re-arming its 4 listeners from scratch every tick would be
+  // pure waste on top of the redraw this already needs.
+  if (layer instanceof L.Polyline) refreshDistanceLabels();
 }
 
 /**
@@ -176,7 +176,7 @@ function showSimplificationSlider(layer) {
   if (!infoPanel || !details) return;
 
   const isPolygon = layer instanceof L.Polygon;
-  const countPoints = () => (isPolygon ? layer.getLatLngs()[0].length : layer.getLatLngs().length);
+  const countPoints = () => flattenRingPoints(layer.getLatLngs()).length;
   const maxValue = 1000;
   const introText = "Simplify points";
 
@@ -252,7 +252,12 @@ function showSimplificationSlider(layer) {
     "Max-simplification probe (not applied)",
   ).coords.length;
 
-  if (maxTolerantCount === countPoints()) {
+  // Read by _simplifySliderLockHandler below so a later manual edit doesn't overwrite this
+  // message with "Locked after a manual point edit" - that would misreport *why* the slider
+  // is locked when it never had anything to do with the edit at all.
+  const alreadyLockedAtSetup = maxTolerantCount === countPoints();
+
+  if (alreadyLockedAtSetup) {
     slider.disabled = true;
     lockMessage.textContent = "Already fully simplified";
   } else {
@@ -324,7 +329,11 @@ function showSimplificationSlider(layer) {
   // the live "current" count without ever re-enabling the slider.
   _simplifySliderLockHandler = () => {
     slider.disabled = true;
-    lockMessage.textContent = "Locked after a manual point edit"; // shown via the :empty CSS rule
+    // Leave the more accurate "Already fully simplified" message in place if that's why the
+    // slider was already locked before this edit ever happened.
+    if (!alreadyLockedAtSetup) {
+      lockMessage.textContent = "Locked after a manual point edit"; // shown via the :empty CSS rule
+    }
     updateCurrent();
   };
   map.on(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);

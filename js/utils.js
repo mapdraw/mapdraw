@@ -241,6 +241,16 @@ function flattenRingPoints(latlngs) {
 }
 
 /**
+ * Converts an L.LatLng to a plain [lng, lat] array (or [lng, lat, alt] when altitude is set) -
+ * the coordinate order GeoJSON and simplify.js expect.
+ * @param {L.LatLng} latlng
+ * @returns {number[]}
+ */
+function latLngToCoord(latlng) {
+  return latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat];
+}
+
+/**
  * Calculates the total distance of a path in meters.
  * @param {L.Polyline | L.Polygon} path - The layer to measure
  * @returns {number} Total distance in meters

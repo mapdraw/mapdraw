@@ -105,22 +105,14 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
     });
   } else if (layerToDuplicate instanceof L.Polygon) {
     // Handle polygon (must check before Polyline since Polygon extends Polyline)
-    const originalCoords = layerToDuplicate
-      .getLatLngs()[0]
-      .map((latlng) =>
-        latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
-      );
+    const originalCoords = flattenRingPoints(layerToDuplicate.getLatLngs()).map(latLngToCoord);
 
     newLayer = L.polygon(
       originalCoords.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
       { ...STYLE_CONFIG.path.default, color: color },
     );
   } else if (layerToDuplicate instanceof L.Polyline) {
-    const originalCoords = layerToDuplicate
-      .getLatLngs()
-      .map((latlng) =>
-        latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
-      );
+    const originalCoords = flattenRingPoints(layerToDuplicate.getLatLngs()).map(latLngToCoord);
 
     newLayer = L.polyline(
       originalCoords.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
