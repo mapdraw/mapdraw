@@ -13,14 +13,14 @@ const SLIDER_TOLERANCE_STEP = 0.00001;
  * @param {Array} coordinates - Array of coordinates in [lng, lat] or [lng, lat, alt] format
  * @param {string} type - Geometry type ('LineString' or 'Polygon')
  * @param {number} tolerance - Simplify.js tolerance in decimal degrees
- * @param {string|null} [logLabel] - Prefix for the console.log below - override for a call that's
+ * @param {string|null} logLabel - Prefix for the console.log below - override for a call that's
  *   only checking a hypothetical result (e.g. showSimplificationSlider's max-tolerance probe),
  *   so it doesn't read like a simplification was actually applied to the layer. Pass null to
  *   suppress the log entirely (e.g. setSimplificationTolerance's per-tick slider calls, where
  *   it would otherwise fire dozens of times per drag).
  * @returns {Array} Resulting coordinates
  */
-function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified") {
+function simplifyPath(coordinates, type, tolerance, logLabel) {
   const simplifySinglePath = (pathCoords) => {
     const hasAltitude = pathCoords.some((c) => c.length === 3 && c[2] !== undefined);
 
@@ -29,9 +29,6 @@ function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified"
     const simplifiedPoints = simplify(points, tolerance, true);
 
     if (simplifiedPoints.length === pathCoords.length) return pathCoords;
-
-    if (logLabel)
-      console.log(`${logLabel}: ${pathCoords.length} -> ${simplifiedPoints.length} points`);
 
     // If original had altitude, restore it using the index
     if (hasAltitude) {
@@ -48,17 +45,24 @@ function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified"
 
   // LineString and Polygon are both single arrays of coordinates
   // Polygon is treated as a closed LineString for simplification purposes
-  const newCoordinates = simplifySinglePath(coordinates);
+  let newCoordinates = simplifySinglePath(coordinates);
   if (type === "Polygon" && newCoordinates.length < 3) {
     // Douglas-Peucker treats the ring as an open line, so it can degenerate to just the
     // first/last point (2) - a "polygon" with fewer than 3 points has zero area and isn't
     // a valid shape. Fall back to a first/middle/last triangle instead of the full
     // unsimplified input, so a tiny/dense polygon still ends up reduced.
-    return [
+    newCoordinates = [
       coordinates[0],
       coordinates[Math.floor(coordinates.length / 2)],
       coordinates[coordinates.length - 1],
     ];
+  }
+
+  // Logged here, after the polygon fallback above, so this always reflects what's actually
+  // being returned - not simplifySinglePath's intermediate result, which the fallback can
+  // still override.
+  if (logLabel && newCoordinates.length !== coordinates.length) {
+    console.log(`${logLabel}: ${coordinates.length} -> ${newCoordinates.length} points`);
   }
 
   return newCoordinates;
