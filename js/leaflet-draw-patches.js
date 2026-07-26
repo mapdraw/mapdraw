@@ -183,30 +183,41 @@ function toggleEditHandleVisibility(marker, group, eligible) {
 // sees the same object as its _middleLeft. Returns how many ended up live. Shared by the
 // _initMarkers patch below and refreshEditHandles below, so both stay in sync by construction
 // instead of by keeping two copies of this logic aligned by hand.
-function syncEditHandles(markers, group) {
+// active=false forces every handle eligible regardless of viewport/zoom - used by
+// refreshEditHandles below to restore full visibility once a ring drops back under
+// EDIT_LOD_POINT_THRESHOLD (manual point add/remove changes the count without ever going
+// through a full _initMarkers rebuild, so nothing else would undo a stale filter).
+function syncEditHandles(markers, group, active = true) {
   let liveCount = 0;
   for (const marker of markers) {
-    const vertexEligible = editHandleEligible(marker.getLatLng());
+    const vertexEligible = !active || editHandleEligible(marker.getLatLng());
     toggleEditHandleVisibility(marker, group, vertexEligible);
     if (vertexEligible) liveCount++;
 
     const mid = marker._middleRight;
     if (!mid) continue;
-    const midEligible = editMidpointEligible(marker.getLatLng(), marker._next.getLatLng());
+    const midEligible =
+      !active || editMidpointEligible(marker.getLatLng(), marker._next.getLatLng());
     toggleEditHandleVisibility(mid, group, midEligible);
     if (midEligible) liveCount++;
   }
   return liveCount;
 }
 
-// Re-syncs every LOD-active ring's handles on a layer to the current viewport - the only place
-// this happens outside a full _initMarkers rebuild, which pan/zoom and a manual vertex edit
-// never trigger on their own. Only caller is showSimplificationSlider
-// (path-simplification.js), which runs every Polyline/Polygon edit session.
+// Re-syncs every ring's handles on a layer to the current viewport - the only place this
+// happens outside a full _initMarkers rebuild, which pan/zoom and a manual vertex edit never
+// trigger on their own. Only caller is showSimplificationSlider (path-simplification.js),
+// which runs every Polyline/Polygon edit session.
+//
+// Always runs, even for rings currently under EDIT_LOD_POINT_THRESHOLD: a manual point
+// add/remove can cross the threshold in either direction without ever calling _initMarkers,
+// so a ring that was LOD-filtered while >= threshold and then dropped back under it (one
+// point removed) needs this to force its hidden handles back on - skipping non-LOD-active
+// rings here would leave that stale filter in place forever.
 function refreshEditHandles(layer) {
   for (const handler of layer.editing._verticesHandlers) {
-    if (!isEditLodActive(handler)) continue;
-    const liveCount = syncEditHandles(handler._markers, handler._markerGroup);
+    const active = isEditLodActive(handler);
+    const liveCount = syncEditHandles(handler._markers, handler._markerGroup, active);
     if (EDIT_HANDLE_DEBUG) {
       console.log(`Edit handles: ${liveCount} live out of ~${handler._markers.length * 2}`);
     }
