@@ -70,7 +70,7 @@ function simplifyPath(coordinates, type, tolerance, logLabel = "Path simplified"
  * @param {L.Polygon|L.Polyline} layer
  * @returns {Array} Coordinates array
  */
-function _getEditingLayerCoords(layer) {
+function getEditingLayerCoords(layer) {
   return flattenRingPoints(layer.getLatLngs()).map(latLngToCoord);
 }
 

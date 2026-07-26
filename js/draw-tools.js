@@ -280,7 +280,7 @@ function initDrawTools() {
         if (itemBeingEdited !== editedLayer) return; // session ended/changed already
         // Captured fresh every session so the manual slider can always re-derive from
         // full detail, regardless of what a previous session already reduced it to.
-        editedLayer._simplifyBaseline = _getEditingLayerCoords(editedLayer);
+        editedLayer._simplifyBaseline = getEditingLayerCoords(editedLayer);
         // Also keeps the LOD vertex/mid-segment handles (leaflet-draw-patches.js's
         // refreshEditHandles) synced for the rest of the session - see
         // showSimplificationSlider for why it owns that instead of a listener here.
