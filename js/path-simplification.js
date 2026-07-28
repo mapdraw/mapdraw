@@ -149,7 +149,7 @@ let _simplifyLodHandler = null;
 
 /**
  * Shows a range input in the info panel's details area while a complex item is being
- * edited, live-updating vertex handles as it's dragged (see .simplify-panel* in style.css
+ * edited, live-updating the item's shape as it's dragged (see .simplify-panel* in style.css
  * for its styling). Content is rebuilt fresh into #info-panel-details each session rather
  * than toggling pre-existing markup - the existing no-selection-removal mechanism already
  * makes the panel visible on both desktop and mobile, and nothing else can write into it
