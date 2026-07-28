@@ -271,6 +271,12 @@ body.glass-mode .leaflet-container {
   background: var(--glass-bg);
 }
 
+/* Only affects the open popup (Windows Chrome), never the closed box. */
+body.glass-mode select option {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
 /* LIGHT */
 /*
  *  _    ___ ___ _  _ _____
@@ -298,7 +304,8 @@ body.light-mode {
  */
 
 body.dark-mode,
-body.glass-mode .swal2-container /* in glass mode, SweetAlert uses the same style as dark mode */ {
+body.glass-mode .swal2-container, /* in glass mode, SweetAlert uses the same style as dark mode */
+body.glass-mode select option /* ditto for the open dropdown popup - see the rule above */ {
   --icon-color: var(--color-white);
   --border-color: #bdbdbd;
   --divider-color: var(--border-color);
