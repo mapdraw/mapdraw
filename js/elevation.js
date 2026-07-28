@@ -135,8 +135,12 @@ async function fetchElevationForPathGoogle(latlngs, realDistance) {
     try {
       const response = await elevator.getElevationForLocations({ locations: batch });
       if (response && response.results) {
-        const batchResults = response.results.map((result) =>
-          L.latLng(result.location.lat(), result.location.lng(), result.elevation),
+        // Use the coordinate we actually queried, not result.location - Google's Elevation
+        // API snaps/interpolates to its own DEM sample grid and can return a location that
+        // drifts off the real path geometry, which showed up as a zig-zag in the elevation
+        // profile's hover marker. We only need result.elevation; the position is already known.
+        const batchResults = response.results.map((result, j) =>
+          L.latLng(batch[j].lat, batch[j].lng, result.elevation),
         );
         allResults = allResults.concat(batchResults);
       } else {
