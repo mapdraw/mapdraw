@@ -107,7 +107,6 @@
         background: var(--background-color);
         border: 1px solid var(--border-color);
         border-radius: var(--border-radius);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         z-index: 10000;
         display: none;
         flex-direction: column;
@@ -188,7 +187,6 @@
         background: var(--glass-bg);
         backdrop-filter: var(--glass-blur);
         -webkit-backdrop-filter: var(--glass-blur);
-        box-shadow: var(--glass-inset-shadow);
       }
       body.glass-mode #dev-header {
         background: var(--glass-btn-bg);

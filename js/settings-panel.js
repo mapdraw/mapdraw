@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // Settings Panel
-// Populates the settings panel: path simplification, theme, units, layout,
-// line thickness, routing/elevation providers, and the about/legal/dev links.
+// Populates the settings panel: theme, units, layout, line thickness,
+// routing/elevation providers, and the about/legal/dev links.
 
 /**
  * Updates currently displayed UI elements that show units (routing panel, info panel,
@@ -29,58 +29,6 @@ function initSettingsPanel() {
   if (!settingsPanel) return;
 
   initOSM(settingsPanel);
-
-  const simplificationContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
-  const labelGroup = L.DomUtil.create("div", "", simplificationContainer);
-  labelGroup.style.display = "flex";
-  labelGroup.style.alignItems = "center";
-  const label = L.DomUtil.create("label", "", labelGroup);
-  label.htmlFor = "simplification-toggle";
-  label.innerText = "Path & Area Simplification";
-  const infoIcon = L.DomUtil.create("span", "settings-info-icon", labelGroup);
-  infoIcon.innerHTML = '<span class="material-symbols">help</span>';
-  infoIcon.title = "What's this?";
-  const checkbox = L.DomUtil.create("input", "", simplificationContainer);
-  checkbox.type = "checkbox";
-  checkbox.id = "simplification-toggle";
-  checkbox.checked = enablePathSimplification;
-  L.DomEvent.on(checkbox, "change", (e) => {
-    enablePathSimplification = e.target.checked;
-    localStorage.setItem("enablePathSimplification", enablePathSimplification);
-    Swal.fire({
-      toast: true,
-      icon: "info",
-      title: `Path & Area Simplification ${enablePathSimplification ? "Enabled" : "Disabled"}`,
-      showConfirmButton: false,
-      timer: 1500,
-    });
-  });
-  L.DomEvent.on(infoIcon, "click", () => {
-    Swal.fire({
-      title: "Path & Area Simplification",
-      html: `
-<p style="text-align: left; margin: 0 0 18px 0">
-  When enabled, this option automatically reduces the number of points in paths and areas to improve performance. This simplification happens at specific times:
-</p>
-<ul style="text-align: left; padding-left: 20px; margin: 0 0 18px 0;">
-  <li style="margin-bottom: 5px;">When an <strong>imported track or area</strong> is duplicated.</li>
-  <li style="margin-bottom: 5px;">When a <strong>generated route</strong> is saved.</li>
-  <li>When a <strong>Strava activity</strong> is duplicated.</li>
-</ul>
-<p style="text-align: left; margin: 0 0 18px 0">
-  The original, high-detail files are never modified.
-</p>
-<p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Enabled (Recommended):</strong> Improves performance and makes paths and areas easier to edit. The visual change is often unnoticeable.
-</p>
-<p style="text-align: left">
-  <strong>Disabled:</strong> Preserves every single point when duplicating or saving. Use this if absolute precision is critical.
-</p>
-`,
-      confirmButtonText: "Got it!",
-    });
-  });
-  L.DomEvent.on(simplificationContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
 
   const themeToggleContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
   const themeLabel = L.DomUtil.create("label", "", themeToggleContainer);

@@ -340,9 +340,8 @@
     updateActionButtonsState();
   }
 
-  // Skips the per-layer UI refresh (and, for duplication, the simplification
-  // toast) - otherwise acting on hundreds of items is O(n^2) and visibly slow,
-  // and duplication would spam a toast per item. Refreshes once at the end instead.
+  // Skips the per-layer UI refresh - otherwise acting on hundreds of items is
+  // O(n^2) and visibly slow. Refreshes once at the end instead.
   function performBulkAction(perLayerAction) {
     if (selectedLayers.size === 0) return;
     const layers = Array.from(selectedLayers);

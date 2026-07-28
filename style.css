@@ -271,6 +271,12 @@ body.glass-mode .leaflet-container {
   background: var(--glass-bg);
 }
 
+/* Only affects the open popup (Windows Chrome), never the closed box. */
+body.glass-mode select option {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
 /* LIGHT */
 /*
  *  _    ___ ___ _  _ _____
@@ -298,7 +304,8 @@ body.light-mode {
  */
 
 body.dark-mode,
-body.glass-mode .swal2-container /* in glass mode, SweetAlert uses the same style as dark mode */ {
+body.glass-mode .swal2-container, /* in glass mode, SweetAlert uses the same style as dark mode */
+body.glass-mode select option /* ditto for the open dropdown popup - see the rule above */ {
   --icon-color: var(--color-white);
   --border-color: #bdbdbd;
   --divider-color: var(--border-color);
@@ -405,24 +412,47 @@ select:focus {
   stroke-dasharray: none !important;
 }
 
-/* Path/area vertex + mid-segment handles (.leaflet-editing-middle-icon from leaflet-draw-patches.js) */
-.leaflet-editing-icon,
-.leaflet-editing-middle-icon {
+/* Vertex handle shown while drawing or editing a path/area. Colored to match the item via
+   --active-item-color (set in draw-tools.js/leaflet-draw-patches.js/path-extend.js), falling
+   back to black if it's ever unset. */
+.leaflet-editing-icon {
   border-radius: 50%;
-  background-color: var(--color-white);
+  background-color: var(--active-item-color, var(--color-black));
+  opacity: 1 !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-left: -10px !important;
+  margin-top: -10px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
   border: none;
 }
 
+/* Mid-segment "add point" handle (tagged by leaflet-draw-patches.js). Same coloring as
+   .leaflet-editing-icon; opacity is forced because leaflet-draw itself sets these to 0.6. */
 .leaflet-editing-middle-icon {
-  opacity: 0.75 !important;
+  border-radius: 50%;
+  background-color: var(--active-item-color, var(--color-black));
+  opacity: 1 !important;
+  width: 10px !important;
+  height: 10px !important;
+  margin-left: -5px !important;
+  margin-top: -5px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
+  border: none;
 }
 
-/* Existing path endpoints shown while drawing a new path (js/path-extend.js), before
-   one is clicked to start extending from it. Same shape/size as .leaflet-editing-icon,
-   just a different color so it reads as "not yet active". */
+/* Existing path endpoint shown while drawing a new path (js/path-extend.js), before it's
+   clicked to start extending from it. Same shape/size as .leaflet-editing-icon, always
+   black so it reads as "not yet active". */
 .path-extend-endpoint {
   border-radius: 50%;
   background-color: var(--color-black);
+  opacity: 1 !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-left: -10px !important;
+  margin-top: -10px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
   border: none;
 }
 
@@ -718,6 +748,58 @@ body.glass-mode #info-panel-edit-hint {
   padding: 4px 6px;
   border-radius: var(--border-radius);
   box-sizing: border-box;
+}
+
+/* Simplification slider shown in #info-panel-details while editing a path/area -
+   see showSimplificationSlider() in js/path-simplification.js */
+/* Prevents shrink-to-content width, which would resize the slider as the lock message changes. */
+#info-panel.simplify-active #info-panel-details {
+  width: 100%;
+}
+
+.simplify-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.simplify-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.simplify-panel-count {
+  min-width: 20px;
+  text-align: right;
+  font-size: var(--font-size-14);
+}
+
+.simplify-panel-slider {
+  flex: 1;
+  cursor: pointer;
+  accent-color: var(--highlight-color);
+}
+
+.simplify-panel-lock-message:empty {
+  display: none;
+}
+
+/* Matches .poi-cat-msg--info's warning look (yellow bg, black text). */
+.simplify-zoom-hint {
+  padding: 8px 10px;
+  border-radius: var(--border-radius);
+  background: var(--color-yellow);
+  color: var(--color-black);
+  font-size: var(--font-size-14);
+  line-height: 20px;
+  text-align: center;
+}
+
+.simplify-zoom-hint:empty {
+  display: none;
 }
 
 /* Color Picker Styles */
@@ -2834,15 +2916,11 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    0 0 0 2px var(--color-white),
-    0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px var(--color-white);
 }
 
 .poi-marker-icon.selected {
-  box-shadow:
-    0 0 0 2px var(--color-black),
-    0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px var(--color-black);
 }
 
 .poi-marker-icon .material-symbols {

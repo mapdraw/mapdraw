@@ -86,7 +86,7 @@ function toggleLayerVisibility(layerToToggle) {
  * @param {L.Layer} layerToDuplicate - The layer to duplicate
  * @param {{skipUiUpdate?: boolean}} [options] - Pass skipUiUpdate when duplicating
  *   many layers in a row, so the caller can select/refresh once at the end
- *   instead of doing it - and popping a simplification toast - per layer.
+ *   instead of doing it per layer.
  * @returns {L.Layer|undefined} The newly created layer, or undefined if it couldn't be duplicated
  */
 function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
@@ -105,86 +105,25 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
     });
   } else if (layerToDuplicate instanceof L.Polygon) {
     // Handle polygon (must check before Polyline since Polygon extends Polyline)
-    const originalCoords = layerToDuplicate
-      .getLatLngs()[0]
-      .map((latlng) =>
-        latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
-      );
+    const originalCoords = flattenRingPoints(layerToDuplicate.getLatLngs()).map(latLngToCoord);
 
-    let coordsToUse = originalCoords;
-    let simplificationHappened = false;
-
-    // Apply simplification if enabled
-    if (enablePathSimplification) {
-      const simplifiedResult = simplifyPath(originalCoords, "Polygon", pathSimplificationConfig);
-
-      // Check if the polygon was actually simplified
-      if (simplifiedResult.simplified) {
-        coordsToUse = simplifiedResult.coords;
-        simplificationHappened = true;
-      }
-    }
-
-    // Show a notification if simplification occurred (skipped in bulk mode -
-    // popping one toast per item would spam the screen for a large selection)
-    if (simplificationHappened && !skipUiUpdate) {
-      Swal.fire({
-        toast: true,
-        icon: "info",
-        title: "Area Optimized",
-        text: "The duplicated area was simplified for better performance.",
-        showConfirmButton: false,
-        timer: 3000,
-      });
-    }
-
-    newLayer = L.polygon(
-      coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
-      { ...STYLE_CONFIG.path.default, color: color },
-    );
+    newLayer = L.polygon(originalCoords.map(coordToLatLng), {
+      ...STYLE_CONFIG.path.default,
+      color: color,
+    });
   } else if (layerToDuplicate instanceof L.Polyline) {
-    const originalCoords = layerToDuplicate
-      .getLatLngs()
-      .map((latlng) =>
-        latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat],
-      );
+    const originalCoords = flattenRingPoints(layerToDuplicate.getLatLngs()).map(latLngToCoord);
 
-    let coordsToUse = originalCoords;
-    let simplificationHappened = false;
-
-    if (enablePathSimplification) {
-      const simplifiedResult = simplifyPath(originalCoords, "LineString", pathSimplificationConfig);
-
-      // Check if the path was actually simplified
-      if (simplifiedResult.simplified) {
-        coordsToUse = simplifiedResult.coords;
-        simplificationHappened = true;
-      }
-    }
-
-    // Show a notification if simplification occurred (skipped in bulk mode -
-    // popping one toast per item would spam the screen for a large selection)
-    if (simplificationHappened && !skipUiUpdate) {
-      Swal.fire({
-        toast: true,
-        icon: "info",
-        title: "Path Optimized",
-        text: "The duplicated path was simplified for better performance.",
-        showConfirmButton: false,
-        timer: 3000,
-      });
-    }
-
-    newLayer = L.polyline(
-      coordsToUse.map((c) => (c.length === 3 ? [c[1], c[0], c[2]] : [c[1], c[0]])),
-      { ...STYLE_CONFIG.path.default, color: color },
-    );
+    newLayer = L.polyline(originalCoords.map(coordToLatLng), {
+      ...STYLE_CONFIG.path.default,
+      color: color,
+    });
     newFeature.properties.totalDistance = calculatePathDistance(newLayer);
   }
 
   if (newLayer) {
     // Keep only essential properties (name, color) - discard all source-specific metadata
-    // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths
+    // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths.
     const cleanProperties = {
       name: newFeature.properties.name,
       color: newFeature.properties.color || DEFAULT_COLOR,
@@ -336,7 +275,10 @@ function createOverviewListItem(layer) {
 }
 
 /**
- * Populates or updates the overview list with all items on the map, grouped by type.
+ * Populates or updates the overview list with all items on the map, grouped by type. Rebuilds
+ * the list's DOM unconditionally, which is also what data-editor.js's MutationObserver relies
+ * on to know the map's data changed - any caller of this is implicitly keeping the GeoJSON
+ * Editor tab live too.
  */
 function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
@@ -627,6 +569,9 @@ function setEditHint(icon, text, onClick) {
  * @param {L.Layer} layer - The selected layer
  */
 function showInfoPanel(layer) {
+  // Don't clobber the simplification slider shown here during Edit mode.
+  if (isEditMode) return;
+
   // Style adjustments for when an item is selected
   infoPanel.classList.remove("no-selection");
   infoPanelName.style.display = "block";
@@ -696,18 +641,20 @@ function showInfoPanel(layer) {
     const areaLine = isSelfIntersectingRing(layer.getLatLngs()[0])
       ? "Self-intersecting shape"
       : `Area: ${formatArea(calculatePolygonArea(layer))}`;
+    const pointCount = flattenRingPoints(layer.getLatLngs()).length;
 
-    details = `${areaLine}<br>Perimeter: ${formatDistance(perimeter)}`;
+    details = `${areaLine}<br>Perimeter: ${formatDistance(perimeter)}<br>Points: ${pointCount}`;
   } else if (layer instanceof L.Polyline) {
     // Recalculate distance from geometry to ensure consistency with elevation panel
     const totalDistance = calculatePathDistance(layer);
+    const pointCount = layer.getLatLngs().length;
 
     // Update the cached property
     if (layer.feature && layer.feature.properties) {
       layer.feature.properties.totalDistance = totalDistance;
     }
 
-    details = `Length: ${formatDistance(totalDistance)}`;
+    details = `Length: ${formatDistance(totalDistance)}<br>Points: ${pointCount}`;
   }
 
   infoPanelName.value = name;
@@ -813,6 +760,8 @@ function resetInfoPanel() {
  */
 function showMultiSelectInfoPanel(count, commonColor) {
   if (!infoPanel) return;
+  // Don't clobber the simplification slider shown here during Edit mode.
+  if (isEditMode) return;
   infoPanel.classList.remove("no-selection");
   resetInfoPanelDetailsStyle(`${count} items selected`);
 

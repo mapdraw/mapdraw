@@ -26,9 +26,8 @@ function initDrawTools() {
   L.drawLocal.edit.toolbar.buttons.edit = "Edit drawn items";
   L.drawLocal.edit.toolbar.buttons.editDisabled = "No drawn items to edit";
 
-  // Edit toolbar tooltips
-  L.drawLocal.edit.handlers.edit.tooltip.text =
-    "Drag handles or markers to edit<br>Click cancel to undo";
+  // Edit toolbar tooltip - text is set per session in EDITSTART below, since only
+  // the single selected item is ever edited and its type determines the wording.
   L.drawLocal.edit.handlers.edit.tooltip.subtext = "";
 
   drawControl = new L.Control.Draw({
@@ -68,15 +67,24 @@ function initDrawTools() {
   Applies only to items in the <strong>Drawn Items</strong> layer!
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Points:</strong> Solid white dots are a path's or area's actual points. Drag to move,
-  click to remove.
+  <strong>Markers:</strong> Drag to move.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Midpoints:</strong> Semi-transparent white dots between points. Drag or click one to
-  add a new point there.
+  <strong>Points:</strong> A path's or area's actual points, shown larger. Drag to move, click to
+  remove.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Midpoints:</strong> Smaller points shown between a path's or area's points. Drag or
+  click one to add a new point there.
+</p>
+<p style="text-align: left; margin: 0 0 18px 0">
+  <strong>Simplify slider:</strong> Shown in the info panel whenever you edit a path or area.
+  Drag it to remove more or fewer points.
 </p>
 <p style="text-align: left">
-  <strong>Markers:</strong> Drag to move.
+  <strong>Dense paths/areas:</strong> On a path or area with a lot of points, points and
+  midpoints only show up once you're zoomed in close enough. If none appear, check the info
+  panel - it'll say so.
 </p>
 `,
         confirmButtonText: "Got it!",
@@ -97,13 +105,13 @@ function initDrawTools() {
   the Finish button) to complete it.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>Start on an endpoint:</strong> Every visible existing path shows a black dot at each end
-  while drawing. Click one as your very first point to extend that path from there, keeping its
-  name and color.
+  <strong>Start on an endpoint:</strong> Every visible existing path shows a black point at each
+  end while drawing. Click one as your very first point to extend that path from there, keeping
+  its name and color.
 </p>
 <p style="text-align: left; margin: 0 0 18px 0">
-  <strong>End on an endpoint:</strong> Click one on any later point to connect your new path to
-  it and finish immediately.
+  <strong>End on an endpoint:</strong> Click one of those black points at any later point in your
+  drawing to connect your new path to it and finish immediately.
 </p>
 <p style="text-align: left">
   <strong>Start and end on endpoints:</strong> Do both in the same drawing to merge two paths
@@ -173,6 +181,9 @@ function initDrawTools() {
       }
     });
     updateDrawControlStates();
+    // Also what keeps the GeoJSON Editor tab (data-editor.js) live if it's open - see
+    // updateOverviewList()'s own doc comment for why.
+    updateOverviewList();
   });
 
   // EDITSTOP reselects whatever was being edited, but only after a short delay (below).
@@ -200,6 +211,9 @@ function initDrawTools() {
     hideDistanceLabels();
 
     if (e.layerType === "polyline" || e.layerType === "polygon") {
+      // Matches leaflet-draw's own shapeOptions.color above - keeps the in-progress
+      // vertex handles (style.css) the same color the shape will get once created.
+      document.documentElement.style.setProperty("--active-item-color", DEFAULT_COLOR);
       map.on("draw:drawvertex", function (evt) {
         const newPoints = evt.layers.getLayers().map((l) => l.getLatLng());
         // path-extend.js's own listener (bound after this one) seeds the label for
@@ -222,6 +236,7 @@ function initDrawTools() {
     window.app.deactivateMode("draw-tools");
     L.DomUtil.removeClass(document.body, "leaflet-is-drawing");
     window.app.setDrawnItemsCheckboxLocked(false);
+    document.documentElement.style.removeProperty("--active-item-color");
     // Only clear if the draw was cancelled - a finished shape's draw:created already
     // handed the labels off to it via selectItem(), which fires before this.
     if (isDistanceLabelSourceInProgress()) {
@@ -236,6 +251,15 @@ function initDrawTools() {
     // Captured before deselecting so leaflet-draw-patches.js's _enableLayerEdit guard
     // still knows which layer to give vertex handles to.
     itemBeingEdited = globallySelectedItem;
+    // leaflet-draw reads this text into its tooltip synchronously right after this
+    // event finishes firing (L.EditToolbar.Edit.prototype.enable), so it's set fresh
+    // per session rather than once at init - only the selected item is ever edited.
+    L.drawLocal.edit.handlers.edit.tooltip.text =
+      itemBeingEdited instanceof L.Marker
+        ? "Drag marker to move<br>Click cancel to undo"
+        : itemBeingEdited instanceof L.Polygon
+          ? "Drag points to edit area<br>Click cancel to undo"
+          : "Drag points to edit path<br>Click cancel to undo";
     deselectCurrentItem({ skipControlUpdate: true });
     L.DomUtil.addClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(true);
@@ -245,6 +269,23 @@ function initDrawTools() {
     // stays live for the rest of the edit session - no extra wiring needed here.
     if (itemBeingEdited instanceof L.Polyline) {
       showDistanceLabelsFor(itemBeingEdited);
+
+      // Deferred to the next tick: leaflet-draw enables this layer's editing handler
+      // synchronously right after this EDITSTART handler returns, as part of the same
+      // enable() call chain (see L.EditToolbar.Edit.prototype.enable in
+      // leaflet.draw-src.js) - showSimplificationSlider() needs layer.editing to
+      // already exist for its LOD handle sync.
+      const editedLayer = itemBeingEdited;
+      setTimeout(() => {
+        if (itemBeingEdited !== editedLayer) return; // session ended/changed already
+        // Captured fresh every session so the manual slider can always re-derive from
+        // full detail, regardless of what a previous session already reduced it to.
+        editedLayer._simplifyBaseline = getEditingLayerCoords(editedLayer);
+        // Also keeps the LOD vertex/mid-segment handles (leaflet-draw-patches.js's
+        // refreshEditHandles) synced for the rest of the session - see
+        // showSimplificationSlider for why it owns that instead of a listener here.
+        showSimplificationSlider(editedLayer);
+      }, 0);
     }
   });
 
@@ -253,7 +294,9 @@ function initDrawTools() {
     isEditMode = false;
     L.DomUtil.removeClass(map.getContainer(), "map-is-editing");
     window.app.setDrawnItemsCheckboxLocked(false);
+    document.documentElement.style.removeProperty("--active-item-color");
     hideDistanceLabels();
+    hideSimplificationSlider(itemBeingEdited);
 
     const itemToReselect = itemBeingEdited;
     itemBeingEdited = null;

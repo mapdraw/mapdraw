@@ -59,7 +59,6 @@ const COLOR_PALETTE = [
   { name: "Slate Gray", hex: "#708090" },
 ];
 
-let enablePathSimplification = localStorage.getItem("enablePathSimplification") !== "false";
 let lineThickness = parseInt(localStorage.getItem("lineThickness")) || 10;
 
 /**
@@ -99,21 +98,4 @@ const STYLE_CONFIG = {
       },
     },
   },
-};
-
-/**
- * Simplification settings for imported paths (GPX, KML, KMZ).
- * Tolerance is in decimal degrees (~0.00005° ≈ 5.5m at equator).
- */
-const pathSimplificationConfig = {
-  TOLERANCE: 0.00015,
-  MIN_POINTS: 100,
-};
-
-/**
- * Simplification settings for generated routes from routing engines.
- */
-const routeSimplificationConfig = {
-  TOLERANCE: 0.00015,
-  MIN_POINTS: 100,
 };

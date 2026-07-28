@@ -139,70 +139,6 @@ function parseCoordinateString(inputString) {
 }
 
 /**
- * Simplifies a geometry's coordinates using the simplify.js library and provided configuration.
- * @param {Array} coordinates - Array of coordinates in [lng, lat] format
- * @param {string} type - Geometry type ('LineString', 'Polygon', or 'MultiLineString')
- * @param {object} config - Configuration object with TOLERANCE and MIN_POINTS properties
- * @returns {{simplified: boolean, coords: Array}} Object with simplification flag and resulting coordinates
- */
-function simplifyPath(coordinates, type, config) {
-  let overallSimplified = false;
-  let newCoordinates;
-
-  const simplifySinglePath = (pathCoords) => {
-    if (pathCoords.length <= config.MIN_POINTS) {
-      return { simplified: false, coords: pathCoords };
-    }
-
-    // Check if coordinates have altitude data (3D coordinates)
-    const hasAltitude = pathCoords.some((c) => c.length === 3 && c[2] !== undefined);
-
-    // Add index to each point so we can track which ones are kept after simplification
-    const points = pathCoords.map((c, i) => ({ x: c[0], y: c[1], idx: i }));
-    const simplifiedPoints = simplify(points, config.TOLERANCE, true);
-
-    if (simplifiedPoints.length < pathCoords.length) {
-      console.log(
-        `Path segment simplified: ${pathCoords.length} -> ${simplifiedPoints.length} points`,
-      );
-
-      // If original had altitude, restore it using the index
-      if (hasAltitude) {
-        const simplifiedWithAlt = simplifiedPoints.map((p) => {
-          const originalCoord = pathCoords[p.idx];
-          return originalCoord.length === 3 ? [p.x, p.y, originalCoord[2]] : [p.x, p.y];
-        });
-        return { simplified: true, coords: simplifiedWithAlt };
-      }
-
-      return { simplified: true, coords: simplifiedPoints.map((p) => [p.x, p.y]) };
-    }
-
-    return { simplified: false, coords: pathCoords };
-  };
-
-  if (type === "LineString" || type === "Polygon") {
-    // LineString and Polygon are both single arrays of coordinates
-    // Polygon is treated as a closed LineString for simplification purposes
-    const result = simplifySinglePath(coordinates);
-    overallSimplified = result.simplified;
-    newCoordinates = result.coords;
-  } else if (type === "MultiLineString") {
-    newCoordinates = coordinates.map((line) => {
-      const result = simplifySinglePath(line);
-      if (result.simplified) {
-        overallSimplified = true;
-      }
-      return result.coords;
-    });
-  } else {
-    return { simplified: false, coords: coordinates };
-  }
-
-  return { simplified: overallSimplified, coords: newCoordinates };
-}
-
-/**
  * Copies text to clipboard using modern Clipboard API with fallback to legacy execCommand.
  * @param {string} text - The string to copy to clipboard
  * @returns {Promise<void>} Promise that resolves on success, rejects on failure
@@ -302,6 +238,25 @@ function flattenRingPoints(latlngs) {
     latlngs = latlngs[0];
   }
   return latlngs;
+}
+
+/**
+ * Converts an L.LatLng to a plain [lng, lat] array (or [lng, lat, alt] when altitude is set) -
+ * the coordinate order GeoJSON and simplify.js expect.
+ * @param {L.LatLng} latlng
+ * @returns {number[]}
+ */
+function latLngToCoord(latlng) {
+  return latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat];
+}
+
+/**
+ * Converts a [lng, lat] or [lng, lat, alt] coordinate (GeoJSON/simplify.js order) to an L.LatLng.
+ * @param {number[]} coord
+ * @returns {L.LatLng}
+ */
+function coordToLatLng(coord) {
+  return coord.length > 2 ? L.latLng(coord[1], coord[0], coord[2]) : L.latLng(coord[1], coord[0]);
 }
 
 /**

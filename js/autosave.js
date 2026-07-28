@@ -120,19 +120,13 @@ async function restoreAutosave() {
 
       if (geomType === "Point") {
         const coords = feature.geometry.coordinates;
-        const latlng = (
-          coords.length > 2
-            ? L.latLng(coords[1], coords[0], coords[2])
-            : L.latLng(coords[1], coords[0])
-        ).wrap();
+        const latlng = coordToLatLng(coords).wrap();
         layer = L.marker(latlng, {
           icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
         });
       } else if (geomType === "Polygon") {
         const ring = feature.geometry.coordinates[0];
-        const latlngs = ring.map((c) =>
-          c.length > 2 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]),
-        );
+        const latlngs = ring.map(coordToLatLng);
         // Remove closing duplicate if present
         if (latlngs.length > 1) {
           const first = latlngs[0],
@@ -141,9 +135,7 @@ async function restoreAutosave() {
         }
         layer = L.polygon(latlngs, { ...STYLE_CONFIG.path.default, color });
       } else if (geomType === "LineString") {
-        const latlngs = feature.geometry.coordinates.map((c) =>
-          c.length > 2 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]),
-        );
+        const latlngs = feature.geometry.coordinates.map(coordToLatLng);
         layer = L.polyline(latlngs, { ...STYLE_CONFIG.path.default, color });
       } else {
         return; // Unsupported geometry

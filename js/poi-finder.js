@@ -382,7 +382,7 @@ function createCategoryClusterGroup(color) {
         html: `<div style="
           width:${size}px;height:${size}px;border-radius:50%;
           background-color:${color};
-          box-shadow:0 0 0 3px white,0 2px 4px rgba(0,0,0,0.3);
+          box-shadow:0 0 0 2px white;
           display:flex;align-items:center;justify-content:center;
           font-weight:bold;color:white;
           text-shadow:0 1px 2px rgba(0,0,0,0.5);

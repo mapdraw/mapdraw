@@ -95,14 +95,14 @@ function initPathExtend() {
   // them apart without tracking its previous value ourselves.
   let previousMarkerCount = 0;
 
+  // Size/position come entirely from .leaflet-editing-icon/.path-extend-endpoint in style.css
+  // (both !important) - no iconSize/iconAnchor needed here.
   function endpointIcon(active) {
-    const size = L.Browser.touch ? 20 : 8;
-    const classes = ["leaflet-div-icon", active ? "leaflet-editing-icon" : "path-extend-endpoint"];
-    if (L.Browser.touch) classes.push("leaflet-touch-icon");
     return L.divIcon({
-      className: classes.join(" "),
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
+      className: [
+        "leaflet-div-icon",
+        active ? "leaflet-editing-icon" : "path-extend-endpoint",
+      ].join(" "),
     });
   }
 
@@ -166,6 +166,7 @@ function initPathExtend() {
     handler._markers[0].setLatLng(snap.latlng);
     handler._poly.setLatLngs([snap.latlng]);
     handler._poly.setStyle({ color: snap.layer.options.color });
+    document.documentElement.style.setProperty("--active-item-color", snap.layer.options.color);
     // Seeds labels with the existing path so they show right away, not just once a
     // new segment is drawn - draw-tools.js takes over from the second vertex on.
     showDistanceLabelsFor(pathExtendLeadInPoints(pathExtendTarget));

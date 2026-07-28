@@ -1086,24 +1086,7 @@ function initRouting() {
       return;
     }
 
-    let coordsToUse = currentRoutePath.getLatLngs();
-    let simplificationHappened = false;
-
-    if (enablePathSimplification) {
-      const originalCoords = coordsToUse.map((latlng) => [latlng.lng, latlng.lat]);
-      const simplifiedResult = simplifyPath(
-        originalCoords,
-        "LineString",
-        routeSimplificationConfig,
-      );
-
-      if (simplifiedResult.simplified) {
-        coordsToUse = simplifiedResult.coords.map((c) => L.latLng(c[1], c[0]));
-        simplificationHappened = true;
-      }
-    }
-
-    const newPath = L.polyline(coordsToUse, {
+    const newPath = L.polyline(currentRoutePath.getLatLngs(), {
       ...STYLE_CONFIG.path.default,
       color: currentRoutePath.options.color,
     });
@@ -1120,23 +1103,13 @@ function initRouting() {
     updateOverviewList();
     updateDrawControlStates();
 
-    if (simplificationHappened) {
-      Swal.fire({
-        icon: "success",
-        title: "Route Saved & Optimized!",
-        text: 'The route was simplified and added to the "Drawn Items" layer.',
-        timer: 2500,
-        showConfirmButton: false,
-      });
-    } else {
-      Swal.fire({
-        icon: "success",
-        title: "Route Saved!",
-        text: 'The route has been added to the "Drawn Items" layer.',
-        timer: 2500,
-        showConfirmButton: false,
-      });
-    }
+    Swal.fire({
+      icon: "success",
+      title: "Route Saved!",
+      text: 'The route has been added to the "Drawn Items" layer.',
+      timer: 2500,
+      showConfirmButton: false,
+    });
   };
 
   saveRouteBtn.addEventListener("click", saveRoute);
