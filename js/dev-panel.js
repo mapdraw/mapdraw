@@ -67,7 +67,7 @@
     panel.innerHTML = `
       <div id="dev-header">
         <span>Developer Panel</span>
-        <button id="dev-close">✕</button>
+        <button id="dev-close"><span class="material-symbols">close</span></button>
       </div>
       <div id="dev-content">
         <div id="dev-console-hint">
@@ -126,11 +126,13 @@
         border-radius: var(--border-radius) var(--border-radius) 0 0;
       }
       #dev-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         background: none;
         border: none;
         color: var(--text-color);
         cursor: pointer;
-        font-size: 18px;
         padding: 0;
         width: 20px;
         height: 20px;
