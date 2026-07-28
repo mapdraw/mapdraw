@@ -99,6 +99,9 @@ function _applyCoordsToEditingLayer(layer, coords) {
   for (const c of coords) {
     ring.push(coordToLatLng(c));
   }
+  // Only setLatLngs() (not used here, see above) recomputes this normally; redraw() below
+  // reprojects the geometry but leaves it as-is, so it would otherwise still reflect the
+  // pre-simplification extent.
   layer._bounds = L.latLngBounds(ring);
   layer.redraw();
   layer.editing.updateMarkers();
