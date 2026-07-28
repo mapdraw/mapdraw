@@ -251,6 +251,15 @@ function latLngToCoord(latlng) {
 }
 
 /**
+ * Converts a [lng, lat] or [lng, lat, alt] coordinate (GeoJSON/simplify.js order) to an L.LatLng.
+ * @param {number[]} coord
+ * @returns {L.LatLng}
+ */
+function coordToLatLng(coord) {
+  return coord.length > 2 ? L.latLng(coord[1], coord[0], coord[2]) : L.latLng(coord[1], coord[0]);
+}
+
+/**
  * Calculates the total distance of a path in meters.
  * @param {L.Polyline | L.Polygon} path - The layer to measure
  * @returns {number} Total distance in meters

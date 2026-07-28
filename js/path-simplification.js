@@ -97,7 +97,7 @@ function _applyCoordsToEditingLayer(layer, coords) {
   const ring = flattenRingPoints(layer.getLatLngs());
   ring.length = 0;
   for (const c of coords) {
-    ring.push(c.length === 3 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]));
+    ring.push(coordToLatLng(c));
   }
   layer._bounds = L.latLngBounds(ring);
   layer.redraw();
