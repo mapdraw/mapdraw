@@ -2909,15 +2909,11 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    0 0 0 2px var(--color-white),
-    0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px var(--color-white);
 }
 
 .poi-marker-icon.selected {
-  box-shadow:
-    0 0 0 2px var(--color-black),
-    0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px var(--color-black);
 }
 
 .poi-marker-icon .material-symbols {

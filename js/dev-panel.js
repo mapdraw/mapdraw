@@ -188,7 +188,6 @@
         background: var(--glass-bg);
         backdrop-filter: var(--glass-blur);
         -webkit-backdrop-filter: var(--glass-blur);
-        box-shadow: var(--glass-inset-shadow);
       }
       body.glass-mode #dev-header {
         background: var(--glass-btn-bg);
