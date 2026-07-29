@@ -276,14 +276,14 @@ function createOverviewListItem(layer) {
 }
 
 /**
- * Populates or updates the overview list with all items on the map, grouped by type. Rebuilds
- * the list's DOM unconditionally, which is also what data-editor.js's MutationObserver relies
- * on to know the map's data changed - any caller of this is implicitly keeping the GeoJSON
- * Editor tab live too.
+ * Populates or updates the overview list with all items on the map, grouped by type. Also
+ * keeps the GeoJSON Editor tab (data-editor.js) live, since any caller of this is implicitly
+ * reporting that the map's data changed.
  */
 function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
   if (!listContainer) return;
+  scheduleDataEditorRefresh();
   const overviewPanel = document.getElementById("overview-panel"); // Get the parent panel
 
   // 1. Collect all items into a single array
@@ -967,6 +967,7 @@ function applyColorToSelectedItem(hex, hidePicker = true) {
       infoPanelLayerName.textContent = "";
     }
     if (hidePicker) colorPicker.style.display = "none";
+    scheduleDataEditorRefresh();
     return;
   }
 
@@ -997,6 +998,7 @@ function applyColorToSelectedItem(hex, hidePicker = true) {
   if (hidePicker) {
     colorPicker.style.display = "none";
   }
+  scheduleDataEditorRefresh();
 }
 
 /**

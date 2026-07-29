@@ -9,10 +9,11 @@
  * - pathType is serialized into each feature so drawn vs. imported items survive a round-trip.
  * - Apply validates JSON, GeoJSON structure, and geometry before clearing the map.
  * - isDirty blocks auto-refresh while the user has unsaved edits in the editor.
- * - While the tab is open, auto-refresh only fires when something mutates the overview list's
- *   DOM (i.e. calls updateOverviewList()) or the info panel's color swatch - not on every map
- *   change. Opening the tab or clicking Reset always refreshes regardless, since those rebuild
- *   directly from current layer state rather than relying on either being caught.
+ * - Auto-refresh is explicit: anything that changes layer data calls scheduleDataEditorRefresh()
+ *   directly (updateOverviewList() does; so do the two color-write spots in ui-handlers.js that
+ *   bypass it). refreshDataEditor() itself doesn't check tab visibility - only
+ *   scheduleDataEditorRefresh() does - so opening the tab and clicking Reset call
+ *   refreshDataEditor() directly for an immediate, non-debounced result.
  */
 
 const CM_THEME_LIGHT = "eclipse";
@@ -53,6 +54,20 @@ function refreshDataEditor() {
   cmEditor.setValue(newJson);
   error.textContent = "";
   error.style.display = "none";
+}
+
+let dataEditorRefreshTimer = null;
+
+/**
+ * Call after any layer-data change (name, color, geometry, add/remove, ...) to keep the
+ * GeoJSON Editor tab in sync while it's open. Debounced so bursts of changes only trigger one
+ * rebuild. No-ops while the tab is closed - opening it refreshes directly instead (see the
+ * tabBtn click handler below).
+ */
+function scheduleDataEditorRefresh() {
+  if (!document.getElementById("data-editor-panel")?.classList.contains("active")) return;
+  clearTimeout(dataEditorRefreshTimer);
+  dataEditorRefreshTimer = setTimeout(refreshDataEditor, 300);
 }
 
 function applyDataEditor() {
@@ -217,6 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("data-editor-restore").addEventListener("click", () => {
     const hadEdits = isDirty;
     isDirty = false;
+    // Direct call: tab's already open, and Reset should feel instant, not debounced.
     refreshDataEditor();
     if (hadEdits) {
       Swal.fire({
@@ -352,6 +368,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   tabBtn.addEventListener("click", () => {
     initCodeMirror();
+    // Direct call: this listener runs before tab-navigation.js adds the panel's "active" class
+    // (data-editor.js loads first), so scheduleDataEditorRefresh()'s check would wrongly skip it.
     refreshDataEditor();
     // CodeMirror needs a refresh after becoming visible
     setTimeout(() => cmEditor.refresh(), 0);
@@ -362,26 +380,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.matches && panel.classList.contains("active")) {
       document.getElementById("tab-btn-overview").click();
     }
-  });
-
-  let refreshTimer = null;
-  const scheduleRefresh = () => {
-    if (!panel.classList.contains("active")) return;
-    clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(refreshDataEditor, 300);
-  };
-
-  const observer = new MutationObserver(scheduleRefresh);
-  observer.observe(document.getElementById("overview-panel-list"), {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
-
-  // Color changes don't update the overview list DOM, so observe the color swatch directly
-  const colorObserver = new MutationObserver(scheduleRefresh);
-  colorObserver.observe(document.getElementById("info-panel-color-swatch"), {
-    attributes: true,
-    attributeFilter: ["style"],
   });
 });
