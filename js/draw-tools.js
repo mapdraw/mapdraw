@@ -23,8 +23,8 @@ function initDrawTools() {
   L.drawLocal.draw.handlers.marker.tooltip.start = "Click to place marker";
 
   // Edit toolbar buttons
-  L.drawLocal.edit.toolbar.buttons.edit = "Edit drawn items";
-  L.drawLocal.edit.toolbar.buttons.editDisabled = "No drawn items to edit";
+  L.drawLocal.edit.toolbar.buttons.edit = "Edit items in the Drawn Items layer";
+  L.drawLocal.edit.toolbar.buttons.editDisabled = "No items in the Drawn Items layer to edit";
 
   // Edit toolbar tooltip - text is set per session in EDITSTART below, since only
   // the single selected item is ever edited and its type determines the wording.

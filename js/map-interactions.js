@@ -531,8 +531,8 @@ function updateDrawControlStates() {
     editControlContainer.title = !hasEditableLayers
       ? L.drawLocal.edit.toolbar.buttons.editDisabled
       : canEditSelection
-        ? "Edit selected drawn item"
-        : "Select a drawn item to edit";
+        ? "Edit selected item"
+        : "Select an item in the Drawn Items layer to edit";
   }
 }
 /**
