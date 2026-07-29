@@ -258,6 +258,39 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
   };
 }
 
+// Dragging a vertex/marker handle can move it past the world edge, unlike drawing a new point
+// (naturally clamped, see leaflet-core-patches.js). Clamp the pixel position on 'predrag',
+// same hook Leaflet's own map-panning bounds use.
+function clampDragToWorldBounds(marker) {
+  if (marker._dragClamped) return;
+  marker._dragClamped = true;
+  marker.on("dragstart", () => {
+    const draggable = marker.dragging._draggable;
+    if (draggable._clamped) return;
+    draggable._clamped = true;
+    draggable.on("predrag", function () {
+      this._newPos = marker._map.latLngToLayerPoint(marker._map.layerPointToLatLng(this._newPos));
+    });
+  });
+}
+
+if (L.Edit && L.Edit.PolyVerticesEdit) {
+  const origCreateMarker = L.Edit.PolyVerticesEdit.prototype._createMarker;
+  L.Edit.PolyVerticesEdit.prototype._createMarker = function (latlng, index) {
+    const marker = origCreateMarker.call(this, latlng, index);
+    clampDragToWorldBounds(marker);
+    return marker;
+  };
+}
+
+if (L.Edit && L.Edit.Marker) {
+  const origAddHooks = L.Edit.Marker.prototype.addHooks;
+  L.Edit.Marker.prototype.addHooks = function () {
+    origAddHooks.call(this);
+    clampDragToWorldBounds(this._marker);
+  };
+}
+
 // Injects an extra action button (styled like leaflet-draw's own Save/Cancel/Finish/Undo)
 // into a toolbar's actions row. ToolbarClass is L.DrawToolbar or L.EditToolbar; filter(handler)
 // decides which active handler - e.g. L.Draw.Polyline, L.EditToolbar.Edit - gets the button.

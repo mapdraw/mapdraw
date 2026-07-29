@@ -20,6 +20,9 @@ const WORLD_BOUNDS = [
   [90, 180],
 ];
 
+// A bit wider than WORLD_BOUNDS so panning doesn't snap tight to the edges.
+const MAP_MAX_BOUNDS = L.latLngBounds(WORLD_BOUNDS).pad(0.1);
+
 // Core Application Colors
 const DEFAULT_COLOR = "#DC143C"; // Crimson
 const ROUTE_COLOR = "#FFD700"; // Gold

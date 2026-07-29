@@ -61,7 +61,7 @@ async function initMapView() {
     attributionControl: false,
     doubleClickZoom: true,
     boxZoom: false,
-    maxBounds: WORLD_BOUNDS,
+    maxBounds: MAP_MAX_BOUNDS,
   });
 
   initAttribution();
