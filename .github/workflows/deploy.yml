@@ -78,12 +78,12 @@ jobs:
           terser js/bundle.js -c -m -o js/app.min.js --source-map "filename='js/app.min.js.map'"
 
           # Replace bundle section with single minified script
-          sed -i '/<!-- START-BUNDLE -->/,/<!-- END-BUNDLE -->/c\    <script src="/js/app.min.js"><\/script>' index.html
+          sed -i '/<!-- START-BUNDLE -->/,/<!-- END-BUNDLE -->/c\    <script src="/js/app.min.js?v=__BUILD_TIMESTAMP__"><\/script>' index.html
 
       - name: Inject build timestamp
         run: |
           BUILD_TIMESTAMP=$(date -u +"%Y%m%d%H%M%S")
-          sed -i "s|__BUILD_TIMESTAMP__|${BUILD_TIMESTAMP}|g" credits.html
+          sed -i "s|__BUILD_TIMESTAMP__|${BUILD_TIMESTAMP}|g" index.html credits.html
           echo "Injected build timestamp: $BUILD_TIMESTAMP"
 
       - name: Upload artifact
