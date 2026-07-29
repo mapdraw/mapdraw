@@ -472,7 +472,6 @@ function displayActivitiesOnMap(activities) {
             stravaId: activity.id,
           },
         };
-        polyline.pathType = "strava";
         polyline.on("click", (e) => {
           L.DomEvent.stopPropagation(e);
           selectItem(polyline);

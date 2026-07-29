@@ -417,7 +417,7 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
         // and the path is not an active route (unsaved routes may change anytime).
         (source &&
         localStorage.getItem("preferFileElevation") !== "false" &&
-        selectedElevationPath?.pathType !== "route"
+        selectedElevationPath?.feature?.properties?.pathType !== "route"
           ? `<span style="${itemStyle}">Source: ${source}` +
             (source === "File"
               ? ` <span onclick="removeElevationFromPath()" title="Remove elevation data from path" class="material-symbols material-symbols-fill elevation-action-icon">cancel</span>`

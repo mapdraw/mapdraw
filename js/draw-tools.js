@@ -153,8 +153,8 @@ function initDrawTools() {
     // endpoint, splicing/joining the points instead of creating a separate item.
     if (pathExtendTarget || pathExtendFinishTarget) return;
     const layer = e.layer;
-    layer.pathType = "drawn";
     layer.feature = layer.feature || { properties: {} };
+    layer.feature.properties.pathType = "drawn";
     layer.feature.properties.color = DEFAULT_COLOR;
     layer.feature.properties.name = getDefaultLayerName(layer);
     drawnItems.addLayer(layer);

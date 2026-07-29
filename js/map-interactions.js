@@ -184,7 +184,7 @@ function syncSelectedDownloadButtonsState() {
   kmlBtn.title = "Download the selection as KML";
   shareBtn.title = "Copy a share link for the selection";
 
-  const allStrava = layers.every((layer) => layer.pathType === "strava");
+  const allStrava = layers.every((layer) => layer.feature?.properties?.pathType === "strava");
   stravaRow.style.display = allStrava ? "" : "none";
   if (allStrava) {
     stravaBtn.textContent =
@@ -373,7 +373,7 @@ function selectItem(layer) {
       showDistanceLabelsFor(layer);
     }
 
-    if (layer.pathType !== "route") {
+    if (layer.feature?.properties?.pathType !== "route") {
       // Raising the overlay pane above the marker pane (600) makes the selected
       // path draw over unrelated markers - but the overlay pane is shared by
       // every path on the map, and the marker pane also holds leaflet-draw's own

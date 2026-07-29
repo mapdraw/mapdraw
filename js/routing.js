@@ -320,9 +320,9 @@ function initRouting() {
                 name: newRouteName,
                 color: ROUTE_COLOR,
                 totalDistance: route.summary.totalDistance,
+                pathType: "route",
               },
             };
-            newRoutePath.pathType = "route";
 
             let pressTimer = null;
             let wasLongPress = false;
@@ -1091,7 +1091,7 @@ function initRouting() {
       color: currentRoutePath.options.color,
     });
     newPath.feature = JSON.parse(JSON.stringify(currentRoutePath.feature));
-    newPath.pathType = "drawn";
+    newPath.feature.properties.pathType = "drawn";
     newPath.feature.properties.name = newPath.feature.properties.name || "Saved Route";
     newPath.on("click", (ev) => {
       L.DomEvent.stopPropagation(ev);

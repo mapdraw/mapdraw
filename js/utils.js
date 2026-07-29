@@ -668,10 +668,10 @@ function createAndSaveMarker(lat, lon, name) {
   //   weight: 0,
   // }).addTo(map);
 
-  newMarker.pathType = "drawn";
   newMarker.feature = {
     properties: {
       color: DEFAULT_COLOR,
+      pathType: "drawn",
     },
   };
 

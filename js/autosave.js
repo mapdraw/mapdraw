@@ -43,7 +43,7 @@ function _serializeLayersForAutosave() {
       if (src.color) props.color = src.color;
       if (src.stravaId) props.stravaId = src.stravaId;
       if (src.type) props.type = src.type; // Strava activity type (Ride, Run, etc.)
-      props.pathType = layer.pathType || "drawn";
+      props.pathType = src.pathType || "drawn";
 
       geojson.properties = props;
       geojson.type = "Feature";
@@ -144,14 +144,13 @@ async function restoreAutosave() {
       // Set feature data
       layer.feature = {
         type: "Feature",
-        properties: { ...props, color },
+        properties: { ...props, color, pathType },
         geometry: feature.geometry,
       };
       // Safety net for autosave data saved before names were guaranteed at creation time
       if (!layer.feature.properties.name) {
         layer.feature.properties.name = getDefaultLayerName(layer);
       }
-      layer.pathType = pathType;
 
       // Click handler
       layer.on("click", (e) => {

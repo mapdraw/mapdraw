@@ -316,8 +316,9 @@ function importGeoJsonToMap(geoJsonData, fileType) {
         layer.feature.properties.name = getDefaultLayerName(layer);
       }
 
-      // All imported items use fileType as pathType
-      layer.pathType = fileType;
+      // All imported items use fileType as pathType, unless the feature already carries
+      // one (e.g. a "drawn"/"route" feature round-tripping through the GeoJSON data editor)
+      layer.feature.properties.pathType = layer.feature.properties.pathType || fileType;
 
       layer.on("click", (e) => {
         L.DomEvent.stopPropagation(e);
@@ -743,6 +744,7 @@ function notifyExportSuccess(shouldNotify, title, text) {
 const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
   "color",
   "totalDistance",
+  "pathType",
   "stroke-width",
   "stroke-opacity",
   "fill",
@@ -1185,7 +1187,7 @@ function buildKmlContent(docName, layers = null) {
     const kmlSnippet = convertLayerToKmlPlacemark(layer, defaultName);
     if (!kmlSnippet) return;
 
-    switch (layer.pathType) {
+    switch (layer.feature?.properties?.pathType) {
       case "drawn":
       case "route":
         drawnFeatures.push(kmlSnippet);

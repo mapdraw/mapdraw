@@ -122,14 +122,15 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
   }
 
   if (newLayer) {
-    // Keep only essential properties (name, color) - discard all source-specific metadata
-    // This removes stravaId, imported file metadata, etc., making duplicates independent drawn paths.
+    // Keep only essential properties (name, color) and force pathType to "drawn" -
+    // discard all source-specific metadata. This removes stravaId, imported file
+    // metadata, etc., making duplicates independent drawn paths.
     const cleanProperties = {
       name: newFeature.properties.name,
       color: newFeature.properties.color || DEFAULT_COLOR,
+      pathType: "drawn",
     };
     newLayer.feature = { properties: cleanProperties };
-    newLayer.pathType = "drawn";
     newLayer.on("click", (ev) => {
       L.DomEvent.stopPropagation(ev);
       selectItem(newLayer);
@@ -345,7 +346,7 @@ function updateOverviewList() {
 
   // Helper to expand a category if it's collapsed, ensuring a layer is visible in the list
   window.expandCategoryForItem = (layer) => {
-    const key = getGroupTitle(layer.pathType);
+    const key = getGroupTitle(layer.feature?.properties?.pathType);
     if (collapsedCategories.has(key)) {
       collapsedCategories.delete(key);
       updateOverviewList();
@@ -353,7 +354,7 @@ function updateOverviewList() {
   };
 
   allItems.forEach((layer) => {
-    const key = getGroupTitle(layer.pathType);
+    const key = getGroupTitle(layer.feature?.properties?.pathType);
     if (!groupedItems[key]) {
       groupedItems[key] = [];
     }
@@ -664,7 +665,7 @@ function showInfoPanel(layer) {
 
   // Determine layer type for display
   let layerTypeName = "Unknown";
-  switch (layer.pathType) {
+  switch (layer.feature?.properties?.pathType) {
     case "drawn":
       layerTypeName = "Drawn Item";
       break;

@@ -32,8 +32,6 @@ function buildDataEditorGeoJSON() {
 
       applyFullPrecisionCoordinates(layer, geojson);
 
-      geojson.properties = { ...geojson.properties, pathType: layer.pathType || "drawn" };
-
       features.push({
         type: "Feature",
         properties: geojson.properties,
@@ -131,7 +129,6 @@ function applyDataEditor() {
       importedItems.removeLayer(layer);
       drawnItems.addLayer(layer);
       editableLayers.addLayer(layer);
-      layer.pathType = layer.feature?.properties?.pathType || "drawn";
     });
   }
 
