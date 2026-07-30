@@ -834,6 +834,16 @@ body.glass-mode #info-panel-edit-hint {
   border: 2px solid var(--text-color);
 }
 
+/* Sized like a swatch; position is set in JS */
+#color-picker-close-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 /* TABS */
 /*
  * ████████╗ █████╗ ██████╗ ███████╗

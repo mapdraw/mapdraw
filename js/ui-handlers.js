@@ -809,10 +809,18 @@ function hasActiveColorTarget() {
 }
 
 /**
- * Populates the color picker with swatches from the palette.
- * Adds a 17th swatch that opens the native color picker for custom colors.
+ * Populates the color picker: close button, palette swatches, custom color swatch.
  */
 function populateColorPicker() {
+  colorPickerCloseBtn = document.createElement("span");
+  colorPickerCloseBtn.id = "color-picker-close-btn";
+  colorPickerCloseBtn.className = "material-symbols";
+  colorPickerCloseBtn.textContent = "close";
+  colorPickerCloseBtn.addEventListener("click", () => {
+    colorPicker.style.display = "none";
+  });
+  colorPicker.appendChild(colorPickerCloseBtn);
+
   // Add palette colors
   COLOR_PALETTE.forEach((color) => {
     const swatch = document.createElement("div");
@@ -876,6 +884,20 @@ function populateColorPicker() {
 }
 
 /**
+ * Moves the close button to the end of row 1 (values must match the CSS).
+ */
+function repositionColorPickerCloseButton() {
+  const swatchSize = 24;
+  const gap = 5;
+  const padding = 5;
+  const contentWidth = colorPicker.clientWidth - 2 * padding;
+  const columns = Math.max(1, Math.floor((contentWidth + gap) / (swatchSize + gap)));
+
+  const swatches = Array.from(colorPicker.children).filter((el) => el !== colorPickerCloseBtn);
+  colorPicker.insertBefore(colorPickerCloseBtn, swatches[columns - 1] ?? null);
+}
+
+/**
  * Adjusts the height of the info panel's name textarea to fit its content,
  * up to a maximum of approximately three lines.
  * @param {HTMLTextAreaElement} textarea - The textarea element to resize
@@ -925,6 +947,7 @@ function initInfoPanel() {
   });
 
   populateColorPicker();
+  new ResizeObserver(repositionColorPickerCloseButton).observe(colorPicker);
 
   const infoPanelObserver = new MutationObserver(() => {
     if (infoPanelName) {
