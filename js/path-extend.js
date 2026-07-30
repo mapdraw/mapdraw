@@ -85,18 +85,6 @@ L.Draw.Polyline.prototype._getTooltipText = function () {
   return origGetTooltipText.call(this);
 };
 
-// _drawGuide() always paints new dashes with this.options.shapeOptions.color - the
-// tool's default - ignoring the per-path color startExtending() below applies to the
-// polyline itself. Re-sync them here, deferring to the error color exactly like
-// _drawGuide itself does whenever _errorShown is set.
-const origUpdateGuide = L.Draw.Polyline.prototype._updateGuide;
-L.Draw.Polyline.prototype._updateGuide = function (newPos) {
-  origUpdateGuide.call(this, newPos);
-  if (pathExtendTarget && !this._errorShown) {
-    this._updateGuideColor(pathExtendTarget.layer.options.color);
-  }
-};
-
 function initPathExtend() {
   // { layer, end, marker } for every endpoint dot currently shown.
   let endpointMarkers = [];

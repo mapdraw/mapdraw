@@ -456,6 +456,13 @@ select:focus {
   border: none;
 }
 
+/* Leaflet-draw hardcodes this dash's opacity and color; override both to match the
+   app's own default opacity and the active item's color. */
+.leaflet-draw-guide-dash {
+  background-color: var(--active-item-color, var(--color-black)) !important;
+  opacity: 0.75 !important;
+}
+
 /* Distance/area labels shown on a path or area while drawing, selected, or being edited */
 .distance-label {
   pointer-events: none;
