@@ -81,6 +81,18 @@ const BASEMAP_CONFIG = [
   },
 ];
 
+const BASEMAP_STORAGE_KEY = "lastBasemap";
+
+/**
+ * Returns the last-selected basemap key, falling back to the default (first
+ * entry) if unset or no longer present in BASEMAP_CONFIG - e.g. after a key
+ * was renamed or removed.
+ */
+function getSavedBasemapKey() {
+  const saved = localStorage.getItem(BASEMAP_STORAGE_KEY);
+  return BASEMAP_CONFIG.some((b) => b.key === saved) ? saved : BASEMAP_CONFIG[0].key;
+}
+
 const OVERLAY_CONFIG = [
   {
     key: "WaymarkedTrailsHiking",
@@ -101,3 +113,18 @@ const OVERLAY_CONFIG = [
     attribution: { name: "Waymarked Trails", url: "https://waymarkedtrails.org" },
   },
 ];
+
+const OVERLAY_STORAGE_KEY = "activeOverlays";
+
+/**
+ * Returns the saved set of active overlay keys, filtered to ones that still
+ * exist in OVERLAY_CONFIG - e.g. after a key was renamed or removed.
+ */
+function getSavedOverlayKeys() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(OVERLAY_STORAGE_KEY) || "[]");
+    return saved.filter((key) => OVERLAY_CONFIG.some((o) => o.key === key));
+  } catch {
+    return [];
+  }
+}

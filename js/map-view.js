@@ -26,12 +26,12 @@ function showAttributionToast() {
     document.body.classList.contains("force-desktop-layout")
   )
     return;
-  const attribution = basemapAttributions[BASEMAP_CONFIG[0].key];
-  if (!attribution) return;
+  const attributionHTML = document.getElementById("map-attribution").innerHTML;
+  if (!attributionHTML) return;
   Swal.fire({
     toast: true,
     position: "top",
-    html: `Map data ${attribution}`,
+    html: `<div class="attribution-toast-lines"><div>Map data</div>${attributionHTML}</div>`,
     showConfirmButton: false,
     timer: 5000,
     customClass: { popup: "attribution-toast" },
@@ -156,7 +156,7 @@ async function initMapView() {
 
   window.addEventListener("hashchange", handleHashChange, false);
 
-  baseMaps[BASEMAP_CONFIG[0].key].addTo(map);
+  baseMaps[getSavedBasemapKey()].addTo(map);
 
   drawnItems = new L.FeatureGroup().addTo(map);
   importedItems = new L.FeatureGroup().addTo(map);

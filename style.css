@@ -2118,6 +2118,13 @@ button.strava-button-secondary:not(:disabled) {
   text-decoration: underline;
 }
 
+.attribution-toast-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 /* Center text in toast notifications */
 .swal2-toast .swal2-title {
   text-align: center !important;

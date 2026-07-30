@@ -32,6 +32,13 @@ function initLayerControlPanel(baseMaps) {
     ),
   };
 
+  // Restore previously active overlay layers (e.g. Waymarked Trails) before
+  // the checkboxes below render, so their checked state reflects the map.
+  getSavedOverlayKeys().forEach((key) => {
+    map.addLayer(allOverlayMaps[key]);
+    addOverlayAttribution(key);
+  });
+
   const LayersToggleControl = L.Control.extend({
     options: { position: "topleft" },
     onAdd: function (map) {
@@ -77,14 +84,12 @@ function initLayerControlPanel(baseMaps) {
   let formContent = '<form class="leaflet-control-layers-form">';
 
   formContent += '<div class="leaflet-control-layers-base">';
-  let firstBaseLayer = true;
   for (const name in baseMaps) {
     const layer = baseMaps[name];
     const layerId = L.Util.stamp(layer);
-    const isChecked = firstBaseLayer ? 'checked="checked"' : "";
+    const isChecked = map.hasLayer(layer) ? 'checked="checked"' : "";
     const displayName = layerDisplayNames[name] || name;
     formContent += `<label><div><input type="radio" class="leaflet-control-layers-selector" name="leaflet-base-layers" ${isChecked} data-layer-id="${layerId}" data-layer-name="${name}"><span> ${displayName}</span></div></label>`;
-    firstBaseLayer = false;
   }
   formContent += "</div>";
 
@@ -299,6 +304,16 @@ function initLayerControlPanel(baseMaps) {
     localStorage.setItem("overlayLayerOrder", JSON.stringify(order));
   }
 
+  // Recomputes the active OVERLAY_CONFIG keys (e.g. Waymarked Trails) straight
+  // from map state and saves them - called on every overlay toggle so it can
+  // never drift, regardless of which specific overlay triggered the change.
+  function saveActiveOverlays() {
+    const active = OVERLAY_CONFIG.filter((o) => map.hasLayer(allOverlayMaps[o.key])).map(
+      (o) => o.key,
+    );
+    localStorage.setItem(OVERLAY_STORAGE_KEY, JSON.stringify(active));
+  }
+
   // Expose reapplyOverlayZIndex and saveOverlayOrder globally for WmsImport and XyzImport modules
   window.reapplyOverlayZIndex = reapplyOverlayZIndex;
   window.saveOverlayOrder = saveOverlayOrder;
@@ -360,6 +375,7 @@ function initLayerControlPanel(baseMaps) {
     addOverlayAttribution(name);
     // Reapply z-index to ensure layer respects list order
     reapplyOverlayZIndex();
+    saveActiveOverlays();
   }
 
   // Locked for the duration of any draw or Edit session (draw-tools.js) - path-extend.js's
@@ -390,6 +406,7 @@ function initLayerControlPanel(baseMaps) {
           if (L.Util.stamp(baseMaps[name]) === selectedLayerId) {
             map.addLayer(baseMaps[name]);
             setBasemapAttribution(name);
+            localStorage.setItem(BASEMAP_STORAGE_KEY, name);
           }
         }
         // Reapply overlay layer z-index after base layer change
@@ -405,6 +422,7 @@ function initLayerControlPanel(baseMaps) {
               map.removeLayer(layer);
               onOverlayToggle({ type: "overlayremove", layer: layer });
               removeOverlayAttribution(name);
+              saveActiveOverlays();
             }
             break;
           }
