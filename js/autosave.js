@@ -44,6 +44,7 @@ function _serializeLayersForAutosave() {
       if (src.stravaId) props.stravaId = src.stravaId;
       if (src.type) props.type = src.type; // Strava activity type (Ride, Run, etc.)
       props.pathType = src.pathType || "drawn";
+      if (layer.isManuallyHidden) props.hidden = true;
 
       geojson.properties = props;
       geojson.type = "Feature";
@@ -111,7 +112,8 @@ async function restoreAutosave() {
     geojsonData.features.forEach((feature) => {
       if (!feature.geometry) return;
 
-      const props = feature.properties || {};
+      // Kept out of props so it can't leak into feature.properties or a GeoJSON export.
+      const { hidden: wasHidden, ...props } = feature.properties || {};
       const color = parseColor(props.color) || DEFAULT_COLOR;
       const pathType = props.pathType || "drawn";
       const geomType = feature.geometry.type;
@@ -168,6 +170,8 @@ async function restoreAutosave() {
         // Imported types: geojson, gpx, kml, kmz
         importedItems.addLayer(layer);
       }
+
+      if (wasHidden) toggleLayerVisibility(layer);
 
       restoredCount++;
     });
