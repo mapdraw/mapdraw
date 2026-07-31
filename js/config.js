@@ -75,7 +75,7 @@ const STYLE_CONFIG = {
       fill: false,
       // Leaflet's default (1.0) simplifies less aggressively; raised here purely for
       // rendering perf on vertex-heavy paths - display-only, never touches real coordinates.
-      smoothFactor: 5,
+      smoothFactor: 3,
     },
     highlight: {
       weight: lineThickness,
