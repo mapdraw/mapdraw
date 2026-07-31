@@ -62,6 +62,7 @@ async function initMapView() {
     doubleClickZoom: true,
     boxZoom: false,
     maxBounds: MAP_MAX_BOUNDS,
+    preferCanvas: true,
   });
 
   initAttribution();

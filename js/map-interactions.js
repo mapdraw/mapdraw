@@ -11,18 +11,21 @@ window.mapInteractions = {};
 window.mapInteractions.showElevationMarker = function (latlng) {
   if (!latlng) return;
 
-  const markerStyle = {
-    color: "var(--color-white)",
-    weight: 2,
-    fillColor: "var(--highlight-color)",
-    fillOpacity: 1,
-    radius: 6,
-  };
-
   if (elevationHoverMarker) {
     elevationHoverMarker.setLatLng(latlng);
   } else {
-    elevationHoverMarker = L.circleMarker(latlng, markerStyle).addTo(map);
+    // ctx.fillStyle/strokeStyle can't resolve CSS var() like SVG presentation attributes
+    // can - resolve to literal colors first (COLOR_WHITE already is, see config.js).
+    const highlightColor = getComputedStyle(document.documentElement)
+      .getPropertyValue("--highlight-color")
+      .trim();
+    elevationHoverMarker = L.circleMarker(latlng, {
+      color: COLOR_WHITE,
+      weight: 2,
+      fillColor: highlightColor,
+      fillOpacity: 1,
+      radius: 6,
+    }).addTo(map);
   }
   elevationHoverMarker.bringToFront();
 };
@@ -202,9 +205,14 @@ function syncSelectedDownloadButtonsState() {
  */
 function initClickToDeselect() {
   map.on("click", (e) => {
+    const target = e.originalEvent.target;
+    // Reaching here means no layer was hit - each one calls stopPropagation() on its own
+    // click. Canvas's opaque <canvas> absorbs every click regardless of content, so an empty
+    // click's target is now the tile/overlay pane, not the container - matched explicitly below.
     if (
-      e.originalEvent.target.id === "map" ||
-      e.originalEvent.target.classList.contains("leaflet-container")
+      target.id === "map" ||
+      target.classList.contains("leaflet-container") ||
+      target.closest(".leaflet-tile-pane, .leaflet-overlay-pane")
     ) {
       deselectCurrentItem();
     }

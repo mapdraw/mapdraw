@@ -407,11 +407,6 @@ select:focus {
   display: none !important;
 }
 
-/* Forcefully removes dotted line style ONLY during editing */
-.map-is-editing path.leaflet-interactive {
-  stroke-dasharray: none !important;
-}
-
 /* Vertex handle shown while drawing or editing a path/area. Colored to match the item via
    --active-item-color (set in draw-tools.js/leaflet-draw-patches.js/path-extend.js), falling
    back to black if it's ever unset. */

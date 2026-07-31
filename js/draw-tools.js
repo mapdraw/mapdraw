@@ -31,7 +31,14 @@ function initDrawTools() {
   L.drawLocal.edit.handlers.edit.tooltip.subtext = "";
 
   drawControl = new L.Control.Draw({
-    edit: { featureGroup: editableLayers, remove: false },
+    edit: {
+      featureGroup: editableLayers,
+      remove: false,
+      // leaflet-draw reads selectedPathOptions from its own nested "edit" sub-key (parallel
+      // to "remove" above), not this outer wrapper - clears the default edit-mode dashArray,
+      // which Canvas renders via ctx.setLineDash() (no DOM attribute for CSS to override).
+      edit: { selectedPathOptions: { dashArray: null } },
+    },
     draw: {
       polyline: {
         shapeOptions: { ...STYLE_CONFIG.path.default, color: DEFAULT_COLOR },

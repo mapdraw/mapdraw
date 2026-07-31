@@ -38,3 +38,14 @@ L.Control.Scale.prototype._update = function () {
   );
   this._updateScales(maxMeters);
 };
+
+// Canvas's _containsPoint substitutes for SVG's pointer-events: visiblePainted, but
+// ray-casts the interior regardless of fill - an unfilled polygon becomes clickable
+// everywhere inside it. Skip that for fill: false, keep only the shared stroke test.
+const originalPolygonContainsPoint = L.Polygon.prototype._containsPoint;
+L.Polygon.prototype._containsPoint = function (p) {
+  if (this.options.fill === false) {
+    return L.Polyline.prototype._containsPoint.call(this, p, true);
+  }
+  return originalPolygonContainsPoint.call(this, p);
+};
