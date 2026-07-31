@@ -7,6 +7,36 @@
 // Persistent state for collapsed categories in the overview list
 const collapsedCategories = new Set();
 
+// The overview list is virtualized: however many items exist, only the ones scrolled into
+// view (+ a small buffer) are ever real DOM elements - see updateOverviewList(),
+// renderOverviewWindow() and scrollOverviewToLayer() below. Row height must match
+// --overview-header-height in style.css - both rows and headers share it, which keeps the
+// windowing math (index * rowHeight) simple regardless of entry type.
+const OVERVIEW_ROW_HEIGHT =
+  parseInt(
+    getComputedStyle(document.documentElement).getPropertyValue("--overview-header-height"),
+    10,
+  ) || 32;
+// Extra rows rendered above/below the visible viewport, so a small scroll doesn't pop new
+// rows in right at the edge.
+const OVERVIEW_SCROLL_BUFFER_PX = OVERVIEW_ROW_HEIGHT * 8;
+
+// Currently-rendered header/row elements, keyed "h:<groupKey>" / "r:<layerId>" - only ever
+// holds what's within the current scroll window (+ buffer), not the whole list.
+const overviewNodesByKey = new Map();
+// The full ordered list of what the panel would contain if nothing were virtualized
+// (headers + rows, in display order). Rebuilt by updateOverviewList() on structural
+// changes (items added/removed, a category collapsed/expanded) - NOT on scroll.
+let overviewFlatSequence = [];
+// layerId -> index into overviewFlatSequence, so scrolling to a layer (possibly currently
+// off-screen, with no DOM row to look up) can compute where to go.
+let overviewLayerIndex = new Map();
+let overviewRenderedHeaderKeys = [];
+let overviewTopSpacer = null;
+let overviewBottomSpacer = null;
+let overviewScrollListenerAttached = false;
+let overviewRenderScheduled = false;
+
 // Suspend/resume leaflet-draw editing around a layer's removal/re-add, so its edit
 // highlight and vertex handles survive - restricted to editableLayers members only.
 // Single-item edit mode - only itemBeingEdited ever gets vertex handles, so re-enabling
@@ -146,14 +176,41 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
 }
 
 /**
+ * Finds the live layer behind an overview-list row's cached layer id, checking every group
+ * a row's layer could currently live in (including the live route, which isn't inside any
+ * Leaflet layer group).
+ * @param {number} layerId - The Leaflet stamp id encoded in the row's data-layer-id
+ * @returns {L.Layer|null}
+ */
+function resolveOverviewLayerById(layerId) {
+  return (
+    editableLayers.getLayer(layerId) ||
+    stravaActivitiesLayer.getLayer(layerId) ||
+    importedItems.getLayer(layerId) ||
+    (currentRoutePath && L.Util.stamp(currentRoutePath) === layerId ? currentRoutePath : null)
+  );
+}
+
+/**
+ * Material-symbols icon name for a visibility toggle, reflecting ONLY the manual
+ * override (isManuallyHidden), not effective on-map visibility.
+ */
+function getVisibilityIconName(isHidden) {
+  return isHidden ? "visibility_off" : "visibility";
+}
+
+/**
  * Helper function to create a single list item for the overview panel.
  * This encapsulates the logic for creating the item's text, buttons, and event listeners.
+ * The row is cached and reused across renders for as long as its layer stays within the
+ * scrolled-into-view window (see renderOverviewWindow()) - state that can change
+ * afterwards (name, visibility, selection) is synced separately by
+ * patchOverviewListItem().
  * @param {L.Layer} layer - The layer to create the list item for
  * @returns {HTMLElement} The created list item element
  */
 function createOverviewListItem(layer) {
   const layerId = L.Util.stamp(layer);
-  let layerName = layer.feature?.properties?.name || getDefaultLayerName(layer);
 
   const listItem = document.createElement("div");
   listItem.className = "overview-list-item";
@@ -163,25 +220,17 @@ function createOverviewListItem(layer) {
   const visibilityBtn = document.createElement("span");
   visibilityBtn.className = "overview-visibility-btn";
   visibilityBtn.title = "Toggle visibility";
-  const setIcon = (visible) => {
-    visibilityBtn.innerHTML = visible
-      ? '<span class="material-symbols">visibility</span>'
-      : '<span class="material-symbols">visibility_off</span>';
-  };
-  const isInitiallyVisible = !layer.isManuallyHidden;
-  setIcon(isInitiallyVisible);
+  const visibilityIcon = document.createElement("span");
+  visibilityIcon.className = "material-symbols";
+  visibilityBtn.appendChild(visibilityIcon);
   visibilityBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    const layerToToggle =
-      editableLayers.getLayer(layerId) ||
-      stravaActivitiesLayer.getLayer(layerId) ||
-      importedItems.getLayer(layerId) ||
-      (currentRoutePath && L.Util.stamp(currentRoutePath) === layerId ? currentRoutePath : null);
+    const layerToToggle = resolveOverviewLayerById(layerId);
     if (!layerToToggle) return;
 
     toggleLayerVisibility(layerToToggle);
     // Icon state reflects ONLY the manual override, not effective visibility
-    setIcon(!layerToToggle.isManuallyHidden);
+    visibilityIcon.textContent = getVisibilityIconName(layerToToggle.isManuallyHidden);
   });
 
   // Duplicate button
@@ -192,11 +241,7 @@ function createOverviewListItem(layer) {
     duplicateBtn.title = "Duplicate";
     duplicateBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const layerToDuplicate =
-        editableLayers.getLayer(layerId) ||
-        stravaActivitiesLayer.getLayer(layerId) ||
-        importedItems.getLayer(layerId);
-      duplicateLayer(layerToDuplicate);
+      duplicateLayer(resolveOverviewLayerById(layerId));
     });
   }
 
@@ -207,11 +252,7 @@ function createOverviewListItem(layer) {
   deleteBtn.title = layer === currentRoutePath ? "Clear the current route" : "Delete";
   deleteBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    const layerToDelete =
-      editableLayers.getLayer(layerId) ||
-      stravaActivitiesLayer.getLayer(layerId) ||
-      importedItems.getLayer(layerId) ||
-      (currentRoutePath && L.Util.stamp(currentRoutePath) === layerId ? currentRoutePath : null);
+    const layerToDelete = resolveOverviewLayerById(layerId);
     if (layerToDelete) {
       deleteLayerImmediately(layerToDelete);
     }
@@ -220,8 +261,6 @@ function createOverviewListItem(layer) {
   // Text span for the name
   const textSpan = document.createElement("span");
   textSpan.className = "overview-item-text";
-  textSpan.textContent = layerName;
-  textSpan.title = layerName;
 
   // Slot 1: Visibility
   listItem.appendChild(visibilityBtn);
@@ -249,16 +288,8 @@ function createOverviewListItem(layer) {
   // Slot 4: Name
   listItem.appendChild(textSpan);
 
-  if (globallySelectedItem && L.Util.stamp(globallySelectedItem) === layerId) {
-    listItem.classList.add("selected");
-  }
-
   listItem.addEventListener("click", () => {
-    const targetLayer =
-      editableLayers.getLayer(layerId) ||
-      stravaActivitiesLayer.getLayer(layerId) ||
-      importedItems.getLayer(layerId) ||
-      (currentRoutePath && L.Util.stamp(currentRoutePath) === layerId ? currentRoutePath : null);
+    const targetLayer = resolveOverviewLayerById(layerId);
     if (targetLayer) {
       if (targetLayer instanceof L.Polyline || targetLayer instanceof L.Polygon) {
         if (targetLayer.getBounds().isValid()) {
@@ -272,13 +303,383 @@ function createOverviewListItem(layer) {
     }
   });
 
+  listItem._visibilityIcon = visibilityIcon;
+  listItem._textSpan = textSpan;
+  patchOverviewListItem(listItem, layer);
   return listItem;
+}
+
+/**
+ * Syncs a cached overview-list row's mutable state (name, visibility icon, selection
+ * highlight) with the current layer, without touching its buttons/listeners. Needed
+ * because a row now persists across multiple renders while its layer stays scrolled into
+ * view, instead of being thrown away and rebuilt every single time.
+ * @param {HTMLElement} listItem - A row previously created by createOverviewListItem()
+ * @param {L.Layer} layer - The layer it represents
+ */
+function patchOverviewListItem(listItem, layer) {
+  const layerName = layer.feature?.properties?.name || getDefaultLayerName(layer);
+  if (listItem._textSpan.textContent !== layerName) {
+    listItem._textSpan.textContent = layerName;
+    listItem._textSpan.title = layerName;
+  }
+  listItem._visibilityIcon.textContent = getVisibilityIconName(layer.isManuallyHidden);
+  listItem.classList.toggle(
+    "selected",
+    !!globallySelectedItem && L.Util.stamp(globallySelectedItem) === L.Util.stamp(layer),
+  );
+}
+
+/**
+ * Creates a category header row for the overview panel (e.g. "Drawn Items (3)"). Cached
+ * forever per group key (there are at most 4: DrawnItems/ImportedFiles/StravaActivities/
+ * Other) and reused across renders - buttons/listeners are only ever set up once here, and
+ * patchOverviewHeader() syncs everything that can change afterwards (item count, collapsed
+ * state, category visibility).
+ * @param {string} key - Stable group key (e.g. "DrawnItems")
+ * @param {string} label - Display label (e.g. "Drawn Items")
+ * @param {L.LayerGroup|null} layerGroup - The Leaflet group behind this category, or null
+ *   for "Other", which has no real layer group backing it
+ * @returns {HTMLElement}
+ */
+function createOverviewHeader(key, label, layerGroup) {
+  const header = document.createElement("div");
+  header.className = "overview-list-header";
+  header._itemsInGroup = [];
+
+  // 1. Visibility Button (Eye)
+  const eyeBtnSlot = document.createElement("div");
+  if (layerGroup) {
+    eyeBtnSlot.className = "overview-header-visibility-btn";
+    const eyeBtn = document.createElement("span");
+    const eyeIcon = document.createElement("span");
+    eyeIcon.className = "material-symbols";
+    eyeBtn.appendChild(eyeIcon);
+    eyeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isRemoving = map.hasLayer(layerGroup);
+      if (isRemoving) {
+        if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, false);
+        map.removeLayer(layerGroup);
+        if (key === "DrawnItems" && currentRoutePath) {
+          map.removeLayer(currentRoutePath);
+        }
+      } else {
+        map.addLayer(layerGroup);
+        if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, true);
+        if (key === "DrawnItems" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
+          map.addLayer(currentRoutePath);
+        }
+      }
+      if (typeof window.onOverlayToggle === "function") {
+        window.onOverlayToggle({
+          type: isRemoving ? "overlayremove" : "overlayadd",
+          layer: layerGroup,
+        });
+      }
+      updateOverviewList();
+    });
+    eyeBtnSlot.appendChild(eyeBtn);
+    header._eyeBtn = eyeBtn;
+    header._eyeIcon = eyeIcon;
+  } else {
+    eyeBtnSlot.className = "overview-icon-spacer";
+  }
+  header.appendChild(eyeBtnSlot);
+
+  // 2. Delete Button (Clear all)
+  const delBtnSlot = document.createElement("div");
+  if (layerGroup) {
+    delBtnSlot.className = "overview-header-delete-btn";
+    const delBtn = document.createElement("span");
+    delBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
+    delBtn.title = `Clear all ${label}`;
+    delBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      Swal.fire({
+        title: `Clear all items in "${label}"?`,
+        text:
+          key === "DrawnItems" && currentRoutePath
+            ? "This will also clear the current route."
+            : "This action cannot be undone.",
+        icon: "warning",
+        showCancelButton: true,
+        customClass: { confirmButton: "swal-confirm-danger" },
+        confirmButtonText: "Yes, clear all",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          if (key === "DrawnItems" && window.app?.clearRouting) {
+            window.app.clearRouting();
+          }
+          // Same per-layer path used by the individual delete button and
+          // rect-select's bulk delete - keeps rectangle-selection state,
+          // deselection, and group/editableLayers cleanup all in sync.
+          header._itemsInGroup.forEach((item) =>
+            deleteLayerImmediately(item, { skipUiUpdate: true }),
+          );
+          updateDrawControlStates();
+          if (!map.hasLayer(layerGroup)) {
+            map.addLayer(layerGroup);
+          }
+          updateOverviewList();
+        }
+      });
+    });
+    delBtnSlot.appendChild(delBtn);
+  } else {
+    delBtnSlot.className = "overview-icon-spacer";
+  }
+  header.appendChild(delBtnSlot);
+
+  // 3. Duplicate Button (Duplicate all)
+  const dupBtnSlot = document.createElement("div");
+  if (layerGroup) {
+    dupBtnSlot.className = "overview-header-duplicate-btn";
+    const dupBtn = document.createElement("span");
+    dupBtn.innerHTML = '<span class="material-symbols">add_to_photos</span>';
+    dupBtn.title = `Duplicate all ${label}`;
+    dupBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Same per-layer path used by the individual duplicate button and
+      // rect-select's bulk duplicate - including the live route, which
+      // duplicateLayer() already handles like any other layer (an
+      // independent copy saved to Drawn Items, route keeps running).
+      header._itemsInGroup.forEach((item) => {
+        duplicateLayer(item, { skipUiUpdate: true });
+      });
+      updateOverviewList();
+      updateDrawControlStates();
+    });
+    dupBtnSlot.appendChild(dupBtn);
+  } else {
+    dupBtnSlot.className = "overview-icon-spacer";
+  }
+  header.appendChild(dupBtnSlot);
+
+  // 4. Arrow
+  const arrowContainer = document.createElement("div");
+  arrowContainer.className = "overview-header-arrow";
+  const arrow = document.createElement("span");
+  arrow.className = "material-symbols";
+  arrowContainer.appendChild(arrow);
+  header.appendChild(arrowContainer);
+  header._arrow = arrow;
+
+  // 5. Title
+  const titleSpan = document.createElement("span");
+  titleSpan.className = "overview-header-text";
+  header.appendChild(titleSpan);
+  header._titleSpan = titleSpan;
+
+  header.addEventListener("click", () => {
+    // Reads collapsedCategories live rather than a captured isCollapsed, since this header
+    // (and its listener) is cached and reused across many renders where that could change.
+    if (collapsedCategories.has(key)) {
+      collapsedCategories.delete(key);
+    } else {
+      collapsedCategories.add(key);
+    }
+    updateOverviewList();
+  });
+
+  return header;
+}
+
+/**
+ * Syncs a cached category header's mutable state (item count, collapsed arrow, category
+ * visibility icon, and the item list its bulk buttons act on) with the current group.
+ * @param {HTMLElement} header - A header previously created by createOverviewHeader()
+ * @param {string} label - Display label (e.g. "Drawn Items")
+ * @param {L.LayerGroup|null} layerGroup - The group behind this category, or null
+ * @param {L.Layer[]} itemsInGroup - The group's current items, in display order
+ * @param {boolean} isCollapsed - Whether the category is currently collapsed
+ */
+function patchOverviewHeader(header, label, layerGroup, itemsInGroup, isCollapsed) {
+  header._itemsInGroup = itemsInGroup;
+  header.classList.toggle("collapsed", isCollapsed);
+  header._arrow.textContent = isCollapsed ? "keyboard_arrow_down" : "keyboard_arrow_up";
+  header._titleSpan.textContent = `${label} (${itemsInGroup.length})`;
+  if (layerGroup && header._eyeIcon) {
+    const isVisible = map.hasLayer(layerGroup);
+    header._eyeIcon.textContent = isVisible ? "visibility" : "visibility_off";
+    header._eyeBtn.title = isVisible ? "Hide category" : "Show category";
+  }
+}
+
+/**
+ * Makes sure the overview list container has its virtualization spacers (a top and bottom
+ * one - normal-flow elements sized to represent the rows scrolled past above/below the
+ * rendered window, so the container's scrollbar behaves as if every row were really
+ * there) and its scroll/resize listeners - both set up lazily, once. Recreates the
+ * spacers if the empty-state branch in updateOverviewList() wiped the container's content
+ * since the last render.
+ * @param {HTMLElement} listContainer
+ */
+function ensureOverviewListStructure(listContainer) {
+  if (!overviewTopSpacer || !listContainer.contains(overviewTopSpacer)) {
+    listContainer.innerHTML = "";
+    overviewTopSpacer = document.createElement("div");
+    overviewTopSpacer.className = "overview-list-spacer";
+    overviewBottomSpacer = document.createElement("div");
+    overviewBottomSpacer.className = "overview-list-spacer";
+    listContainer.appendChild(overviewTopSpacer);
+    listContainer.appendChild(overviewBottomSpacer);
+    overviewNodesByKey.clear();
+  }
+
+  if (!overviewScrollListenerAttached) {
+    listContainer.addEventListener(
+      "scroll",
+      () => {
+        if (overviewRenderScheduled) return;
+        overviewRenderScheduled = true;
+        requestAnimationFrame(() => {
+          overviewRenderScheduled = false;
+          renderOverviewWindow();
+        });
+      },
+      { passive: true },
+    );
+    // Catches the panel's own size changing (e.g. window resize) even without a scroll -
+    // otherwise newly-revealed space at the bottom would stay unrendered until the next
+    // scroll event.
+    new ResizeObserver(() => renderOverviewWindow()).observe(listContainer);
+    overviewScrollListenerAttached = true;
+  }
+}
+
+/**
+ * Renders whichever slice of overviewFlatSequence currently falls within the container's
+ * visible scroll range (+ a small buffer) as real DOM elements, reusing/patching ones
+ * that are already there and removing ones that scrolled out - so the DOM only ever holds
+ * a screenful of rows, however many items the list logically has. Rendered rows stay in
+ * normal document flow between the top/bottom spacers (reordered via insertBefore when
+ * their position actually changes), rather than being pulled out with absolute
+ * positioning. Called after every structural change (via updateOverviewList()) and on
+ * every scroll/resize.
+ */
+function renderOverviewWindow() {
+  const listContainer = document.getElementById("overview-panel-list");
+  if (!listContainer || !overviewTopSpacer || !overviewBottomSpacer) return;
+
+  const total = overviewFlatSequence.length;
+  if (total === 0) return;
+  const rowH = OVERVIEW_ROW_HEIGHT;
+  const scrollTop = listContainer.scrollTop;
+  const viewHeight = listContainer.clientHeight;
+
+  const startIndex = Math.max(0, Math.floor((scrollTop - OVERVIEW_SCROLL_BUFFER_PX) / rowH));
+  const endIndex = Math.min(
+    total - 1,
+    Math.ceil((scrollTop + viewHeight + OVERVIEW_SCROLL_BUFFER_PX) / rowH),
+  );
+
+  overviewTopSpacer.style.height = `${startIndex * rowH}px`;
+  overviewBottomSpacer.style.height = `${(total - endIndex - 1) * rowH}px`;
+
+  const seenKeys = new Set();
+  let cursor = overviewTopSpacer.nextSibling;
+
+  for (let i = startIndex; i <= endIndex; i++) {
+    const entry = overviewFlatSequence[i];
+    const nodeKey = entry.type === "header" ? `h:${entry.key}` : `r:${L.Util.stamp(entry.layer)}`;
+    seenKeys.add(nodeKey);
+    let node = overviewNodesByKey.get(nodeKey);
+
+    if (entry.type === "header") {
+      if (!node) {
+        node = createOverviewHeader(entry.key, entry.label, entry.layerGroup);
+        overviewNodesByKey.set(nodeKey, node);
+      }
+      patchOverviewHeader(
+        node,
+        entry.label,
+        entry.layerGroup,
+        entry.itemsInGroup,
+        entry.isCollapsed,
+      );
+      node.classList.toggle(
+        "last-header",
+        overviewRenderedHeaderKeys[overviewRenderedHeaderKeys.length - 1] === entry.key,
+      );
+    } else {
+      if (!node) {
+        node = createOverviewListItem(entry.layer);
+        overviewNodesByKey.set(nodeKey, node);
+      } else {
+        patchOverviewListItem(node, entry.layer);
+      }
+    }
+
+    // DOM order no longer matches display order once virtualized (the spacers are always
+    // the true first/last children), so "first/last item in the whole list" (for the CSS
+    // rules that used to key off :first-child/:last-child) has to be tracked explicitly.
+    node.classList.toggle("overview-first-in-list", i === 0);
+    node.classList.toggle("overview-last-in-list", i === total - 1);
+
+    if (node === cursor) {
+      cursor = cursor.nextSibling;
+    } else {
+      listContainer.insertBefore(node, cursor);
+    }
+  }
+
+  // Remove nodes for headers/rows that scrolled out of the rendered window (or are no
+  // longer part of the list at all - deleted items, emptied categories, rows hidden
+  // behind a newly-collapsed category).
+  overviewNodesByKey.forEach((node, key) => {
+    if (!seenKeys.has(key)) {
+      node.remove();
+      overviewNodesByKey.delete(key);
+    }
+  });
+
+  // Rows are reused/patched rather than recreated, so any rectangle-select highlight
+  // already on them normally survives - but reapply it anyway, since rows that just
+  // scrolled into view (or are newly created) start without it.
+  window.app?.syncRectangleSelectionHighlight?.();
+}
+
+/**
+ * Scrolls the overview list so the given layer's row is visible - only moving the scroll
+ * position if it isn't already (mirroring scrollIntoView({block: "nearest"})) - then
+ * forces an immediate render so the row actually exists right away, rather than waiting
+ * for the next scroll/animation-frame tick.
+ * @param {L.Layer} layer
+ * @returns {HTMLElement|null} The row element, if the layer is currently in the list
+ */
+function scrollOverviewToLayer(layer) {
+  const listContainer = document.getElementById("overview-panel-list");
+  if (!listContainer) return null;
+  const layerId = L.Util.stamp(layer);
+  const index = overviewLayerIndex.get(layerId);
+  if (index === undefined) return null;
+
+  const rowTop = index * OVERVIEW_ROW_HEIGHT;
+  const rowBottom = rowTop + OVERVIEW_ROW_HEIGHT;
+  const viewTop = listContainer.scrollTop;
+  const viewBottom = viewTop + listContainer.clientHeight;
+
+  if (rowTop < viewTop) {
+    listContainer.scrollTop = rowTop;
+  } else if (rowBottom > viewBottom) {
+    listContainer.scrollTop = rowBottom - listContainer.clientHeight;
+  }
+
+  renderOverviewWindow();
+  return overviewNodesByKey.get(`r:${layerId}`) || null;
 }
 
 /**
  * Populates or updates the overview list with all items on the map, grouped by type. Also
  * keeps the GeoJSON Editor tab (data-editor.js) live, since any caller of this is implicitly
  * reporting that the map's data changed.
+ *
+ * The list is virtualized (see renderOverviewWindow()): this function only rebuilds
+ * overviewFlatSequence, the ordered description of what the panel WOULD contain if
+ * nothing were virtualized - actually creating/patching DOM is delegated to
+ * renderOverviewWindow(), which only ever touches the currently-visible slice, so a call
+ * here stays cheap regardless of how many items are on the map.
  */
 function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
@@ -299,14 +700,19 @@ function updateOverviewList() {
   // Handle the empty state
   if (allItems.length === 0) {
     overviewPanel.classList.add("is-empty"); // Add the class to the panel
+    overviewFlatSequence = [];
+    overviewLayerIndex = new Map();
+    overviewRenderedHeaderKeys = [];
+    overviewNodesByKey.clear();
+    overviewTopSpacer = null;
+    overviewBottomSpacer = null;
     listContainer.innerHTML =
       '<div class="overview-list-item overview-list-empty-message" style="color: grey; cursor: default;">No items on map</div>';
     return;
   }
 
-  // If we get here, the list is not empty, so remove the class and clear the list
+  // If we get here, the list is not empty, so remove the class
   overviewPanel.classList.remove("is-empty");
-  listContainer.innerHTML = "";
 
   // 2. Group all items by their type
   const groupedItems = {};
@@ -361,181 +767,47 @@ function updateOverviewList() {
     groupedItems[key].push(layer);
   });
 
-  // 3. Render the groups in a specific order
-  const fragment = document.createDocumentFragment();
+  // 3. Build the full ordered sequence (headers + rows) the panel would contain if
+  // nothing were virtualized, in a specific group order - used for scroll-height/index
+  // math; renderOverviewWindow() decides what of it actually becomes DOM.
   const groupOrder = ["DrawnItems", "ImportedFiles", "StravaActivities", "Other"];
-
-  // Track which headers we're actually rendering
-  const renderedHeaders = [];
+  const sequence = [];
+  const renderedHeaderKeys = [];
 
   groupOrder.forEach((key) => {
     const itemsInGroup = groupedItems[key];
     if (itemsInGroup && itemsInGroup.length > 0) {
-      const label = GROUP_LABELS[key];
       const isCollapsed = collapsedCategories.has(key);
 
-      // Create the header element
-      const header = document.createElement("div");
-      header.className = "overview-list-header";
-      if (isCollapsed) header.classList.add("collapsed");
-
-      // "Other" has no real Leaflet layer group behind it, so its header
-      // renders without visibility/delete/duplicate buttons (spacers only).
-      const layerGroup = GROUP_LAYERS[key] || null;
-
-      const arrow = document.createElement("span");
-      arrow.className = "material-symbols";
-      arrow.textContent = isCollapsed ? "keyboard_arrow_down" : "keyboard_arrow_up";
-
-      // 1. Visibility Button (Eye)
-      const eyeBtnSlot = document.createElement("div");
-      eyeBtnSlot.className = "overview-header-visibility-btn";
-      if (layerGroup) {
-        const eyeBtn = document.createElement("span");
-        const isVisible = map.hasLayer(layerGroup);
-        eyeBtn.innerHTML = isVisible
-          ? '<span class="material-symbols">visibility</span>'
-          : '<span class="material-symbols">visibility_off</span>';
-        eyeBtn.title = isVisible ? "Hide category" : "Show category";
-        eyeBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const isRemoving = map.hasLayer(layerGroup);
-          if (isRemoving) {
-            if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, false);
-            map.removeLayer(layerGroup);
-            if (key === "DrawnItems" && currentRoutePath) {
-              map.removeLayer(currentRoutePath);
-            }
-          } else {
-            map.addLayer(layerGroup);
-            if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, true);
-            if (key === "DrawnItems" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
-              map.addLayer(currentRoutePath);
-            }
-          }
-          if (typeof window.onOverlayToggle === "function") {
-            window.onOverlayToggle({
-              type: isRemoving ? "overlayremove" : "overlayadd",
-              layer: layerGroup,
-            });
-          }
-          updateOverviewList();
-        });
-        eyeBtnSlot.appendChild(eyeBtn);
-      } else {
-        eyeBtnSlot.className = "overview-icon-spacer";
-      }
-      header.appendChild(eyeBtnSlot);
-
-      // 2. Delete Button (Clear all)
-      const delBtnSlot = document.createElement("div");
-      delBtnSlot.className = "overview-header-delete-btn";
-      if (layerGroup) {
-        const delBtn = document.createElement("span");
-        delBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
-        delBtn.title = `Clear all ${label}`;
-        delBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          Swal.fire({
-            title: `Clear all items in "${label}"?`,
-            text:
-              key === "DrawnItems" && currentRoutePath
-                ? "This will also clear the current route."
-                : "This action cannot be undone.",
-            icon: "warning",
-            showCancelButton: true,
-            customClass: { confirmButton: "swal-confirm-danger" },
-            confirmButtonText: "Yes, clear all",
-          }).then((result) => {
-            if (result.isConfirmed) {
-              if (key === "DrawnItems" && window.app?.clearRouting) {
-                window.app.clearRouting();
-              }
-              // Same per-layer path used by the individual delete button and
-              // rect-select's bulk delete - keeps rectangle-selection state,
-              // deselection, and group/editableLayers cleanup all in sync.
-              itemsInGroup.forEach((item) => deleteLayerImmediately(item, { skipUiUpdate: true }));
-              updateDrawControlStates();
-              if (!map.hasLayer(layerGroup)) {
-                map.addLayer(layerGroup);
-              }
-
-              updateOverviewList();
-            }
-          });
-        });
-        delBtnSlot.appendChild(delBtn);
-      } else {
-        delBtnSlot.className = "overview-icon-spacer";
-      }
-      header.appendChild(delBtnSlot);
-
-      // 3. Duplicate Button (Duplicate all)
-      const dupBtnSlot = document.createElement("div");
-      dupBtnSlot.className = "overview-header-duplicate-btn";
-      if (layerGroup) {
-        const dupBtn = document.createElement("span");
-        dupBtn.innerHTML = '<span class="material-symbols">add_to_photos</span>';
-        dupBtn.title = `Duplicate all ${label}`;
-        dupBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          // Same per-layer path used by the individual duplicate button and
-          // rect-select's bulk duplicate - including the live route, which
-          // duplicateLayer() already handles like any other layer (an
-          // independent copy saved to Drawn Items, route keeps running).
-          itemsInGroup.forEach((item) => {
-            duplicateLayer(item, { skipUiUpdate: true });
-          });
-          updateOverviewList();
-          updateDrawControlStates();
-        });
-        dupBtnSlot.appendChild(dupBtn);
-      } else {
-        dupBtnSlot.className = "overview-icon-spacer";
-      }
-      header.appendChild(dupBtnSlot);
-
-      // 4. Arrow
-      const arrowContainer = document.createElement("div");
-      arrowContainer.className = "overview-header-arrow";
-      arrowContainer.appendChild(arrow);
-      header.appendChild(arrowContainer);
-
-      // 5. Title
-      const titleSpan = document.createElement("span");
-      titleSpan.className = "overview-header-text";
-      titleSpan.textContent = `${label} (${itemsInGroup.length})`;
-      header.appendChild(titleSpan);
-
-      header.addEventListener("click", () => {
-        if (isCollapsed) {
-          collapsedCategories.delete(key);
-        } else {
-          collapsedCategories.add(key);
-        }
-        updateOverviewList();
+      sequence.push({
+        type: "header",
+        key,
+        label: GROUP_LABELS[key],
+        // "Other" has no real Leaflet layer group behind it, so its header
+        // renders without visibility/delete/duplicate buttons (spacers only).
+        layerGroup: GROUP_LAYERS[key] || null,
+        itemsInGroup,
+        isCollapsed,
       });
+      renderedHeaderKeys.push(key);
 
-      fragment.appendChild(header);
-      renderedHeaders.push(header);
-
-      // Create and append the list items for this group if not collapsed
       if (!isCollapsed) {
         itemsInGroup.forEach((layer) => {
-          const listItem = createOverviewListItem(layer); // Use the helper function
-          fragment.appendChild(listItem);
+          sequence.push({ type: "row", layer });
         });
       }
     }
   });
 
-  // Mark the last header with a special class
-  if (renderedHeaders.length > 0) {
-    const lastHeader = renderedHeaders[renderedHeaders.length - 1];
-    lastHeader.classList.add("last-header");
-  }
+  overviewFlatSequence = sequence;
+  overviewRenderedHeaderKeys = renderedHeaderKeys;
+  overviewLayerIndex = new Map();
+  sequence.forEach((entry, i) => {
+    if (entry.type === "row") overviewLayerIndex.set(L.Util.stamp(entry.layer), i);
+  });
 
-  listContainer.appendChild(fragment);
+  ensureOverviewListStructure(listContainer);
+  renderOverviewWindow();
 
   // Sync checkboxes in the custom layers panel with the map's current state
   Object.entries(GROUP_LAYERS).forEach(([name, group]) => {
@@ -544,12 +816,6 @@ function updateOverviewList() {
     );
     if (checkbox) checkbox.checked = map.hasLayer(group);
   });
-
-  // Every row above is a brand-new element, so any rectangle-select highlight
-  // applied to the previous rows is gone - reapply it to whichever of the
-  // still-selected layers survived (called here so every one of this
-  // function's ~20 call sites across the app gets this for free).
-  window.app?.syncRectangleSelectionHighlight?.();
 }
 
 /**

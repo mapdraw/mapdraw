@@ -1011,6 +1011,14 @@ body.glass-mode #info-panel-edit-hint {
   flex: 1;
   min-height: 0;
 }
+/* Invisible element sized to represent however many rows are scrolled past above/below
+   the currently-rendered window - normal document flow, exactly like a real row would
+   take up, just with no content. One sits before and one after the rendered rows (see
+   renderOverviewWindow() in ui-handlers.js), so the container's scrollbar behaves as if
+   every row/header were really present. */
+.overview-list-spacer {
+  pointer-events: none;
+}
 .overview-list-item {
   display: flex;
   align-items: center;
@@ -1025,6 +1033,11 @@ body.glass-mode #info-panel-edit-hint {
   background-color: var(--background-color);
   color: var(--text-color) !important;
   scroll-margin-top: var(--overview-header-height);
+  /* Without this, border-bottom makes the actual rendered height 1px taller than
+     --overview-header-height - and ui-handlers.js's virtualized renderer assumes every
+     row is exactly that tall when sizing the spacers that stand in for scrolled-past
+     rows, so a mismatch here would drift the list out of alignment over a long scroll. */
+  box-sizing: border-box;
 }
 .overview-visibility-btn,
 .overview-duplicate-btn,
@@ -1076,7 +1089,10 @@ body.glass-mode #info-panel-edit-hint {
   color: var(--text-color);
   padding-left: 4px;
 }
-.overview-list-item:last-child {
+/* DOM order no longer matches display order once rows are virtualized (only the ones
+   scrolled into view exist as DOM children, appended as they're created) - "last row in
+   the whole list" is tracked explicitly via this class instead of :last-child. */
+.overview-list-item.overview-last-in-list {
   border-bottom: none !important;
 }
 .overview-list-item.selected,
@@ -1137,9 +1153,13 @@ body:has(#map.map-is-editing)
   display: flex;
   align-items: center;
   cursor: pointer;
+  /* See .overview-list-item's identical rule - same reasoning applies to headers. */
+  box-sizing: border-box;
 }
 
-#overview-panel-list .overview-list-header:first-child {
+/* Same reasoning as .overview-last-in-list above - DOM order isn't display order once
+   virtualized, so "first item in the whole list" needs an explicit class. */
+#overview-panel-list .overview-list-header.overview-first-in-list {
   border-top: none;
 }
 

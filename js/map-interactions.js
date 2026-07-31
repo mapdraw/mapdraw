@@ -345,21 +345,23 @@ function selectItem(layer) {
   }
   globallySelectedItem = layer;
 
-  const layerId = L.Util.stamp(layer);
   if (window.expandCategoryForItem) {
     window.expandCategoryForItem(layer);
   }
 
-  const newListItem = document.querySelector(
-    `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
-  );
-  if (newListItem) {
-    newListItem.classList.add("selected");
-    if (document.getElementById("overview-panel").classList.contains("active")) {
-      requestAnimationFrame(() => {
-        newListItem.scrollIntoView({ behavior: "auto", block: "nearest" });
-      });
-    }
+  // The overview list is virtualized (ui-handlers.js) - most items don't have a DOM row at
+  // any given moment, only whatever's currently scrolled into view does. Re-render the
+  // current window immediately so an already-visible row picks up .selected right away,
+  // same as the original's synchronous classList.add.
+  renderOverviewWindow();
+
+  // Scrolling the (possibly not-yet-visible) row into view is deferred to the next frame
+  // and only attempted while the tab is actually shown - same guard the original used
+  // around its scrollIntoView call.
+  if (document.getElementById("overview-panel").classList.contains("active")) {
+    requestAnimationFrame(() => {
+      scrollOverviewToLayer(layer);
+    });
   }
 
   const highlightColor = layer.feature?.properties?.color || DEFAULT_COLOR;
