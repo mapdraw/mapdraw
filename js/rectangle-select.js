@@ -652,7 +652,7 @@
   window.app.getRectangleSelectionCount = () => selectedLayers.size;
   window.app.getRectangleSelectionSingleLayer = getSingleSelectedLayer;
   window.app.getRectangleSelectionLayers = () => Array.from(selectedLayers);
+  window.app.isRectangleSelected = (layer) => selectedLayers.has(layer);
   window.app.applyBulkColor = applyBulkColor;
-  window.app.syncRectangleSelectionHighlight = syncOverviewHighlight;
   window.app.hasAnyItems = hasAnyItems;
 })();

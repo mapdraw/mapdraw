@@ -264,6 +264,10 @@ function deselectCurrentItem({ skipControlUpdate = false } = {}) {
     overlayPane.style.zIndex = 400;
   }
 
+  // Only clears .selected if this layer's row happens to be currently mounted (virtualized
+  // to the active category + scrolled-into-view slice) - relies on patchOverviewListItem()
+  // recomputing .selected from globallySelectedItem (already null by the time it runs) on
+  // whatever render happens to follow this call, rather than guaranteeing it here directly.
   const layerId = L.Util.stamp(globallySelectedItem);
   const listItem = document.querySelector(
     `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
@@ -345,8 +349,8 @@ function selectItem(layer) {
   }
   globallySelectedItem = layer;
 
-  if (window.expandCategoryForItem) {
-    window.expandCategoryForItem(layer);
+  if (window.activateCategoryForItem) {
+    window.activateCategoryForItem(layer);
   }
 
   // The overview list is virtualized (ui-handlers.js) - most items don't have a DOM row at

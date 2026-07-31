@@ -4,14 +4,16 @@
 // This module handles the user interface elements for the overview list, info panel,
 // color picker, and various UI updates throughout the application.
 
-// Persistent state for collapsed categories in the overview list
-const collapsedCategories = new Set();
+// Which category (DrawnItems/ImportedFiles/StravaActivities/Other) is currently shown in
+// the overview list. Category headers themselves are pinned outside the list (see
+// renderOverviewHeaders()) and are never virtualized - at most 4 exist, so their nodes are
+// cached forever in overviewHeaderNodesByKey rather than evicted on scroll.
+let activeCategory = null;
+const overviewHeaderNodesByKey = new Map();
 
-// The overview list is virtualized: however many items exist, only the ones scrolled into
-// view (+ a small buffer) are ever real DOM elements - see updateOverviewList(),
-// renderOverviewWindow() and scrollOverviewToLayer() below. Row height must match
-// --overview-header-height in style.css - both rows and headers share it, which keeps the
-// windowing math (index * rowHeight) simple regardless of entry type.
+// The item list is virtualized: however many items exist, only the ones scrolled into view
+// (+ a small buffer) are ever real DOM elements - see updateOverviewList(),
+// renderOverviewWindow() and scrollOverviewToLayer() below.
 const OVERVIEW_ROW_HEIGHT =
   parseInt(
     getComputedStyle(document.documentElement).getPropertyValue("--overview-header-height"),
@@ -21,17 +23,16 @@ const OVERVIEW_ROW_HEIGHT =
 // rows in right at the edge.
 const OVERVIEW_SCROLL_BUFFER_PX = OVERVIEW_ROW_HEIGHT * 8;
 
-// Currently-rendered header/row elements, keyed "h:<groupKey>" / "r:<layerId>" - only ever
-// holds what's within the current scroll window (+ buffer), not the whole list.
+// Currently-rendered row elements, keyed by layerId - only ever holds what's within the
+// current scroll window (+ buffer), not the whole active category.
 const overviewNodesByKey = new Map();
-// The full ordered list of what the panel would contain if nothing were virtualized
-// (headers + rows, in display order). Rebuilt by updateOverviewList() on structural
-// changes (items added/removed, a category collapsed/expanded) - NOT on scroll.
-let overviewFlatSequence = [];
-// layerId -> index into overviewFlatSequence, so scrolling to a layer (possibly currently
+// The active category's items, in display order - what the list would contain if nothing
+// were virtualized. Rebuilt by updateOverviewList() on structural changes (items
+// added/removed, active category switched) - NOT on scroll.
+let overviewActiveItems = [];
+// layerId -> index into overviewActiveItems, so scrolling to a layer (possibly currently
 // off-screen, with no DOM row to look up) can compute where to go.
 let overviewLayerIndex = new Map();
-let overviewRenderedHeaderKeys = [];
 let overviewTopSpacer = null;
 let overviewBottomSpacer = null;
 let overviewScrollListenerAttached = false;
@@ -311,9 +312,10 @@ function createOverviewListItem(layer) {
 
 /**
  * Syncs a cached overview-list row's mutable state (name, visibility icon, selection
- * highlight) with the current layer, without touching its buttons/listeners. Needed
- * because a row now persists across multiple renders while its layer stays scrolled into
- * view, instead of being thrown away and rebuilt every single time.
+ * highlight, rectangle-select highlight) with the current layer, without touching its
+ * buttons/listeners. Needed because a row now persists across multiple renders while its
+ * layer stays scrolled into view, instead of being thrown away and rebuilt every single
+ * time.
  * @param {HTMLElement} listItem - A row previously created by createOverviewListItem()
  * @param {L.Layer} layer - The layer it represents
  */
@@ -328,14 +330,20 @@ function patchOverviewListItem(listItem, layer) {
     "selected",
     !!globallySelectedItem && L.Util.stamp(globallySelectedItem) === L.Util.stamp(layer),
   );
+  // Derived live from the rectangle-select tool's own selection state (rather than a
+  // one-time DOM query pass over whatever happens to be mounted right now), so a row gets
+  // the correct highlight the instant it's created/patched - including rows that weren't
+  // mounted yet at the moment of a bulk Select All/Invert and only get created later, as
+  // they scroll into view or their category becomes active.
+  listItem.classList.toggle("rectangle-selected", !!window.app?.isRectangleSelected?.(layer));
 }
 
 /**
- * Creates a category header row for the overview panel (e.g. "Drawn Items (3)"). Cached
- * forever per group key (there are at most 4: DrawnItems/ImportedFiles/StravaActivities/
- * Other) and reused across renders - buttons/listeners are only ever set up once here, and
- * patchOverviewHeader() syncs everything that can change afterwards (item count, collapsed
- * state, category visibility).
+ * Creates a category header for the overview panel (e.g. "Drawn Items (3)"), pinned outside
+ * the virtualized item list. Cached forever per group key (there are at most 4:
+ * DrawnItems/ImportedFiles/StravaActivities/Other) and reused across renders - buttons/
+ * listeners are only ever set up once here, and patchOverviewHeader() syncs everything that
+ * can change afterwards (item count, active state, category visibility).
  * @param {string} key - Stable group key (e.g. "DrawnItems")
  * @param {string} label - Display label (e.g. "Drawn Items")
  * @param {L.LayerGroup|null} layerGroup - The Leaflet group behind this category, or null
@@ -456,14 +464,14 @@ function createOverviewHeader(key, label, layerGroup) {
   }
   header.appendChild(dupBtnSlot);
 
-  // 4. Arrow
-  const arrowContainer = document.createElement("div");
-  arrowContainer.className = "overview-header-arrow";
-  const arrow = document.createElement("span");
-  arrow.className = "material-symbols";
-  arrowContainer.appendChild(arrow);
-  header.appendChild(arrowContainer);
-  header._arrow = arrow;
+  // 4. Active-category dot
+  const dotContainer = document.createElement("div");
+  dotContainer.className = "overview-header-dot-container";
+  const dot = document.createElement("span");
+  dot.className = "overview-header-dot";
+  dotContainer.appendChild(dot);
+  header.appendChild(dotContainer);
+  header._dot = dot;
 
   // 5. Title
   const titleSpan = document.createElement("span");
@@ -472,13 +480,10 @@ function createOverviewHeader(key, label, layerGroup) {
   header._titleSpan = titleSpan;
 
   header.addEventListener("click", () => {
-    // Reads collapsedCategories live rather than a captured isCollapsed, since this header
-    // (and its listener) is cached and reused across many renders where that could change.
-    if (collapsedCategories.has(key)) {
-      collapsedCategories.delete(key);
-    } else {
-      collapsedCategories.add(key);
-    }
+    // Reads activeCategory live rather than a captured isActive, since this header (and
+    // its listener) is cached and reused across many renders where that could change.
+    if (activeCategory === key) return;
+    activeCategory = key;
     updateOverviewList();
   });
 
@@ -486,24 +491,62 @@ function createOverviewHeader(key, label, layerGroup) {
 }
 
 /**
- * Syncs a cached category header's mutable state (item count, collapsed arrow, category
- * visibility icon, and the item list its bulk buttons act on) with the current group.
+ * Syncs a cached category header's mutable state (item count, active-category dot,
+ * category visibility icon, and the item list its bulk buttons act on) with the current
+ * group.
  * @param {HTMLElement} header - A header previously created by createOverviewHeader()
  * @param {string} label - Display label (e.g. "Drawn Items")
  * @param {L.LayerGroup|null} layerGroup - The group behind this category, or null
  * @param {L.Layer[]} itemsInGroup - The group's current items, in display order
- * @param {boolean} isCollapsed - Whether the category is currently collapsed
+ * @param {boolean} isActive - Whether this category is currently shown in the list
  */
-function patchOverviewHeader(header, label, layerGroup, itemsInGroup, isCollapsed) {
+function patchOverviewHeader(header, label, layerGroup, itemsInGroup, isActive) {
   header._itemsInGroup = itemsInGroup;
-  header.classList.toggle("collapsed", isCollapsed);
-  header._arrow.textContent = isCollapsed ? "keyboard_arrow_down" : "keyboard_arrow_up";
+  header.classList.toggle("active", isActive);
   header._titleSpan.textContent = `${label} (${itemsInGroup.length})`;
   if (layerGroup && header._eyeIcon) {
     const isVisible = map.hasLayer(layerGroup);
-    header._eyeIcon.textContent = isVisible ? "visibility" : "visibility_off";
+    header._eyeIcon.textContent = getVisibilityIconName(!isVisible);
     header._eyeBtn.title = isVisible ? "Hide category" : "Show category";
   }
+}
+
+/**
+ * Renders the pinned category headers above the virtualized item list - creating/patching
+ * a header for each non-empty group (in fixed groupOrder) and detaching any whose group
+ * just became empty, while keeping its node cached in overviewHeaderNodesByKey for reuse.
+ * Unlike rows, headers are never evicted on scroll (at most 4 ever exist).
+ * @param {string[]} groupOrder
+ * @param {Record<string, L.Layer[]>} groupedItems
+ * @param {Record<string, string>} groupLabels
+ * @param {Record<string, L.LayerGroup>} groupLayers
+ */
+function renderOverviewHeaders(groupOrder, groupedItems, groupLabels, groupLayers) {
+  const headersContainer = document.getElementById("overview-panel-headers");
+  if (!headersContainer) return;
+
+  groupOrder.forEach((key) => {
+    const itemsInGroup = groupedItems[key];
+    let header = overviewHeaderNodesByKey.get(key);
+
+    if (!itemsInGroup || itemsInGroup.length === 0) {
+      if (header) header.remove();
+      return;
+    }
+
+    if (!header) {
+      header = createOverviewHeader(key, groupLabels[key], groupLayers[key] || null);
+      overviewHeaderNodesByKey.set(key, header);
+    }
+    patchOverviewHeader(
+      header,
+      groupLabels[key],
+      groupLayers[key] || null,
+      itemsInGroup,
+      key === activeCategory,
+    );
+    headersContainer.appendChild(header);
+  });
 }
 
 /**
@@ -528,33 +571,33 @@ function ensureOverviewListStructure(listContainer) {
   }
 
   if (!overviewScrollListenerAttached) {
-    listContainer.addEventListener(
-      "scroll",
-      () => {
-        if (overviewRenderScheduled) return;
-        overviewRenderScheduled = true;
-        requestAnimationFrame(() => {
-          overviewRenderScheduled = false;
-          renderOverviewWindow();
-        });
-      },
-      { passive: true },
-    );
+    const scheduleRender = () => {
+      if (overviewRenderScheduled) return;
+      overviewRenderScheduled = true;
+      requestAnimationFrame(() => {
+        overviewRenderScheduled = false;
+        renderOverviewWindow();
+      });
+    };
+    listContainer.addEventListener("scroll", scheduleRender, { passive: true });
     // Catches the panel's own size changing (e.g. window resize) even without a scroll -
     // otherwise newly-revealed space at the bottom would stay unrendered until the next
-    // scroll event.
-    new ResizeObserver(() => renderOverviewWindow()).observe(listContainer);
+    // scroll event. Shares scroll's rAF throttle (scheduleRender) rather than calling
+    // renderOverviewWindow() directly, so a resize that also shifts scrollTop (browsers
+    // fire a native scroll event when content shrinks and the old position no longer fits)
+    // can't trigger two renders back-to-back for one visual change.
+    new ResizeObserver(scheduleRender).observe(listContainer);
     overviewScrollListenerAttached = true;
   }
 }
 
 /**
- * Renders whichever slice of overviewFlatSequence currently falls within the container's
+ * Renders whichever slice of overviewActiveItems currently falls within the container's
  * visible scroll range (+ a small buffer) as real DOM elements, reusing/patching ones
  * that are already there and removing ones that scrolled out - so the DOM only ever holds
- * a screenful of rows, however many items the list logically has. Rendered rows stay in
- * normal document flow between the top/bottom spacers (reordered via insertBefore when
- * their position actually changes), rather than being pulled out with absolute
+ * a screenful of rows, however many items the active category logically has. Rendered rows
+ * stay in normal document flow between the top/bottom spacers (reordered via insertBefore
+ * when their position actually changes), rather than being pulled out with absolute
  * positioning. Called after every structural change (via updateOverviewList()), on every
  * scroll/resize, and directly wherever else the visible window can go stale without one of
  * those - a new/changed selection (selectItem() in map-interactions.js) or the panel tab
@@ -564,53 +607,60 @@ function renderOverviewWindow() {
   const listContainer = document.getElementById("overview-panel-list");
   if (!listContainer || !overviewTopSpacer || !overviewBottomSpacer) return;
 
-  const total = overviewFlatSequence.length;
+  const total = overviewActiveItems.length;
   if (total === 0) return;
   const rowH = OVERVIEW_ROW_HEIGHT;
   const scrollTop = listContainer.scrollTop;
   const viewHeight = listContainer.clientHeight;
 
-  const startIndex = Math.max(0, Math.floor((scrollTop - OVERVIEW_SCROLL_BUFFER_PX) / rowH));
   const endIndex = Math.min(
     total - 1,
     Math.ceil((scrollTop + viewHeight + OVERVIEW_SCROLL_BUFFER_PX) / rowH),
+  );
+  // Clamped against endIndex, not just 0: scrollTop can be stale relative to a just-shrunk
+  // total (e.g. switching to a smaller active category while scrolled deep in a larger one),
+  // in which case an unclamped startIndex could exceed endIndex and skip the render loop
+  // entirely, leaving overviewTopSpacer sized to a huge, stale height.
+  const startIndex = Math.min(
+    Math.max(0, Math.floor((scrollTop - OVERVIEW_SCROLL_BUFFER_PX) / rowH)),
+    endIndex,
   );
 
   overviewTopSpacer.style.height = `${startIndex * rowH}px`;
   overviewBottomSpacer.style.height = `${(total - endIndex - 1) * rowH}px`;
 
   const seenKeys = new Set();
+  for (let i = startIndex; i <= endIndex; i++) {
+    seenKeys.add(L.Util.stamp(overviewActiveItems[i]));
+  }
+
+  // Evict rows that fell outside the new window (or are no longer part of the active
+  // category at all - deleted items, or the active category was switched) BEFORE
+  // reconciling DOM order below. Otherwise a node about to be evicted here (e.g. the old
+  // startIndex, on a single-row scroll forward) would still be sitting where `cursor`
+  // starts, and since it never matches any node in the loop below, every remaining node
+  // would get insertBefore'd one-by-one even though their relative order among themselves
+  // never actually changed - O(window size) DOM moves for what only needs 2 (drop the
+  // evicted node, append the new one).
+  overviewNodesByKey.forEach((node, key) => {
+    if (!seenKeys.has(key)) {
+      node.remove();
+      overviewNodesByKey.delete(key);
+    }
+  });
+
   let cursor = overviewTopSpacer.nextSibling;
 
   for (let i = startIndex; i <= endIndex; i++) {
-    const entry = overviewFlatSequence[i];
-    const nodeKey = entry.type === "header" ? `h:${entry.key}` : `r:${L.Util.stamp(entry.layer)}`;
-    seenKeys.add(nodeKey);
+    const layer = overviewActiveItems[i];
+    const nodeKey = L.Util.stamp(layer);
     let node = overviewNodesByKey.get(nodeKey);
 
-    if (entry.type === "header") {
-      if (!node) {
-        node = createOverviewHeader(entry.key, entry.label, entry.layerGroup);
-        overviewNodesByKey.set(nodeKey, node);
-      }
-      patchOverviewHeader(
-        node,
-        entry.label,
-        entry.layerGroup,
-        entry.itemsInGroup,
-        entry.isCollapsed,
-      );
-      node.classList.toggle(
-        "last-header",
-        overviewRenderedHeaderKeys[overviewRenderedHeaderKeys.length - 1] === entry.key,
-      );
+    if (!node) {
+      node = createOverviewListItem(layer);
+      overviewNodesByKey.set(nodeKey, node);
     } else {
-      if (!node) {
-        node = createOverviewListItem(entry.layer);
-        overviewNodesByKey.set(nodeKey, node);
-      } else {
-        patchOverviewListItem(node, entry.layer);
-      }
+      patchOverviewListItem(node, layer);
     }
 
     // DOM order no longer matches display order once virtualized (the spacers are always
@@ -625,28 +675,16 @@ function renderOverviewWindow() {
       listContainer.insertBefore(node, cursor);
     }
   }
-
-  // Remove nodes for headers/rows that scrolled out of the rendered window (or are no
-  // longer part of the list at all - deleted items, emptied categories, rows hidden
-  // behind a newly-collapsed category).
-  overviewNodesByKey.forEach((node, key) => {
-    if (!seenKeys.has(key)) {
-      node.remove();
-      overviewNodesByKey.delete(key);
-    }
-  });
-
-  // Rows are reused/patched rather than recreated, so any rectangle-select highlight
-  // already on them normally survives - but reapply it anyway, since rows that just
-  // scrolled into view (or are newly created) start without it.
-  window.app?.syncRectangleSelectionHighlight?.();
 }
 
 /**
  * Scrolls the overview list so the given layer's row is visible - only moving the scroll
- * position if it isn't already (mirroring scrollIntoView({block: "nearest"})) - then
- * forces an immediate render so the row actually exists right away, rather than waiting
- * for the next scroll/animation-frame tick.
+ * position if it isn't already (mirroring scrollIntoView({block: "nearest"})). Only forces
+ * an immediate render if scrollTop actually changed: every caller already runs this right
+ * after some other render (updateOverviewList()/renderOverviewWindow()) that used the same
+ * scrollTop, so if this row's target position was already inside the viewport, that prior
+ * render is guaranteed to have already covered it (its window is always >= the viewport,
+ * padded by OVERVIEW_SCROLL_BUFFER_PX) - re-rendering again here would be redundant.
  * @param {L.Layer} layer
  * @returns {HTMLElement|null} The row element, if the layer is currently in the list
  */
@@ -662,30 +700,47 @@ function scrollOverviewToLayer(layer) {
   const viewTop = listContainer.scrollTop;
   const viewBottom = viewTop + listContainer.clientHeight;
 
+  let scrolled = false;
   if (rowTop < viewTop) {
     listContainer.scrollTop = rowTop;
+    scrolled = true;
   } else if (rowBottom > viewBottom) {
     listContainer.scrollTop = rowBottom - listContainer.clientHeight;
+    scrolled = true;
   }
 
-  renderOverviewWindow();
-  return overviewNodesByKey.get(`r:${layerId}`) || null;
+  if (scrolled) renderOverviewWindow();
+  return overviewNodesByKey.get(layerId) || null;
 }
 
+// Stable grouping keys and their fixed display order, decoupled from the display label so
+// renaming a label can never silently break the ordering/lookup logic that compares
+// against it. Used by updateOverviewList() below.
+const OVERVIEW_GROUP_ORDER = ["DrawnItems", "ImportedFiles", "StravaActivities", "Other"];
+const OVERVIEW_GROUP_LABELS = {
+  DrawnItems: "Drawn Items",
+  ImportedFiles: "Imported Files",
+  StravaActivities: "Strava Activities",
+  Other: "Other",
+};
+
 /**
- * Populates or updates the overview list with all items on the map, grouped by type. Also
+ * Populates or updates the overview panel with all items on the map, grouped by type. Also
  * keeps the GeoJSON Editor tab (data-editor.js) live, since any caller of this is implicitly
  * reporting that the map's data changed.
  *
- * The list is virtualized (see renderOverviewWindow()): this function only rebuilds
- * overviewFlatSequence, the ordered description of what the panel WOULD contain if
- * nothing were virtualized - actually creating/patching DOM is delegated to
- * renderOverviewWindow(), which only ever touches the currently-visible slice, so a call
- * here stays cheap regardless of how many items are on the map.
+ * Category headers are pinned outside the item list (see renderOverviewHeaders()); exactly
+ * one category is "active" (activeCategory) at a time, and the item list below only shows
+ * that category's items. The item list itself is virtualized (see renderOverviewWindow()):
+ * this function only rebuilds overviewActiveItems, the ordered description of what the list
+ * WOULD contain if nothing were virtualized - actually creating/patching item DOM is
+ * delegated to renderOverviewWindow(), which only ever touches the currently-visible slice,
+ * so a call here stays cheap regardless of how many items are on the map.
  */
 function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
-  if (!listContainer) return;
+  const headersContainer = document.getElementById("overview-panel-headers");
+  if (!listContainer || !headersContainer) return;
   scheduleDataEditorRefresh();
   const overviewPanel = document.getElementById("overview-panel"); // Get the parent panel
 
@@ -702,12 +757,14 @@ function updateOverviewList() {
   // Handle the empty state
   if (allItems.length === 0) {
     overviewPanel.classList.add("is-empty"); // Add the class to the panel
-    overviewFlatSequence = [];
+    activeCategory = null;
+    overviewActiveItems = [];
     overviewLayerIndex = new Map();
-    overviewRenderedHeaderKeys = [];
     overviewNodesByKey.clear();
     overviewTopSpacer = null;
     overviewBottomSpacer = null;
+    // Headers stay cached in overviewHeaderNodesByKey for reuse, just detached for now.
+    headersContainer.innerHTML = "";
     listContainer.innerHTML =
       '<div class="overview-list-item overview-list-empty-message" style="color: grey; cursor: default;">No items on map</div>';
     return;
@@ -718,15 +775,6 @@ function updateOverviewList() {
 
   // 2. Group all items by their type
   const groupedItems = {};
-  // Stable grouping keys, decoupled from the display label so renaming a
-  // label below can never silently break the ordering/lookup logic that
-  // compares against it.
-  const GROUP_LABELS = {
-    DrawnItems: "Drawn Items",
-    ImportedFiles: "Imported Files",
-    StravaActivities: "Strava Activities",
-    Other: "Other",
-  };
   const GROUP_LAYERS = {
     DrawnItems: drawnItems,
     ImportedFiles: importedItems,
@@ -752,11 +800,12 @@ function updateOverviewList() {
   // Export for use in other modules (e.g., selectItem)
   window.getGroupTitle = getGroupTitle;
 
-  // Helper to expand a category if it's collapsed, ensuring a layer is visible in the list
-  window.expandCategoryForItem = (layer) => {
+  // Switches the active category to the one containing layer, if it isn't already,
+  // ensuring the layer is visible in the list.
+  window.activateCategoryForItem = (layer) => {
     const key = getGroupTitle(layer.feature?.properties?.pathType);
-    if (collapsedCategories.has(key)) {
-      collapsedCategories.delete(key);
+    if (activeCategory !== key) {
+      activeCategory = key;
       updateOverviewList();
     }
   };
@@ -769,43 +818,23 @@ function updateOverviewList() {
     groupedItems[key].push(layer);
   });
 
-  // 3. Build the full ordered sequence (headers + rows) the panel would contain if
-  // nothing were virtualized, in a specific group order - used for scroll-height/index
-  // math; renderOverviewWindow() decides what of it actually becomes DOM.
-  const groupOrder = ["DrawnItems", "ImportedFiles", "StravaActivities", "Other"];
-  const sequence = [];
-  const renderedHeaderKeys = [];
+  // 3. Resolve the effective active category - defaults to the first non-empty group (in
+  // fixed order) on first load, and falls back the same way if the previously-active
+  // category just ran out of items (e.g. its last item was deleted). Guaranteed non-empty:
+  // the allItems.length === 0 check above already ruled out every group being empty.
+  const nonEmptyKeys = OVERVIEW_GROUP_ORDER.filter((key) => groupedItems[key]?.length);
+  if (!activeCategory || !nonEmptyKeys.includes(activeCategory)) {
+    activeCategory = nonEmptyKeys[0];
+  }
 
-  groupOrder.forEach((key) => {
-    const itemsInGroup = groupedItems[key];
-    if (itemsInGroup && itemsInGroup.length > 0) {
-      const isCollapsed = collapsedCategories.has(key);
+  renderOverviewHeaders(OVERVIEW_GROUP_ORDER, groupedItems, OVERVIEW_GROUP_LABELS, GROUP_LAYERS);
 
-      sequence.push({
-        type: "header",
-        key,
-        label: GROUP_LABELS[key],
-        // "Other" has no real Leaflet layer group behind it, so its header
-        // renders without visibility/delete/duplicate buttons (spacers only).
-        layerGroup: GROUP_LAYERS[key] || null,
-        itemsInGroup,
-        isCollapsed,
-      });
-      renderedHeaderKeys.push(key);
-
-      if (!isCollapsed) {
-        itemsInGroup.forEach((layer) => {
-          sequence.push({ type: "row", layer });
-        });
-      }
-    }
-  });
-
-  overviewFlatSequence = sequence;
-  overviewRenderedHeaderKeys = renderedHeaderKeys;
+  // 4. Build the active category's items - used for scroll-height/index math;
+  // renderOverviewWindow() decides which of them actually become DOM.
+  overviewActiveItems = groupedItems[activeCategory];
   overviewLayerIndex = new Map();
-  sequence.forEach((entry, i) => {
-    if (entry.type === "row") overviewLayerIndex.set(L.Util.stamp(entry.layer), i);
+  overviewActiveItems.forEach((layer, i) => {
+    overviewLayerIndex.set(L.Util.stamp(layer), i);
   });
 
   ensureOverviewListStructure(listContainer);

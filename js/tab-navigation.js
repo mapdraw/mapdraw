@@ -31,8 +31,8 @@ function initTabNavigation() {
 
         const selectedForOverview = getEffectiveSelectedLayer();
         if (selectedForOverview) {
-          if (window.expandCategoryForItem) {
-            window.expandCategoryForItem(selectedForOverview);
+          if (window.activateCategoryForItem) {
+            window.activateCategoryForItem(selectedForOverview);
           }
           scrollOverviewToLayer(selectedForOverview);
         }
