@@ -411,7 +411,9 @@ function selectItem(layer) {
       if (selectedPathOutline) {
         map.removeLayer(selectedPathOutline);
       }
-      // Use L.polygon for polygons to ensure the closing line has an outline
+      // Use L.polygon for polygons to ensure the closing line has an outline. smoothFactor
+      // must match the selected layer's own - this is a separate layer built from the same
+      // points, and a mismatched simplification level makes the two visibly diverge.
       if (layer instanceof L.Polygon) {
         selectedPathOutline = L.polygon(layer.getLatLngs()[0], {
           color: outline.color,
@@ -421,6 +423,7 @@ function selectItem(layer) {
           fill: true,
           fillColor: highlightColor,
           fillOpacity: outline.fillOpacity,
+          smoothFactor: layer.options.smoothFactor,
         });
       } else {
         selectedPathOutline = L.polyline(layer.getLatLngs(), {
@@ -428,6 +431,7 @@ function selectItem(layer) {
           weight: STYLE_CONFIG.path.highlight.weight + outline.weightOffset,
           opacity: STYLE_CONFIG.path.highlight.opacity,
           interactive: false,
+          smoothFactor: layer.options.smoothFactor,
         });
       }
       if (map.hasLayer(layer) && !isEditMode) {
