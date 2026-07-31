@@ -555,8 +555,10 @@ function ensureOverviewListStructure(listContainer) {
  * a screenful of rows, however many items the list logically has. Rendered rows stay in
  * normal document flow between the top/bottom spacers (reordered via insertBefore when
  * their position actually changes), rather than being pulled out with absolute
- * positioning. Called after every structural change (via updateOverviewList()) and on
- * every scroll/resize.
+ * positioning. Called after every structural change (via updateOverviewList()), on every
+ * scroll/resize, and directly wherever else the visible window can go stale without one of
+ * those - a new/changed selection (selectItem() in map-interactions.js) or the panel tab
+ * just becoming visible (tab-navigation.js).
  */
 function renderOverviewWindow() {
   const listContainer = document.getElementById("overview-panel-list");
