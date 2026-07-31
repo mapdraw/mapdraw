@@ -5,11 +5,14 @@
 // color picker, and various UI updates throughout the application.
 
 // Which category (DrawnItems/ImportedFiles/StravaActivities/Other) is currently shown in
-// the overview list. Category headers themselves are pinned outside the list (see
-// renderOverviewHeaders()) and are never virtualized - at most 4 exist, so their nodes are
-// cached forever in overviewHeaderNodesByKey rather than evicted on scroll.
+// the overview list. The pinned area above the list (see renderOverviewControls()) is never
+// virtualized: one persistent shared controls row (eye/delete/duplicate, acting on whatever
+// category is active) plus one small "pill" button per category, cached forever in
+// overviewPillNodesByKey (at most 4) rather than evicted on scroll.
 let activeCategory = null;
-const overviewHeaderNodesByKey = new Map();
+let overviewControlsRow = null;
+let overviewCaptionEl = null;
+const overviewPillNodesByKey = new Map();
 
 // The item list is virtualized: however many items exist, only the ones scrolled into view
 // (+ a small buffer) are ever real DOM elements - see updateOverviewList(),
@@ -339,214 +342,238 @@ function patchOverviewListItem(listItem, layer) {
 }
 
 /**
- * Creates a category header for the overview panel (e.g. "Drawn Items (3)"), pinned outside
- * the virtualized item list. Cached forever per group key (there are at most 4:
- * DrawnItems/ImportedFiles/StravaActivities/Other) and reused across renders - buttons/
- * listeners are only ever set up once here, and patchOverviewHeader() syncs everything that
- * can change afterwards (item count, active state, category visibility).
- * @param {string} key - Stable group key (e.g. "DrawnItems")
- * @param {string} label - Display label (e.g. "Drawn Items")
- * @param {L.LayerGroup|null} layerGroup - The Leaflet group behind this category, or null
- *   for "Other", which has no real layer group backing it
+ * Creates the single shared controls row pinned above the virtualized item list: one set of
+ * eye/delete/duplicate buttons that act on whichever category is currently active (instead
+ * of one set per category), plus the container for the per-category "pill" buttons. Built
+ * once and reused forever - the click handlers below read the row's own
+ * _activeKey/_activeLabel/_activeLayerGroup/_activeItemsInGroup live (refreshed on every
+ * patchOverviewControlsRow() call) rather than closing over a fixed category, since a
+ * single row now has to act on whatever category is active at click time.
  * @returns {HTMLElement}
  */
-function createOverviewHeader(key, label, layerGroup) {
-  const header = document.createElement("div");
-  header.className = "overview-list-header";
-  header._itemsInGroup = [];
+function createOverviewControlsRow() {
+  const row = document.createElement("div");
+  row.className = "overview-controls-row";
+  row._activeItemsInGroup = [];
 
   // 1. Visibility Button (Eye)
   const eyeBtnSlot = document.createElement("div");
-  if (layerGroup) {
-    eyeBtnSlot.className = "overview-header-visibility-btn";
-    const eyeBtn = document.createElement("span");
-    const eyeIcon = document.createElement("span");
-    eyeIcon.className = "material-symbols";
-    eyeBtn.appendChild(eyeIcon);
-    eyeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isRemoving = map.hasLayer(layerGroup);
-      if (isRemoving) {
-        if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, false);
-        map.removeLayer(layerGroup);
-        if (key === "DrawnItems" && currentRoutePath) {
-          map.removeLayer(currentRoutePath);
-        }
-      } else {
-        map.addLayer(layerGroup);
-        if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, true);
-        if (key === "DrawnItems" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
-          map.addLayer(currentRoutePath);
-        }
+  eyeBtnSlot.className = "overview-header-visibility-btn";
+  const eyeBtn = document.createElement("span");
+  const eyeIcon = document.createElement("span");
+  eyeIcon.className = "material-symbols";
+  eyeBtn.appendChild(eyeIcon);
+  eyeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const layerGroup = row._activeLayerGroup;
+    if (!layerGroup) return;
+    const key = row._activeKey;
+    const isRemoving = map.hasLayer(layerGroup);
+    if (isRemoving) {
+      if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, false);
+      map.removeLayer(layerGroup);
+      if (key === "DrawnItems" && currentRoutePath) {
+        map.removeLayer(currentRoutePath);
       }
-      if (typeof window.onOverlayToggle === "function") {
-        window.onOverlayToggle({
-          type: isRemoving ? "overlayremove" : "overlayadd",
-          layer: layerGroup,
-        });
+    } else {
+      map.addLayer(layerGroup);
+      if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, true);
+      if (key === "DrawnItems" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
+        map.addLayer(currentRoutePath);
       }
-      updateOverviewList();
-    });
-    eyeBtnSlot.appendChild(eyeBtn);
-    header._eyeBtn = eyeBtn;
-    header._eyeIcon = eyeIcon;
-  } else {
-    eyeBtnSlot.className = "overview-icon-spacer";
-  }
-  header.appendChild(eyeBtnSlot);
+    }
+    if (typeof window.onOverlayToggle === "function") {
+      window.onOverlayToggle({
+        type: isRemoving ? "overlayremove" : "overlayadd",
+        layer: layerGroup,
+      });
+    }
+    updateOverviewList();
+  });
+  eyeBtnSlot.appendChild(eyeBtn);
+  row._eyeBtn = eyeBtn;
+  row._eyeIcon = eyeIcon;
+  row.appendChild(eyeBtnSlot);
 
   // 2. Delete Button (Clear all)
   const delBtnSlot = document.createElement("div");
-  if (layerGroup) {
-    delBtnSlot.className = "overview-header-delete-btn";
-    const delBtn = document.createElement("span");
-    delBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
-    delBtn.title = `Clear all ${label}`;
-    delBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      Swal.fire({
-        title: `Clear all items in "${label}"?`,
-        text:
-          key === "DrawnItems" && currentRoutePath
-            ? "This will also clear the current route."
-            : "This action cannot be undone.",
-        icon: "warning",
-        showCancelButton: true,
-        customClass: { confirmButton: "swal-confirm-danger" },
-        confirmButtonText: "Yes, clear all",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          if (key === "DrawnItems" && window.app?.clearRouting) {
-            window.app.clearRouting();
-          }
-          // Same per-layer path used by the individual delete button and
-          // rect-select's bulk delete - keeps rectangle-selection state,
-          // deselection, and group/editableLayers cleanup all in sync.
-          header._itemsInGroup.forEach((item) =>
-            deleteLayerImmediately(item, { skipUiUpdate: true }),
-          );
-          updateDrawControlStates();
-          if (!map.hasLayer(layerGroup)) {
-            map.addLayer(layerGroup);
-          }
-          updateOverviewList();
+  delBtnSlot.className = "overview-header-delete-btn";
+  const delBtn = document.createElement("span");
+  delBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
+  delBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const layerGroup = row._activeLayerGroup;
+    if (!layerGroup) return;
+    const key = row._activeKey;
+    const label = row._activeLabel;
+    Swal.fire({
+      title: `Clear all items in "${label}"?`,
+      text:
+        key === "DrawnItems" && currentRoutePath
+          ? "This will also clear the current route."
+          : "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      customClass: { confirmButton: "swal-confirm-danger" },
+      confirmButtonText: "Yes, clear all",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        if (key === "DrawnItems" && window.app?.clearRouting) {
+          window.app.clearRouting();
         }
-      });
+        // Same per-layer path used by the individual delete button and
+        // rect-select's bulk delete - keeps rectangle-selection state,
+        // deselection, and group/editableLayers cleanup all in sync.
+        row._activeItemsInGroup.forEach((item) =>
+          deleteLayerImmediately(item, { skipUiUpdate: true }),
+        );
+        updateDrawControlStates();
+        if (!map.hasLayer(layerGroup)) {
+          map.addLayer(layerGroup);
+        }
+        updateOverviewList();
+      }
     });
-    delBtnSlot.appendChild(delBtn);
-  } else {
-    delBtnSlot.className = "overview-icon-spacer";
-  }
-  header.appendChild(delBtnSlot);
+  });
+  delBtnSlot.appendChild(delBtn);
+  row._delBtn = delBtn;
+  row.appendChild(delBtnSlot);
 
   // 3. Duplicate Button (Duplicate all)
   const dupBtnSlot = document.createElement("div");
-  if (layerGroup) {
-    dupBtnSlot.className = "overview-header-duplicate-btn";
-    const dupBtn = document.createElement("span");
-    dupBtn.innerHTML = '<span class="material-symbols">add_to_photos</span>';
-    dupBtn.title = `Duplicate all ${label}`;
-    dupBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      // Same per-layer path used by the individual duplicate button and
-      // rect-select's bulk duplicate - including the live route, which
-      // duplicateLayer() already handles like any other layer (an
-      // independent copy saved to Drawn Items, route keeps running).
-      header._itemsInGroup.forEach((item) => {
-        duplicateLayer(item, { skipUiUpdate: true });
-      });
-      updateOverviewList();
-      updateDrawControlStates();
+  dupBtnSlot.className = "overview-header-duplicate-btn";
+  const dupBtn = document.createElement("span");
+  dupBtn.innerHTML = '<span class="material-symbols">add_to_photos</span>';
+  dupBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!row._activeLayerGroup) return;
+    // Same per-layer path used by the individual duplicate button and
+    // rect-select's bulk duplicate - including the live route, which
+    // duplicateLayer() already handles like any other layer (an
+    // independent copy saved to Drawn Items, route keeps running).
+    row._activeItemsInGroup.forEach((item) => {
+      duplicateLayer(item, { skipUiUpdate: true });
     });
-    dupBtnSlot.appendChild(dupBtn);
-  } else {
-    dupBtnSlot.className = "overview-icon-spacer";
+    updateOverviewList();
+    updateDrawControlStates();
+  });
+  dupBtnSlot.appendChild(dupBtn);
+  row._dupBtn = dupBtn;
+  row.appendChild(dupBtnSlot);
+
+  // 4. Category pills
+  const pillsContainer = document.createElement("div");
+  pillsContainer.className = "overview-category-pills";
+  row.appendChild(pillsContainer);
+  row._pillsContainer = pillsContainer;
+
+  return row;
+}
+
+/**
+ * Syncs the shared controls row's active-category state (which items its bulk buttons act
+ * on, visibility icon, dialog/title copy) with whichever category is currently active.
+ * Toggles "no-group" when the active category has no real layer group (the "Other"
+ * category), so CSS can hide/disable the eye/delete/duplicate buttons.
+ * @param {HTMLElement} row - The row previously created by createOverviewControlsRow()
+ * @param {string} key - The active category's stable key (e.g. "DrawnItems")
+ * @param {string} label - The active category's display label (e.g. "Drawn Items")
+ * @param {L.LayerGroup|null} layerGroup - The active category's group, or null for "Other"
+ * @param {L.Layer[]} itemsInGroup - The active category's current items, in display order
+ */
+function patchOverviewControlsRow(row, key, label, layerGroup, itemsInGroup) {
+  row._activeKey = key;
+  row._activeLabel = label;
+  row._activeLayerGroup = layerGroup;
+  row._activeItemsInGroup = itemsInGroup;
+  row.classList.toggle("no-group", !layerGroup);
+  row._delBtn.title = `Clear all ${label}`;
+  row._dupBtn.title = `Duplicate all ${label}`;
+  if (layerGroup) {
+    const isVisible = map.hasLayer(layerGroup);
+    row._eyeIcon.textContent = getVisibilityIconName(!isVisible);
+    row._eyeBtn.title = isVisible ? "Hide category" : "Show category";
   }
-  header.appendChild(dupBtnSlot);
+}
 
-  // 4. Active-category dot
-  const dotContainer = document.createElement("div");
-  dotContainer.className = "overview-header-dot-container";
-  const dot = document.createElement("span");
-  dot.className = "overview-header-dot";
-  dotContainer.appendChild(dot);
-  header.appendChild(dotContainer);
-  header._dot = dot;
+/**
+ * Gets or creates a category "pill" button - a small tab-like control that switches the
+ * active category on click. Cached forever per group key (there are at most 4:
+ * DrawnItems/ImportedFiles/StravaActivities/Other) in overviewPillNodesByKey, same reasoning
+ * as the per-category headers this replaced.
+ * @param {string} key - Stable group key (e.g. "DrawnItems")
+ * @param {string} label - Short display label (e.g. "Drawn")
+ * @returns {HTMLElement}
+ */
+function getOrCreatePill(key, label) {
+  let pill = overviewPillNodesByKey.get(key);
+  if (pill) return pill;
 
-  // 5. Title
-  const titleSpan = document.createElement("span");
-  titleSpan.className = "overview-header-text";
-  header.appendChild(titleSpan);
-  header._titleSpan = titleSpan;
-
-  header.addEventListener("click", () => {
-    // Reads activeCategory live rather than a captured isActive, since this header (and
-    // its listener) is cached and reused across many renders where that could change.
+  pill = document.createElement("button");
+  pill.type = "button";
+  pill.className = "overview-category-pill";
+  pill.textContent = label;
+  pill.addEventListener("click", () => {
+    // Reads activeCategory live rather than a captured isActive, since this pill (and its
+    // listener) is cached and reused across many renders where that could change.
     if (activeCategory === key) return;
     activeCategory = key;
     updateOverviewList();
   });
-
-  return header;
+  overviewPillNodesByKey.set(key, pill);
+  return pill;
 }
 
 /**
- * Syncs a cached category header's mutable state (item count, active-category dot,
- * category visibility icon, and the item list its bulk buttons act on) with the current
- * group.
- * @param {HTMLElement} header - A header previously created by createOverviewHeader()
- * @param {string} label - Display label (e.g. "Drawn Items")
- * @param {L.LayerGroup|null} layerGroup - The group behind this category, or null
- * @param {L.Layer[]} itemsInGroup - The group's current items, in display order
- * @param {boolean} isActive - Whether this category is currently shown in the list
- */
-function patchOverviewHeader(header, label, layerGroup, itemsInGroup, isActive) {
-  header._itemsInGroup = itemsInGroup;
-  header.classList.toggle("active", isActive);
-  header._titleSpan.textContent = `${label} (${itemsInGroup.length})`;
-  if (layerGroup && header._eyeIcon) {
-    const isVisible = map.hasLayer(layerGroup);
-    header._eyeIcon.textContent = getVisibilityIconName(!isVisible);
-    header._eyeBtn.title = isVisible ? "Hide category" : "Show category";
-  }
-}
-
-/**
- * Renders the pinned category headers above the virtualized item list - creating/patching
- * a header for each non-empty group (in fixed groupOrder) and detaching any whose group
- * just became empty, while keeping its node cached in overviewHeaderNodesByKey for reuse.
- * Unlike rows, headers are never evicted on scroll (at most 4 ever exist).
+ * Renders the category pills into the shared controls row - creating/patching one per
+ * non-empty group (in fixed groupOrder) and detaching any whose group just became empty,
+ * while keeping its node cached for reuse.
  * @param {string[]} groupOrder
  * @param {Record<string, L.Layer[]>} groupedItems
- * @param {Record<string, string>} groupLabels
- * @param {Record<string, L.LayerGroup>} groupLayers
+ * @param {Record<string, string>} pillLabels
  */
-function renderOverviewHeaders(groupOrder, groupedItems, groupLabels, groupLayers) {
-  const headersContainer = document.getElementById("overview-panel-headers");
-  if (!headersContainer) return;
+function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
+  const pillsContainer = overviewControlsRow._pillsContainer;
 
   groupOrder.forEach((key) => {
     const itemsInGroup = groupedItems[key];
-    let header = overviewHeaderNodesByKey.get(key);
+    const cachedPill = overviewPillNodesByKey.get(key);
 
     if (!itemsInGroup || itemsInGroup.length === 0) {
-      if (header) header.remove();
+      if (cachedPill) cachedPill.remove();
       return;
     }
 
-    if (!header) {
-      header = createOverviewHeader(key, groupLabels[key], groupLayers[key] || null);
-      overviewHeaderNodesByKey.set(key, header);
-    }
-    patchOverviewHeader(
-      header,
-      groupLabels[key],
-      groupLayers[key] || null,
-      itemsInGroup,
-      key === activeCategory,
-    );
-    headersContainer.appendChild(header);
+    const pill = getOrCreatePill(key, pillLabels[key]);
+    pill.classList.toggle("active", key === activeCategory);
+    pillsContainer.appendChild(pill);
   });
+}
+
+/**
+ * Updates the small caption below the shared controls row with the active category's item
+ * count, correctly pluralized.
+ * @param {HTMLElement} captionEl
+ * @param {number} count
+ */
+function patchActiveCaption(captionEl, count) {
+  captionEl.textContent = `${count} item${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * Makes sure the pinned header area has its shared controls row (eye/delete/duplicate +
+ * category pills) and active-category caption - both created once and reused, mirroring
+ * ensureOverviewListStructure()'s spacers. Recreates them if the empty-state branch in
+ * updateOverviewList() wiped the container's content since the last render.
+ * @param {HTMLElement} headersContainer
+ */
+function ensureOverviewControlsRow(headersContainer) {
+  if (overviewControlsRow && headersContainer.contains(overviewControlsRow)) return;
+  overviewControlsRow = createOverviewControlsRow();
+  overviewCaptionEl = document.createElement("div");
+  overviewCaptionEl.className = "overview-active-caption";
+  headersContainer.appendChild(overviewControlsRow);
+  headersContainer.appendChild(overviewCaptionEl);
 }
 
 /**
@@ -723,19 +750,29 @@ const OVERVIEW_GROUP_LABELS = {
   StravaActivities: "Strava Activities",
   Other: "Other",
 };
+// Short labels for the compact category pills (see getOrCreatePill()) - distinct from
+// OVERVIEW_GROUP_LABELS above, which stays full-length for dialog copy (delete/duplicate
+// confirmation titles) where there's room for it.
+const OVERVIEW_PILL_LABELS = {
+  DrawnItems: "Drawn",
+  ImportedFiles: "Imported",
+  StravaActivities: "Strava",
+  Other: "Other",
+};
 
 /**
  * Populates or updates the overview panel with all items on the map, grouped by type. Also
  * keeps the GeoJSON Editor tab (data-editor.js) live, since any caller of this is implicitly
  * reporting that the map's data changed.
  *
- * Category headers are pinned outside the item list (see renderOverviewHeaders()); exactly
- * one category is "active" (activeCategory) at a time, and the item list below only shows
- * that category's items. The item list itself is virtualized (see renderOverviewWindow()):
- * this function only rebuilds overviewActiveItems, the ordered description of what the list
- * WOULD contain if nothing were virtualized - actually creating/patching item DOM is
- * delegated to renderOverviewWindow(), which only ever touches the currently-visible slice,
- * so a call here stays cheap regardless of how many items are on the map.
+ * The shared controls row and category pills are pinned outside the item list (see
+ * renderCategoryPills()/patchOverviewControlsRow()); exactly one category is "active"
+ * (activeCategory) at a time, and the item list below only shows that category's items. The
+ * item list itself is virtualized (see renderOverviewWindow()): this function only rebuilds
+ * overviewActiveItems, the ordered description of what the list WOULD contain if nothing
+ * were virtualized - actually creating/patching item DOM is delegated to
+ * renderOverviewWindow(), which only ever touches the currently-visible slice, so a call
+ * here stays cheap regardless of how many items are on the map.
  */
 function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
@@ -763,7 +800,11 @@ function updateOverviewList() {
     overviewNodesByKey.clear();
     overviewTopSpacer = null;
     overviewBottomSpacer = null;
-    // Headers stay cached in overviewHeaderNodesByKey for reuse, just detached for now.
+    // The controls row and pills stay cached (overviewPillNodesByKey) for reuse - only
+    // detached from the DOM for now, along with the now-stale controlsRow/captionEl
+    // references (ensureOverviewControlsRow() rebuilds them next time).
+    overviewControlsRow = null;
+    overviewCaptionEl = null;
     headersContainer.innerHTML = "";
     listContainer.innerHTML =
       '<div class="overview-list-item overview-list-empty-message" style="color: grey; cursor: default;">No items on map</div>';
@@ -827,7 +868,16 @@ function updateOverviewList() {
     activeCategory = nonEmptyKeys[0];
   }
 
-  renderOverviewHeaders(OVERVIEW_GROUP_ORDER, groupedItems, OVERVIEW_GROUP_LABELS, GROUP_LAYERS);
+  ensureOverviewControlsRow(headersContainer);
+  patchOverviewControlsRow(
+    overviewControlsRow,
+    activeCategory,
+    OVERVIEW_GROUP_LABELS[activeCategory],
+    GROUP_LAYERS[activeCategory] || null,
+    groupedItems[activeCategory],
+  );
+  renderCategoryPills(OVERVIEW_GROUP_ORDER, groupedItems, OVERVIEW_PILL_LABELS);
+  patchActiveCaption(overviewCaptionEl, groupedItems[activeCategory].length);
 
   // 4. Build the active category's items - used for scroll-height/index math;
   // renderOverviewWindow() decides which of them actually become DOM.

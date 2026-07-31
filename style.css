@@ -1030,7 +1030,7 @@ body.glass-mode #info-panel-edit-hint {
 .overview-list-item {
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 12px 0 6px;
   min-height: var(--overview-header-height);
   cursor: pointer;
   border-bottom: 1px solid var(--divider-color);
@@ -1067,31 +1067,6 @@ body.glass-mode #info-panel-edit-hint {
 
 .overview-icon-spacer {
   cursor: default;
-}
-
-.overview-header-dot-container {
-  width: 32px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-/* Lights up in the highlight color for whichever category is currently shown in the item
-   list (see .overview-list-header.active) - a plain dot rather than the collapse arrow this
-   replaced, since there's no per-category collapsed state anymore. */
-.overview-header-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--text-color);
-  opacity: 0.5;
-}
-
-.overview-list-header.active .overview-header-dot {
-  background-color: var(--highlight-color);
-  opacity: 1;
 }
 
 .overview-visibility-btn .material-symbols,
@@ -1165,41 +1140,78 @@ body:has(#map.map-is-editing)
   opacity: 0.5;
 }
 
-/* Styles for Overview Panel Group Headers */
-.overview-list-header {
-  font-weight: bold;
-  font-size: var(--font-size-12);
-  padding: 0 12px;
-  min-height: var(--overview-header-height);
-  background-color: var(--background2-color);
-  color: var(--text-color);
-  border-bottom: 1px solid var(--divider-color);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+/* Styles for the overview panel's shared controls row and category pills */
+.overview-controls-row {
   display: flex;
   align-items: center;
-  cursor: pointer;
-  box-sizing: border-box;
+  padding: 0 12px 0 6px;
+  min-height: var(--overview-header-height);
+  background-color: var(--background2-color);
 }
 
-/* Headers are pinned outside the virtualized list, in their own small container - real DOM
-   order always matches display order there, so :first-child/:last-child just work (unlike
-   the virtualized item list, which needs explicit overview-first-in-list/-last-in-list
-   classes since only the scrolled-into-view slice actually exists as DOM). */
-#overview-panel-headers .overview-list-header:first-child {
-  border-top: none;
+/* "Other" has no real Leaflet layer group behind it - hide/disable the shared
+   eye/delete/duplicate buttons rather than have them act on nothing. visibility: hidden
+   (not display: none) keeps the row's layout width stable when switching to/from it. */
+.overview-controls-row.no-group
+  :is(
+    .overview-header-visibility-btn,
+    .overview-header-delete-btn,
+    .overview-header-duplicate-btn
+  ) {
+  visibility: hidden;
+  pointer-events: none;
 }
 
-#overview-panel-headers .overview-list-header:last-child {
-  border-bottom: none;
-}
-
-.overview-header-text {
-  flex-grow: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.overview-category-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
   padding-left: 4px;
+}
+
+.overview-category-pill {
+  border: none;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: var(--font-size-12);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  background-color: var(--text-color);
+  /* Matches the controls row's own background, so inactive pills read as "cut out" of it. */
+  color: var(--background2-color);
+}
+
+/* Matching the pill's text to the controls row's own background doesn't work in glass-mode
+   - --background2-color there is a translucent view of whatever's behind the panel, not a
+   fixed color, so there's nothing solid to match. Use the same glass tint/text combo as the
+   layer-import (WMS/XYZ) buttons instead, for a consistent glass-mode look. :not(.active)
+   keeps this from ever competing with .overview-category-pill.active's highlight/white
+   style below - the two selectors are mutually exclusive, not relying on specificity. */
+body.glass-mode .overview-category-pill:not(.active) {
+  background-color: var(--glass-btn-bg);
+  color: var(--color-white);
+}
+
+.overview-category-pill.active {
+  background-color: var(--highlight-color);
+  color: var(--color-white);
+}
+
+/* Active category's item count, shown below the controls row (see patchActiveCaption() in
+   ui-handlers.js) - same background as .overview-controls-row and the border-bottom moved
+   down onto this element, so the two together read as one taller header block rather than
+   a row plus a separately-floating caption line. */
+.overview-active-caption {
+  padding-left: 12px;
+  background-color: var(--background2-color);
+  border-bottom: 1px solid var(--divider-color);
+  font-size: var(--font-size-12);
+  color: var(--text-color);
 }
 
 /* ROUTING */
