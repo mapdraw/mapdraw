@@ -1095,6 +1095,13 @@ body.glass-mode #info-panel-edit-hint {
 .overview-list-item.overview-last-in-list {
   border-bottom: none !important;
 }
+/* The empty-state message (updateOverviewList() in ui-handlers.js) is always the sole
+   child of the list container, built outside the virtualized render path entirely - so it
+   never gets .overview-last-in-list, but still needs its border-bottom suppressed the same
+   way a real last row would. */
+.overview-list-empty-message {
+  border-bottom: none !important;
+}
 .overview-list-item.selected,
 .overview-list-item.rectangle-selected {
   background-color: var(--highlight-color);
