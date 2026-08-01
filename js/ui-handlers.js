@@ -858,12 +858,13 @@ function updateOverviewList() {
 
   // Switches the active category to the one containing layer, if it isn't already,
   // ensuring the layer is visible in the list.
+  // @returns {boolean} Whether it changed category (and already re-rendered).
   window.activateCategoryForItem = (layer) => {
     const key = getGroupTitle(layer.feature?.properties?.pathType);
-    if (activeCategory !== key) {
-      activeCategory = key;
-      updateOverviewList();
-    }
+    if (activeCategory === key) return false;
+    activeCategory = key;
+    updateOverviewList();
+    return true;
   };
 
   allItems.forEach((layer) => {

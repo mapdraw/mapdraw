@@ -24,16 +24,18 @@ function initTabNavigation() {
       }
 
       if (targetPanelId === "overview-panel") {
-        // The panel was display:none until the classList.add("active") above, so the
-        // virtualized list (ui-handlers.js) had no real viewport height to render
-        // against - render now that it actually has one.
-        renderOverviewWindow();
-
         const selectedForOverview = getEffectiveSelectedLayer();
+        const categoryChanged =
+          selectedForOverview && window.activateCategoryForItem?.(selectedForOverview);
+
+        // The panel was display:none until the classList.add("active") above, so the
+        // virtualized list (ui-handlers.js) had no real viewport height to render against -
+        // render now that it actually has one. Skipped if already done above.
+        if (!categoryChanged) {
+          renderOverviewWindow();
+        }
+
         if (selectedForOverview) {
-          if (window.activateCategoryForItem) {
-            window.activateCategoryForItem(selectedForOverview);
-          }
           scrollOverviewToLayer(selectedForOverview);
         }
       }
