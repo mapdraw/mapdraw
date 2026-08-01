@@ -5,13 +5,12 @@
 // color picker, and various UI updates throughout the application.
 
 // Which category (DrawnItems/ImportedFiles/StravaActivities/Other) is currently shown in
-// the overview list. The pinned area above the list (see renderOverviewControls()) is never
-// virtualized: one persistent shared controls row (eye/delete/duplicate, acting on whatever
-// category is active) plus one small "pill" button per category, cached forever in
+// the overview list. The pinned area above the list (see createOverviewControlsRow()) is
+// never virtualized: one persistent shared controls row (eye/delete/duplicate, acting on
+// whatever category is active) plus one small "pill" button per category, cached forever in
 // overviewPillNodesByKey (at most 4) rather than evicted on scroll.
 let activeCategory = null;
 let overviewControlsRow = null;
-let overviewCaptionEl = null;
 const overviewPillNodesByKey = new Map();
 
 // The item list is virtualized: however many items exist, only the ones scrolled into view
@@ -342,13 +341,11 @@ function patchOverviewListItem(listItem, layer) {
 }
 
 /**
- * Creates the single shared controls row pinned above the virtualized item list: one set of
- * eye/delete/duplicate buttons that act on whichever category is currently active (instead
- * of one set per category), plus the container for the per-category "pill" buttons. Built
- * once and reused forever - the click handlers below read the row's own
- * _activeKey/_activeLabel/_activeLayerGroup/_activeItemsInGroup live (refreshed on every
- * patchOverviewControlsRow() call) rather than closing over a fixed category, since a
- * single row now has to act on whatever category is active at click time.
+ * Creates the single shared controls row pinned above the virtualized item list: eye/delete/
+ * duplicate buttons for whichever category is active, plus the per-category "pill" buttons
+ * and a line below for their item counts. Built once and reused forever - the click handlers
+ * below read _activeKey/_activeLabel/_activeLayerGroup/_activeItemsInGroup live (refreshed by
+ * patchOverviewControlsRow()) since one row now has to act on whatever category is active.
  * @returns {HTMLElement}
  */
 function createOverviewControlsRow() {
@@ -356,14 +353,24 @@ function createOverviewControlsRow() {
   row.className = "overview-controls-row";
   row._activeItemsInGroup = [];
 
+  // Icons + pills share one line (topRow); counts get their own line below (countsRow),
+  // lined up under their pills via matching offset/gap rather than sharing topRow's
+  // centering - see getOrCreatePill()/renderCategoryPills() and the CSS for both rows.
+  const topRow = document.createElement("div");
+  topRow.className = "overview-controls-top-row";
+  row.appendChild(topRow);
+
   // 1. Visibility Button (Eye)
+  // Icon sits directly in the flex slot (no wrapper span) - matches the per-item buttons'
+  // DOM shape (createOverviewListItem()). A wrapper span here previously added an inline
+  // "strut" that inflated the slot ~2px taller than the icon and threw off centering
+  // against the pills.
   const eyeBtnSlot = document.createElement("div");
   eyeBtnSlot.className = "overview-header-visibility-btn";
-  const eyeBtn = document.createElement("span");
   const eyeIcon = document.createElement("span");
   eyeIcon.className = "material-symbols";
-  eyeBtn.appendChild(eyeIcon);
-  eyeBtn.addEventListener("click", (e) => {
+  eyeBtnSlot.appendChild(eyeIcon);
+  eyeBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
     const layerGroup = row._activeLayerGroup;
     if (!layerGroup) return;
@@ -390,17 +397,15 @@ function createOverviewControlsRow() {
     }
     updateOverviewList();
   });
-  eyeBtnSlot.appendChild(eyeBtn);
-  row._eyeBtn = eyeBtn;
+  row._eyeBtn = eyeBtnSlot;
   row._eyeIcon = eyeIcon;
-  row.appendChild(eyeBtnSlot);
+  topRow.appendChild(eyeBtnSlot);
 
   // 2. Delete Button (Clear all)
   const delBtnSlot = document.createElement("div");
   delBtnSlot.className = "overview-header-delete-btn";
-  const delBtn = document.createElement("span");
-  delBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
-  delBtn.addEventListener("click", (e) => {
+  delBtnSlot.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
+  delBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
     const layerGroup = row._activeLayerGroup;
     if (!layerGroup) return;
@@ -435,16 +440,14 @@ function createOverviewControlsRow() {
       }
     });
   });
-  delBtnSlot.appendChild(delBtn);
-  row._delBtn = delBtn;
-  row.appendChild(delBtnSlot);
+  row._delBtn = delBtnSlot;
+  topRow.appendChild(delBtnSlot);
 
   // 3. Duplicate Button (Duplicate all)
   const dupBtnSlot = document.createElement("div");
   dupBtnSlot.className = "overview-header-duplicate-btn";
-  const dupBtn = document.createElement("span");
-  dupBtn.innerHTML = '<span class="material-symbols">add_to_photos</span>';
-  dupBtn.addEventListener("click", (e) => {
+  dupBtnSlot.innerHTML = '<span class="material-symbols">add_to_photos</span>';
+  dupBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!row._activeLayerGroup) return;
     // Same per-layer path used by the individual duplicate button and
@@ -457,15 +460,28 @@ function createOverviewControlsRow() {
     updateOverviewList();
     updateDrawControlStates();
   });
-  dupBtnSlot.appendChild(dupBtn);
-  row._dupBtn = dupBtn;
-  row.appendChild(dupBtnSlot);
+  row._dupBtn = dupBtnSlot;
+  topRow.appendChild(dupBtnSlot);
 
   // 4. Category pills
   const pillsContainer = document.createElement("div");
   pillsContainer.className = "overview-category-pills";
-  row.appendChild(pillsContainer);
+  topRow.appendChild(pillsContainer);
   row._pillsContainer = pillsContainer;
+
+  // 5. Per-category counts, below topRow. Three leading spacers (the icon slots' own
+  // fixed-width class) keep countsContainer starting at the same x as pillsContainer,
+  // past the eye/delete/duplicate icons.
+  const countsRow = document.createElement("div");
+  countsRow.className = "overview-category-counts-row";
+  countsRow.appendChild(document.createElement("div")).className = "overview-icon-spacer";
+  countsRow.appendChild(document.createElement("div")).className = "overview-icon-spacer";
+  countsRow.appendChild(document.createElement("div")).className = "overview-icon-spacer";
+  const countsContainer = document.createElement("div");
+  countsContainer.className = "overview-category-counts";
+  countsRow.appendChild(countsContainer);
+  row.appendChild(countsRow);
+  row._countsContainer = countsContainer;
 
   return row;
 }
@@ -497,19 +513,20 @@ function patchOverviewControlsRow(row, key, label, layerGroup, itemsInGroup) {
 }
 
 /**
- * Gets or creates a category "pill" button - a small tab-like control that switches the
- * active category on click. Cached forever per group key (there are at most 4:
- * DrawnItems/ImportedFiles/StravaActivities/Other) in overviewPillNodesByKey, same reasoning
- * as the per-category headers this replaced.
+ * Gets or creates a category "pill" button (switches the active category on click) and its
+ * count element - two separate nodes in different rows (pillsContainer vs the counts row
+ * below it), so the count doesn't grow the pill's own row and affect the eye/delete/duplicate
+ * buttons' centering there. Cached forever per group key (at most 4: DrawnItems/
+ * ImportedFiles/StravaActivities/Other) in overviewPillNodesByKey.
  * @param {string} key - Stable group key (e.g. "DrawnItems")
  * @param {string} label - Short display label (e.g. "Drawn")
- * @returns {HTMLElement}
+ * @returns {{pill: HTMLElement, countEl: HTMLElement}}
  */
 function getOrCreatePill(key, label) {
-  let pill = overviewPillNodesByKey.get(key);
-  if (pill) return pill;
+  let entry = overviewPillNodesByKey.get(key);
+  if (entry) return entry;
 
-  pill = document.createElement("button");
+  const pill = document.createElement("button");
   pill.type = "button";
   pill.className = "overview-category-pill";
   pill.textContent = label;
@@ -520,60 +537,81 @@ function getOrCreatePill(key, label) {
     activeCategory = key;
     updateOverviewList();
   });
-  overviewPillNodesByKey.set(key, pill);
-  return pill;
+
+  const countEl = document.createElement("span");
+  countEl.className = "overview-category-pill-count";
+
+  entry = { pill, countEl };
+  overviewPillNodesByKey.set(key, entry);
+  return entry;
 }
 
 /**
- * Renders the category pills into the shared controls row - creating/patching one per
- * non-empty group (in fixed groupOrder) and detaching any whose group just became empty,
- * while keeping its node cached for reuse.
+ * Renders the category pills and their counts into the shared controls row - one pair per
+ * non-empty group (fixed groupOrder), detaching pairs whose group just emptied while keeping
+ * them cached for reuse. Both containers are walked in the same order, so a pill and its
+ * count always land in the same left-to-right position in their respective rows.
  * @param {string[]} groupOrder
  * @param {Record<string, L.Layer[]>} groupedItems
  * @param {Record<string, string>} pillLabels
  */
 function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
   const pillsContainer = overviewControlsRow._pillsContainer;
+  const countsContainer = overviewControlsRow._countsContainer;
 
   groupOrder.forEach((key) => {
     const itemsInGroup = groupedItems[key];
-    const cachedPill = overviewPillNodesByKey.get(key);
+    const cachedEntry = overviewPillNodesByKey.get(key);
 
     if (!itemsInGroup || itemsInGroup.length === 0) {
-      if (cachedPill) cachedPill.remove();
+      if (cachedEntry) {
+        cachedEntry.pill.remove();
+        cachedEntry.countEl.remove();
+      }
       return;
     }
 
-    const pill = getOrCreatePill(key, pillLabels[key]);
+    const { pill, countEl } = getOrCreatePill(key, pillLabels[key]);
     pill.classList.toggle("active", key === activeCategory);
+    countEl.textContent = itemsInGroup.length;
     pillsContainer.appendChild(pill);
+    countsContainer.appendChild(countEl);
+    syncPillCountWidth(pill, countEl);
   });
 }
 
 /**
- * Updates the small caption below the shared controls row with the active category's item
- * count, correctly pluralized.
- * @param {HTMLElement} captionEl
- * @param {number} count
+ * Pins a count element's min-width to its pill's rendered width, so the count (no width of
+ * its own) stays centered under its organically-sized pill. offsetWidth reads 0 while the
+ * overview tab is hidden (display: none on .tab-panel), so this is skipped then and re-run
+ * via resyncPillCountWidths() once the tab reappears - see tab-navigation.js.
+ * @param {HTMLElement} pill
+ * @param {HTMLElement} countEl
  */
-function patchActiveCaption(captionEl, count) {
-  captionEl.textContent = `${count} item${count === 1 ? "" : "s"}`;
+function syncPillCountWidth(pill, countEl) {
+  if (pill.offsetWidth > 0) countEl.style.minWidth = `${pill.offsetWidth}px`;
+}
+
+/**
+ * Re-applies every cached pill's rendered width to its count element - called when the
+ * overview tab becomes visible again, in case updateOverviewList() last ran while it was
+ * hidden and syncPillCountWidth() saw a stale offsetWidth of 0 (see its own doc comment).
+ */
+function resyncPillCountWidths() {
+  overviewPillNodesByKey.forEach(({ pill, countEl }) => syncPillCountWidth(pill, countEl));
 }
 
 /**
  * Makes sure the pinned header area has its shared controls row (eye/delete/duplicate +
- * category pills) and active-category caption - both created once and reused, mirroring
- * ensureOverviewListStructure()'s spacers. Recreates them if the empty-state branch in
- * updateOverviewList() wiped the container's content since the last render.
+ * category pills) - created once and reused, mirroring ensureOverviewListStructure()'s
+ * spacers. Recreates it if the empty-state branch in updateOverviewList() wiped the
+ * container's content since the last render.
  * @param {HTMLElement} headersContainer
  */
 function ensureOverviewControlsRow(headersContainer) {
   if (overviewControlsRow && headersContainer.contains(overviewControlsRow)) return;
   overviewControlsRow = createOverviewControlsRow();
-  overviewCaptionEl = document.createElement("div");
-  overviewCaptionEl.className = "overview-active-caption";
   headersContainer.appendChild(overviewControlsRow);
-  headersContainer.appendChild(overviewCaptionEl);
 }
 
 /**
@@ -801,10 +839,9 @@ function updateOverviewList() {
     overviewTopSpacer = null;
     overviewBottomSpacer = null;
     // The controls row and pills stay cached (overviewPillNodesByKey) for reuse - only
-    // detached from the DOM for now, along with the now-stale controlsRow/captionEl
-    // references (ensureOverviewControlsRow() rebuilds them next time).
+    // detached from the DOM for now, along with the now-stale controlsRow reference
+    // (ensureOverviewControlsRow() rebuilds it next time).
     overviewControlsRow = null;
-    overviewCaptionEl = null;
     headersContainer.innerHTML = "";
     listContainer.innerHTML =
       '<div class="overview-list-item overview-list-empty-message" style="color: grey; cursor: default;">No items on map</div>';
@@ -877,7 +914,6 @@ function updateOverviewList() {
     groupedItems[activeCategory],
   );
   renderCategoryPills(OVERVIEW_GROUP_ORDER, groupedItems, OVERVIEW_PILL_LABELS);
-  patchActiveCaption(overviewCaptionEl, groupedItems[activeCategory].length);
 
   // 4. Build the active category's items - used for scroll-height/index math;
   // renderOverviewWindow() decides which of them actually become DOM.

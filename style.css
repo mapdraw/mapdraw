@@ -1143,10 +1143,20 @@ body:has(#map.map-is-editing)
 /* Styles for the overview panel's shared controls row and category pills */
 .overview-controls-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   padding: 0 12px 0 6px;
-  min-height: var(--overview-header-height);
   background-color: var(--background2-color);
+  border-bottom: 1px solid var(--divider-color);
+}
+
+/* Icons + pills share this line. align-items: center lives here, not on
+   .overview-controls-row, so the buttons stay centered against the pills, unaffected by the
+   counts line below. No min-height (unlike .overview-list-item) - the icon slots and
+   .overview-category-pill both use line-height: 1, so centering is driven by their real
+   content heights, keeping this row tight to the panel's standard 10px top spacing. */
+.overview-controls-top-row {
+  display: flex;
+  align-items: center;
 }
 
 /* "Other" has no real Leaflet layer group behind it - hide/disable the shared
@@ -1164,8 +1174,7 @@ body:has(#map.map-is-editing)
 
 .overview-category-pills {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  gap: 3px;
   flex: 1;
   padding-left: 4px;
 }
@@ -1173,25 +1182,57 @@ body:has(#map.map-is-editing)
 .overview-category-pill {
   border: none;
   border-radius: 999px;
-  padding: 3px 10px;
+  /* Vertical padding is 1px more than the horizontal 10px: with line-height: 1, the button's
+     content height is 12px (font-size) + 2*padding, so 4px here makes it exactly 20px -
+     matching the icon slots' own 20px (font-size 20px * line-height 1) so align-items: center
+     lines them up with zero gap instead of the 1px each side a plain 3px padding left. */
+  padding: 4px 10px;
   font: inherit;
   font-size: var(--font-size-12);
   font-weight: bold;
+  /* Matches the icon slots' line-height: 1 (see .overview-icon-spacer and friends) - without
+     this, the button falls back to the browser's default line-height, which sizes/centers
+     its text differently from the icons and throws off align-items: center between them. */
+  line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
   cursor: pointer;
   background-color: var(--text-color);
-  /* Matches the controls row's own background, so inactive pills read as "cut out" of it. */
-  color: var(--background2-color);
+  /* Matches the panel's own background (not the controls row's --background2-color), so
+     inactive pills read as "cut out" of the panel behind everything. Glass-mode overrides
+     both below, since --background-color there is transparent. */
+  color: var(--background-color);
 }
 
-/* Matching the pill's text to the controls row's own background doesn't work in glass-mode
-   - --background2-color there is a translucent view of whatever's behind the panel, not a
-   fixed color, so there's nothing solid to match. Use the same glass tint/text combo as the
-   layer-import (WMS/XYZ) buttons instead, for a consistent glass-mode look. :not(.active)
-   keeps this from ever competing with .overview-category-pill.active's highlight/white
-   style below - the two selectors are mutually exclusive, not relying on specificity. */
+/* Counts line below the pills (see getOrCreatePill()/renderCategoryPills() in
+   ui-handlers.js) - its own row so a count's height never affects the pills row above. */
+.overview-category-counts-row {
+  display: flex;
+}
+
+.overview-category-counts {
+  display: flex;
+  gap: 3px;
+  padding-left: 4px;
+}
+
+/* min-width is set inline per pill (see renderCategoryPills() in ui-handlers.js), matched to
+   that pill's own rendered width so the count stays centered under its (organically-sized)
+   pill without forcing every pill to a fixed width. */
+.overview-category-pill-count {
+  text-align: center;
+  font-size: var(--font-size-12);
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+/* Matching the pill's text to the panel's own background doesn't work in glass-mode -
+   --background-color there is transparent, so there's nothing solid to match. Use the same
+   glass tint/text combo as the layer-import (WMS/XYZ) buttons instead, for a consistent
+   glass-mode look. :not(.active) keeps this from ever competing with
+   .overview-category-pill.active's highlight/white style below - the two selectors are
+   mutually exclusive, not relying on specificity. */
 body.glass-mode .overview-category-pill:not(.active) {
   background-color: var(--glass-btn-bg);
   color: var(--color-white);
@@ -1200,18 +1241,6 @@ body.glass-mode .overview-category-pill:not(.active) {
 .overview-category-pill.active {
   background-color: var(--highlight-color);
   color: var(--color-white);
-}
-
-/* Active category's item count, shown below the controls row (see patchActiveCaption() in
-   ui-handlers.js) - same background as .overview-controls-row and the border-bottom moved
-   down onto this element, so the two together read as one taller header block rather than
-   a row plus a separately-floating caption line. */
-.overview-active-caption {
-  padding-left: 12px;
-  background-color: var(--background2-color);
-  border-bottom: 1px solid var(--divider-color);
-  font-size: var(--font-size-12);
-  color: var(--text-color);
 }
 
 /* ROUTING */
