@@ -168,6 +168,11 @@ body.glass-mode .routing-profile-selector .profile-btn.active {
   color: var(--color-white) !important;
   border-color: rgba(255, 255, 255, 0.3) !important;
 }
+/* transparent, not a color matching the translucent fill - that would still show a seam
+   where the two alphas overlap at the rounded edge. */
+body.glass-mode .routing-profile-selector .profile-btn.active {
+  border-color: transparent !important;
+}
 body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols {
   color: var(--color-white) !important;
 }
