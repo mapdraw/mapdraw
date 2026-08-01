@@ -861,9 +861,6 @@ function updateOverviewList() {
     }
   };
 
-  // Export for use in other modules (e.g., selectItem)
-  window.getGroupTitle = getGroupTitle;
-
   // Switches the active category to the one containing layer, if it isn't already,
   // ensuring the layer is visible in the list.
   // @returns {boolean} Whether it changed category (and already re-rendered).
