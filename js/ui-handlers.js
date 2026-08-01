@@ -677,10 +677,13 @@ function renderOverviewWindow() {
   overviewTopSpacer.style.height = `${startIndex * rowH}px`;
   overviewBottomSpacer.style.height = `${(total - endIndex - 1) * rowH}px`;
 
-  const seenKeys = new Set();
+  // Stamped once per index and reused below in the patch loop, rather than re-stamping the
+  // same layers a second time there.
+  const rowKeys = [];
   for (let i = startIndex; i <= endIndex; i++) {
-    seenKeys.add(L.Util.stamp(overviewActiveItems[i]));
+    rowKeys.push(L.Util.stamp(overviewActiveItems[i]));
   }
+  const seenKeys = new Set(rowKeys);
 
   // Evict rows that fell outside the new window (or are no longer part of the active
   // category at all - deleted items, or the active category was switched) BEFORE
@@ -701,7 +704,7 @@ function renderOverviewWindow() {
 
   for (let i = startIndex; i <= endIndex; i++) {
     const layer = overviewActiveItems[i];
-    const nodeKey = L.Util.stamp(layer);
+    const nodeKey = rowKeys[i - startIndex];
     let node = overviewNodesByKey.get(nodeKey);
 
     if (!node) {
