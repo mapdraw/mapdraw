@@ -411,6 +411,9 @@ function createOverviewControlsRow() {
     if (!layerGroup) return;
     const key = row._activeKey;
     const label = row._activeLabel;
+    // Snapshot now - row._activeItemsInGroup can be reassigned to another category
+    // while the dialog below is open (row is cached/reused across renders).
+    const itemsInGroup = row._activeItemsInGroup;
     Swal.fire({
       title: `Clear all items in "${label}"?`,
       text:
@@ -429,9 +432,7 @@ function createOverviewControlsRow() {
         // Same per-layer path used by the individual delete button and
         // rect-select's bulk delete - keeps rectangle-selection state,
         // deselection, and group/editableLayers cleanup all in sync.
-        row._activeItemsInGroup.forEach((item) =>
-          deleteLayerImmediately(item, { skipUiUpdate: true }),
-        );
+        itemsInGroup.forEach((item) => deleteLayerImmediately(item, { skipUiUpdate: true }));
         updateDrawControlStates();
         if (!map.hasLayer(layerGroup)) {
           map.addLayer(layerGroup);
