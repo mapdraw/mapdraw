@@ -794,6 +794,7 @@ function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
   const headersContainer = document.getElementById("overview-panel-headers");
   if (!listContainer || !headersContainer) return;
+  const previousActiveCategory = activeCategory;
   scheduleDataEditorRefresh();
   const overviewPanel = document.getElementById("overview-panel"); // Get the parent panel
 
@@ -881,6 +882,11 @@ function updateOverviewList() {
   const nonEmptyKeys = OVERVIEW_GROUP_ORDER.filter((key) => groupedItems[key]?.length);
   if (!activeCategory || !nonEmptyKeys.includes(activeCategory)) {
     activeCategory = nonEmptyKeys[0];
+  }
+  // Stale scrollTop from the previous category would otherwise clamp into the
+  // middle/bottom of the new one instead of showing it from the top.
+  if (activeCategory !== previousActiveCategory) {
+    listContainer.scrollTop = 0;
   }
 
   ensureOverviewControlsRow(headersContainer);
