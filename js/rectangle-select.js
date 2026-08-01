@@ -333,9 +333,9 @@
         toggleLayerVisibility(layer);
       }
     });
-    // Rebuilds every row so each one's own eye icon reflects its new state;
-    // updateOverviewList() re-applies our rectangle-selected highlighting to
-    // the freshly rebuilt rows itself.
+    // updateOverviewList() patches each visible row's eye icon to its new state, and
+    // (via patchOverviewListItem()) re-derives its rectangle-selected highlight live -
+    // no separate re-apply step needed.
     updateOverviewList();
     updateActionButtonsState();
   }
