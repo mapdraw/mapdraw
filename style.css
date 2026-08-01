@@ -1145,7 +1145,6 @@ body:has(#map.map-is-editing)
   display: flex;
   flex-direction: column;
   padding: 0 12px 0 6px;
-  background-color: var(--background2-color);
   border-bottom: 1px solid var(--divider-color);
 }
 
@@ -1179,14 +1178,16 @@ body:has(#map.map-is-editing)
   padding-left: 4px;
 }
 
+/* Unselected is an outline (panel bg + themed border), like .profile-btn's unselected state
+   - driven by theme variables alone, no override needed. Active is a solid fill (see below,
+   including a glass-mode override). */
 .overview-category-pill {
-  border: none;
+  border: 1px solid var(--border-color);
   border-radius: 999px;
-  /* Vertical padding is 1px more than the horizontal 10px: with line-height: 1, the button's
-     content height is 12px (font-size) + 2*padding, so 4px here makes it exactly 20px -
-     matching the icon slots' own 20px (font-size 20px * line-height 1) so align-items: center
-     lines them up with zero gap instead of the 1px each side a plain 3px padding left. */
-  padding: 4px 10px;
+  /* With line-height: 1 and the 1px border, 3px vertical padding makes the button exactly
+     20px tall (12px font-size + 6px padding + 2px border) - matching the icon slots' own
+     20px so align-items: center lines them up with zero gap. */
+  padding: 3px 10px;
   font: inherit;
   font-size: var(--font-size-12);
   font-weight: bold;
@@ -1198,11 +1199,8 @@ body:has(#map.map-is-editing)
   letter-spacing: 0.5px;
   white-space: nowrap;
   cursor: pointer;
-  background-color: var(--text-color);
-  /* Matches the panel's own background (not the controls row's --background2-color), so
-     inactive pills read as "cut out" of the panel behind everything. Glass-mode overrides
-     both below, since --background-color there is transparent. */
-  color: var(--background-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 /* Counts line below the pills (see getOrCreatePill()/renderCategoryPills() in
@@ -1227,19 +1225,21 @@ body:has(#map.map-is-editing)
   opacity: 0.8;
 }
 
-/* Matching the pill's text to the panel's own background doesn't work in glass-mode -
-   --background-color there is transparent, so there's nothing solid to match. Use the same
-   glass tint/text combo as the layer-import (WMS/XYZ) buttons instead, for a consistent
-   glass-mode look. :not(.active) keeps this from ever competing with
-   .overview-category-pill.active's highlight/white style below - the two selectors are
-   mutually exclusive, not relying on specificity. */
-body.glass-mode .overview-category-pill:not(.active) {
-  background-color: var(--glass-btn-bg);
-  color: var(--color-white);
+/* Same fill as .profile-btn.active (var(--text-color), not --highlight-color) - border-color
+   matches the fill so it blends in instead of showing as a mismatched ring. */
+.overview-category-pill.active {
+  background-color: var(--text-color);
+  border-color: var(--text-color);
+  color: var(--background-color);
 }
 
-.overview-category-pill.active {
-  background-color: var(--highlight-color);
+/* var(--text-color) is too low-contrast in glass-mode, so active needs its own fill
+   (glass-btn-bg/white, like .profile-btn.active). border-color: transparent, not the fill -
+   matching translucent colors still shows a seam where border and fill alpha overlap at the
+   rounded edge. */
+body.glass-mode .overview-category-pill.active {
+  background-color: var(--glass-btn-bg);
+  border-color: transparent;
   color: var(--color-white);
 }
 
