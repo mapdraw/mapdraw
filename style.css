@@ -1093,6 +1093,9 @@ body.glass-mode #info-panel-edit-hint {
 .overview-list-empty-message {
   border-bottom: none !important;
 }
+.overview-list-empty-message {
+  padding-left: 10px;
+}
 .overview-list-item.selected,
 .overview-list-item.rectangle-selected {
   background-color: var(--highlight-color);
