@@ -1175,7 +1175,7 @@ body:has(#map.map-is-editing)
   display: flex;
   gap: 3px;
   flex: 1;
-  padding-left: 4px;
+  padding-left: 2px;
 }
 
 /* Unselected is an outline (panel bg + themed border), like .profile-btn's unselected state
@@ -1212,7 +1212,7 @@ body:has(#map.map-is-editing)
 .overview-category-counts {
   display: flex;
   gap: 3px;
-  padding-left: 4px;
+  padding-left: 2px;
 }
 
 /* min-width is set inline per pill (see renderCategoryPills() in ui-handlers.js), matched to
