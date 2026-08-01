@@ -149,28 +149,28 @@ body.glass-mode #info-panel-name:focus {
   color: var(--color-white) !important;
 }
 
-/* Data editor action buttons */
+/* Filled action buttons: glass fill (base fill is in the BASE section below). */
+body.glass-mode #info-panel-edit-hint,
+body.glass-mode #clear-route-btn:not(:disabled),
+body.glass-mode #save-route-btn:not(:disabled),
+body.glass-mode .layer-import-button,
+body.glass-mode button.strava-button-secondary:not(:disabled),
 body.glass-mode #data-editor-restore,
 body.glass-mode #data-editor-apply,
 body.glass-mode #data-editor-copy,
 body.glass-mode #data-editor-copy-clean,
-body.glass-mode #data-editor-find {
+body.glass-mode #data-editor-find,
+body.glass-mode .leaflet-popup-content-wrapper button,
+body.glass-mode .leaflet-popup-content-wrapper button:hover {
   background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
 
-/* Active button states */
-body.glass-mode #clear-route-btn:not(:disabled),
-body.glass-mode #save-route-btn:not(:disabled),
-body.glass-mode .panel-input-group button.active,
+/* border-color: transparent, not border: none - avoids both the translucent-fill seam and
+   the flex-width shift (see .profile-btn.active in the ROUTING section). */
 body.glass-mode .routing-profile-selector .profile-btn.active {
   background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-}
-/* transparent, not a color matching the translucent fill - that would still show a seam
-   where the two alphas overlap at the rounded edge. */
-body.glass-mode .routing-profile-selector .profile-btn.active {
   border-color: transparent !important;
 }
 body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols {
@@ -187,25 +187,6 @@ body.glass-mode #select-start-on-map.active .material-symbols,
 body.glass-mode #select-via-on-map.active .material-symbols,
 body.glass-mode #select-end-on-map.active .material-symbols,
 body.glass-mode #routing-pen-btn.active .material-symbols {
-  color: var(--color-white) !important;
-}
-
-/* Layer import buttons */
-body.glass-mode .layer-import-button {
-  background-color: var(--glass-btn-bg) !important;
-  color: var(--color-white) !important;
-}
-
-/* Strava export buttons */
-body.glass-mode button.strava-button-secondary:not(:disabled) {
-  background-color: var(--glass-btn-bg) !important;
-  color: var(--color-white) !important;
-}
-
-/* Search result popup button */
-body.glass-mode .leaflet-popup-content-wrapper button,
-body.glass-mode .leaflet-popup-content-wrapper button:hover {
-  background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
 
@@ -361,6 +342,23 @@ a {
 /* Also remove the focus outline, which can appear as a blue ring */
 *:focus {
   outline: none !important;
+}
+
+/* Filled action buttons: base fill (glass fill is in the GLASS section above). */
+#info-panel-edit-hint,
+#clear-route-btn:not(:disabled),
+#save-route-btn:not(:disabled),
+.layer-import-button,
+button.strava-button-secondary:not(:disabled),
+#data-editor-restore,
+#data-editor-apply,
+#data-editor-copy,
+#data-editor-copy-clean,
+#data-editor-find {
+  font-weight: bold;
+  background-color: var(--text-color);
+  color: var(--background-color);
+  border: none;
 }
 
 input[type="checkbox"],
@@ -674,10 +672,7 @@ select:focus {
 
 #info-panel-edit-hint {
   font-size: var(--font-size-12);
-  font-weight: bold;
   line-height: 1.25;
-  color: var(--background-color);
-  background: var(--text-color);
   border-radius: var(--border-radius);
   padding: 4px 6px;
   margin-top: 5px;
@@ -695,11 +690,6 @@ select:focus {
   vertical-align: middle;
   position: relative;
   top: -2px;
-}
-
-body.glass-mode #info-panel-edit-hint {
-  background: var(--glass-btn-bg);
-  color: var(--color-white);
 }
 
 /* Style Row for Color Swatch and Layer Name */
@@ -1217,10 +1207,8 @@ body:has(#map.map-is-editing)
   color: var(--background-color);
 }
 
-/* var(--text-color) is too low-contrast in glass-mode, so active needs its own fill
-   (glass-btn-bg/white, like .profile-btn.active). border-color: transparent, not the fill -
-   matching translucent colors still shows a seam where border and fill alpha overlap at the
-   rounded edge. */
+/* glass-btn-bg/white fill (var(--text-color) is too low-contrast in glass). border-color:
+   transparent, not the fill - matching alphas still shows a seam at the rounded corner. */
 body.glass-mode .overview-category-pill.active {
   background-color: var(--glass-btn-bg);
   border-color: transparent;
@@ -1314,11 +1302,6 @@ body.glass-mode .overview-category-pill.active {
   background-color: var(--background-color);
   font-size: var(--font-size-14);
 }
-.panel-input-group button.active {
-  background-color: var(--text-color);
-  color: var(--color-white);
-  border-color: var(--border-color);
-}
 #select-start-on-map.active,
 #select-via-on-map.active,
 #select-end-on-map.active,
@@ -1371,7 +1354,8 @@ body.glass-mode .overview-category-pill.active {
   border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }
 
-/* Style for the active/selected button */
+/* border-color, not border: none - the latter shifts the flex row's width by 1px when the
+   first/last button (whose border forms the group's outer edge) goes active. */
 .routing-profile-selector .profile-btn.active {
   background-color: var(--text-color);
   border-color: var(--text-color);
@@ -1439,13 +1423,6 @@ body.glass-mode .overview-category-pill.active {
   cursor: pointer;
 }
 
-#clear-route-btn:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
-}
-
 #clear-route-btn:disabled {
   cursor: not-allowed;
 }
@@ -1460,13 +1437,6 @@ body.glass-mode .overview-category-pill.active {
   cursor: pointer;
   margin-left: 5px;
   margin-right: 5px;
-}
-
-#save-route-btn:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
 }
 
 #save-route-btn:disabled {
@@ -1651,14 +1621,6 @@ body.glass-mode .overview-category-pill.active {
   cursor: not-allowed;
 }
 
-/* Active state for secondary buttons to match routing buttons */
-button.strava-button-secondary:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
-}
-
 /* Link styles */
 #strava-panel a {
   color: var(--link-color);
@@ -1796,11 +1758,7 @@ button.strava-button-secondary:not(:disabled) {
 #data-editor-find {
   flex: 1;
   font-size: var(--font-size-14);
-  font-weight: bold;
   padding: 6px;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
   border-radius: var(--border-radius);
   cursor: pointer;
 }
@@ -2445,6 +2403,15 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
  */
 
 /* Custom Layers Panel Styles */
+.layer-import-button {
+  flex: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: var(--font-size-12);
+  line-height: 1.25;
+  border-radius: var(--border-radius);
+}
+
 .layer-icon {
   vertical-align: middle;
   margin-right: 0;
