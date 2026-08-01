@@ -24,6 +24,11 @@ const OVERVIEW_ROW_HEIGHT =
 // Extra rows rendered above/below the visible viewport, so a small scroll doesn't pop new
 // rows in right at the edge.
 const OVERVIEW_SCROLL_BUFFER_PX = OVERVIEW_ROW_HEIGHT * 8;
+// Matches the icon buttons' own width (style.css --overview-icon-width) - read once here
+// instead of duplicating the value, so the two never drift apart.
+const OVERVIEW_ICON_WIDTH = getComputedStyle(document.documentElement)
+  .getPropertyValue("--overview-icon-width")
+  .trim();
 
 // Currently-rendered row elements, keyed by layerId - only ever holds what's within the
 // current scroll window (+ buffer), not the whole active category.
@@ -547,12 +552,7 @@ function getOrCreatePill(key, label) {
  * @param {Record<string, string>} pillLabels
  */
 function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
-  // Matches the icon buttons' own width (style.css --overview-icon-width) - read from
-  // there instead of duplicating the value, so the two never drift apart.
-  const iconWidth = getComputedStyle(document.documentElement)
-    .getPropertyValue("--overview-icon-width")
-    .trim();
-  const columns = [iconWidth, iconWidth, iconWidth];
+  const columns = [OVERVIEW_ICON_WIDTH, OVERVIEW_ICON_WIDTH, OVERVIEW_ICON_WIDTH];
   let visibleIndex = 0;
 
   groupOrder.forEach((key) => {
