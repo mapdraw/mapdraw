@@ -783,6 +783,35 @@ const OVERVIEW_PILL_LABELS = {
   Other: "Other",
 };
 
+// Maps a layer's pathType to its overview-list group key.
+function getGroupTitle(pathType) {
+  switch (pathType) {
+    case "route":
+    case "drawn":
+      return "DrawnItems";
+    case "gpx":
+    case "kml":
+    case "geojson":
+    case "kmz":
+      return "ImportedFiles";
+    case "strava":
+      return "StravaActivities";
+    default:
+      return "Other";
+  }
+}
+
+// Switches the active category to the one containing layer, if it isn't already,
+// ensuring the layer is visible in the list.
+// @returns {boolean} Whether it changed category (and already re-rendered).
+window.activateCategoryForItem = (layer) => {
+  const key = getGroupTitle(layer.feature?.properties?.pathType);
+  if (activeCategory === key) return false;
+  activeCategory = key;
+  updateOverviewList();
+  return true;
+};
+
 /**
  * Populates or updates the overview panel with all items on the map, grouped by type. Also
  * keeps the GeoJSON Editor tab (data-editor.js) live, since any caller of this is implicitly
@@ -843,33 +872,6 @@ function updateOverviewList() {
     DrawnItems: drawnItems,
     ImportedFiles: importedItems,
     StravaActivities: stravaActivitiesLayer,
-  };
-  const getGroupTitle = (pathType) => {
-    switch (pathType) {
-      case "route":
-      case "drawn":
-        return "DrawnItems";
-      case "gpx":
-      case "kml":
-      case "geojson":
-      case "kmz":
-        return "ImportedFiles";
-      case "strava":
-        return "StravaActivities";
-      default:
-        return "Other";
-    }
-  };
-
-  // Switches the active category to the one containing layer, if it isn't already,
-  // ensuring the layer is visible in the list.
-  // @returns {boolean} Whether it changed category (and already re-rendered).
-  window.activateCategoryForItem = (layer) => {
-    const key = getGroupTitle(layer.feature?.properties?.pathType);
-    if (activeCategory === key) return false;
-    activeCategory = key;
-    updateOverviewList();
-    return true;
   };
 
   allItems.forEach((layer) => {
