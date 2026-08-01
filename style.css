@@ -1053,8 +1053,7 @@ body.glass-mode #info-panel-edit-hint {
 .overview-save-btn,
 .overview-header-visibility-btn,
 .overview-header-delete-btn,
-.overview-header-duplicate-btn,
-.overview-icon-spacer {
+.overview-header-duplicate-btn {
   width: 32px;
   display: flex;
   justify-content: center;
@@ -1063,10 +1062,6 @@ body.glass-mode #info-panel-edit-hint {
   line-height: 1;
   flex-shrink: 0;
   color: var(--text-color);
-}
-
-.overview-icon-spacer {
-  cursor: default;
 }
 
 .overview-visibility-btn .material-symbols,
@@ -1140,22 +1135,24 @@ body:has(#map.map-is-editing)
   opacity: 0.5;
 }
 
-/* Styles for the overview panel's shared controls row and category pills */
+/* Styles for the overview panel's shared controls row and category pills. A single CSS grid,
+   not flex: icons sit in fixed columns 1-3 (row 1 only, see createOverviewControlsRow() in
+   ui-handlers.js); each non-empty category gets one max-content column holding its pill (row
+   1) and count (row 2), assigned by renderCategoryPills(), which also rebuilds
+   grid-template-columns to match whichever categories are currently visible. Column width and
+   spacing live here once instead of being duplicated across separate pill/count containers,
+   and a pill/count pair shares its column's width automatically - no JS measurement needed. */
 .overview-controls-row {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto auto;
+  /* Explicit, not relying on the default (which already behaves the same way) - states
+     outright that the row packs left, since it's easy to break by mistake here (e.g. an
+     auto instead of max-content column absorbs leftover space and undoes this). */
+  justify-content: start;
+  align-items: center;
+  justify-items: center;
   padding: 0 12px 0 6px;
   border-bottom: 1px solid var(--divider-color);
-}
-
-/* Icons + pills share this line. align-items: center lives here, not on
-   .overview-controls-row, so the buttons stay centered against the pills, unaffected by the
-   counts line below. No min-height (unlike .overview-list-item) - the icon slots and
-   .overview-category-pill both use line-height: 1, so centering is driven by their real
-   content heights, keeping this row tight to the panel's standard 10px top spacing. */
-.overview-controls-top-row {
-  display: flex;
-  align-items: center;
 }
 
 /* "Other" has no real Leaflet layer group behind it - hide/disable the shared
@@ -1171,19 +1168,12 @@ body:has(#map.map-is-editing)
   pointer-events: none;
 }
 
-.overview-category-pills {
-  display: flex;
-  gap: 3px;
-  flex: 1;
-  padding-left: 2px;
-}
-
 /* Unselected is an outline (panel bg + themed border), like .profile-btn's unselected state
    - driven by theme variables alone, no override needed. Active is a solid fill (see below,
    including a glass-mode override). */
 .overview-category-pill {
   border: 1px solid var(--border-color);
-  border-radius: 999px;
+  border-radius: var(--border-radius);
   /* With line-height: 1 and the 1px border, 3px vertical padding makes the button exactly
      20px tall (12px font-size + 6px padding + 2px border) - matching the icon slots' own
      20px so align-items: center lines them up with zero gap. */
@@ -1191,9 +1181,10 @@ body:has(#map.map-is-editing)
   font: inherit;
   font-size: var(--font-size-12);
   font-weight: bold;
-  /* Matches the icon slots' line-height: 1 (see .overview-icon-spacer and friends) - without
-     this, the button falls back to the browser's default line-height, which sizes/centers
-     its text differently from the icons and throws off align-items: center between them. */
+  /* Matches the icon slots' line-height: 1 (see .overview-header-visibility-btn and friends)
+     - without this, the button falls back to the browser's default line-height, which
+     sizes/centers its text differently from the icons and throws off align-items: center
+     between them. */
   line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1203,21 +1194,6 @@ body:has(#map.map-is-editing)
   color: var(--text-color);
 }
 
-/* Counts line below the pills (see getOrCreatePill()/renderCategoryPills() in
-   ui-handlers.js) - its own row so a count's height never affects the pills row above. */
-.overview-category-counts-row {
-  display: flex;
-}
-
-.overview-category-counts {
-  display: flex;
-  gap: 3px;
-  padding-left: 2px;
-}
-
-/* min-width is set inline per pill (see renderCategoryPills() in ui-handlers.js), matched to
-   that pill's own rendered width so the count stays centered under its (organically-sized)
-   pill without forcing every pill to a fixed width. */
 .overview-category-pill-count {
   text-align: center;
   font-size: var(--font-size-12);

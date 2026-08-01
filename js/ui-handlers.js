@@ -343,8 +343,11 @@ function patchOverviewListItem(listItem, layer) {
 /**
  * Creates the single shared controls row pinned above the virtualized item list: eye/delete/
  * duplicate buttons for whichever category is active, plus the per-category "pill" buttons
- * and a line below for their item counts. Built once and reused forever - the click handlers
- * below read _activeKey/_activeLabel/_activeLayerGroup/_activeItemsInGroup live (refreshed by
+ * and their item counts below them - all items in one CSS grid (icons fixed at columns 1-3,
+ * row 1; pills/counts added later by getOrCreatePill()/renderCategoryPills(), which also
+ * rebuilds grid-template-columns for whichever categories are non-empty). Built once and
+ * reused forever - the click handlers below read
+ * _activeKey/_activeLabel/_activeLayerGroup/_activeItemsInGroup live (refreshed by
  * patchOverviewControlsRow()) since one row now has to act on whatever category is active.
  * @returns {HTMLElement}
  */
@@ -353,13 +356,6 @@ function createOverviewControlsRow() {
   row.className = "overview-controls-row";
   row._activeItemsInGroup = [];
 
-  // Icons + pills share one line (topRow); counts get their own line below (countsRow),
-  // lined up under their pills via matching offset/gap rather than sharing topRow's
-  // centering - see getOrCreatePill()/renderCategoryPills() and the CSS for both rows.
-  const topRow = document.createElement("div");
-  topRow.className = "overview-controls-top-row";
-  row.appendChild(topRow);
-
   // 1. Visibility Button (Eye)
   // Icon sits directly in the flex slot (no wrapper span) - matches the per-item buttons'
   // DOM shape (createOverviewListItem()). A wrapper span here previously added an inline
@@ -367,6 +363,8 @@ function createOverviewControlsRow() {
   // against the pills.
   const eyeBtnSlot = document.createElement("div");
   eyeBtnSlot.className = "overview-header-visibility-btn";
+  eyeBtnSlot.style.gridColumn = "1";
+  eyeBtnSlot.style.gridRow = "1";
   const eyeIcon = document.createElement("span");
   eyeIcon.className = "material-symbols";
   eyeBtnSlot.appendChild(eyeIcon);
@@ -399,11 +397,13 @@ function createOverviewControlsRow() {
   });
   row._eyeBtn = eyeBtnSlot;
   row._eyeIcon = eyeIcon;
-  topRow.appendChild(eyeBtnSlot);
+  row.appendChild(eyeBtnSlot);
 
   // 2. Delete Button (Clear all)
   const delBtnSlot = document.createElement("div");
   delBtnSlot.className = "overview-header-delete-btn";
+  delBtnSlot.style.gridColumn = "2";
+  delBtnSlot.style.gridRow = "1";
   delBtnSlot.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
   delBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -441,11 +441,13 @@ function createOverviewControlsRow() {
     });
   });
   row._delBtn = delBtnSlot;
-  topRow.appendChild(delBtnSlot);
+  row.appendChild(delBtnSlot);
 
   // 3. Duplicate Button (Duplicate all)
   const dupBtnSlot = document.createElement("div");
   dupBtnSlot.className = "overview-header-duplicate-btn";
+  dupBtnSlot.style.gridColumn = "3";
+  dupBtnSlot.style.gridRow = "1";
   dupBtnSlot.innerHTML = '<span class="material-symbols">add_to_photos</span>';
   dupBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -461,28 +463,10 @@ function createOverviewControlsRow() {
     updateDrawControlStates();
   });
   row._dupBtn = dupBtnSlot;
-  topRow.appendChild(dupBtnSlot);
+  row.appendChild(dupBtnSlot);
 
-  // 4. Category pills
-  const pillsContainer = document.createElement("div");
-  pillsContainer.className = "overview-category-pills";
-  topRow.appendChild(pillsContainer);
-  row._pillsContainer = pillsContainer;
-
-  // 5. Per-category counts, below topRow. Three leading spacers (the icon slots' own
-  // fixed-width class) keep countsContainer starting at the same x as pillsContainer,
-  // past the eye/delete/duplicate icons.
-  const countsRow = document.createElement("div");
-  countsRow.className = "overview-category-counts-row";
-  countsRow.appendChild(document.createElement("div")).className = "overview-icon-spacer";
-  countsRow.appendChild(document.createElement("div")).className = "overview-icon-spacer";
-  countsRow.appendChild(document.createElement("div")).className = "overview-icon-spacer";
-  const countsContainer = document.createElement("div");
-  countsContainer.className = "overview-category-counts";
-  countsRow.appendChild(countsContainer);
-  row.appendChild(countsRow);
-  row._countsContainer = countsContainer;
-
+  // Category pills and their counts are added later, directly into this grid, by
+  // getOrCreatePill()/renderCategoryPills().
   return row;
 }
 
@@ -514,9 +498,9 @@ function patchOverviewControlsRow(row, key, label, layerGroup, itemsInGroup) {
 
 /**
  * Gets or creates a category "pill" button (switches the active category on click) and its
- * count element - two separate nodes in different rows (pillsContainer vs the counts row
- * below it), so the count doesn't grow the pill's own row and affect the eye/delete/duplicate
- * buttons' centering there. Cached forever per group key (at most 4: DrawnItems/
+ * count element - both grid items in the shared controls row (pill on row 1, count on row
+ * 2). renderCategoryPills() assigns their shared grid-column on every call, since which
+ * categories are visible can change. Cached forever per group key (at most 4: DrawnItems/
  * ImportedFiles/StravaActivities/Other) in overviewPillNodesByKey.
  * @param {string} key - Stable group key (e.g. "DrawnItems")
  * @param {string} label - Short display label (e.g. "Drawn")
@@ -529,6 +513,7 @@ function getOrCreatePill(key, label) {
   const pill = document.createElement("button");
   pill.type = "button";
   pill.className = "overview-category-pill";
+  pill.style.gridRow = "1";
   pill.textContent = label;
   pill.addEventListener("click", () => {
     // Reads activeCategory live rather than a captured isActive, since this pill (and its
@@ -540,6 +525,7 @@ function getOrCreatePill(key, label) {
 
   const countEl = document.createElement("span");
   countEl.className = "overview-category-pill-count";
+  countEl.style.gridRow = "2";
 
   entry = { pill, countEl };
   overviewPillNodesByKey.set(key, entry);
@@ -547,17 +533,21 @@ function getOrCreatePill(key, label) {
 }
 
 /**
- * Renders the category pills and their counts into the shared controls row - one pair per
- * non-empty group (fixed groupOrder), detaching pairs whose group just emptied while keeping
- * them cached for reuse. Both containers are walked in the same order, so a pill and its
- * count always land in the same left-to-right position in their respective rows.
+ * Renders the category pills and their counts as grid items in the shared controls row - one
+ * column per non-empty group (fixed groupOrder), detaching pairs whose group just emptied
+ * while keeping them cached. Rebuilds grid-template-columns to match the currently-visible
+ * categories: icons keep columns 1-3, then a 2px gap before the first category and 3px
+ * before each one after, with a max-content column per category shared by its pill and
+ * count - centering a count under its pill for free, no JS measurement needed. max-content,
+ * not auto: auto tracks absorb leftover row space (CSS grid's "maximize tracks" step), which
+ * spreads pills out instead of packing them left at their natural width.
  * @param {string[]} groupOrder
  * @param {Record<string, L.Layer[]>} groupedItems
  * @param {Record<string, string>} pillLabels
  */
 function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
-  const pillsContainer = overviewControlsRow._pillsContainer;
-  const countsContainer = overviewControlsRow._countsContainer;
+  const columns = ["32px", "32px", "32px"];
+  let visibleIndex = 0;
 
   groupOrder.forEach((key) => {
     const itemsInGroup = groupedItems[key];
@@ -574,31 +564,18 @@ function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
     const { pill, countEl } = getOrCreatePill(key, pillLabels[key]);
     pill.classList.toggle("active", key === activeCategory);
     countEl.textContent = itemsInGroup.length;
-    pillsContainer.appendChild(pill);
-    countsContainer.appendChild(countEl);
-    syncPillCountWidth(pill, countEl);
+
+    const column = `${5 + visibleIndex * 2}`;
+    pill.style.gridColumn = column;
+    countEl.style.gridColumn = column;
+    overviewControlsRow.appendChild(pill);
+    overviewControlsRow.appendChild(countEl);
+
+    columns.push(visibleIndex === 0 ? "2px" : "3px", "max-content");
+    visibleIndex++;
   });
-}
 
-/**
- * Pins a count element's min-width to its pill's rendered width, so the count (no width of
- * its own) stays centered under its organically-sized pill. offsetWidth reads 0 while the
- * overview tab is hidden (display: none on .tab-panel), so this is skipped then and re-run
- * via resyncPillCountWidths() once the tab reappears - see tab-navigation.js.
- * @param {HTMLElement} pill
- * @param {HTMLElement} countEl
- */
-function syncPillCountWidth(pill, countEl) {
-  if (pill.offsetWidth > 0) countEl.style.minWidth = `${pill.offsetWidth}px`;
-}
-
-/**
- * Re-applies every cached pill's rendered width to its count element - called when the
- * overview tab becomes visible again, in case updateOverviewList() last ran while it was
- * hidden and syncPillCountWidth() saw a stale offsetWidth of 0 (see its own doc comment).
- */
-function resyncPillCountWidths() {
-  overviewPillNodesByKey.forEach(({ pill, countEl }) => syncPillCountWidth(pill, countEl));
+  overviewControlsRow.style.gridTemplateColumns = columns.join(" ");
 }
 
 /**

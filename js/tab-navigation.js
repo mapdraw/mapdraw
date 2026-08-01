@@ -28,9 +28,6 @@ function initTabNavigation() {
         // virtualized list (ui-handlers.js) had no real viewport height to render
         // against - render now that it actually has one.
         renderOverviewWindow();
-        // Same reasoning for the category pills' counts: any updateOverviewList() call
-        // while this panel was hidden couldn't read a pill's real rendered width.
-        resyncPillCountWidths();
 
         const selectedForOverview = getEffectiveSelectedLayer();
         if (selectedForOverview) {
