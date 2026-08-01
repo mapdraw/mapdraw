@@ -707,9 +707,8 @@ function renderOverviewWindow() {
     }
 
     // DOM order no longer matches display order once virtualized (the spacers are always
-    // the true first/last children), so "first/last item in the whole list" (for the CSS
-    // rules that used to key off :first-child/:last-child) has to be tracked explicitly.
-    node.classList.toggle("overview-first-in-list", i === 0);
+    // the true first/last children), so "last item in the whole list" (for the CSS rule
+    // that used to key off :last-child) has to be tracked explicitly.
     node.classList.toggle("overview-last-in-list", i === total - 1);
 
     if (node === cursor) {
