@@ -123,8 +123,7 @@ function applyDataEditor() {
   const importedFeatures = [];
 
   (parsed.features ?? []).forEach((f) => {
-    const pt = f.properties?.pathType;
-    if (pt === "drawn" || pt === "route") {
+    if (f.properties?.pathType === "drawn") {
       drawnFeatures.push(f);
     } else {
       importedFeatures.push(f);
@@ -139,6 +138,7 @@ function applyDataEditor() {
     const layerGroup = importGeoJsonToMap(
       { type: "FeatureCollection", features: drawnFeatures },
       "geojson",
+      { trustPathType: true },
     );
     layerGroup.eachLayer((layer) => {
       importedItems.removeLayer(layer);
