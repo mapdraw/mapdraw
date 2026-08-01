@@ -18,7 +18,7 @@ const overviewPillNodesByKey = new Map();
 // renderOverviewWindow() and scrollOverviewToLayer() below.
 const OVERVIEW_ROW_HEIGHT =
   parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue("--overview-header-height"),
+    getComputedStyle(document.documentElement).getPropertyValue("--overview-row-height"),
     10,
   ) || 32;
 // Extra rows rendered above/below the visible viewport, so a small scroll doesn't pop new
@@ -547,7 +547,12 @@ function getOrCreatePill(key, label) {
  * @param {Record<string, string>} pillLabels
  */
 function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
-  const columns = ["32px", "32px", "32px"];
+  // Matches the icon buttons' own width (style.css --overview-icon-width) - read from
+  // there instead of duplicating the value, so the two never drift apart.
+  const iconWidth = getComputedStyle(document.documentElement)
+    .getPropertyValue("--overview-icon-width")
+    .trim();
+  const columns = [iconWidth, iconWidth, iconWidth];
   let visibleIndex = 0;
 
   groupOrder.forEach((key) => {

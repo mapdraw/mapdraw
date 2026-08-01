@@ -56,7 +56,8 @@
   /* SweetAlert links use --highlight-color directly, not --link-color */
   --link-color: var(--highlight-color);
   --locate-color: var(--color-blue);
-  --overview-header-height: 32px;
+  --overview-row-height: 32px;
+  --overview-icon-width: 28px;
   --top-right-btn-height: 32px;
   --top-right-clearance: calc(var(--top-right-btn-height) + 8px);
 }
@@ -1031,7 +1032,7 @@ body.glass-mode #info-panel-edit-hint {
   display: flex;
   align-items: center;
   padding: 0 12px 0 6px;
-  min-height: var(--overview-header-height);
+  min-height: var(--overview-row-height);
   cursor: pointer;
   border-bottom: 1px solid var(--divider-color);
   font-size: var(--font-size-14);
@@ -1040,9 +1041,8 @@ body.glass-mode #info-panel-edit-hint {
   text-overflow: ellipsis;
   background-color: var(--background-color);
   color: var(--text-color) !important;
-  scroll-margin-top: var(--overview-header-height);
   /* Without this, border-bottom makes the actual rendered height 1px taller than
-     --overview-header-height - and ui-handlers.js's virtualized renderer assumes every
+     --overview-row-height - and ui-handlers.js's virtualized renderer assumes every
      row is exactly that tall when sizing the spacers that stand in for scrolled-past
      rows, so a mismatch here would drift the list out of alignment over a long scroll. */
   box-sizing: border-box;
@@ -1054,7 +1054,7 @@ body.glass-mode #info-panel-edit-hint {
 .overview-header-visibility-btn,
 .overview-header-delete-btn,
 .overview-header-duplicate-btn {
-  width: 32px;
+  width: var(--overview-icon-width);
   display: flex;
   justify-content: center;
   align-items: center;
