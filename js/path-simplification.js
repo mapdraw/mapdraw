@@ -247,9 +247,6 @@ function showSimplificationSlider(layer) {
     "Max-simplification probe (not applied)",
   ).length;
 
-  // Read by _simplifySliderLockHandler below so a later manual edit doesn't overwrite this
-  // message with "Locked after a manual point edit" - that would misreport *why* the slider
-  // is locked when it never had anything to do with the edit at all.
   const alreadyLockedAtSetup = maxTolerantCount === countPoints();
 
   if (alreadyLockedAtSetup) {
@@ -324,11 +321,7 @@ function showSimplificationSlider(layer) {
   // the live "current" count without ever re-enabling the slider.
   _simplifySliderLockHandler = () => {
     slider.disabled = true;
-    // Leave the more accurate "Already fully simplified" message in place if that's why the
-    // slider was already locked before this edit ever happened.
-    if (!alreadyLockedAtSetup) {
-      lockMessage.textContent = "Locked after a manual point edit"; // shown via the :empty CSS rule
-    }
+    lockMessage.textContent = "Locked after a manual point edit"; // shown via the :empty CSS rule
     updateCurrent();
   };
   map.on(L.Draw.Event.EDITVERTEX, _simplifySliderLockHandler);
