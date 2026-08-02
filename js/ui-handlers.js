@@ -93,13 +93,6 @@ function toggleLayerVisibility(layerToToggle) {
     Object.values(displayLayerGroups).forEach((group) => {
       if (group.hasLayer(layerToToggle) && map.hasLayer(group)) {
         isParentVisible = true;
-      } else {
-        // Also check inside GeoJSON groups for imported items
-        group.eachLayer((child) => {
-          if (child instanceof L.GeoJSON && child.hasLayer(layerToToggle) && map.hasLayer(group)) {
-            isParentVisible = true;
-          }
-        });
       }
     });
 
