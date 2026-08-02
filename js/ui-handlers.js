@@ -734,14 +734,13 @@ function renderOverviewWindow() {
  * render is guaranteed to have already covered it (its window is always >= the viewport,
  * padded by OVERVIEW_SCROLL_BUFFER_PX) - re-rendering again here would be redundant.
  * @param {L.Layer} layer
- * @returns {HTMLElement|null} The row element, if the layer is currently in the list
  */
 function scrollOverviewToLayer(layer) {
   const listContainer = document.getElementById("overview-panel-list");
-  if (!listContainer) return null;
+  if (!listContainer) return;
   const layerId = L.Util.stamp(layer);
   const index = overviewLayerIndex.get(layerId);
-  if (index === undefined) return null;
+  if (index === undefined) return;
 
   const rowTop = index * OVERVIEW_ROW_HEIGHT;
   const rowBottom = rowTop + OVERVIEW_ROW_HEIGHT;
@@ -758,7 +757,6 @@ function scrollOverviewToLayer(layer) {
   }
 
   if (scrolled) renderOverviewWindow();
-  return overviewNodesByKey.get(layerId) || null;
 }
 
 // Stable grouping keys and their fixed display order, decoupled from the display label so
