@@ -312,7 +312,7 @@
   }
 
   // Called whenever a whole layer-group's visibility is toggled via the layers
-  // panel checkbox (the overview panel's own category header is blocked while
+  // panel checkbox (the overview panel's own shared controls row is blocked while
   // this tool is active, same as its rows - see the "rectangle-select-active"
   // rule in style.css). Kept as an unconditional refresh so the button states
   // can't drift from a category-wide change, even though none of today's
