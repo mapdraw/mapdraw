@@ -31,6 +31,22 @@ if (L.EditToolbar) {
   };
 }
 
+// addToolbar() reruns _checkDisabled() (patched above) on every single featureGroup
+// layeradd/layerremove - O(current size) per call, since it rebuilds a full array via
+// getLayers(). A bulk add/remove loop (e.g. Clear all, Duplicate all) turns that into O(n^2)
+// and hangs on large categories. Our own updateDrawControlStates() (map-interactions.js)
+// already keeps this button in sync - more accurately too, since it's selection-aware - on
+// every selection change and once per bulk operation. Let addToolbar() run normally (keeping
+// its one-time initial _checkDisabled() call), then drop the listener it just registered.
+if (L.EditToolbar) {
+  const origAddToolbar = L.EditToolbar.prototype.addToolbar;
+  L.EditToolbar.prototype.addToolbar = function (map) {
+    const container = origAddToolbar.call(this, map);
+    this.options.featureGroup.off("layeradd layerremove", this._checkDisabled, this);
+    return container;
+  };
+}
+
 // A hidden marker has no marker.dragging (deleted by Leaflet on removal, recreated on
 // add). leaflet-draw touches it unconditionally, throwing "Cannot read properties of
 // undefined (reading 'enable'/'disable')" when Edit mode is entered while a marker is

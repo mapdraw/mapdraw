@@ -68,6 +68,10 @@ function initRouting() {
       map.removeLayer(currentRoutePath);
       currentRoutePath = null;
       updateOverviewList();
+      // Must run after currentRoutePath is nulled above, not just after deselectCurrentItem()
+      // (which can run earlier, while currentRoutePath is still set) - hasAnyItems()
+      // (rectangle-select.js), which drives the Download/Rectangle-select buttons, checks it.
+      updateDrawControlStates();
     }
 
     if (!preserveViaMarkers) {

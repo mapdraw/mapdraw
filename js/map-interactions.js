@@ -566,17 +566,9 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
     deselectCurrentItem();
   }
 
-  Object.values(displayLayerGroups).forEach((group) => {
-    if (group.hasLayer(layer)) {
-      group.removeLayer(layer);
-    } else {
-      group.eachLayer((geoJsonGroup) => {
-        if (geoJsonGroup instanceof L.GeoJSON && geoJsonGroup.hasLayer(layer)) {
-          geoJsonGroup.removeLayer(layer);
-        }
-      });
-    }
-  });
+  // FeatureGroup.removeLayer() is already a safe no-op on a group that doesn't own the
+  // layer (early-returns on hasLayer()), so no need to check membership here ourselves.
+  Object.values(displayLayerGroups).forEach((group) => group.removeLayer(layer));
 
   // Also remove it from the master editable layer group if it's there
   if (editableLayers.hasLayer(layer)) {
