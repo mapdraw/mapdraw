@@ -181,8 +181,9 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
 
 /**
  * Finds the live layer behind an overview-list row's cached layer id, checking every group
- * a row's layer could currently live in (including the live route, which isn't inside any
- * Leaflet layer group).
+ * a row's layer could currently live in (including the live route, which lives in drawnItems
+ * but - unlike every other drawn item - is never added to editableLayers, so it needs this
+ * explicit fallback instead of being found via the groups above).
  * @param {number} layerId - The Leaflet stamp id encoded in the row's data-layer-id
  * @returns {L.Layer|null}
  */
