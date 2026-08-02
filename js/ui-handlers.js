@@ -203,8 +203,9 @@ function resolveOverviewLayerById(layerId) {
 }
 
 /**
- * Material-symbols icon name for a visibility toggle, reflecting ONLY the manual
- * override (isManuallyHidden), not effective on-map visibility.
+ * Material-symbols icon name for a visibility toggle. Callers decide what "hidden" means for
+ * their case - an item's own isManuallyHidden below, a category's map.hasLayer() in
+ * patchOverviewControlsRow().
  */
 function getVisibilityIconName(isHidden) {
   return isHidden ? "visibility_off" : "visibility";
