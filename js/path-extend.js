@@ -33,6 +33,11 @@ function pathExtendFindSnapTarget(latlng) {
   let closestDist = PATH_EXTEND_SNAP_RADIUS_PX;
   editableLayers.eachLayer((layer) => {
     if (!pathExtendIsExtendablePolyline(layer)) return;
+    // Excludes the path already being extended from candidacy, not just from a
+    // later validity check - otherwise, when another path's endpoint sits at (or
+    // near) the same spot, this path's own endpoint can win the distance
+    // comparison and mask the other, genuinely snappable one entirely.
+    if (pathExtendTarget && layer === pathExtendTarget.layer) return;
     pathExtendEndpoints(layer).forEach(({ end, latlng: endpointLatLng }) => {
       const dist = map.latLngToContainerPoint(endpointLatLng).distanceTo(point);
       if (dist < closestDist) {
