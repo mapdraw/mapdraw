@@ -10,6 +10,9 @@
 // whatever category is active) plus one small "pill" button per category, cached forever in
 // overviewPillNodesByKey (at most 4) rather than evicted on scroll.
 let activeCategory = null;
+// Last category actually rendered - callers set activeCategory before calling
+// updateOverviewList(), so it can't be compared against itself to detect a switch.
+let overviewRenderedCategory = null;
 let overviewControlsRow = null;
 const overviewPillNodesByKey = new Map();
 
@@ -830,7 +833,6 @@ function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
   const headersContainer = document.getElementById("overview-panel-headers");
   if (!listContainer || !headersContainer) return;
-  const previousActiveCategory = activeCategory;
   scheduleDataEditorRefresh();
   const overviewPanel = document.getElementById("overview-panel"); // Get the parent panel
 
@@ -848,6 +850,7 @@ function updateOverviewList() {
   if (allItems.length === 0) {
     overviewPanel.classList.add("is-empty"); // Add the class to the panel
     activeCategory = null;
+    overviewRenderedCategory = null;
     overviewActiveItems = [];
     overviewLayerIndex = new Map();
     overviewNodesByKey.clear();
@@ -892,9 +895,10 @@ function updateOverviewList() {
   }
   // Stale scrollTop from the previous category would otherwise clamp into the
   // middle/bottom of the new one instead of showing it from the top.
-  if (activeCategory !== previousActiveCategory) {
+  if (activeCategory !== overviewRenderedCategory) {
     listContainer.scrollTop = 0;
   }
+  overviewRenderedCategory = activeCategory;
 
   ensureOverviewControlsRow(headersContainer);
   patchOverviewControlsRow(
