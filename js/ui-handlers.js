@@ -480,7 +480,8 @@ function createOverviewControlsRow() {
     const collapsed = document.getElementById("overview-panel").classList.toggle("collapsed");
     collapseBtnSlot.title = collapsed ? "Expand item list" : "Collapse item list";
     if (!collapsed) {
-      // Same re-reveal behavior as switching back to this tab (tab-navigation.js).
+      // No real height to render against while collapsed (tab-navigation.js does the same).
+      renderOverviewWindow();
       const selected = getEffectiveSelectedLayer();
       if (selected) scrollOverviewToLayer(selected);
     }
