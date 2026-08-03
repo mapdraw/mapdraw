@@ -331,10 +331,7 @@ function patchOverviewListItem(listItem, layer) {
     listItem._textSpan.title = layerName;
   }
   listItem._visibilityIcon.textContent = getVisibilityIconName(layer.isManuallyHidden);
-  listItem.classList.toggle(
-    "selected",
-    !!globallySelectedItem && L.Util.stamp(globallySelectedItem) === L.Util.stamp(layer),
-  );
+  listItem.classList.toggle("selected", globallySelectedItem === layer);
   // Derived live from the rectangle-select tool's own selection state (rather than a
   // one-time DOM query pass over whatever happens to be mounted right now), so a row gets
   // the correct highlight the instant it's created/patched - including rows that weren't
