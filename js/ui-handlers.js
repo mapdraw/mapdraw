@@ -870,16 +870,13 @@ function updateOverviewList() {
     overviewRenderedCategory = null;
     overviewActiveItems = [];
     overviewLayerIndex = new Map();
-    overviewNodesByKey.clear();
-    overviewTopSpacer = null;
-    overviewBottomSpacer = null;
-    // The controls row and pills stay cached (overviewPillNodesByKey) for reuse - only
-    // detached from the DOM for now, along with the now-stale controlsRow reference
-    // (ensureOverviewControlsRow() rebuilds it next time).
-    overviewControlsRow = null;
     controlsContainer.innerHTML = "";
     listContainer.innerHTML =
       '<div class="overview-list-item overview-list-empty-message" style="color: grey; cursor: default;">No items on map</div>';
+    // overviewControlsRow/overviewTopSpacer/overviewBottomSpacer/overviewNodesByKey aren't
+    // reset here: the innerHTML wipes above already detach them, so ensureOverviewControlsRow()/
+    // ensureOverviewListStructure() already rebuild them (and re-clear overviewNodesByKey) the
+    // next time the list is non-empty.
     return;
   }
 
