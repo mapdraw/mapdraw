@@ -603,9 +603,10 @@ function renderCategoryPills(groupedItems) {
  * @param {HTMLElement} controlsContainer
  */
 function ensureOverviewControlsRow(controlsContainer) {
-  if (overviewControlsRow && controlsContainer.contains(overviewControlsRow)) return;
-  overviewControlsRow = createOverviewControlsRow();
-  controlsContainer.appendChild(overviewControlsRow);
+  if (!overviewControlsRow || !controlsContainer.contains(overviewControlsRow)) {
+    overviewControlsRow = createOverviewControlsRow();
+    controlsContainer.appendChild(overviewControlsRow);
+  }
 }
 
 /**
