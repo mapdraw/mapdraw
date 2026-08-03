@@ -814,14 +814,16 @@ function getGroupTitle(pathType) {
 }
 
 // Switches the active category to the one containing layer, if it isn't already,
-// ensuring the layer is visible in the list.
-// @returns {boolean} Whether it changed category (and already re-rendered).
+// ensuring the layer is visible in the list. Always leaves the virtualized window
+// rendered, whether or not the category changed.
 function activateCategoryForItem(layer) {
   const key = getGroupTitle(layer.feature?.properties?.pathType);
-  if (activeCategory === key) return false;
-  activeCategory = key;
-  updateOverviewList();
-  return true;
+  if (activeCategory !== key) {
+    activeCategory = key;
+    updateOverviewList(); // already renders internally
+  } else {
+    renderOverviewWindow();
+  }
 }
 
 /**

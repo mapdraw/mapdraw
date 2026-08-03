@@ -347,15 +347,12 @@ function selectItem(layer) {
   }
   globallySelectedItem = layer;
 
-  const categoryChanged = activateCategoryForItem(layer);
-
   // The overview list is virtualized (ui-handlers.js) - most items don't have a DOM row at
-  // any given moment, only whatever's currently scrolled into view does. Re-render the
-  // current window immediately so an already-visible row picks up .selected right away,
-  // same as the original's synchronous classList.add. Skipped if already done above.
-  if (!categoryChanged) {
-    renderOverviewWindow();
-  }
+  // any given moment, only whatever's currently scrolled into view does.
+  // activateCategoryForItem() always leaves the current window rendered, so an
+  // already-visible row picks up .selected right away, same as the original's
+  // synchronous classList.add.
+  activateCategoryForItem(layer);
 
   // Scrolling the (possibly not-yet-visible) row into view is deferred to the next frame
   // and only attempted while the tab is actually shown - same guard the original used

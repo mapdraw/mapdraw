@@ -25,12 +25,14 @@ function initTabNavigation() {
 
       if (targetPanelId === "overview-panel") {
         const selectedForOverview = getEffectiveSelectedLayer();
-        const categoryChanged = selectedForOverview && activateCategoryForItem(selectedForOverview);
 
         // The panel was display:none until the classList.add("active") above, so the
         // virtualized list (ui-handlers.js) had no real viewport height to render against -
-        // render now that it actually has one. Skipped if already done above.
-        if (!categoryChanged) {
+        // render now that it actually has one. activateCategoryForItem() already renders
+        // when there's a selected item; otherwise render directly.
+        if (selectedForOverview) {
+          activateCategoryForItem(selectedForOverview);
+        } else {
           renderOverviewWindow();
         }
 
