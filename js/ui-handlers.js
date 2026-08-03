@@ -357,7 +357,6 @@ function patchOverviewListItem(listItem, layer) {
 function createOverviewControlsRow() {
   const row = document.createElement("div");
   row.className = "overview-controls-row";
-  row._activeItemsInGroup = [];
 
   // 1. Visibility Button (Eye)
   // Icon sits directly in the flex slot (no wrapper span) - matches the per-item buttons'
