@@ -337,7 +337,10 @@ function patchOverviewListItem(listItem, layer) {
     listItem._textSpan.textContent = layerName;
     listItem._textSpan.title = layerName;
   }
-  listItem._visibilityIcon.textContent = getVisibilityIconName(layer.isManuallyHidden);
+  const iconName = getVisibilityIconName(layer.isManuallyHidden);
+  if (listItem._visibilityIcon.textContent !== iconName) {
+    listItem._visibilityIcon.textContent = iconName;
+  }
   listItem.classList.toggle("selected", globallySelectedItem === layer);
   // Derived live from the rectangle-select tool's own selection state (rather than a
   // one-time DOM query pass over whatever happens to be mounted right now), so a row gets
