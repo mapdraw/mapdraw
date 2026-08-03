@@ -14,6 +14,8 @@ let activeCategory = null;
 // updateOverviewList(), so it can't be compared against itself to detect a switch.
 let overviewRenderedCategory = null;
 let overviewControlsRow = null;
+// Last gridTemplateColumns applied by renderCategoryPills() - skips the write when unchanged.
+let overviewRenderedColumns = null;
 // The shared controls row's bulk-action targets for whichever category is active - refreshed
 // by patchOverviewControlsRow() in lockstep with activeCategory.
 let overviewActiveLabel = "";
@@ -598,7 +600,11 @@ function renderCategoryPills(groupedItems) {
     visibleIndex++;
   });
 
-  overviewControlsRow.style.gridTemplateColumns = columns.join(" ");
+  const columnsStr = columns.join(" ");
+  if (columnsStr !== overviewRenderedColumns) {
+    overviewControlsRow.style.gridTemplateColumns = columnsStr;
+    overviewRenderedColumns = columnsStr;
+  }
 }
 
 /**
@@ -612,6 +618,7 @@ function ensureOverviewControlsRow(controlsContainer) {
   if (!overviewControlsRow || !controlsContainer.contains(overviewControlsRow)) {
     overviewControlsRow = createOverviewControlsRow();
     controlsContainer.appendChild(overviewControlsRow);
+    overviewRenderedColumns = null;
   }
 }
 
