@@ -1176,6 +1176,26 @@ body:has(#map.map-is-editing)
   border-bottom: 1px solid var(--divider-color);
 }
 
+.overview-controls-visibility-btn {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.overview-controls-delete-btn {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.overview-controls-duplicate-btn {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.overview-controls-collapse-btn {
+  grid-column: 1;
+  grid-row: 2;
+}
+
 /* No list below it to divide from once collapsed - mirrors
    #directions-panel.collapsed #directions-panel-header. */
 #overview-panel.collapsed .overview-controls-row {
@@ -1199,6 +1219,7 @@ body:has(#map.map-is-editing)
    - driven by theme variables alone, no override needed. Active is a solid fill (see below,
    including a glass-mode override). */
 .overview-category-pill {
+  grid-row: 1;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   /* With line-height: 1 and the 1px border, 3px vertical padding makes the button exactly
@@ -1222,6 +1243,7 @@ body:has(#map.map-is-editing)
 }
 
 .overview-category-pill-count {
+  grid-row: 2;
   text-align: center;
   font-size: var(--font-size-12);
   color: var(--text-color);

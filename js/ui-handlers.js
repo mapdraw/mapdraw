@@ -363,8 +363,6 @@ function createOverviewControlsRow() {
   // against the pills.
   const eyeBtnSlot = document.createElement("div");
   eyeBtnSlot.className = "overview-controls-visibility-btn";
-  eyeBtnSlot.style.gridColumn = "1";
-  eyeBtnSlot.style.gridRow = "1";
   const eyeIcon = document.createElement("span");
   eyeIcon.className = "material-symbols";
   eyeBtnSlot.appendChild(eyeIcon);
@@ -402,8 +400,6 @@ function createOverviewControlsRow() {
   // 2. Delete Button (Clear all)
   const delBtnSlot = document.createElement("div");
   delBtnSlot.className = "overview-controls-delete-btn";
-  delBtnSlot.style.gridColumn = "2";
-  delBtnSlot.style.gridRow = "1";
   delBtnSlot.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
   delBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -447,8 +443,6 @@ function createOverviewControlsRow() {
   // 3. Duplicate Button (Duplicate all)
   const dupBtnSlot = document.createElement("div");
   dupBtnSlot.className = "overview-controls-duplicate-btn";
-  dupBtnSlot.style.gridColumn = "3";
-  dupBtnSlot.style.gridRow = "1";
   dupBtnSlot.innerHTML = '<span class="material-symbols">add_to_photos</span>';
   dupBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -472,8 +466,6 @@ function createOverviewControlsRow() {
   const collapseBtnSlot = document.createElement("div");
   collapseBtnSlot.className = "overview-controls-collapse-btn";
   collapseBtnSlot.title = "Collapse item list";
-  collapseBtnSlot.style.gridColumn = "1";
-  collapseBtnSlot.style.gridRow = "2";
   collapseBtnSlot.innerHTML = '<span class="material-symbols"></span>';
   collapseBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -536,7 +528,6 @@ function getOrCreatePill(key, label) {
   const pill = document.createElement("button");
   pill.type = "button";
   pill.className = "overview-category-pill";
-  pill.style.gridRow = "1";
   pill.textContent = label;
   pill.addEventListener("click", () => {
     // Reads activeCategory live rather than a captured isActive, since this pill (and its
@@ -552,7 +543,6 @@ function getOrCreatePill(key, label) {
 
   const countEl = document.createElement("span");
   countEl.className = "overview-category-pill-count";
-  countEl.style.gridRow = "2";
 
   entry = { pill, countEl };
   overviewPillNodesByKey.set(key, entry);
