@@ -26,8 +26,9 @@ const overviewPillNodesByKey = new Map();
 // The item list is virtualized: however many items exist, only the ones scrolled into view
 // (+ a small buffer) are ever real DOM elements - see updateOverviewList(),
 // renderOverviewWindow() and scrollOverviewToLayer() below.
+const overviewRootStyle = getComputedStyle(document.documentElement);
 const OVERVIEW_ROW_HEIGHT = parseInt(
-  getComputedStyle(document.documentElement).getPropertyValue("--overview-row-height"),
+  overviewRootStyle.getPropertyValue("--overview-row-height"),
   10,
 );
 // Extra rows rendered above/below the visible viewport, so a small scroll doesn't pop new
@@ -35,9 +36,7 @@ const OVERVIEW_ROW_HEIGHT = parseInt(
 const OVERVIEW_SCROLL_BUFFER_PX = OVERVIEW_ROW_HEIGHT * 8;
 // Matches the icon buttons' own width (style.css --overview-icon-width) - read once here
 // instead of duplicating the value, so the two never drift apart.
-const OVERVIEW_ICON_WIDTH = getComputedStyle(document.documentElement)
-  .getPropertyValue("--overview-icon-width")
-  .trim();
+const OVERVIEW_ICON_WIDTH = overviewRootStyle.getPropertyValue("--overview-icon-width").trim();
 
 // Currently-rendered row elements, keyed by layerId - only ever holds what's within the
 // current scroll window (+ buffer), not the whole active category.
