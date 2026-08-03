@@ -49,15 +49,6 @@ function pathExtendFindSnapTarget(latlng) {
   return closest;
 }
 
-// A snap only counts as a finish (joining onto a *different* path) when it
-// lands on a path other than the one already being extended this session -
-// snapping back onto the start path's own other endpoint doesn't finish
-// anything. Shared by the tooltip preview below and handleDrawVertex's actual
-// finish logic, so the two can't drift out of sync.
-function pathExtendIsValidFinishSnap(snap) {
-  return !!snap && (!pathExtendTarget || snap.layer !== pathExtendTarget.layer);
-}
-
 // Orients an existing path's points to lead INTO the snapped endpoint (reversed if
 // that endpoint was the path's own start). Reused by draw-tools.js's live labels
 // and below for splicing paths - reversing this result gives "lead out of" instead.
@@ -74,18 +65,14 @@ const origGetTooltipText = L.Draw.Polyline.prototype._getTooltipText;
 L.Draw.Polyline.prototype._getTooltipText = function () {
   if (!this._currentLatLng) return origGetTooltipText.call(this);
 
-  if (this._markers.length === 0) {
-    if (pathExtendFindSnapTarget(this._currentLatLng)) {
-      return { text: "Click to extend this path" };
-    }
-  } else {
-    const snap = pathExtendFindSnapTarget(this._currentLatLng);
-    if (pathExtendIsValidFinishSnap(snap)) {
-      return {
-        text: "Click to connect to this path",
-        subtext: this.options.showLength ? this._getMeasurementString() : "",
-      };
-    }
+  const snap = pathExtendFindSnapTarget(this._currentLatLng);
+  if (snap) {
+    return this._markers.length === 0
+      ? { text: "Click to extend this path" }
+      : {
+          text: "Click to connect to this path",
+          subtext: this.options.showLength ? this._getMeasurementString() : "",
+        };
   }
   return origGetTooltipText.call(this);
 };
@@ -218,7 +205,7 @@ function initPathExtend() {
     }
 
     const snap = pathExtendFindSnapTarget(latestLatLng);
-    if (pathExtendIsValidFinishSnap(snap)) {
+    if (snap) {
       finishByConnecting(snap, handler, markerCount - 1);
     }
   }
