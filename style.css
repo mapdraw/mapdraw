@@ -1015,6 +1015,15 @@ select:focus {
   flex: 1;
   min-height: 0;
 }
+
+/* Frees up map space for a long list, without losing which category is active - the
+   controls row (icons/pills) stays pinned above it. Desktop only (see the max-width: 768px
+   media query, which also guards against a stale .collapsed left over from a desktop-width
+   collapse). */
+#overview-panel.collapsed #overview-panel-list {
+  display: none;
+}
+
 /* Invisible element sized to represent however many rows are scrolled past above/below
    the currently-rendered window - normal document flow, exactly like a real row would
    take up, just with no content. One sits before and one after the rendered rows (see
@@ -1048,7 +1057,8 @@ select:focus {
 .overview-save-btn,
 .overview-controls-visibility-btn,
 .overview-controls-delete-btn,
-.overview-controls-duplicate-btn {
+.overview-controls-duplicate-btn,
+.overview-controls-collapse-btn {
   width: var(--overview-icon-width);
   display: flex;
   justify-content: center;
@@ -1065,8 +1075,19 @@ select:focus {
 .overview-save-btn .material-symbols,
 .overview-controls-visibility-btn .material-symbols,
 .overview-controls-delete-btn .material-symbols,
-.overview-controls-duplicate-btn .material-symbols {
+.overview-controls-duplicate-btn .material-symbols,
+.overview-controls-collapse-btn .material-symbols {
   font-size: var(--icon-size-20) !important;
+}
+
+/* Expanded (default): up arrow, i.e. "click to collapse". */
+#overview-panel:not(.collapsed) .overview-controls-collapse-btn .material-symbols::before {
+  content: "keyboard_arrow_up";
+}
+
+/* Collapsed: down arrow, i.e. "click to expand". */
+#overview-panel.collapsed .overview-controls-collapse-btn .material-symbols::before {
+  content: "keyboard_arrow_down";
 }
 
 .overview-item-text {
@@ -1105,7 +1126,8 @@ select:focus {
    "map-is-editing" class lives on #map, not <body> like "leaflet-is-drawing" and
    "rectangle-select-active" do, hence :has(). Excludes .overview-list-empty-message, the
    "No items on map" placeholder, which has no click listener to actually block. Doesn't
-   touch the controls row's own pill/label - switching the active category is harmless.
+   touch the controls row's own pill/label or collapse arrow - switching category or
+   collapsing/expanding the list is harmless, neither touches a layer.
    cursor: not-allowed goes on the list itself, not the (now pointer-events: none) rows -
    an element excluded from hit-testing can't show its own cursor either, so it has to come
    from a still-interactive ancestor instead, showing through as the pointer passes to it. */
@@ -1134,12 +1156,13 @@ body:has(#map.map-is-editing)
 }
 
 /* Styles for the overview panel's shared controls row and category pills. A single CSS grid,
-   not flex: icons sit in fixed columns 1-3 (row 1 only, see createOverviewControlsRow() in
-   ui-handlers.js); each non-empty category gets one max-content column holding its pill (row
-   1) and count (row 2), assigned by renderCategoryPills(), which also rebuilds
-   grid-template-columns to match whichever categories are currently visible. Column width and
-   spacing live here once instead of being duplicated across separate pill/count containers,
-   and a pill/count pair shares its column's width automatically - no JS measurement needed. */
+   not flex: icons sit in fixed columns 1-3 (eye/delete/duplicate on row 1, the collapse arrow
+   on row 2 under the eye icon - see createOverviewControlsRow() in ui-handlers.js); each
+   non-empty category gets one max-content column holding its pill (row 1) and count (row 2),
+   assigned by renderCategoryPills(), which also rebuilds grid-template-columns to match
+   whichever categories are currently visible. Column width and spacing live here once instead
+   of being duplicated across separate pill/count containers, and a pill/count pair shares its
+   column's width automatically - no JS measurement needed. */
 .overview-controls-row {
   display: grid;
   grid-template-rows: auto auto;
@@ -1151,6 +1174,12 @@ body:has(#map.map-is-editing)
   justify-items: center;
   padding: 0 12px 0 6px;
   border-bottom: 1px solid var(--divider-color);
+}
+
+/* No list below it to divide from once collapsed - mirrors
+   #directions-panel.collapsed #directions-panel-header. */
+#overview-panel.collapsed .overview-controls-row {
+  border-bottom: none;
 }
 
 /* "Other" has no real Leaflet layer group behind it - hide/disable the shared
@@ -3570,6 +3599,17 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
 
     #overview-panel-list {
       padding-bottom: 20px;
+    }
+
+    /* Desktop only - no button to un-collapse on mobile, so never actually hide the list
+       here even if .collapsed carried over from a desktop-width collapse (e.g. the browser
+       window was resized across the breakpoint). */
+    .overview-controls-collapse-btn {
+      display: none !important;
+    }
+
+    #overview-panel.collapsed #overview-panel-list {
+      display: block;
     }
 
     #routing-panel {

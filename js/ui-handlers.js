@@ -342,11 +342,12 @@ function patchOverviewListItem(listItem, layer) {
 
 /**
  * Creates the single shared controls row pinned above the virtualized item list: eye/delete/
- * duplicate buttons for whichever category is active, plus the per-category "pill" buttons
- * and their item counts below them - all items in one CSS grid (icons fixed at columns 1-3,
- * row 1; pills/counts added later by getOrCreatePill()/renderCategoryPills(), which also
- * rebuilds grid-template-columns for whichever categories are non-empty). Built once and
- * reused forever - the click handlers below read
+ * duplicate buttons for whichever category is active, a collapse arrow for the list itself,
+ * and the per-category "pill" buttons with their item counts below them - all in one CSS
+ * grid (icons fixed at columns 1-3, row 1, except the collapse arrow which shares column 1
+ * one row down; pills/counts added later by getOrCreatePill()/renderCategoryPills(), which
+ * also rebuilds grid-template-columns for whichever categories are non-empty). Built once
+ * and reused forever - the click handlers below read
  * _activeKey/_activeLabel/_activeLayerGroup/_activeItemsInGroup live (refreshed by
  * patchOverviewControlsRow()) since one row now has to act on whatever category is active.
  * @returns {HTMLElement}
@@ -466,6 +467,27 @@ function createOverviewControlsRow() {
   row._dupBtn = dupBtnSlot;
   row.appendChild(dupBtnSlot);
 
+  // 4. Collapse/Expand Arrow (desktop only, see the max-width: 768px media query) - hides
+  // #overview-panel-list to free up map space. Icon is swapped purely by CSS (::before,
+  // keyed off #overview-panel.collapsed), mirroring #directions-panel-header-arrow.
+  const collapseBtnSlot = document.createElement("div");
+  collapseBtnSlot.className = "overview-controls-collapse-btn";
+  collapseBtnSlot.title = "Collapse item list";
+  collapseBtnSlot.style.gridColumn = "1";
+  collapseBtnSlot.style.gridRow = "2";
+  collapseBtnSlot.innerHTML = '<span class="material-symbols"></span>';
+  collapseBtnSlot.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const collapsed = document.getElementById("overview-panel").classList.toggle("collapsed");
+    collapseBtnSlot.title = collapsed ? "Expand item list" : "Collapse item list";
+    if (!collapsed) {
+      // Same re-reveal behavior as switching back to this tab (tab-navigation.js).
+      const selected = getEffectiveSelectedLayer();
+      if (selected) scrollOverviewToLayer(selected);
+    }
+  });
+  row.appendChild(collapseBtnSlot);
+
   // Category pills and their counts are added later, directly into this grid, by
   // getOrCreatePill()/renderCategoryPills().
   return row;
@@ -522,6 +544,10 @@ function getOrCreatePill(key, label) {
     if (activeCategory === key) return;
     activeCategory = key;
     updateOverviewList();
+    // Same re-reveal behavior as switching tabs (tab-navigation.js) - no-ops if the
+    // selection isn't in this category, since scrollOverviewToLayer() has no index for it.
+    const selected = getEffectiveSelectedLayer();
+    if (selected) scrollOverviewToLayer(selected);
   });
 
   const countEl = document.createElement("span");
@@ -734,7 +760,9 @@ function renderOverviewWindow() {
  */
 function scrollOverviewToLayer(layer) {
   const listContainer = document.getElementById("overview-panel-list");
-  if (!listContainer) return;
+  // No real viewport to align against while hidden (e.g. collapsed) - scrollTop math against
+  // a clientHeight of 0 would misplace the row instead of bringing it into view.
+  if (!listContainer || !listContainer.clientHeight) return;
   const layerId = L.Util.stamp(layer);
   const index = overviewLayerIndex.get(layerId);
   if (index === undefined) return;
@@ -839,6 +867,9 @@ function updateOverviewList() {
   // Handle the empty state
   if (allItems.length === 0) {
     overviewPanel.classList.add("is-empty"); // Add the class to the panel
+    // The collapse arrow is wiped below with the rest of the controls row - a leftover
+    // .collapsed would hide the "No items on map" message with no button left to undo it.
+    overviewPanel.classList.remove("collapsed");
     activeCategory = null;
     overviewRenderedCategory = null;
     overviewActiveItems = [];
