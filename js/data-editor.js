@@ -138,9 +138,9 @@ function applyDataEditor() {
     const layerGroup = importGeoJsonToMap(
       { type: "FeatureCollection", features: drawnFeatures },
       "geojson",
-      { trustPathType: true },
     );
     layerGroup.eachLayer((layer) => {
+      layer.feature.properties.pathType = "drawn";
       importedItems.removeLayer(layer);
       drawnItems.addLayer(layer);
       editableLayers.addLayer(layer);

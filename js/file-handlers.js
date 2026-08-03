@@ -278,13 +278,9 @@ function parseColorFromKmlStyle(properties) {
  * Imports GeoJSON data to the map, applying appropriate styles.
  * @param {object} geoJsonData - The GeoJSON data to add
  * @param {string} fileType - The file type ('gpx', 'kml', 'kmz', 'geojson')
- * @param {Object} [options]
- * @param {boolean} [options.trustPathType] - Preserve an existing feature.properties.pathType
- *   instead of overwriting it with fileType. Only data-editor.js's "drawn" round-trip passes
- *   this - real file imports must never let a file's own pathType affect its category.
  * @returns {L.GeoJSON} The created layer group
  */
-function importGeoJsonToMap(geoJsonData, fileType, { trustPathType = false } = {}) {
+function importGeoJsonToMap(geoJsonData, fileType) {
   const targetGroup = importedItems; // All imported files go to the same group
   const isKmlBased = fileType === "kml" || fileType === "kmz";
 
@@ -320,11 +316,8 @@ function importGeoJsonToMap(geoJsonData, fileType, { trustPathType = false } = {
         layer.feature.properties.name = getDefaultLayerName(layer);
       }
 
-      // All imported items use fileType as pathType - a file's own pathType is never
-      // trusted, except for the Data Editor's "drawn" round-trip (see trustPathType above).
-      layer.feature.properties.pathType = trustPathType
-        ? layer.feature.properties.pathType || fileType
-        : fileType;
+      // All imported items use fileType as pathType - a file's own pathType is never trusted.
+      layer.feature.properties.pathType = fileType;
 
       layer.on("click", (e) => {
         L.DomEvent.stopPropagation(e);
