@@ -204,6 +204,9 @@ function getVisibilityIconName(isHidden) {
   return isHidden ? "visibility_off" : "visibility";
 }
 
+const DUPLICATE_ICON_HTML = '<span class="material-symbols">add_to_photos</span>';
+const DELETE_ICON_HTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
+
 /**
  * Helper function to create a single list item for the overview panel.
  * This encapsulates the logic for creating the item's text, buttons, and event listeners.
@@ -242,7 +245,7 @@ function createOverviewListItem(layer) {
   const duplicateBtn = document.createElement("span");
   if (layer !== currentRoutePath) {
     duplicateBtn.className = "overview-duplicate-btn";
-    duplicateBtn.innerHTML = '<span class="material-symbols">add_to_photos</span>';
+    duplicateBtn.innerHTML = DUPLICATE_ICON_HTML;
     duplicateBtn.title = "Duplicate";
     duplicateBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -253,7 +256,7 @@ function createOverviewListItem(layer) {
   // Delete button
   const deleteBtn = document.createElement("span");
   deleteBtn.className = "overview-delete-btn";
-  deleteBtn.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
+  deleteBtn.innerHTML = DELETE_ICON_HTML;
   deleteBtn.title = layer === currentRoutePath ? "Clear the current route" : "Delete";
   deleteBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -400,7 +403,7 @@ function createOverviewControlsRow() {
   // 2. Delete Button (Clear all)
   const delBtnSlot = document.createElement("div");
   delBtnSlot.className = "overview-controls-delete-btn";
-  delBtnSlot.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
+  delBtnSlot.innerHTML = DELETE_ICON_HTML;
   delBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
     const layerGroup = row._activeLayerGroup;
@@ -443,7 +446,7 @@ function createOverviewControlsRow() {
   // 3. Duplicate Button (Duplicate all)
   const dupBtnSlot = document.createElement("div");
   dupBtnSlot.className = "overview-controls-duplicate-btn";
-  dupBtnSlot.innerHTML = '<span class="material-symbols">add_to_photos</span>';
+  dupBtnSlot.innerHTML = DUPLICATE_ICON_HTML;
   dupBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!row._activeLayerGroup) return;
