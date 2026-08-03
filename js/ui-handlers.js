@@ -362,7 +362,7 @@ function createOverviewControlsRow() {
   // "strut" that inflated the slot ~2px taller than the icon and threw off centering
   // against the pills.
   const eyeBtnSlot = document.createElement("div");
-  eyeBtnSlot.className = "overview-header-visibility-btn";
+  eyeBtnSlot.className = "overview-controls-visibility-btn";
   eyeBtnSlot.style.gridColumn = "1";
   eyeBtnSlot.style.gridRow = "1";
   const eyeIcon = document.createElement("span");
@@ -401,7 +401,7 @@ function createOverviewControlsRow() {
 
   // 2. Delete Button (Clear all)
   const delBtnSlot = document.createElement("div");
-  delBtnSlot.className = "overview-header-delete-btn";
+  delBtnSlot.className = "overview-controls-delete-btn";
   delBtnSlot.style.gridColumn = "2";
   delBtnSlot.style.gridRow = "1";
   delBtnSlot.innerHTML = '<span class="material-symbols material-symbols-fill">cancel</span>';
@@ -446,7 +446,7 @@ function createOverviewControlsRow() {
 
   // 3. Duplicate Button (Duplicate all)
   const dupBtnSlot = document.createElement("div");
-  dupBtnSlot.className = "overview-header-duplicate-btn";
+  dupBtnSlot.className = "overview-controls-duplicate-btn";
   dupBtnSlot.style.gridColumn = "3";
   dupBtnSlot.style.gridRow = "1";
   dupBtnSlot.innerHTML = '<span class="material-symbols">add_to_photos</span>';
@@ -580,16 +580,16 @@ function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
 }
 
 /**
- * Makes sure the pinned header area has its shared controls row (eye/delete/duplicate +
+ * Makes sure the pinned controls container has its shared controls row (eye/delete/duplicate +
  * category pills) - created once and reused, mirroring ensureOverviewListStructure()'s
  * spacers. Recreates it if the empty-state branch in updateOverviewList() wiped the
  * container's content since the last render.
- * @param {HTMLElement} headersContainer
+ * @param {HTMLElement} controlsContainer
  */
-function ensureOverviewControlsRow(headersContainer) {
-  if (overviewControlsRow && headersContainer.contains(overviewControlsRow)) return;
+function ensureOverviewControlsRow(controlsContainer) {
+  if (overviewControlsRow && controlsContainer.contains(overviewControlsRow)) return;
   overviewControlsRow = createOverviewControlsRow();
-  headersContainer.appendChild(overviewControlsRow);
+  controlsContainer.appendChild(overviewControlsRow);
 }
 
 /**
@@ -821,8 +821,8 @@ window.activateCategoryForItem = (layer) => {
  */
 function updateOverviewList() {
   const listContainer = document.getElementById("overview-panel-list");
-  const headersContainer = document.getElementById("overview-panel-headers");
-  if (!listContainer || !headersContainer) return;
+  const controlsContainer = document.getElementById("overview-panel-controls");
+  if (!listContainer || !controlsContainer) return;
   scheduleDataEditorRefresh();
   const overviewPanel = document.getElementById("overview-panel"); // Get the parent panel
 
@@ -850,7 +850,7 @@ function updateOverviewList() {
     // detached from the DOM for now, along with the now-stale controlsRow reference
     // (ensureOverviewControlsRow() rebuilds it next time).
     overviewControlsRow = null;
-    headersContainer.innerHTML = "";
+    controlsContainer.innerHTML = "";
     listContainer.innerHTML =
       '<div class="overview-list-item overview-list-empty-message" style="color: grey; cursor: default;">No items on map</div>';
     return;
@@ -890,7 +890,7 @@ function updateOverviewList() {
   }
   overviewRenderedCategory = activeCategory;
 
-  ensureOverviewControlsRow(headersContainer);
+  ensureOverviewControlsRow(controlsContainer);
   patchOverviewControlsRow(
     overviewControlsRow,
     activeCategory,

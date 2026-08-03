@@ -996,14 +996,14 @@ select:focus {
 
 /* Pins the shared controls row (see createOverviewControlsRow() in ui-handlers.js) above
    the scrollable item list rather than inside it - sized to its content, never scrolls. */
-#overview-panel-headers {
+#overview-panel-controls {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   padding-top: 10px;
 }
 
-#overview-panel.is-empty #overview-panel-headers {
+#overview-panel.is-empty #overview-panel-controls {
   padding-top: 0;
 }
 
@@ -1046,9 +1046,9 @@ select:focus {
 .overview-duplicate-btn,
 .overview-delete-btn,
 .overview-save-btn,
-.overview-header-visibility-btn,
-.overview-header-delete-btn,
-.overview-header-duplicate-btn {
+.overview-controls-visibility-btn,
+.overview-controls-delete-btn,
+.overview-controls-duplicate-btn {
   width: var(--overview-icon-width);
   display: flex;
   justify-content: center;
@@ -1063,9 +1063,9 @@ select:focus {
 .overview-duplicate-btn .material-symbols,
 .overview-delete-btn .material-symbols,
 .overview-save-btn .material-symbols,
-.overview-header-visibility-btn .material-symbols,
-.overview-header-delete-btn .material-symbols,
-.overview-header-duplicate-btn .material-symbols {
+.overview-controls-visibility-btn .material-symbols,
+.overview-controls-delete-btn .material-symbols,
+.overview-controls-duplicate-btn .material-symbols {
   font-size: var(--icon-size-20) !important;
 }
 
@@ -1110,24 +1110,24 @@ select:focus {
    an element excluded from hit-testing can't show its own cursor either, so it has to come
    from a still-interactive ancestor instead, showing through as the pointer passes to it. */
 body:is(.leaflet-is-drawing, .rectangle-select-active)
-  :is(#overview-panel-headers, #overview-panel-list),
-body:has(#map.map-is-editing) :is(#overview-panel-headers, #overview-panel-list) {
+  :is(#overview-panel-controls, #overview-panel-list),
+body:has(#map.map-is-editing) :is(#overview-panel-controls, #overview-panel-list) {
   cursor: not-allowed;
 }
 
 body:is(.leaflet-is-drawing, .rectangle-select-active)
   :is(
     .overview-list-item,
-    .overview-header-visibility-btn,
-    .overview-header-delete-btn,
-    .overview-header-duplicate-btn
+    .overview-controls-visibility-btn,
+    .overview-controls-delete-btn,
+    .overview-controls-duplicate-btn
   ):not(.overview-list-empty-message),
 body:has(#map.map-is-editing)
   :is(
     .overview-list-item,
-    .overview-header-visibility-btn,
-    .overview-header-delete-btn,
-    .overview-header-duplicate-btn
+    .overview-controls-visibility-btn,
+    .overview-controls-delete-btn,
+    .overview-controls-duplicate-btn
   ):not(.overview-list-empty-message) {
   pointer-events: none;
   opacity: 0.5;
@@ -1158,9 +1158,9 @@ body:has(#map.map-is-editing)
    (not display: none) keeps the row's layout width stable when switching to/from it. */
 .overview-controls-row.no-group
   :is(
-    .overview-header-visibility-btn,
-    .overview-header-delete-btn,
-    .overview-header-duplicate-btn
+    .overview-controls-visibility-btn,
+    .overview-controls-delete-btn,
+    .overview-controls-duplicate-btn
   ) {
   visibility: hidden;
   pointer-events: none;
@@ -1179,7 +1179,7 @@ body:has(#map.map-is-editing)
   font: inherit;
   font-size: var(--font-size-12);
   font-weight: bold;
-  /* Matches the icon slots' line-height: 1 (see .overview-header-visibility-btn and friends)
+  /* Matches the icon slots' line-height: 1 (see .overview-controls-visibility-btn and friends)
      - without this, the button falls back to the browser's default line-height, which
      sizes/centers its text differently from the icons and throws off align-items: center
      between them. */
