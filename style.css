@@ -2435,6 +2435,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 .leaflet-container a.leaflet-popup-close-button:hover {
   color: var(--text-color);
 }
+/* Overrides the "Save to Map" button's inline style (top-right-buttons.js). */
 .leaflet-popup-content-wrapper button,
 .leaflet-popup-content-wrapper button:hover {
   border: none !important;
