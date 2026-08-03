@@ -14,6 +14,11 @@ let activeCategory = null;
 // updateOverviewList(), so it can't be compared against itself to detect a switch.
 let overviewRenderedCategory = null;
 let overviewControlsRow = null;
+// The shared controls row's bulk-action targets for whichever category is active - refreshed
+// by patchOverviewControlsRow() in lockstep with activeCategory.
+let overviewActiveLabel = "";
+let overviewActiveLayerGroup = null;
+let overviewActiveItemsInGroup = [];
 const overviewPillNodesByKey = new Map();
 
 // The item list is virtualized: however many items exist, only the ones scrolled into view
@@ -349,8 +354,8 @@ function patchOverviewListItem(listItem, layer) {
  * grid (icons fixed at columns 1-3, row 1, except the collapse arrow which shares column 1
  * one row down; pills/counts added later by getOrCreatePill()/renderCategoryPills(), which
  * also rebuilds grid-template-columns for whichever categories are non-empty). Built once
- * and reused forever - the click handlers below read
- * _activeKey/_activeLabel/_activeLayerGroup/_activeItemsInGroup live (refreshed by
+ * and reused forever - the click handlers below read activeCategory and the module-level
+ * overviewActiveLabel/overviewActiveLayerGroup/overviewActiveItemsInGroup live (refreshed by
  * patchOverviewControlsRow()) since one row now has to act on whatever category is active.
  * @returns {HTMLElement}
  */
@@ -370,9 +375,9 @@ function createOverviewControlsRow() {
   eyeBtnSlot.appendChild(eyeIcon);
   eyeBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
-    const layerGroup = row._activeLayerGroup;
+    const layerGroup = overviewActiveLayerGroup;
     if (!layerGroup) return;
-    const key = row._activeKey;
+    const key = activeCategory;
     const isRemoving = map.hasLayer(layerGroup);
     if (isRemoving) {
       if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, false);
@@ -405,13 +410,13 @@ function createOverviewControlsRow() {
   delBtnSlot.innerHTML = DELETE_ICON_HTML;
   delBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
-    const layerGroup = row._activeLayerGroup;
+    const layerGroup = overviewActiveLayerGroup;
     if (!layerGroup) return;
-    const key = row._activeKey;
-    const label = row._activeLabel;
-    // Snapshot now - row._activeItemsInGroup can be reassigned to another category
-    // while the dialog below is open (row is cached/reused across renders).
-    const itemsInGroup = row._activeItemsInGroup;
+    const key = activeCategory;
+    const label = overviewActiveLabel;
+    // Snapshot now - overviewActiveItemsInGroup can be reassigned to another category
+    // while the dialog below is open.
+    const itemsInGroup = overviewActiveItemsInGroup;
     Swal.fire({
       title: `Clear all items in "${label}"?`,
       text:
@@ -448,12 +453,12 @@ function createOverviewControlsRow() {
   dupBtnSlot.innerHTML = DUPLICATE_ICON_HTML;
   dupBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (!row._activeLayerGroup) return;
+    if (!overviewActiveLayerGroup) return;
     // Same per-layer path used by the individual duplicate button and
     // rect-select's bulk duplicate - including the live route, which
     // duplicateLayer() already handles like any other layer (an
     // independent copy saved to Drawn Items, route keeps running).
-    row._activeItemsInGroup.forEach((item) => {
+    overviewActiveItemsInGroup.forEach((item) => {
       duplicateLayer(item, { skipUiUpdate: true });
     });
     updateOverviewList();
@@ -488,21 +493,19 @@ function createOverviewControlsRow() {
 }
 
 /**
- * Syncs the shared controls row's active-category state (which items its bulk buttons act
- * on, visibility icon, dialog/title copy) with whichever category is currently active.
- * Toggles "no-group" when the active category has no real layer group (the "Other"
+ * Syncs the shared controls row's bulk-action state (which items its buttons act on,
+ * visibility icon, dialog/title copy) with activeCategory, which the caller sets before this
+ * runs. Toggles "no-group" when the active category has no real layer group (the "Other"
  * category), so CSS can hide/disable the eye/delete/duplicate buttons.
  * @param {HTMLElement} row - The row previously created by createOverviewControlsRow()
- * @param {string} key - The active category's stable key (e.g. "DrawnItems")
  * @param {string} label - The active category's display label (e.g. "Drawn Items")
  * @param {L.LayerGroup|null} layerGroup - The active category's group, or null for "Other"
  * @param {L.Layer[]} itemsInGroup - The active category's current items, in display order
  */
-function patchOverviewControlsRow(row, key, label, layerGroup, itemsInGroup) {
-  row._activeKey = key;
-  row._activeLabel = label;
-  row._activeLayerGroup = layerGroup;
-  row._activeItemsInGroup = itemsInGroup;
+function patchOverviewControlsRow(row, label, layerGroup, itemsInGroup) {
+  overviewActiveLabel = label;
+  overviewActiveLayerGroup = layerGroup;
+  overviewActiveItemsInGroup = itemsInGroup;
   row.classList.toggle("no-group", !layerGroup);
   row._delBtn.title = `Clear all ${label}`;
   row._dupBtn.title = `Duplicate all ${label}`;
@@ -921,7 +924,6 @@ function updateOverviewList() {
   ensureOverviewControlsRow(controlsContainer);
   patchOverviewControlsRow(
     overviewControlsRow,
-    activeCategory,
     OVERVIEW_GROUP_LABELS[activeCategory],
     GROUP_LAYERS[activeCategory] || null,
     groupedItems[activeCategory],
