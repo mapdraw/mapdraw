@@ -247,9 +247,7 @@ function showSimplificationSlider(layer) {
     "Max-simplification probe (not applied)",
   ).length;
 
-  const alreadyLockedAtSetup = maxTolerantCount === countPoints();
-
-  if (alreadyLockedAtSetup) {
+  if (maxTolerantCount === countPoints()) {
     slider.disabled = true;
     lockMessage.textContent = "Already fully simplified";
   } else {

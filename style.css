@@ -1028,7 +1028,7 @@ select:focus {
    the currently-rendered window - normal document flow, exactly like a real row would
    take up, just with no content. One sits before and one after the rendered rows (see
    renderOverviewWindow() in ui-handlers.js), so the container's scrollbar behaves as if
-   every row/header were really present. */
+   every row were really present. */
 .overview-list-spacer {
   pointer-events: none;
 }
@@ -3610,6 +3610,12 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
 
     #overview-panel.collapsed #overview-panel-list {
       display: block;
+    }
+
+    /* The list reappearing above means there's something to divide from again - restore
+       the border the desktop .collapsed rule drops. */
+    #overview-panel.collapsed .overview-controls-row {
+      border-bottom: 1px solid var(--divider-color);
     }
 
     #routing-panel {

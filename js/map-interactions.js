@@ -264,10 +264,8 @@ function deselectCurrentItem({ skipControlUpdate = false } = {}) {
     overlayPane.style.zIndex = 400;
   }
 
-  // The only element that can ever carry .selected is the currently mounted row for this
-  // layer (virtualized to the active category + scrolled-into-view slice) - evicted rows are
-  // both detached from the DOM and dropped from overviewNodesByKey - so this query finds
-  // exactly that row, if any, and clearing it here is sufficient.
+  // .selected only ever lives on a mounted row - eviction removes both the DOM node and its
+  // overviewNodesByKey entry - so this query can only match, and clear, the right one.
   const layerId = L.Util.stamp(globallySelectedItem);
   const listItem = document.querySelector(
     `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
@@ -349,7 +347,7 @@ function selectItem(layer) {
   }
   globallySelectedItem = layer;
 
-  const categoryChanged = window.activateCategoryForItem?.(layer);
+  const categoryChanged = activateCategoryForItem(layer);
 
   // The overview list is virtualized (ui-handlers.js) - most items don't have a DOM row at
   // any given moment, only whatever's currently scrolled into view does. Re-render the

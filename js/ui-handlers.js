@@ -19,11 +19,10 @@ const overviewPillNodesByKey = new Map();
 // The item list is virtualized: however many items exist, only the ones scrolled into view
 // (+ a small buffer) are ever real DOM elements - see updateOverviewList(),
 // renderOverviewWindow() and scrollOverviewToLayer() below.
-const OVERVIEW_ROW_HEIGHT =
-  parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue("--overview-row-height"),
-    10,
-  ) || 32;
+const OVERVIEW_ROW_HEIGHT = parseInt(
+  getComputedStyle(document.documentElement).getPropertyValue("--overview-row-height"),
+  10,
+);
 // Extra rows rendered above/below the visible viewport, so a small scroll doesn't pop new
 // rows in right at the edge.
 const OVERVIEW_SCROLL_BUFFER_PX = OVERVIEW_ROW_HEIGHT * 8;
@@ -561,22 +560,20 @@ function getOrCreatePill(key, label) {
 
 /**
  * Renders the category pills and their counts as grid items in the shared controls row - one
- * column per non-empty group (fixed groupOrder), detaching pairs whose group just emptied
- * while keeping them cached. Rebuilds grid-template-columns to match the currently-visible
- * categories: icons keep columns 1-3, then a 2px gap before the first category and 3px
- * before each one after, with a max-content column per category shared by its pill and
+ * column per non-empty group (fixed OVERVIEW_GROUP_ORDER), detaching pairs whose group just
+ * emptied while keeping them cached. Rebuilds grid-template-columns to match the currently-
+ * visible categories: icons keep columns 1-3, then a 2px gap before the first category and
+ * 3px before each one after, with a max-content column per category shared by its pill and
  * count - centering a count under its pill for free, no JS measurement needed. max-content,
  * not auto: auto tracks absorb leftover row space (CSS grid's "maximize tracks" step), which
  * spreads pills out instead of packing them left at their natural width.
- * @param {string[]} groupOrder
  * @param {Record<string, L.Layer[]>} groupedItems
- * @param {Record<string, string>} pillLabels
  */
-function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
+function renderCategoryPills(groupedItems) {
   const columns = [OVERVIEW_ICON_WIDTH, OVERVIEW_ICON_WIDTH, OVERVIEW_ICON_WIDTH];
   let visibleIndex = 0;
 
-  groupOrder.forEach((key) => {
+  OVERVIEW_GROUP_ORDER.forEach((key) => {
     const itemsInGroup = groupedItems[key];
     const cachedEntry = overviewPillNodesByKey.get(key);
 
@@ -588,7 +585,7 @@ function renderCategoryPills(groupOrder, groupedItems, pillLabels) {
       return;
     }
 
-    const { pill, countEl } = getOrCreatePill(key, pillLabels[key]);
+    const { pill, countEl } = getOrCreatePill(key, OVERVIEW_PILL_LABELS[key]);
     pill.classList.toggle("active", key === activeCategory);
     countEl.textContent = itemsInGroup.length;
 
@@ -669,8 +666,8 @@ function ensureOverviewListStructure(listContainer) {
  * when their position actually changes), rather than being pulled out with absolute
  * positioning. Called after every structural change (via updateOverviewList()), on every
  * scroll/resize, and directly wherever else the visible window can go stale without one of
- * those - a new/changed selection (selectItem() in map-interactions.js) or the panel tab
- * just becoming visible (tab-navigation.js).
+ * those - a new/changed selection (selectItem() in map-interactions.js), the panel tab just
+ * becoming visible (tab-navigation.js), or scrollOverviewToLayer() below.
  */
 function renderOverviewWindow() {
   const listContainer = document.getElementById("overview-panel-list");
@@ -825,13 +822,13 @@ function getGroupTitle(pathType) {
 // Switches the active category to the one containing layer, if it isn't already,
 // ensuring the layer is visible in the list.
 // @returns {boolean} Whether it changed category (and already re-rendered).
-window.activateCategoryForItem = (layer) => {
+function activateCategoryForItem(layer) {
   const key = getGroupTitle(layer.feature?.properties?.pathType);
   if (activeCategory === key) return false;
   activeCategory = key;
   updateOverviewList();
   return true;
-};
+}
 
 /**
  * Populates or updates the overview panel with all items on the map, grouped by type. Also
@@ -892,6 +889,10 @@ function updateOverviewList() {
 
   // 2. Group all items by their type
   const groupedItems = {};
+  // Stays function-local, unlike its siblings OVERVIEW_GROUP_ORDER/_LABELS/_PILL_LABELS
+  // above - drawnItems/importedItems/stravaActivitiesLayer aren't assigned until main.js
+  // runs (after this script loads), so hoisting this out would throw a TDZ ReferenceError at
+  // load time instead of waiting until this function actually runs.
   const GROUP_LAYERS = {
     DrawnItems: drawnItems,
     ImportedFiles: importedItems,
@@ -929,7 +930,7 @@ function updateOverviewList() {
     GROUP_LAYERS[activeCategory] || null,
     groupedItems[activeCategory],
   );
-  renderCategoryPills(OVERVIEW_GROUP_ORDER, groupedItems, OVERVIEW_PILL_LABELS);
+  renderCategoryPills(groupedItems);
 
   // 4. Build the active category's items - used for scroll-height/index math;
   // renderOverviewWindow() decides which of them actually become DOM.
