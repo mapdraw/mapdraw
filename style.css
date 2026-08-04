@@ -56,7 +56,8 @@
   /* SweetAlert links use --highlight-color directly, not --link-color */
   --link-color: var(--highlight-color);
   --locate-color: var(--color-blue);
-  --overview-header-height: 32px;
+  --overview-row-height: 32px;
+  --overview-icon-width: 28px;
   --top-right-btn-height: 32px;
   --top-right-clearance: calc(var(--top-right-btn-height) + 8px);
 }
@@ -148,24 +149,29 @@ body.glass-mode #info-panel-name:focus {
   color: var(--color-white) !important;
 }
 
-/* Data editor action buttons */
+/* Filled action buttons: glass fill (base fill is in the BASE section below). */
+body.glass-mode #info-panel-edit-hint,
+body.glass-mode #clear-route-btn:not(:disabled),
+body.glass-mode #save-route-btn:not(:disabled),
+body.glass-mode .layer-import-button,
+body.glass-mode button.strava-button-secondary:not(:disabled),
 body.glass-mode #data-editor-restore,
 body.glass-mode #data-editor-apply,
 body.glass-mode #data-editor-copy,
 body.glass-mode #data-editor-copy-clean,
-body.glass-mode #data-editor-find {
+body.glass-mode #data-editor-find,
+body.glass-mode .leaflet-popup-content-wrapper button,
+body.glass-mode .leaflet-popup-content-wrapper button:hover {
   background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
 
-/* Active button states */
-body.glass-mode #clear-route-btn:not(:disabled),
-body.glass-mode #save-route-btn:not(:disabled),
-body.glass-mode .panel-input-group button.active,
+/* border-color: transparent, not border: none - avoids both the translucent-fill seam and
+   the flex-width shift (see .profile-btn.active in the ROUTING section). */
 body.glass-mode .routing-profile-selector .profile-btn.active {
   background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
+  border-color: transparent !important;
 }
 body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols {
   color: var(--color-white) !important;
@@ -181,25 +187,6 @@ body.glass-mode #select-start-on-map.active .material-symbols,
 body.glass-mode #select-via-on-map.active .material-symbols,
 body.glass-mode #select-end-on-map.active .material-symbols,
 body.glass-mode #routing-pen-btn.active .material-symbols {
-  color: var(--color-white) !important;
-}
-
-/* Layer import buttons */
-body.glass-mode .layer-import-button {
-  background-color: var(--glass-btn-bg) !important;
-  color: var(--color-white) !important;
-}
-
-/* Strava export buttons */
-body.glass-mode button.strava-button-secondary:not(:disabled) {
-  background-color: var(--glass-btn-bg) !important;
-  color: var(--color-white) !important;
-}
-
-/* Search result popup button */
-body.glass-mode .leaflet-popup-content-wrapper button,
-body.glass-mode .leaflet-popup-content-wrapper button:hover {
-  background-color: var(--glass-btn-bg) !important;
   color: var(--color-white) !important;
 }
 
@@ -355,6 +342,23 @@ a {
 /* Also remove the focus outline, which can appear as a blue ring */
 *:focus {
   outline: none !important;
+}
+
+/* Filled action buttons: base fill (glass fill is in the GLASS section above). */
+#info-panel-edit-hint,
+#clear-route-btn:not(:disabled),
+#save-route-btn:not(:disabled),
+.layer-import-button,
+button.strava-button-secondary:not(:disabled),
+#data-editor-restore,
+#data-editor-apply,
+#data-editor-copy,
+#data-editor-copy-clean,
+#data-editor-find {
+  font-weight: bold;
+  background-color: var(--text-color);
+  color: var(--background-color);
+  border: none;
 }
 
 input[type="checkbox"],
@@ -668,10 +672,7 @@ select:focus {
 
 #info-panel-edit-hint {
   font-size: var(--font-size-12);
-  font-weight: bold;
   line-height: 1.25;
-  color: var(--background-color);
-  background: var(--text-color);
   border-radius: var(--border-radius);
   padding: 4px 6px;
   margin-top: 5px;
@@ -689,11 +690,6 @@ select:focus {
   vertical-align: middle;
   position: relative;
   top: -2px;
-}
-
-body.glass-mode #info-panel-edit-hint {
-  background: var(--glass-btn-bg);
-  color: var(--color-white);
 }
 
 /* Style Row for Color Swatch and Layer Name */
@@ -996,10 +992,18 @@ body.glass-mode #info-panel-edit-hint {
   padding: 0;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+/* Pins the shared controls row (see createOverviewControlsRow() in ui-handlers.js) above
+   the scrollable item list rather than inside it - sized to its content, never scrolls. */
+#overview-panel-controls {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
   padding-top: 10px;
 }
 
-#overview-panel.is-empty {
+#overview-panel.is-empty #overview-panel-controls {
   padding-top: 0;
 }
 
@@ -1011,11 +1015,28 @@ body.glass-mode #info-panel-edit-hint {
   flex: 1;
   min-height: 0;
 }
+
+/* Frees up map space for a long list, without losing which category is active - the
+   controls row (icons/pills) stays pinned above it. Desktop only (see the max-width: 768px
+   media query, which also guards against a stale .collapsed left over from a desktop-width
+   collapse). */
+#overview-panel.collapsed #overview-panel-list {
+  display: none;
+}
+
+/* Invisible element sized to represent however many rows are scrolled past above/below
+   the currently-rendered window - normal document flow, exactly like a real row would
+   take up, just with no content. One sits before and one after the rendered rows (see
+   renderOverviewWindow() in ui-handlers.js), so the container's scrollbar behaves as if
+   every row were really present. */
+.overview-list-spacer {
+  pointer-events: none;
+}
 .overview-list-item {
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  min-height: var(--overview-header-height);
+  padding: 0 12px 0 6px;
+  min-height: var(--overview-row-height);
   cursor: pointer;
   border-bottom: 1px solid var(--divider-color);
   font-size: var(--font-size-14);
@@ -1024,32 +1045,23 @@ body.glass-mode #info-panel-edit-hint {
   text-overflow: ellipsis;
   background-color: var(--background-color);
   color: var(--text-color) !important;
-  scroll-margin-top: var(--overview-header-height);
+  /* Without this, border-bottom makes the actual rendered height 1px taller than
+     --overview-row-height - and ui-handlers.js's virtualized renderer assumes every
+     row is exactly that tall when sizing the spacers that stand in for scrolled-past
+     rows, so a mismatch here would drift the list out of alignment over a long scroll. */
+  box-sizing: border-box;
 }
 .overview-visibility-btn,
 .overview-duplicate-btn,
 .overview-delete-btn,
 .overview-save-btn,
-.overview-header-visibility-btn,
-.overview-header-delete-btn,
-.overview-header-duplicate-btn,
-.overview-icon-spacer {
-  width: 32px;
+.overview-controls-visibility-btn,
+.overview-controls-delete-btn,
+.overview-controls-duplicate-btn,
+.overview-controls-collapse-btn {
+  width: var(--overview-icon-width);
   display: flex;
   justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  line-height: 1;
-  flex-shrink: 0;
-  color: var(--text-color);
-}
-
-.overview-icon-spacer {
-  cursor: default;
-}
-
-.overview-header-arrow {
-  display: flex;
   align-items: center;
   cursor: pointer;
   line-height: 1;
@@ -1061,11 +1073,21 @@ body.glass-mode #info-panel-edit-hint {
 .overview-duplicate-btn .material-symbols,
 .overview-delete-btn .material-symbols,
 .overview-save-btn .material-symbols,
-.overview-header-visibility-btn .material-symbols,
-.overview-header-delete-btn .material-symbols,
-.overview-header-duplicate-btn .material-symbols,
-.overview-header-arrow .material-symbols {
+.overview-controls-visibility-btn .material-symbols,
+.overview-controls-delete-btn .material-symbols,
+.overview-controls-duplicate-btn .material-symbols,
+.overview-controls-collapse-btn .material-symbols {
   font-size: var(--icon-size-20) !important;
+}
+
+/* Expanded (default): up arrow, i.e. "click to collapse". */
+#overview-panel:not(.collapsed) .overview-controls-collapse-btn .material-symbols::before {
+  content: "keyboard_arrow_up";
+}
+
+/* Collapsed: down arrow, i.e. "click to expand". */
+#overview-panel.collapsed .overview-controls-collapse-btn .material-symbols::before {
+  content: "keyboard_arrow_down";
 }
 
 .overview-item-text {
@@ -1076,15 +1098,26 @@ body.glass-mode #info-panel-edit-hint {
   color: var(--text-color);
   padding-left: 4px;
 }
-.overview-list-item:last-child {
+/* DOM order no longer matches display order once rows are virtualized (only the ones
+   scrolled into view exist as DOM children, appended as they're created) - "last row in
+   the whole list" is tracked explicitly via this class instead of :last-child. The
+   empty-state message (updateOverviewList() in ui-handlers.js) is always the sole child of
+   the list container, built outside the virtualized render path entirely - so it never gets
+   .overview-last-in-list, but still needs its border-bottom suppressed the same way a real
+   last row would. */
+.overview-list-item.overview-last-in-list,
+.overview-list-empty-message {
   border-bottom: none !important;
+}
+.overview-list-empty-message {
+  padding-left: 10px;
 }
 .overview-list-item.selected,
 .overview-list-item.rectangle-selected {
   background-color: var(--highlight-color);
 }
 
-/* Blocks a row's select/visibility/delete/duplicate, and a category header's own
+/* Blocks a row's select/visibility/delete/duplicate, and the shared controls row's own
    visibility/delete/duplicate, while drawing a path, area, or marker, while Edit
    mode is active, or while the rectangle-select tool is active - each conflicts with what's
    on the map right now (an in-progress shape's own vertex handles, an actively edited layer,
@@ -1093,66 +1126,131 @@ body.glass-mode #info-panel-edit-hint {
    "map-is-editing" class lives on #map, not <body> like "leaflet-is-drawing" and
    "rectangle-select-active" do, hence :has(). Excludes .overview-list-empty-message, the
    "No items on map" placeholder, which has no click listener to actually block. Doesn't
-   touch a header's own arrow/label - collapsing/expanding a category is harmless.
+   touch the controls row's own pill/label or collapse arrow - switching category or
+   collapsing/expanding the list is harmless, neither touches a layer.
    cursor: not-allowed goes on the list itself, not the (now pointer-events: none) rows -
    an element excluded from hit-testing can't show its own cursor either, so it has to come
    from a still-interactive ancestor instead, showing through as the pointer passes to it. */
-body:is(.leaflet-is-drawing, .rectangle-select-active) #overview-panel-list,
-body:has(#map.map-is-editing) #overview-panel-list {
+body:is(.leaflet-is-drawing, .rectangle-select-active)
+  :is(#overview-panel-controls, #overview-panel-list),
+body:has(#map.map-is-editing) :is(#overview-panel-controls, #overview-panel-list) {
   cursor: not-allowed;
 }
 
 body:is(.leaflet-is-drawing, .rectangle-select-active)
   :is(
     .overview-list-item,
-    .overview-header-visibility-btn,
-    .overview-header-delete-btn,
-    .overview-header-duplicate-btn
+    .overview-controls-visibility-btn,
+    .overview-controls-delete-btn,
+    .overview-controls-duplicate-btn
   ):not(.overview-list-empty-message),
 body:has(#map.map-is-editing)
   :is(
     .overview-list-item,
-    .overview-header-visibility-btn,
-    .overview-header-delete-btn,
-    .overview-header-duplicate-btn
+    .overview-controls-visibility-btn,
+    .overview-controls-delete-btn,
+    .overview-controls-duplicate-btn
   ):not(.overview-list-empty-message) {
   pointer-events: none;
   opacity: 0.5;
 }
 
-/* Styles for Overview Panel Group Headers */
-.overview-list-header {
-  font-weight: bold;
-  font-size: var(--font-size-12);
-  padding: 0 12px;
-  min-height: var(--overview-header-height);
-  background-color: var(--background2-color);
-  color: var(--text-color);
+/* Styles for the overview panel's shared controls row and category pills. A single CSS grid,
+   not flex: icons sit in fixed columns 1-3 (eye/delete/duplicate on row 1, the collapse arrow
+   on row 2 under the eye icon - see createOverviewControlsRow() in ui-handlers.js); each
+   non-empty category gets one max-content column holding its pill (row 1) and count (row 2),
+   assigned by renderCategoryPills(), which also rebuilds grid-template-columns to match
+   whichever categories are currently visible. Column width and spacing live here once instead
+   of being duplicated across separate pill/count containers, and a pill/count pair shares its
+   column's width automatically - no JS measurement needed. */
+.overview-controls-row {
+  display: grid;
+  grid-template-rows: auto auto;
+  /* Explicit, not relying on the default (which already behaves the same way) - states
+     outright that the row packs left, since it's easy to break by mistake here (e.g. an
+     auto instead of max-content column absorbs leftover space and undoes this). */
+  justify-content: start;
+  align-items: center;
+  justify-items: center;
+  padding: 0 12px 0 6px;
   border-bottom: 1px solid var(--divider-color);
+}
+
+.overview-controls-visibility-btn {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.overview-controls-delete-btn {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.overview-controls-duplicate-btn {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.overview-controls-collapse-btn {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* No list below it to divide from once collapsed - mirrors
+   #directions-panel.collapsed #directions-panel-header. */
+#overview-panel.collapsed .overview-controls-row {
+  border-bottom: none;
+}
+
+/* Unselected is an outline (panel bg + themed border), like .profile-btn's unselected state
+   - driven by theme variables alone, no override needed. Active is a solid fill (see below,
+   including a glass-mode override). */
+.overview-category-pill {
+  grid-row: 1;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  /* With line-height: 1 and the 1px border, 3px vertical padding makes the button exactly
+     20px tall (12px font-size + 6px padding + 2px border) - matching the icon slots' own
+     20px so align-items: center lines them up with zero gap. */
+  padding: 3px 10px;
+  font: inherit;
+  font-size: var(--font-size-12);
+  font-weight: bold;
+  /* Matches the icon slots' line-height: 1 (see .overview-controls-visibility-btn and friends)
+     - without this, the button falls back to the browser's default line-height, which
+     sizes/centers its text differently from the icons and throws off align-items: center
+     between them. */
+  line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  /* position: sticky;
-  top: 0;
-  z-index: 10; */
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-#overview-panel-list .overview-list-header:first-child {
-  border-top: none;
-}
-
-.overview-header-text {
-  flex-grow: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  padding-left: 4px;
+  cursor: pointer;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
-#overview-panel-list .overview-list-header.collapsed.last-header {
-  border-bottom: none;
+.overview-category-pill-count {
+  grid-row: 2;
+  text-align: center;
+  font-size: var(--font-size-12);
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+/* Same fill as .profile-btn.active (var(--text-color), not --highlight-color) - border-color
+   matches the fill so it blends in instead of showing as a mismatched ring. */
+.overview-category-pill.active {
+  background-color: var(--text-color);
+  border-color: var(--text-color);
+  color: var(--background-color);
+}
+
+/* glass-btn-bg/white fill (var(--text-color) is too low-contrast in glass). border-color:
+   transparent, not the fill - matching alphas still shows a seam at the rounded corner. */
+body.glass-mode .overview-category-pill.active {
+  background-color: var(--glass-btn-bg);
+  border-color: transparent;
+  color: var(--color-white);
 }
 
 /* ROUTING */
@@ -1242,11 +1340,6 @@ body:has(#map.map-is-editing)
   background-color: var(--background-color);
   font-size: var(--font-size-14);
 }
-.panel-input-group button.active {
-  background-color: var(--text-color);
-  color: var(--color-white);
-  border-color: var(--border-color);
-}
 #select-start-on-map.active,
 #select-via-on-map.active,
 #select-end-on-map.active,
@@ -1299,7 +1392,8 @@ body:has(#map.map-is-editing)
   border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }
 
-/* Style for the active/selected button */
+/* border-color, not border: none - the latter shifts the flex row's width by 1px when the
+   first/last button (whose border forms the group's outer edge) goes active. */
 .routing-profile-selector .profile-btn.active {
   background-color: var(--text-color);
   border-color: var(--text-color);
@@ -1367,13 +1461,6 @@ body:has(#map.map-is-editing)
   cursor: pointer;
 }
 
-#clear-route-btn:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
-}
-
 #clear-route-btn:disabled {
   cursor: not-allowed;
 }
@@ -1388,13 +1475,6 @@ body:has(#map.map-is-editing)
   cursor: pointer;
   margin-left: 5px;
   margin-right: 5px;
-}
-
-#save-route-btn:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
 }
 
 #save-route-btn:disabled {
@@ -1579,14 +1659,6 @@ body:has(#map.map-is-editing)
   cursor: not-allowed;
 }
 
-/* Active state for secondary buttons to match routing buttons */
-button.strava-button-secondary:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
-}
-
 /* Link styles */
 #strava-panel a {
   color: var(--link-color);
@@ -1651,7 +1723,6 @@ button.strava-button-secondary:not(:disabled) {
 #data-editor-notice {
   font-size: var(--font-size-12);
   color: var(--text-color);
-  opacity: 0.6;
   padding: 0 10px;
 }
 
@@ -1725,11 +1796,7 @@ button.strava-button-secondary:not(:disabled) {
 #data-editor-find {
   flex: 1;
   font-size: var(--font-size-14);
-  font-weight: bold;
   padding: 6px;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
   border-radius: var(--border-radius);
   cursor: pointer;
 }
@@ -2355,6 +2422,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
 .leaflet-container a.leaflet-popup-close-button:hover {
   color: var(--text-color);
 }
+/* Overrides the "Save to Map" button's inline style (top-right-buttons.js). */
 .leaflet-popup-content-wrapper button,
 .leaflet-popup-content-wrapper button:hover {
   border: none !important;
@@ -2374,6 +2442,15 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
  */
 
 /* Custom Layers Panel Styles */
+.layer-import-button {
+  flex: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: var(--font-size-12);
+  line-height: 1.25;
+  border-radius: var(--border-radius);
+}
+
 .layer-icon {
   vertical-align: middle;
   margin-right: 0;
@@ -3532,6 +3609,23 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
 
     #overview-panel-list {
       padding-bottom: 20px;
+    }
+
+    /* Desktop only - no button to un-collapse on mobile, so never actually hide the list
+       here even if .collapsed carried over from a desktop-width collapse (e.g. the browser
+       window was resized across the breakpoint). */
+    .overview-controls-collapse-btn {
+      display: none !important;
+    }
+
+    #overview-panel.collapsed #overview-panel-list {
+      display: block;
+    }
+
+    /* The list reappearing above means there's something to divide from again - restore
+       the border the desktop .collapsed rule drops. */
+    #overview-panel.collapsed .overview-controls-row {
+      border-bottom: 1px solid var(--divider-color);
     }
 
     #routing-panel {

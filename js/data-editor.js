@@ -123,8 +123,7 @@ function applyDataEditor() {
   const importedFeatures = [];
 
   (parsed.features ?? []).forEach((f) => {
-    const pt = f.properties?.pathType;
-    if (pt === "drawn" || pt === "route") {
+    if (f.properties?.pathType === "drawn") {
       drawnFeatures.push(f);
     } else {
       importedFeatures.push(f);
@@ -141,6 +140,7 @@ function applyDataEditor() {
       "geojson",
     );
     layerGroup.eachLayer((layer) => {
+      layer.feature.properties.pathType = "drawn";
       importedItems.removeLayer(layer);
       drawnItems.addLayer(layer);
       editableLayers.addLayer(layer);

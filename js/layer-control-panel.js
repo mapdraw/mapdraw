@@ -130,20 +130,8 @@ function initLayerControlPanel(baseMaps) {
 
   formContent += `
     <div style="padding: 4px 0px 0; display: flex; gap: 6px;">
-      <button
-        id="xyz-import-btn"
-        class="layer-import-button"
-        style="flex: 1; padding: 4px 6px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-12); font-weight: bold; line-height: 1.25;"
-      >
-        Add Tile Layer
-      </button>
-      <button
-        id="wms-import-btn"
-        class="layer-import-button"
-        style="flex: 1; padding: 4px 6px; cursor: pointer; background-color: var(--text-color); color: var(--background-color); border: none; border-radius: var(--border-radius); font-size: var(--font-size-12); font-weight: bold; line-height: 1.25;"
-      >
-        Add WMS Layers
-      </button>
+      <button id="xyz-import-btn" class="layer-import-button">Add Tile Layer</button>
+      <button id="wms-import-btn" class="layer-import-button">Add WMS Layers</button>
     </div>
   `;
 
@@ -348,16 +336,9 @@ function initLayerControlPanel(baseMaps) {
     }
 
     if (isAdding) {
-      e.layer.eachLayer((group) => {
-        const processLayer = (l) => {
-          if (l.isManuallyHidden) {
-            map.removeLayer(l);
-          }
-        };
-        if (group instanceof L.GeoJSON) {
-          group.eachLayer(processLayer);
-        } else {
-          processLayer(group);
+      e.layer.eachLayer((l) => {
+        if (l.isManuallyHidden) {
+          map.removeLayer(l);
         }
       });
     }

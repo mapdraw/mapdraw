@@ -25,17 +25,19 @@ function initTabNavigation() {
 
       if (targetPanelId === "overview-panel") {
         const selectedForOverview = getEffectiveSelectedLayer();
+
+        // The panel was display:none until the classList.add("active") above, so the
+        // virtualized list (ui-handlers.js) had no real viewport height to render against -
+        // render now that it actually has one. activateCategoryForItem() already renders
+        // when there's a selected item; otherwise render directly.
         if (selectedForOverview) {
-          if (window.expandCategoryForItem) {
-            window.expandCategoryForItem(selectedForOverview);
-          }
-          const layerId = L.Util.stamp(selectedForOverview);
-          const listItem = document.querySelector(
-            `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
-          );
-          if (listItem) {
-            listItem.scrollIntoView({ behavior: "auto", block: "nearest" });
-          }
+          activateCategoryForItem(selectedForOverview);
+          // Deferred like selectItem() to avoid a reflow from reading scroll state right after the spacer write.
+          requestAnimationFrame(() => {
+            scrollOverviewToLayer(selectedForOverview);
+          });
+        } else {
+          renderOverviewWindow();
         }
       }
 

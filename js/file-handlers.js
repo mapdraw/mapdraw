@@ -316,9 +316,8 @@ function importGeoJsonToMap(geoJsonData, fileType) {
         layer.feature.properties.name = getDefaultLayerName(layer);
       }
 
-      // All imported items use fileType as pathType, unless the feature already carries
-      // one (e.g. a "drawn"/"route" feature round-tripping through the GeoJSON data editor)
-      layer.feature.properties.pathType = layer.feature.properties.pathType || fileType;
+      // All imported items use fileType as pathType - a file's own pathType is never trusted.
+      layer.feature.properties.pathType = fileType;
 
       layer.on("click", (e) => {
         L.DomEvent.stopPropagation(e);
@@ -1180,6 +1179,13 @@ function buildKmlContent(docName, layers = null) {
   const stravaActivities = [];
 
   const allLayers = layers || getAllExportableLayers();
+  // Reuses ui-handlers.js's getGroupTitle() so a snippet always lands in the same
+  // folder its layer would be grouped under in the overview list.
+  const featuresByGroup = {
+    DrawnItems: drawnFeatures,
+    ImportedFiles: importedFeatures,
+    StravaActivities: stravaActivities,
+  };
 
   allLayers.forEach(function (layer) {
     const defaultName =
@@ -1187,21 +1193,8 @@ function buildKmlContent(docName, layers = null) {
     const kmlSnippet = convertLayerToKmlPlacemark(layer, defaultName);
     if (!kmlSnippet) return;
 
-    switch (layer.feature?.properties?.pathType) {
-      case "drawn":
-      case "route":
-        drawnFeatures.push(kmlSnippet);
-        break;
-      case "gpx":
-      case "kml":
-      case "geojson":
-      case "kmz":
-        importedFeatures.push(kmlSnippet);
-        break;
-      case "strava":
-        stravaActivities.push(kmlSnippet);
-        break;
-    }
+    const groupKey = getGroupTitle(layer.feature?.properties?.pathType);
+    featuresByGroup[groupKey].push(kmlSnippet);
   });
 
   if (drawnFeatures.length > 0) {

@@ -264,6 +264,8 @@ function deselectCurrentItem({ skipControlUpdate = false } = {}) {
     overlayPane.style.zIndex = 400;
   }
 
+  // .selected only ever lives on a mounted row - eviction removes both the DOM node and its
+  // overviewNodesByKey entry - so this query can only match, and clear, the right one.
   const layerId = L.Util.stamp(globallySelectedItem);
   const listItem = document.querySelector(
     `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
@@ -345,21 +347,20 @@ function selectItem(layer) {
   }
   globallySelectedItem = layer;
 
-  const layerId = L.Util.stamp(layer);
-  if (window.expandCategoryForItem) {
-    window.expandCategoryForItem(layer);
-  }
+  // The overview list is virtualized (ui-handlers.js) - most items don't have a DOM row at
+  // any given moment, only whatever's currently scrolled into view does.
+  // activateCategoryForItem() always leaves the current window rendered, so an
+  // already-visible row picks up .selected right away, same as the original's
+  // synchronous classList.add.
+  activateCategoryForItem(layer);
 
-  const newListItem = document.querySelector(
-    `#overview-panel-list .overview-list-item[data-layer-id='${layerId}']`,
-  );
-  if (newListItem) {
-    newListItem.classList.add("selected");
-    if (document.getElementById("overview-panel").classList.contains("active")) {
-      requestAnimationFrame(() => {
-        newListItem.scrollIntoView({ behavior: "auto", block: "nearest" });
-      });
-    }
+  // Scrolling the (possibly not-yet-visible) row into view is deferred to the next frame
+  // and only attempted while the tab is actually shown - same guard the original used
+  // around its scrollIntoView call.
+  if (document.getElementById("overview-panel").classList.contains("active")) {
+    requestAnimationFrame(() => {
+      scrollOverviewToLayer(layer);
+    });
   }
 
   const highlightColor = layer.feature?.properties?.color || DEFAULT_COLOR;
@@ -560,17 +561,9 @@ function deleteLayerImmediately(layer, { skipUiUpdate = false } = {}) {
     deselectCurrentItem();
   }
 
-  Object.values(displayLayerGroups).forEach((group) => {
-    if (group.hasLayer(layer)) {
-      group.removeLayer(layer);
-    } else {
-      group.eachLayer((geoJsonGroup) => {
-        if (geoJsonGroup instanceof L.GeoJSON && geoJsonGroup.hasLayer(layer)) {
-          geoJsonGroup.removeLayer(layer);
-        }
-      });
-    }
-  });
+  // FeatureGroup.removeLayer() is already a safe no-op on a group that doesn't own the
+  // layer (early-returns on hasLayer()), so no need to check membership here ourselves.
+  Object.values(displayLayerGroups).forEach((group) => group.removeLayer(layer));
 
   // Also remove it from the master editable layer group if it's there
   if (editableLayers.hasLayer(layer)) {

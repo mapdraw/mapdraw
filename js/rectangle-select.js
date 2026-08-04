@@ -156,16 +156,6 @@
     });
   }
 
-  function syncOverviewHighlight() {
-    const selectedIds = new Set(Array.from(selectedLayers, (layer) => L.Util.stamp(layer)));
-    document
-      .querySelectorAll("#overview-panel-list .overview-list-item[data-layer-id]")
-      .forEach((el) => {
-        const id = Number(el.getAttribute("data-layer-id"));
-        el.classList.toggle("rectangle-selected", selectedIds.has(id));
-      });
-  }
-
   // Mirrors the overview panel's own row icon: reflects the manual override
   // (isManuallyHidden), not effective on-map visibility (which can also depend
   // on a hidden parent category).
@@ -260,7 +250,9 @@
     });
     selectedLayers.clear();
     newSet.forEach((layer) => selectedLayers.add(layer));
-    syncOverviewHighlight();
+    // Reuses patchOverviewListItem()'s live isRectangleSelected() check instead of a
+    // second, separate DOM-query pass over the same rows.
+    renderOverviewWindow();
     updateActionButtonsState();
     syncInfoPanelWithSelection();
     syncElevationWithSelection();
@@ -312,7 +304,7 @@
   }
 
   // Called whenever a whole layer-group's visibility is toggled via the layers
-  // panel checkbox (the overview panel's own category header is blocked while
+  // panel checkbox (the overview panel's own shared controls row is blocked while
   // this tool is active, same as its rows - see the "rectangle-select-active"
   // rule in style.css). Kept as an unconditional refresh so the button states
   // can't drift from a category-wide change, even though none of today's
@@ -333,9 +325,9 @@
         toggleLayerVisibility(layer);
       }
     });
-    // Rebuilds every row so each one's own eye icon reflects its new state;
-    // updateOverviewList() re-applies our rectangle-selected highlighting to
-    // the freshly rebuilt rows itself.
+    // updateOverviewList() patches each visible row's eye icon to its new state, and
+    // (via patchOverviewListItem()) re-derives its rectangle-selected highlight live -
+    // no separate re-apply step needed.
     updateOverviewList();
     updateActionButtonsState();
   }
@@ -652,7 +644,7 @@
   window.app.getRectangleSelectionCount = () => selectedLayers.size;
   window.app.getRectangleSelectionSingleLayer = getSingleSelectedLayer;
   window.app.getRectangleSelectionLayers = () => Array.from(selectedLayers);
+  window.app.isRectangleSelected = (layer) => selectedLayers.has(layer);
   window.app.applyBulkColor = applyBulkColor;
-  window.app.syncRectangleSelectionHighlight = syncOverviewHighlight;
   window.app.hasAnyItems = hasAnyItems;
 })();
