@@ -659,11 +659,13 @@ function ensureOverviewListStructure(listContainer) {
  * a screenful of rows, however many items the active category logically has. Rendered rows
  * stay in normal document flow between the top/bottom spacers (reordered via insertBefore
  * when their position actually changes), rather than being pulled out with absolute
- * positioning. Called after every structural change (via updateOverviewList()), on every
- * scroll/resize, and directly wherever else the visible window can go stale without one of
- * those - a new/changed selection (selectItem() in map-interactions.js), a rectangle-select
- * selection change (setSelection() in rectangle-select.js), the panel tab just becoming
- * visible (tab-navigation.js), or scrollOverviewToLayer() below.
+ * positioning. Also clamps and writes back a stale listContainer.scrollTop (e.g. after a
+ * bulk delete shrinks the total - see the clamp below for why). Called after every
+ * structural change (via updateOverviewList()), on every scroll/resize, and directly
+ * wherever else the visible window can go stale without one of those - a new/changed
+ * selection (selectItem() in map-interactions.js), a rectangle-select selection change
+ * (setSelection() in rectangle-select.js), the panel tab just becoming visible
+ * (tab-navigation.js), or scrollOverviewToLayer() below.
  */
 function renderOverviewWindow() {
   const listContainer = document.getElementById("overview-panel-list");
@@ -672,21 +674,20 @@ function renderOverviewWindow() {
   const total = overviewActiveItems.length;
   if (total === 0) return;
   const rowH = OVERVIEW_ROW_HEIGHT;
-  const scrollTop = listContainer.scrollTop;
   const viewHeight = listContainer.clientHeight;
+  // Clamped against the current total, not read as-is: after a bulk delete shrinks the active
+  // category, a stale scrollTop would compute a window past the new last row. Written back
+  // immediately below so the render matches reality now, rather than waiting a frame for the
+  // browser's own (also correct, but async) scroll-clamping to catch up.
+  const maxScrollTop = Math.max(0, total * rowH - viewHeight);
+  const scrollTop = Math.min(listContainer.scrollTop, maxScrollTop);
+  if (scrollTop !== listContainer.scrollTop) listContainer.scrollTop = scrollTop;
 
   const endIndex = Math.min(
     total - 1,
     Math.ceil((scrollTop + viewHeight + OVERVIEW_SCROLL_BUFFER_PX) / rowH),
   );
-  // Clamped against endIndex, not just 0: scrollTop can be stale relative to a just-shrunk
-  // total (e.g. switching to a smaller active category while scrolled deep in a larger one),
-  // in which case an unclamped startIndex could exceed endIndex and skip the render loop
-  // entirely, leaving overviewTopSpacer sized to a huge, stale height.
-  const startIndex = Math.min(
-    Math.max(0, Math.floor((scrollTop - OVERVIEW_SCROLL_BUFFER_PX) / rowH)),
-    endIndex,
-  );
+  const startIndex = Math.max(0, Math.floor((scrollTop - OVERVIEW_SCROLL_BUFFER_PX) / rowH));
 
   overviewTopSpacer.style.height = `${startIndex * rowH}px`;
   overviewBottomSpacer.style.height = `${(total - endIndex - 1) * rowH}px`;
@@ -797,8 +798,9 @@ const OVERVIEW_PILL_LABELS = {
 
 // Maps a layer's pathType to its overview-list group key. A missing pathType falls back to
 // DrawnItems; any other unrecognized value (e.g. corrupted autosave data) is treated as
-// imported. autosave.js's restoreAutosave() reuses this function, so this is the single
-// source of truth for both the overview list's bucketing and actual layer-group placement.
+// imported. autosave.js's restoreAutosave() and file-handlers.js's KML export reuse this
+// function, so this is the single source of truth for the overview list's bucketing, actual
+// layer-group placement, and KML folder grouping.
 function getGroupTitle(pathType) {
   switch (pathType) {
     case "drawn":
