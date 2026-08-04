@@ -410,7 +410,7 @@ async function showPoiFinder() {
         <span class="poi-cat-name">${cat.name}</span>
         ${cat.isCustom ? '<span id="poi-custom-info-btn" class="settings-info-icon material-symbols" title="What\'s this?">help</span>' : ""}
         <span id="poi-status-${cat.id}" class="poi-cat-status">${renderStatus(isLoading, count, cat.id)}</span>
-        <span id="poi-vis-${cat.id}" class="poi-vis-btn material-symbols${count === 0 ? " poi-vis-hidden" : ""}" data-category="${cat.id}" title="Toggle visibility">${isVisible ? "visibility" : "visibility_off"}</span>
+        <span id="poi-vis-${cat.id}" class="poi-vis-btn material-symbols${count === 0 ? " poi-vis-hidden" : ""}" data-category="${cat.id}" title="Toggle visibility">${getVisibilityIconName(!isVisible)}</span>
         <span id="poi-load-${cat.id}" class="poi-load-btn material-symbols${isLoading ? " poi-load-busy" : ""}" data-category="${cat.id}" title="Search for current view">${isLoading ? "autorenew" : "search"}</span>
       </div>`;
     if (cat.isCustom) {
@@ -739,7 +739,7 @@ function updateCategoryRowUI(categoryId, isLoading, count) {
   if (visEl) {
     const isVisible = count > 0 && poiMasterLayer.hasLayer(poiState[categoryId].layer);
     visEl.classList.toggle("poi-vis-hidden", count === 0);
-    visEl.textContent = isVisible ? "visibility" : "visibility_off";
+    visEl.textContent = getVisibilityIconName(!isVisible);
   }
   if (Swal.getPopup()?.classList.contains("poi-finder-modal")) {
     const denyBtn = Swal.getDenyButton();
