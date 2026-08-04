@@ -32,12 +32,12 @@ function initTabNavigation() {
         // when there's a selected item; otherwise render directly.
         if (selectedForOverview) {
           activateCategoryForItem(selectedForOverview);
+          // Deferred like selectItem() to avoid a reflow from reading scroll state right after the spacer write.
+          requestAnimationFrame(() => {
+            scrollOverviewToLayer(selectedForOverview);
+          });
         } else {
           renderOverviewWindow();
-        }
-
-        if (selectedForOverview) {
-          scrollOverviewToLayer(selectedForOverview);
         }
       }
 
