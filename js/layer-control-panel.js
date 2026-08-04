@@ -336,16 +336,9 @@ function initLayerControlPanel(baseMaps) {
     }
 
     if (isAdding) {
-      e.layer.eachLayer((group) => {
-        const processLayer = (l) => {
-          if (l.isManuallyHidden) {
-            map.removeLayer(l);
-          }
-        };
-        if (group instanceof L.GeoJSON) {
-          group.eachLayer(processLayer);
-        } else {
-          processLayer(group);
+      e.layer.eachLayer((l) => {
+        if (l.isManuallyHidden) {
+          map.removeLayer(l);
         }
       });
     }
