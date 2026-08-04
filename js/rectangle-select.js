@@ -156,16 +156,6 @@
     });
   }
 
-  function syncOverviewHighlight() {
-    const selectedIds = new Set(Array.from(selectedLayers, (layer) => L.Util.stamp(layer)));
-    document
-      .querySelectorAll("#overview-panel-list .overview-list-item[data-layer-id]")
-      .forEach((el) => {
-        const id = Number(el.getAttribute("data-layer-id"));
-        el.classList.toggle("rectangle-selected", selectedIds.has(id));
-      });
-  }
-
   // Mirrors the overview panel's own row icon: reflects the manual override
   // (isManuallyHidden), not effective on-map visibility (which can also depend
   // on a hidden parent category).
@@ -260,7 +250,9 @@
     });
     selectedLayers.clear();
     newSet.forEach((layer) => selectedLayers.add(layer));
-    syncOverviewHighlight();
+    // Reuses patchOverviewListItem()'s live isRectangleSelected() check instead of a
+    // second, separate DOM-query pass over the same rows.
+    renderOverviewWindow();
     updateActionButtonsState();
     syncInfoPanelWithSelection();
     syncElevationWithSelection();
