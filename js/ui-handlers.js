@@ -4,11 +4,11 @@
 // This module handles the user interface elements for the overview list, info panel,
 // color picker, and various UI updates throughout the application.
 
-// Which category (DrawnItems/ImportedFiles/StravaActivities/Other) is currently shown in
+// Which category (DrawnItems/ImportedFiles/StravaActivities) is currently shown in
 // the overview list. The pinned area above the list (see createOverviewControlsRow()) is
 // never virtualized: one persistent shared controls row (eye/delete/duplicate, acting on
 // whatever category is active) plus one small "pill" button per category, cached forever in
-// overviewPillNodesByKey (at most 4) rather than evicted on scroll.
+// overviewPillNodesByKey (at most 3) rather than evicted on scroll.
 let activeCategory = null;
 // Last category actually rendered - callers set activeCategory before calling
 // updateOverviewList(), so it can't be compared against itself to detect a switch.
@@ -376,7 +376,6 @@ function createOverviewControlsRow() {
   eyeBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
     const layerGroup = overviewActiveLayerGroup;
-    if (!layerGroup) return;
     const key = activeCategory;
     const isRemoving = map.hasLayer(layerGroup);
     if (isRemoving) {
@@ -411,7 +410,6 @@ function createOverviewControlsRow() {
   delBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
     const layerGroup = overviewActiveLayerGroup;
-    if (!layerGroup) return;
     const key = activeCategory;
     const label = overviewActiveLabel;
     // Snapshot now - overviewActiveItemsInGroup can be reassigned to another category
@@ -453,7 +451,6 @@ function createOverviewControlsRow() {
   dupBtnSlot.innerHTML = DUPLICATE_ICON_HTML;
   dupBtnSlot.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (!overviewActiveLayerGroup) return;
     // Same per-layer path used by the individual duplicate button and
     // rect-select's bulk duplicate - including the live route, which
     // duplicateLayer() already handles like any other layer (an
@@ -495,33 +492,29 @@ function createOverviewControlsRow() {
 /**
  * Syncs the shared controls row's bulk-action state (which items its buttons act on,
  * visibility icon, dialog/title copy) with activeCategory, which the caller sets before this
- * runs. Toggles "no-group" when the active category has no real layer group (the "Other"
- * category), so CSS can hide/disable the eye/delete/duplicate buttons.
+ * runs.
  * @param {HTMLElement} row - The row previously created by createOverviewControlsRow()
  * @param {string} label - The active category's display label (e.g. "Drawn Items")
- * @param {L.LayerGroup|null} layerGroup - The active category's group, or null for "Other"
+ * @param {L.LayerGroup} layerGroup - The active category's group
  * @param {L.Layer[]} itemsInGroup - The active category's current items, in display order
  */
 function patchOverviewControlsRow(row, label, layerGroup, itemsInGroup) {
   overviewActiveLabel = label;
   overviewActiveLayerGroup = layerGroup;
   overviewActiveItemsInGroup = itemsInGroup;
-  row.classList.toggle("no-group", !layerGroup);
   row._delBtn.title = `Clear all ${label}`;
   row._dupBtn.title = `Duplicate all ${label}`;
-  if (layerGroup) {
-    const isVisible = map.hasLayer(layerGroup);
-    row._eyeIcon.textContent = getVisibilityIconName(!isVisible);
-    row._eyeBtn.title = isVisible ? "Hide category" : "Show category";
-  }
+  const isVisible = map.hasLayer(layerGroup);
+  row._eyeIcon.textContent = getVisibilityIconName(!isVisible);
+  row._eyeBtn.title = isVisible ? "Hide category" : "Show category";
 }
 
 /**
  * Gets or creates a category "pill" button (switches the active category on click) and its
  * count element - both grid items in the shared controls row (pill on row 1, count on row
  * 2). renderCategoryPills() assigns their shared grid-column on every call, since which
- * categories are visible can change. Cached forever per group key (at most 4: DrawnItems/
- * ImportedFiles/StravaActivities/Other) in overviewPillNodesByKey.
+ * categories are visible can change. Cached forever per group key (at most 3: DrawnItems/
+ * ImportedFiles/StravaActivities) in overviewPillNodesByKey.
  * @param {string} key - Stable group key (e.g. "DrawnItems")
  * @param {string} label - Short display label (e.g. "Drawn")
  * @returns {{pill: HTMLElement, countEl: HTMLElement}}
@@ -787,12 +780,11 @@ function scrollOverviewToLayer(layer) {
 // Stable grouping keys and their fixed display order, decoupled from the display label so
 // renaming a label can never silently break the ordering/lookup logic that compares
 // against it. Used by updateOverviewList() below.
-const OVERVIEW_GROUP_ORDER = ["DrawnItems", "ImportedFiles", "StravaActivities", "Other"];
+const OVERVIEW_GROUP_ORDER = ["DrawnItems", "ImportedFiles", "StravaActivities"];
 const OVERVIEW_GROUP_LABELS = {
   DrawnItems: "Drawn Items",
   ImportedFiles: "Imported Files",
   StravaActivities: "Strava Activities",
-  Other: "Other",
 };
 // Short labels for the compact category pills (see getOrCreatePill()) - distinct from
 // OVERVIEW_GROUP_LABELS above, which stays full-length for dialog copy (delete/duplicate
@@ -801,24 +793,21 @@ const OVERVIEW_PILL_LABELS = {
   DrawnItems: "Drawn",
   ImportedFiles: "Imported",
   StravaActivities: "Strava",
-  Other: "Other",
 };
 
-// Maps a layer's pathType to its overview-list group key.
+// Maps a layer's pathType to its overview-list group key. A missing pathType falls back to
+// DrawnItems; any other unrecognized value (e.g. corrupted autosave data) is treated as
+// imported. autosave.js's restoreAutosave() reuses this function, so this is the single
+// source of truth for both the overview list's bucketing and actual layer-group placement.
 function getGroupTitle(pathType) {
   switch (pathType) {
-    case "route":
     case "drawn":
+    case "route":
       return "DrawnItems";
-    case "gpx":
-    case "kml":
-    case "geojson":
-    case "kmz":
-      return "ImportedFiles";
     case "strava":
       return "StravaActivities";
     default:
-      return "Other";
+      return pathType ? "ImportedFiles" : "DrawnItems";
   }
 }
 
@@ -928,7 +917,7 @@ function updateOverviewList() {
   patchOverviewControlsRow(
     overviewControlsRow,
     OVERVIEW_GROUP_LABELS[activeCategory],
-    GROUP_LAYERS[activeCategory] || null,
+    GROUP_LAYERS[activeCategory],
     groupedItems[activeCategory],
   );
   renderCategoryPills(groupedItems);

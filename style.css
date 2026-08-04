@@ -1202,19 +1202,6 @@ body:has(#map.map-is-editing)
   border-bottom: none;
 }
 
-/* "Other" has no real Leaflet layer group behind it - hide/disable the shared
-   eye/delete/duplicate buttons rather than have them act on nothing. visibility: hidden
-   (not display: none) keeps the row's layout width stable when switching to/from it. */
-.overview-controls-row.no-group
-  :is(
-    .overview-controls-visibility-btn,
-    .overview-controls-delete-btn,
-    .overview-controls-duplicate-btn
-  ) {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 /* Unselected is an outline (panel bg + themed border), like .profile-btn's unselected state
    - driven by theme variables alone, no override needed. Active is a solid fill (see below,
    including a glass-mode override). */

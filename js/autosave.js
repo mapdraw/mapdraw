@@ -160,14 +160,15 @@ async function restoreAutosave() {
         selectItem(layer);
       });
 
-      // Route to the correct layer group
-      if (pathType === "strava") {
+      // Route to the correct layer group - shares ui-handlers.js's getGroupTitle() so
+      // grouping logic can't drift between restore and the overview list.
+      const groupKey = getGroupTitle(pathType);
+      if (groupKey === "StravaActivities") {
         stravaActivitiesLayer.addLayer(layer);
-      } else if (pathType === "drawn" || pathType === "route") {
+      } else if (groupKey === "DrawnItems") {
         drawnItems.addLayer(layer);
         editableLayers.addLayer(layer);
       } else {
-        // Imported types: geojson, gpx, kml, kmz
         importedItems.addLayer(layer);
       }
 
