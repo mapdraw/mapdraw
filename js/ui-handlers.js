@@ -662,14 +662,15 @@ function ensureOverviewListStructure(listContainer) {
 /**
  * Renders whichever slice of overviewActiveItems currently falls within the container's
  * visible scroll range (+ a small buffer) as real DOM elements, reusing/patching ones
- * that are already there and removing ones that scrolled out - so the DOM only ever holds
+ * that are already there and removing ones no longer in range - so the DOM only ever holds
  * a screenful of rows, however many items the active category logically has. Rendered rows
  * stay in normal document flow between the top/bottom spacers (reordered via insertBefore
  * when their position actually changes), rather than being pulled out with absolute
  * positioning. Called after every structural change (via updateOverviewList()), on every
  * scroll/resize, and directly wherever else the visible window can go stale without one of
- * those - a new/changed selection (selectItem() in map-interactions.js), the panel tab just
- * becoming visible (tab-navigation.js), or scrollOverviewToLayer() below.
+ * those - a new/changed selection (selectItem() in map-interactions.js), a rectangle-select
+ * selection change (setSelection() in rectangle-select.js), the panel tab just becoming
+ * visible (tab-navigation.js), or scrollOverviewToLayer() below.
  */
 function renderOverviewWindow() {
   const listContainer = document.getElementById("overview-panel-list");
