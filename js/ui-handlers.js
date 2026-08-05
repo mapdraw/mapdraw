@@ -683,15 +683,18 @@ function ensureOverviewListStructure(listContainer) {
  * a screenful of rows, however many items the active category logically has. Rendered rows
  * stay in normal document flow between the top/bottom spacers (reordered via insertBefore
  * when their position actually changes), rather than being pulled out with absolute
- * positioning. Also clamps and writes back a stale listContainer.scrollTop (e.g. after a
- * bulk delete shrinks the total - see the clamp below for why). Called after every
- * structural change (via updateOverviewList()), on every scroll/resize, and directly
- * wherever else the visible window can go stale without one of those - a new/changed
- * selection (selectItem() in map-interactions.js), a rectangle-select selection change
- * (setSelection() in rectangle-select.js), the panel tab just becoming visible
- * (tab-navigation.js), or scrollOverviewToLayer() below.
+ * positioning. Called after every structural change (via updateOverviewList()), on every
+ * scroll/resize, and directly wherever else the visible window can go stale without one of
+ * those - a new/changed selection (selectItem() in map-interactions.js), a rectangle-select
+ * selection change (setSelection() in rectangle-select.js), the panel tab just becoming
+ * visible (tab-navigation.js), or scrollOverviewToLayer() below.
+ * @param {boolean} clampScrollTop Write a clamped listContainer.scrollTop back to the element
+ *   (e.g. after a bulk delete shrinks the total, so an old deep scrollTop would compute a
+ *   window past the new last row). Only pass true from updateOverviewList(): writing it back
+ *   on every scroll-triggered call too caused jitter when scrolling past the list's end
+ *   (confirmed by testing), since it fought the browser's own scrollTop there.
  */
-function renderOverviewWindow() {
+function renderOverviewWindow(clampScrollTop = false) {
   const listContainer = document.getElementById("overview-panel-list");
   if (!listContainer || !overviewTopSpacer || !overviewBottomSpacer) return;
 
@@ -699,13 +702,9 @@ function renderOverviewWindow() {
   if (total === 0) return;
   const rowH = OVERVIEW_ROW_HEIGHT;
   const viewHeight = listContainer.clientHeight;
-  // Clamped against the current total, not read as-is: after a bulk delete shrinks the active
-  // category, a stale scrollTop would compute a window past the new last row. Written back
-  // immediately below so the render matches reality now, rather than waiting a frame for the
-  // browser's own (also correct, but async) scroll-clamping to catch up.
   const maxScrollTop = Math.max(0, total * rowH - viewHeight);
   const scrollTop = Math.min(listContainer.scrollTop, maxScrollTop);
-  if (scrollTop !== listContainer.scrollTop) listContainer.scrollTop = scrollTop;
+  if (clampScrollTop && scrollTop !== listContainer.scrollTop) listContainer.scrollTop = scrollTop;
 
   const endIndex = Math.min(
     total - 1,
@@ -957,7 +956,7 @@ function updateOverviewList() {
   });
 
   ensureOverviewListStructure(listContainer);
-  renderOverviewWindow();
+  renderOverviewWindow(true);
 
   // Sync checkboxes in the custom layers panel with the map's current state
   Object.entries(GROUP_LAYERS).forEach(([name, group]) => {
