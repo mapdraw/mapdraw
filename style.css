@@ -1056,8 +1056,8 @@ select:focus {
 .overview-delete-btn,
 .overview-save-btn,
 .overview-controls-visibility-btn,
-.overview-controls-delete-btn,
 .overview-controls-duplicate-btn,
+.overview-controls-delete-btn,
 .overview-controls-collapse-btn {
   width: var(--overview-icon-width);
   display: flex;
@@ -1074,8 +1074,8 @@ select:focus {
 .overview-delete-btn .material-symbols,
 .overview-save-btn .material-symbols,
 .overview-controls-visibility-btn .material-symbols,
-.overview-controls-delete-btn .material-symbols,
 .overview-controls-duplicate-btn .material-symbols,
+.overview-controls-delete-btn .material-symbols,
 .overview-controls-collapse-btn .material-symbols {
   font-size: var(--icon-size-20) !important;
 }
@@ -1117,8 +1117,8 @@ select:focus {
   background-color: var(--highlight-color);
 }
 
-/* Blocks a row's select/visibility/delete/duplicate, and the shared controls row's own
-   visibility/delete/duplicate, while drawing a path, area, or marker, while Edit
+/* Blocks a row's select/visibility/duplicate/delete, and the shared controls row's own
+   visibility/duplicate/delete, while drawing a path, area, or marker, while Edit
    mode is active, or while the rectangle-select tool is active - each conflicts with what's
    on the map right now (an in-progress shape's own vertex handles, an actively edited layer,
    path-extend.js mid-way through extending a path, or a row's click reaching the normal
@@ -1141,22 +1141,22 @@ body:is(.leaflet-is-drawing, .rectangle-select-active)
   :is(
     .overview-list-item,
     .overview-controls-visibility-btn,
-    .overview-controls-delete-btn,
-    .overview-controls-duplicate-btn
+    .overview-controls-duplicate-btn,
+    .overview-controls-delete-btn
   ):not(.overview-list-empty-message),
 body:has(#map.map-is-editing)
   :is(
     .overview-list-item,
     .overview-controls-visibility-btn,
-    .overview-controls-delete-btn,
-    .overview-controls-duplicate-btn
+    .overview-controls-duplicate-btn,
+    .overview-controls-delete-btn
   ):not(.overview-list-empty-message) {
   pointer-events: none;
   opacity: 0.5;
 }
 
 /* Styles for the overview panel's shared controls row and category pills. A single CSS grid,
-   not flex: icons sit in fixed columns 1-3 (eye/delete/duplicate on row 1, the collapse arrow
+   not flex: icons sit in fixed columns 1-3 (eye/duplicate/delete on row 1, the collapse arrow
    on row 2 under the eye icon - see createOverviewControlsRow() in ui-handlers.js); each
    non-empty category gets one max-content column holding its pill (row 1) and count (row 2),
    assigned by renderCategoryPills(), which also rebuilds grid-template-columns to match
@@ -1181,12 +1181,12 @@ body:has(#map.map-is-editing)
   grid-row: 1;
 }
 
-.overview-controls-delete-btn {
+.overview-controls-duplicate-btn {
   grid-column: 2;
   grid-row: 1;
 }
 
-.overview-controls-duplicate-btn {
+.overview-controls-delete-btn {
   grid-column: 3;
   grid-row: 1;
 }

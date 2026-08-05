@@ -6,7 +6,7 @@
 
 // Which category (DrawnItems/ImportedFiles/StravaActivities) is currently shown in
 // the overview list. The pinned area above the list (see createOverviewControlsRow()) is
-// never virtualized: one persistent shared controls row (eye/delete/duplicate, acting on
+// never virtualized: one persistent shared controls row (eye/duplicate/delete, acting on
 // whatever category is active) plus one small "pill" button per category, cached forever in
 // overviewPillNodesByKey (at most 3) rather than evicted on scroll.
 let activeCategory = null;
@@ -275,10 +275,7 @@ function createOverviewListItem(layer) {
   // Slot 1: Visibility
   listItem.appendChild(visibilityBtn);
 
-  // Slot 2: Delete
-  listItem.appendChild(deleteBtn);
-
-  // Slot 3: Duplicate (Secondary Action) or Save (for Route)
+  // Slot 2: Duplicate (Secondary Action) or Save (for Route)
   if (layer === currentRoutePath) {
     const saveBtn = document.createElement("span");
     saveBtn.className = "overview-save-btn";
@@ -294,6 +291,9 @@ function createOverviewListItem(layer) {
   } else {
     listItem.appendChild(duplicateBtn);
   }
+
+  // Slot 3: Delete
+  listItem.appendChild(deleteBtn);
 
   // Slot 4: Name
   listItem.appendChild(textSpan);
@@ -348,8 +348,8 @@ function patchOverviewListItem(listItem, layer) {
 }
 
 /**
- * Creates the single shared controls row pinned above the virtualized item list: eye/delete/
- * duplicate buttons for whichever category is active, a collapse arrow for the list itself,
+ * Creates the single shared controls row pinned above the virtualized item list: eye/duplicate/
+ * delete buttons for whichever category is active, a collapse arrow for the list itself,
  * and the per-category "pill" buttons with their item counts below them - all in one CSS
  * grid (icons fixed at columns 1-3, row 1, except the collapse arrow which shares column 1
  * one row down; pills/counts added later by getOrCreatePill()/renderCategoryPills(), which
@@ -403,7 +403,26 @@ function createOverviewControlsRow() {
   row._eyeIcon = eyeIcon;
   row.appendChild(eyeBtnSlot);
 
-  // 2. Delete Button (Clear all)
+  // 2. Duplicate Button (Duplicate all)
+  const dupBtnSlot = document.createElement("div");
+  dupBtnSlot.className = "overview-controls-duplicate-btn";
+  dupBtnSlot.innerHTML = DUPLICATE_ICON_HTML;
+  dupBtnSlot.addEventListener("click", (e) => {
+    e.stopPropagation();
+    // Same per-layer path used by the individual duplicate button and
+    // rect-select's bulk duplicate - including the live route, which
+    // duplicateLayer() already handles like any other layer (an
+    // independent copy saved to Drawn Items, route keeps running).
+    overviewActiveItemsInGroup.forEach((item) => {
+      duplicateLayer(item, { skipUiUpdate: true });
+    });
+    updateOverviewList();
+    updateDrawControlStates();
+  });
+  row._dupBtn = dupBtnSlot;
+  row.appendChild(dupBtnSlot);
+
+  // 3. Delete Button (Clear all)
   const delBtnSlot = document.createElement("div");
   delBtnSlot.className = "overview-controls-delete-btn";
   delBtnSlot.innerHTML = DELETE_ICON_HTML;
@@ -444,25 +463,6 @@ function createOverviewControlsRow() {
   });
   row._delBtn = delBtnSlot;
   row.appendChild(delBtnSlot);
-
-  // 3. Duplicate Button (Duplicate all)
-  const dupBtnSlot = document.createElement("div");
-  dupBtnSlot.className = "overview-controls-duplicate-btn";
-  dupBtnSlot.innerHTML = DUPLICATE_ICON_HTML;
-  dupBtnSlot.addEventListener("click", (e) => {
-    e.stopPropagation();
-    // Same per-layer path used by the individual duplicate button and
-    // rect-select's bulk duplicate - including the live route, which
-    // duplicateLayer() already handles like any other layer (an
-    // independent copy saved to Drawn Items, route keeps running).
-    overviewActiveItemsInGroup.forEach((item) => {
-      duplicateLayer(item, { skipUiUpdate: true });
-    });
-    updateOverviewList();
-    updateDrawControlStates();
-  });
-  row._dupBtn = dupBtnSlot;
-  row.appendChild(dupBtnSlot);
 
   // 4. Collapse/Expand Arrow (desktop only, see the max-width: 768px media query) - hides
   // #overview-panel-list to free up map space. Icon is swapped purely by CSS (::before,
@@ -596,7 +596,7 @@ function renderCategoryPills(groupedItems) {
 }
 
 /**
- * Makes sure the pinned controls container has its shared controls row (eye/delete/duplicate +
+ * Makes sure the pinned controls container has its shared controls row (eye/duplicate/delete +
  * category pills) - created once and reused, mirroring ensureOverviewListStructure()'s
  * spacers. Recreates it if the empty-state branch in updateOverviewList() wiped the
  * container's content since the last render.
