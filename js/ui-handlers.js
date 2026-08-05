@@ -198,6 +198,37 @@ function resolveOverviewLayerById(layerId) {
 }
 
 /**
+ * Instantly (no animation) moves the map to an overview-list item: a fixed zoom level for
+ * markers, or a zoom that fits the whole shape plus a margin for paths. On mobile the result is
+ * then shifted vertically (OVERVIEW_FOCUS_MOBILE_VERTICAL_SHIFT) to stay clear of the bottom
+ * sheet UI.
+ * @param {L.Layer} targetLayer - The layer to focus
+ */
+function focusOverviewLayer(targetLayer) {
+  const mapSize = map.getSize();
+  let centerPoint, zoom;
+  if (targetLayer instanceof L.Polyline || targetLayer instanceof L.Polygon) {
+    const bounds = targetLayer.getBounds();
+    if (!bounds.isValid()) return;
+    zoom = map.getBoundsZoom(bounds, false, mapSize.multiplyBy(OVERVIEW_FOCUS_PATH_MARGIN_RATIO));
+    const nw = map.project(bounds.getNorthWest(), zoom);
+    const se = map.project(bounds.getSouthEast(), zoom);
+    centerPoint = nw.add(se).divideBy(2);
+  } else if (targetLayer instanceof L.Marker) {
+    zoom = OVERVIEW_FOCUS_MARKER_ZOOM;
+    centerPoint = map.project(targetLayer.getLatLng(), zoom);
+  } else {
+    return;
+  }
+
+  const isMobile =
+    window.innerWidth <= BREAKPOINT_MOBILE &&
+    !document.body.classList.contains("force-desktop-layout");
+  const verticalShift = isMobile ? mapSize.y * OVERVIEW_FOCUS_MOBILE_VERTICAL_SHIFT : 0;
+  map.setView(map.unproject(centerPoint.add([0, verticalShift]), zoom), zoom, { animate: false });
+}
+
+/**
  * Material-symbols icon name for a visibility toggle. Callers decide what "hidden" means for
  * their case - an item's own isManuallyHidden below, a category's map.hasLayer() in
  * patchOverviewControlsRow().
@@ -301,14 +332,7 @@ function createOverviewListItem(layer) {
   listItem.addEventListener("click", () => {
     const targetLayer = resolveOverviewLayerById(layerId);
     if (targetLayer) {
-      if (targetLayer instanceof L.Polyline || targetLayer instanceof L.Polygon) {
-        if (targetLayer.getBounds().isValid()) {
-          map.fitBounds(targetLayer.getBounds(), { paddingTopLeft: [50, 50] });
-        }
-      } else if (targetLayer instanceof L.Marker) {
-        const targetZoom = Math.max(map.getZoom(), 16);
-        map.flyTo(targetLayer.getLatLng(), targetZoom);
-      }
+      focusOverviewLayer(targetLayer);
       selectItem(targetLayer);
     }
   });

@@ -11,6 +11,11 @@ const OSM_CREATED_BY = "MapDraw"; // OSM changeset created_by tag
 
 const BREAKPOINT_MOBILE = 768; // Mobile breakpoint; matches style.css's @media (max-width: 768px)
 
+// Overview-list "focus" (click an item to jump the map to it)
+const OVERVIEW_FOCUS_MARKER_ZOOM = 15; // Fixed zoom level used when focusing a marker
+const OVERVIEW_FOCUS_PATH_MARGIN_RATIO = 0.3; // Empty margin around a focused path, as a fraction of the viewport (0 = none, 1 = whole viewport)
+const OVERVIEW_FOCUS_MOBILE_VERTICAL_SHIFT = 0.15; // Fraction of viewport height to shift the focused view up on mobile (negative shifts it down)
+
 // Canonical world extent: the map's maxBounds (restricts panning) and every
 // tile layer's bounds option. Needs noWrap alongside it - without noWrap,
 // Leaflet wraps a tile's bounds into range before checking them, so bounds
