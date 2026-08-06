@@ -901,7 +901,7 @@ function exportGeoJson(options = {}) {
 // Specification: https://www.topografix.com/gpx/1/1/
 
 const GPX_HEADER = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"
+<gpx version="1.1" creator="${APP_NAME}" xmlns="http://www.topografix.com/GPX/1/1"
     xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"
     xmlns:gpx_style="http://www.topografix.com/GPX/gpx_style/0/2"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
