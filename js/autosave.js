@@ -35,7 +35,7 @@ function _serializeLayersForAutosave() {
       const feature = layerToPortableFeature(layer);
       if (!feature) return;
 
-      feature.internal = { ...layer.internal, pathType: layer.internal?.pathType || "drawn" };
+      feature.internal = { ...layer.internal };
       features.push(feature);
     } catch (e) {
       console.warn("Autosave: skipping layer", e);
@@ -100,25 +100,13 @@ async function restoreAutosave() {
     geojsonData.features.forEach((feature) => {
       if (!feature.geometry) return;
 
-      // Legacy data (saved before internal state moved off feature.properties) carries
-      // pathType/color/hidden inside properties - pull them out so they can't leak back into
-      // feature.properties or a GeoJSON export. Newer data has none of these keys and gets its
-      // internal state from the sibling `internal` object instead.
-      const {
-        hidden: legacyHidden,
-        color: legacyColor,
-        pathType: legacyPathType,
-        ...props
-      } = feature.properties || {};
-      const internal = feature.internal ?? {
-        pathType: legacyPathType,
-        isManuallyHidden: legacyHidden,
-      };
+      // Properties are restored verbatim; internal state comes from the sibling `internal`
+      // object autosave writes next to each feature (see _serializeLayersForAutosave).
+      const props = feature.properties || {};
+      const internal = feature.internal || {};
       const pathType = internal.pathType || "drawn";
       const geomType = feature.geometry.type;
-      // Legacy color lived under a plain "color" key; current data already carries it
-      // under its simplestyle-spec key, which parseColorFromGeoJsonStyle() reads.
-      const color = parseColor(legacyColor) || parseColorFromGeoJsonStyle(props) || DEFAULT_COLOR;
+      const color = parseColorFromGeoJsonStyle(props) || DEFAULT_COLOR;
 
       let layer;
 
@@ -151,13 +139,12 @@ async function restoreAutosave() {
         properties: props,
         geometry: feature.geometry,
       };
-      // Rebuilt field by field rather than spread, so no stray key from older saved data
-      // survives into the live layer. isManuallyHidden starts false and is applied below via
+      // Rebuilt field by field rather than spread, so no stray key from saved data survives
+      // into the live layer. isManuallyHidden starts false and is applied below via
       // toggleLayerVisibility(), which flips the flag itself and performs the actual hiding.
       const wasHidden = internal.isManuallyHidden;
       layer.internal = { pathType, isManuallyHidden: false };
-      // Normalizes the resolved color onto the right simplestyle key, and migrates
-      // legacy data that stored it under a plain "color" key.
+      // Ensures exactly one simplestyle color key even if the saved record had none.
       setLayerColor(layer, color);
       // Safety net for autosave data saved before names were guaranteed at creation time
       if (!layer.feature.properties.name) {
