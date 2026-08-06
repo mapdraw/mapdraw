@@ -28,6 +28,12 @@ const margin = {
   left: 55,
 };
 
+/** Formats an elevation (in meters) respecting the module's useImperial setting. */
+function formatElevation(meters) {
+  const feet = meters * 3.28084;
+  return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
+}
+
 /**
  * Converts Leaflet data (L.latLng(lat, lng, alt)) into D3 format.
  * @param {Array<L.LatLng>} pointsWithElev - Array of Leaflet LatLng objects with altitude
@@ -220,10 +226,6 @@ function redrawChartData() {
   chartGroup.select(".altitude-area").datum(currentRawData).attr("d", areaGenerator);
   chartGroup.select(".altitude-line").datum(currentRawData).attr("d", lineGenerator);
   const distanceFormatter = (meters) => formatDistance(meters);
-  const elevationFormatter = (meters) => {
-    const feet = meters * 3.28084;
-    return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
-  };
 
   const tickValues = [0, maxDistance / 2, maxDistance];
   xAxis.call(d3.axisBottom(x).tickValues(tickValues).tickFormat(distanceFormatter));
@@ -234,7 +236,7 @@ function redrawChartData() {
   });
 
   const yTickValues = [minElev, (minElev + maxElev) / 2, maxElev];
-  yAxis.call(d3.axisRight(y).tickValues(yTickValues).tickFormat(elevationFormatter));
+  yAxis.call(d3.axisRight(y).tickValues(yTickValues).tickFormat(formatElevation));
   yAxis
     .selectAll(".tick text")
     .attr("dy", null)
@@ -249,12 +251,8 @@ function redrawChartData() {
  * Draws empty axes when no data is present.
  */
 function drawEmptyAxes() {
-  const elevationFormatter = (meters) => {
-    const feet = meters * 3.28084;
-    return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
-  };
   xAxis.call(d3.axisBottom(x).ticks(0).tickFormat(""));
-  yAxis.call(d3.axisRight(y).ticks(4).tickFormat(elevationFormatter));
+  yAxis.call(d3.axisRight(y).ticks(4).tickFormat(formatElevation));
   yAxis.selectAll("text").text("");
 }
 
@@ -399,19 +397,14 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
   const hikingTimeMinutes = calculateSwissHikingTime(currentRawData);
   const hikingTimeFormatted = formatHikingTime(hikingTimeMinutes);
 
-  const elevationFormatter = (meters) => {
-    const feet = meters * 3.28084;
-    return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
-  };
-
   const summaryDiv = svg.select("#d3-summary-html");
   if (summaryDiv) {
     const itemStyle = "display: inline-block; white-space: nowrap; margin: 0 4px;";
     summaryDiv.html(
-      `<span style="${itemStyle}">Ascent: ${elevationFormatter(ascent)}</span>` +
-        `<span style="${itemStyle}">Descent: ${elevationFormatter(descent)}</span>` +
-        `<span style="${itemStyle}">Highest point: ${elevationFormatter(maxElev)}</span>` +
-        `<span style="${itemStyle}">Lowest point: ${elevationFormatter(minElev)}</span>` +
+      `<span style="${itemStyle}">Ascent: ${formatElevation(ascent)}</span>` +
+        `<span style="${itemStyle}">Descent: ${formatElevation(descent)}</span>` +
+        `<span style="${itemStyle}">Highest point: ${formatElevation(maxElev)}</span>` +
+        `<span style="${itemStyle}">Lowest point: ${formatElevation(minElev)}</span>` +
         `<span style="${itemStyle}">Hiking time: ${hikingTimeFormatted}</span>` +
         // Show add/remove buttons only when "prefer file elevation" is enabled (default)
         // and the path is not an active route (unsaved routes may change anytime).
@@ -523,11 +516,7 @@ function onHoverMove(event) {
 
   if (dataPoint) {
     const distanceText = `Distance: ${formatDistance(dataPoint.distance)}`;
-    const elevationFormatter = (meters) => {
-      const feet = meters * 3.28084;
-      return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
-    };
-    const elevationText = `Elevation: ${elevationFormatter(dataPoint.elevation)}`;
+    const elevationText = `Elevation: ${formatElevation(dataPoint.elevation)}`;
 
     const textDist = chartGroup.select("#tooltip-distance-text").text(distanceText);
     const textElev = chartGroup.select("#tooltip-elevation-text").text(elevationText);
