@@ -49,6 +49,15 @@ function formatDistanceLabelInterval(meters) {
   return `${Math.round(meters / unitMeters)} ${unitLabel}`;
 }
 
+// The "0" endpoint, paired with formatDistance(totalDistance) - matches that
+// function's own km/mi -> m/ft threshold so the two stay in the same unit
+// instead of "0 km" sitting next to e.g. "500 m".
+function formatDistanceLabelZero(totalDistance) {
+  const smallUnitThreshold = useImperialUnits ? METERS_PER_MILE / 10 : METERS_PER_KM;
+  if (totalDistance < smallUnitThreshold) return useImperialUnits ? "0 ft" : "0 m";
+  return formatDistanceLabelInterval(0);
+}
+
 function distanceLabelIcon(html, verticalOffset = DISTANCE_LABEL_VERTICAL_OFFSET_PX) {
   return L.divIcon({
     className: "distance-label",
@@ -232,7 +241,7 @@ function placeDistanceLabelEndpoints(
   // worth showing.
   const combinedHtml = noIntervalLabelsVisible
     ? formatDistance(totalDistance)
-    : `${formatDistance(totalDistance)}<br>${formatDistanceLabelInterval(0)}`;
+    : `${formatDistance(totalDistance)}<br>${formatDistanceLabelZero(totalDistance)}`;
 
   if (isClosedRing) {
     // Suppressed in favor of the area label below when the two would overlap - a
@@ -250,7 +259,7 @@ function placeDistanceLabelEndpoints(
     // away from the other). Centered is the neutral choice that doesn't favor either.
     placeDistanceLabel(mergedAnchor, combinedHtml, 0);
   } else {
-    placeDistanceLabel(start, formatDistanceLabelInterval(0));
+    placeDistanceLabel(start, formatDistanceLabelZero(totalDistance));
     placeDistanceLabel(end, formatDistance(totalDistance));
   }
 }

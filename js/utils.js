@@ -611,14 +611,10 @@ function formatDistance(meters, includeSecondary = false) {
   let primaryDisplay, secondaryDisplay;
 
   if (useImperialUnits) {
-    if (miles < 0.1 && miles > 0) {
+    if (miles < 0.1) {
       primaryDisplay = `${Math.round(meters * METERS_TO_FEET)} ft`;
     } else {
-      if (meters === 0) {
-        primaryDisplay = "0 mi";
-      } else {
-        primaryDisplay = `${miles.toFixed(2)} mi`;
-      }
+      primaryDisplay = `${miles.toFixed(2)} mi`;
     }
     secondaryDisplay = km < 1 ? `${Math.round(meters)} m` : `${km.toFixed(2)} km`;
   } else {
