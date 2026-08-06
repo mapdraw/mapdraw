@@ -93,12 +93,13 @@ function applyDataEditor() {
   if (parsed.features?.length > 0) {
     try {
       // The same explosion every file import does before calling importGeoJsonToMap(), which
-      // doesn't do it itself: without it a pasted MultiLineString/MultiPolygon becomes an
-      // L.FeatureGroup, whose toGeoJSON() is a FeatureCollection rather than a Feature, so
-      // layerToPortableFeature() drops it and the item vanishes from this editor and every
-      // export while still sitting on the map. Runs before the check below so that validates
-      // what actually gets imported, and inside the try so a malformed feature reports an
-      // error instead of throwing past the map-clearing step.
+      // doesn't do it itself. Leaflet builds one layer with nested latlngs from a pasted
+      // MultiLineString/MultiPolygon, and an L.FeatureGroup from a MultiPoint/GeometryCollection
+      // - neither survives layerToPortableFeature(): the first writes flattened coordinates
+      // under the untouched Multi* geometry type, the second has no geometry at all and is
+      // dropped from this editor and every export while still sitting on the map. Runs before
+      // the check below so that validates what actually gets imported, and inside the try so a
+      // malformed feature reports an error instead of throwing past the map-clearing step.
       parsed.features = parsed.features.flatMap((f) => explodeMultiGeometries(f));
       if (L.geoJSON(parsed).getLayers().length === 0) {
         error.textContent = "No valid features found — check geometry types and coordinates.";

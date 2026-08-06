@@ -1,16 +1,5 @@
 // Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
-const APP_NAME = "MapDraw.net"; // Used throughout the app as name
-const APP_NAME_PWA = "MapDraw"; // Used in the PWA manifest
-// prettier-ignore
-const APP_TITLE = "MapDraw: Draw on Map, GPS, GPX, KML & GeoJSON Editor"; // Used in the HTML <title> tag
-// prettier-ignore
-const APP_DESCRIPTION = "Free online GPX, KML, KMZ & GeoJSON viewer & editor. Draw, view & edit GPS tracks with routing, elevation profiles & Strava integration."; // Used in <meta name="description">
-const APP_DOMAIN = "www.mapdraw.net"; // Used for Strava setup instructions
-const OSM_CREATED_BY = "MapDraw"; // OSM changeset created_by tag
-
-const BREAKPOINT_MOBILE = 768; // Mobile breakpoint; matches style.css's @media (max-width: 768px)
-
 /**
  * LAYER DATA MODEL
  *
@@ -40,6 +29,17 @@ const BREAKPOINT_MOBILE = 768; // Mobile breakpoint; matches style.css's @media 
  *   needed anywhere. Autosave persists it in a sibling `internal` key, since that record is
  *   the app's own format rather than a GeoJSON document.
  */
+
+const APP_NAME = "MapDraw.net"; // Used throughout the app as name
+const APP_NAME_PWA = "MapDraw"; // Used in the PWA manifest
+// prettier-ignore
+const APP_TITLE = "MapDraw: Draw on Map, GPS, GPX, KML & GeoJSON Editor"; // Used in the HTML <title> tag
+// prettier-ignore
+const APP_DESCRIPTION = "Free online GPX, KML, KMZ & GeoJSON viewer & editor. Draw, view & edit GPS tracks with routing, elevation profiles & Strava integration."; // Used in <meta name="description">
+const APP_DOMAIN = "www.mapdraw.net"; // Used for Strava setup instructions
+const OSM_CREATED_BY = "MapDraw"; // OSM changeset created_by tag
+
+const BREAKPOINT_MOBILE = 768; // Mobile breakpoint; matches style.css's @media (max-width: 768px)
 
 // Overview-list "focus" (click an item to jump the map to it)
 const OVERVIEW_FOCUS_MARKER_ZOOM = 15; // Fixed zoom level used when focusing a marker

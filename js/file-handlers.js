@@ -347,7 +347,7 @@ function importGeoJsonToMap(geoJsonData, fileType) {
       const color = resolveColor(feature.properties);
 
       // Store the resolved color under its simplestyle-spec key, then drop the style
-      // inputs it was resolved from - everything left is the source's own content.
+      // properties the app renders on its own terms (see DISCARDED_STYLE_PROPERTIES).
       setLayerColor(layer, color);
       DISCARDED_STYLE_PROPERTIES.forEach((key) => delete layer.feature.properties[key]);
 

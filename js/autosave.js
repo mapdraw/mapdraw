@@ -101,15 +101,13 @@ async function restoreAutosave() {
       if (!feature.geometry) return;
 
       // Legacy data (saved before internal state moved off feature.properties) carries
-      // pathType/color/hidden inside properties, plus a totalDistance the app no longer
-      // keeps at all - pull them out so they can't leak back into feature.properties or a
-      // GeoJSON export. Newer data has none of these keys and gets its internal state from
-      // the sibling `internal` object instead.
+      // pathType/color/hidden inside properties - pull them out so they can't leak back into
+      // feature.properties or a GeoJSON export. Newer data has none of these keys and gets its
+      // internal state from the sibling `internal` object instead.
       const {
         hidden: legacyHidden,
         color: legacyColor,
         pathType: legacyPathType,
-        totalDistance: _droppedTotalDistance,
         ...props
       } = feature.properties || {};
       const internal = feature.internal ?? {
