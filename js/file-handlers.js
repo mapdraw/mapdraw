@@ -77,6 +77,24 @@ function applyFullPrecisionCoordinates(layer, geojson) {
 }
 
 /**
+ * Converts a layer into the portable GeoJSON feature that represents it everywhere its data
+ * leaves the map: the GeoJSON Editor tab, a GeoJSON export, and autosave (which adds its
+ * internal state in a sibling key afterwards). Exactly type/properties/geometry - an imported
+ * layer's feature can carry extra top-level keys from its source file, and layer.internal is
+ * deliberately not part of layer.feature at all. See the LAYER DATA MODEL note in config.js.
+ * @param {L.Layer} layer - The layer to convert
+ * @returns {object|null} A GeoJSON Feature, or null if the layer has no usable geometry
+ */
+function layerToPortableFeature(layer) {
+  const geojson = layer.toGeoJSON();
+  if (!geojson?.geometry?.type) return null;
+  applyFullPrecisionCoordinates(layer, geojson);
+  // Shallow copy - callers can add or drop top-level properties without touching the live
+  // layer; nested values stay shared.
+  return { type: "Feature", properties: { ...geojson.properties }, geometry: geojson.geometry };
+}
+
+/**
  * Gets all layers that should be included in full exports (everything/all).
  * Includes drawn items, imported items, current route, and Strava activities.
  * @returns {Array} Array of all exportable layers
@@ -275,6 +293,27 @@ function parseColorFromKmlStyle(properties) {
 }
 
 /**
+ * Style properties stripped from every imported feature.
+ *
+ * The app renders everything with its own STYLE_CONFIG (line weight, opacity, and no fill for
+ * areas) and owns a single color, stored under stroke/marker-color by setLayerColor(). Keeping a
+ * source's own style keys would mean exporting styling the app never applied - and would leave
+ * `fill`/`fill-color` behind as a second, stale color as soon as the user recolors the item.
+ *
+ * "color" is the non-standard key resolveColor() reads (set by applyGpxColors(),
+ * applyKmlIconColors(), share-link decoding, or the source file itself); it goes once resolved,
+ * so it can't linger next to the simplestyle key that now holds the same color.
+ */
+const DISCARDED_STYLE_PROPERTIES = [
+  "color",
+  "stroke-width",
+  "stroke-opacity",
+  "fill",
+  "fill-color",
+  "fill-opacity",
+];
+
+/**
  * Imports GeoJSON data to the map, applying appropriate styles.
  * @param {object} geoJsonData - The GeoJSON data to add
  * @param {string} fileType - The file type ('gpx', 'kml', 'kmz', 'geojson')
@@ -307,8 +346,10 @@ function importGeoJsonToMap(geoJsonData, fileType) {
     onEachFeature: (feature, layer) => {
       const color = resolveColor(feature.properties);
 
-      // Store the resolved color
-      layer.feature.properties.color = color;
+      // Store the resolved color under its simplestyle-spec key, then drop the style
+      // inputs it was resolved from - everything left is the source's own content.
+      setLayerColor(layer, color);
+      DISCARDED_STYLE_PROPERTIES.forEach((key) => delete layer.feature.properties[key]);
 
       // Default a missing/empty name so it's never treated as blank downstream
       // (display, export).
@@ -317,7 +358,7 @@ function importGeoJsonToMap(geoJsonData, fileType) {
       }
 
       // All imported items use fileType as pathType - a file's own pathType is never trusted.
-      layer.feature.properties.pathType = fileType;
+      layer.internal = { pathType: fileType };
 
       layer.on("click", (e) => {
         L.DomEvent.stopPropagation(e);
@@ -327,7 +368,7 @@ function importGeoJsonToMap(geoJsonData, fileType) {
     pointToLayer: (feature, latlng) => {
       const color = resolveColor(feature.properties);
 
-      const marker = L.marker(latlng.wrap(), {
+      const marker = L.marker(wrapLatLngIfNeeded(latlng), {
         icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
       });
       marker.feature = feature;
@@ -492,6 +533,16 @@ function importGpxFile(file) {
     try {
       const dom = new DOMParser().parseFromString(readEvent.target.result, "text/xml");
       const geojsonData = toGeoJSON.gpx(dom);
+
+      // toGeoJSON maps GPX's <desc> to a `desc` property, while KML imports and both the
+      // GPX and KML exporters use `description`. Normalized here so one key means one thing
+      // everywhere - otherwise a GPX description survives the import but no export writes it.
+      geojsonData.features.forEach(({ properties }) => {
+        if (properties?.desc) {
+          properties.description = properties.desc;
+          delete properties.desc;
+        }
+      });
 
       // Extract colors from GPX DOM and attach to features BEFORE explosion
       applyGpxColors(dom, geojsonData);
@@ -736,21 +787,6 @@ function notifyExportSuccess(shouldNotify, title, text) {
   Swal.fire({ title, text, timer: 2000, showConfirmButton: false });
 }
 
-/**
- * Properties to exclude from GeoJSON export.
- * These are internal/style properties that shouldn't be included in exported files.
- */
-const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
-  "color",
-  "totalDistance",
-  "pathType",
-  "stroke-width",
-  "stroke-opacity",
-  "fill",
-  "fill-color",
-  "fill-opacity",
-];
-
 // GeoJSON
 // Specification: https://tools.ietf.org/html/rfc7946
 
@@ -802,49 +838,17 @@ function exportGeoJson(options = {}) {
     }
   }
 
-  // Convert each layer to GeoJSON
+  // Convert each layer to GeoJSON. Nothing to filter or add: layerToPortableFeature() already
+  // yields exactly the portable content (including stroke/marker-color), so this writes the
+  // same features the GeoJSON Editor tab shows.
   allLayers.forEach((layer) => {
     try {
-      const geojson = layer.toGeoJSON();
-
-      // Skip if toGeoJSON didn't produce valid geometry
-      if (!geojson || !geojson.geometry || !geojson.geometry.type) {
+      const feature = layerToPortableFeature(layer);
+      if (!feature) {
         console.warn("Skipping layer with invalid geometry:", layer);
         return;
       }
-
-      // Extract full precision coordinates directly from layer
-      applyFullPrecisionCoordinates(layer, geojson);
-
-      // Get color (stored hex or default)
-      const color = layer.feature?.properties?.color || DEFAULT_COLOR;
-
-      // Filter out excluded properties
-      const filteredProperties = Object.keys(geojson.properties || {}).reduce((acc, key) => {
-        if (!GEOJSON_EXPORT_EXCLUDED_PROPERTIES.includes(key)) {
-          acc[key] = geojson.properties[key];
-        }
-        return acc;
-      }, {});
-
-      // Set filtered properties
-      geojson.properties = {
-        ...filteredProperties,
-      };
-
-      // Add standard GeoJSON styling for other tools
-      if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-        geojson.properties.stroke = color;
-      }
-
-      if (layer instanceof L.Marker) {
-        geojson.properties["marker-color"] = color;
-      }
-
-      // Ensure type: "Feature" is present
-      geojson.type = "Feature";
-
-      features.push(geojson);
+      features.push(feature);
     } catch (error) {
       console.error("Error converting layer to GeoJSON:", error, layer);
       // Skip this layer and continue with others
@@ -915,7 +919,7 @@ const GPX_FOOTER = "\n</gpx>";
 function convertLayerToGpxSnippet(layer) {
   const name = layer.feature?.properties?.name || "Exported Feature";
   const description = layer.feature?.properties?.description || "";
-  const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+  const color = getLayerColor(layer);
   // Remove # prefix for GPX format
   const gpxColorHex = color.substring(1).toUpperCase();
   const stravaId = layer.feature?.properties?.stravaId;
@@ -923,40 +927,14 @@ function convertLayerToGpxSnippet(layer) {
   const safeName = escapeXml(name);
   const safeDescription = escapeXml(description);
 
-  if (layer instanceof L.Polygon) {
-    let latlngs = layer.getLatLngs()[0];
-
-    // Close the polygon by adding the first point at the end
-    const closedLatLngs = [...latlngs, latlngs[0]];
-
-    const pathPoints = closedLatLngs
-      .map((p) => {
-        let pt = `<trkpt lat="${p.lat}" lon="${p.lng}">`;
-        if (typeof p.alt === "number") {
-          pt += `<ele>${p.alt}</ele>`;
-        }
-        pt += `</trkpt>`;
-        return pt;
-      })
-      .join("\n      ");
-
-    return `
-  <trk>
-    <name>${safeName}</name>
-    <extensions>
-      <gpx_style:line>
-        <gpx_style:color>${gpxColorHex}</gpx_style:color>
-      </gpx_style:line>
-      <color>#FF${gpxColorHex}</color>${stravaId ? `\n      <stravaId>${stravaId}</stravaId>` : ""}
-    </extensions>
-    <trkseg>
-      ${pathPoints}
-    </trkseg>
-  </trk>`;
-  } else if (layer instanceof L.Polyline) {
-    let latlngs = layer.getLatLngs();
-    while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-      latlngs = latlngs[0];
+  if (layer instanceof L.Polyline) {
+    // L.Polygon extends L.Polyline, so areas land here too - they only differ in closing the ring.
+    let latlngs;
+    if (layer instanceof L.Polygon) {
+      const ring = layer.getLatLngs()[0];
+      latlngs = [...ring, ring[0]];
+    } else {
+      latlngs = flattenRingPoints(layer.getLatLngs());
     }
 
     const pathPoints = latlngs
@@ -970,9 +948,10 @@ function convertLayerToGpxSnippet(layer) {
       })
       .join("\n      ");
 
+    // GPX 1.1's trkType is an ordered sequence: name, then desc, then extensions.
     return `
   <trk>
-    <name>${safeName}</name>
+    <name>${safeName}</name>${safeDescription ? `\n    <desc>${safeDescription}</desc>` : ""}
     <extensions>
       <gpx_style:line>
         <gpx_style:color>${gpxColorHex}</gpx_style:color>
@@ -1068,7 +1047,7 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
     description = layer.feature.properties.description || description;
   }
 
-  const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+  const color = getLayerColor(layer);
   const kmlColor = cssToKmlColor(color);
 
   const safeName = escapeXml(name);
@@ -1193,7 +1172,7 @@ function buildKmlContent(docName, layers = null) {
     const kmlSnippet = convertLayerToKmlPlacemark(layer, defaultName);
     if (!kmlSnippet) return;
 
-    const groupKey = getGroupTitle(layer.feature?.properties?.pathType);
+    const groupKey = getGroupTitle(layer.internal?.pathType);
     featuresByGroup[groupKey].push(kmlSnippet);
   });
 

@@ -160,7 +160,7 @@
   // (isManuallyHidden), not effective on-map visibility (which can also depend
   // on a hidden parent category).
   function anySelectedVisible() {
-    return Array.from(selectedLayers).some((layer) => !layer.isManuallyHidden);
+    return Array.from(selectedLayers).some((layer) => !layer.internal?.isManuallyHidden);
   }
 
   function updateActionButtonsState() {
@@ -189,7 +189,7 @@
   function getCommonSelectionColor() {
     let common;
     for (const layer of selectedLayers) {
-      const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+      const color = getLayerColor(layer);
       if (common === undefined) common = color;
       else if (common !== color) return undefined;
     }
@@ -233,11 +233,7 @@
   // style - selected layers stay in the blue selection highlight until
   // deselected, at which point resetLayerStyle() picks up the new color.
   function applyBulkColor(hex) {
-    selectedLayers.forEach((layer) => {
-      layer.feature = layer.feature || {};
-      layer.feature.properties = layer.feature.properties || {};
-      layer.feature.properties.color = hex;
-    });
+    selectedLayers.forEach((layer) => setLayerColor(layer, hex));
   }
 
   function setSelection(newSet) {
@@ -321,7 +317,7 @@
     if (selectedLayers.size === 0) return;
     const shouldHide = anySelectedVisible();
     selectedLayers.forEach((layer) => {
-      if (layer.isManuallyHidden !== shouldHide) {
+      if (layer.internal?.isManuallyHidden !== shouldHide) {
         toggleLayerVisibility(layer);
       }
     });

@@ -113,7 +113,7 @@ function buildCompactObject(layers = null) {
 
       // Add name, color, and stravaId only if present
       const name = layer.feature?.properties?.name;
-      const color = layer.feature?.properties?.color;
+      const color = getLayerColor(layer);
       const stravaId = layer.feature?.properties?.stravaId;
       if (name) feature.n = name;
       // Strip # prefix from hex color for URL efficiency (auto-restored by parseColor() inside importGeoJsonToMap)

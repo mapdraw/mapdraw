@@ -466,12 +466,16 @@ function displayActivitiesOnMap(activities) {
         polyline.feature = {
           properties: {
             ...activity,
-            totalDistance: activity.distance,
-            color: STRAVA_COLOR,
-            pathType: "strava",
             stravaId: activity.id,
           },
         };
+        polyline.internal = { pathType: "strava" };
+        setLayerColor(polyline, STRAVA_COLOR);
+        // Same guarantee every other creation site makes: a name is never blank downstream
+        // (display, export). Strava supplies one, but an unnamed activity mustn't slip through.
+        if (!polyline.feature.properties.name) {
+          polyline.feature.properties.name = getDefaultLayerName(polyline);
+        }
         polyline.on("click", (e) => {
           L.DomEvent.stopPropagation(e);
           selectItem(polyline);

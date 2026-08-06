@@ -6,8 +6,10 @@
  * Desktop-only tab that shows all current map features as editable GeoJSON.
  * Supports applying edited JSON back to the map.
  *
- * - pathType is serialized into each feature so drawn vs. imported items survive a round-trip.
- * - Apply validates JSON, GeoJSON structure, and geometry before clearing the map.
+ * - Shows layerToPortableFeature() output verbatim: internal state lives on layer.internal, so
+ *   what's displayed is byte-for-byte the same feature a GeoJSON export writes.
+ * - Apply validates JSON, GeoJSON structure, and geometry before clearing the map, and
+ *   turns every applied feature into a drawn item.
  * - isDirty blocks auto-refresh while the user has unsaved edits in the editor.
  * - Auto-refresh is explicit: anything that changes layer data calls scheduleDataEditorRefresh()
  *   directly (updateOverviewList() does; so do the two color-write spots in ui-handlers.js that
@@ -28,16 +30,8 @@ function buildDataEditorGeoJSON() {
 
   allLayers.forEach((layer) => {
     try {
-      const geojson = layer.toGeoJSON();
-      if (!geojson || !geojson.geometry || !geojson.geometry.type) return;
-
-      applyFullPrecisionCoordinates(layer, geojson);
-
-      features.push({
-        type: "Feature",
-        properties: geojson.properties,
-        geometry: geojson.geometry,
-      });
+      const feature = layerToPortableFeature(layer);
+      if (feature) features.push(feature);
     } catch (e) {
       console.error("GeoJSON editor: error serializing layer", e);
     }
@@ -98,6 +92,14 @@ function applyDataEditor() {
 
   if (parsed.features?.length > 0) {
     try {
+      // The same explosion every file import does before calling importGeoJsonToMap(), which
+      // doesn't do it itself: without it a pasted MultiLineString/MultiPolygon becomes an
+      // L.FeatureGroup, whose toGeoJSON() is a FeatureCollection rather than a Feature, so
+      // layerToPortableFeature() drops it and the item vanishes from this editor and every
+      // export while still sitting on the map. Runs before the check below so that validates
+      // what actually gets imported, and inside the try so a malformed feature reports an
+      // error instead of throwing past the map-clearing step.
+      parsed.features = parsed.features.flatMap((f) => explodeMultiGeometries(f));
       if (L.geoJSON(parsed).getLayers().length === 0) {
         error.textContent = "No valid features found — check geometry types and coordinates.";
         error.style.display = "block";
@@ -119,28 +121,12 @@ function applyDataEditor() {
   editableLayers.clearLayers();
   importedItems.clearLayers();
 
-  const drawnFeatures = [];
-  const importedFeatures = [];
-
-  (parsed.features ?? []).forEach((f) => {
-    if (f.properties?.pathType === "drawn") {
-      drawnFeatures.push(f);
-    } else {
-      importedFeatures.push(f);
-    }
-  });
-
-  if (importedFeatures.length > 0) {
-    importGeoJsonToMap({ type: "FeatureCollection", features: importedFeatures }, "geojson");
-  }
-
-  if (drawnFeatures.length > 0) {
-    const layerGroup = importGeoJsonToMap(
-      { type: "FeatureCollection", features: drawnFeatures },
-      "geojson",
-    );
+  // Everything applied from the editor becomes a directly-editable drawn item: the
+  // edited text is pure GeoJSON and carries no pathType to route features by.
+  if (parsed.features?.length > 0) {
+    const layerGroup = importGeoJsonToMap(parsed, "geojson");
     layerGroup.eachLayer((layer) => {
-      layer.feature.properties.pathType = "drawn";
+      layer.internal.pathType = "drawn";
       importedItems.removeLayer(layer);
       drawnItems.addLayer(layer);
       editableLayers.addLayer(layer);

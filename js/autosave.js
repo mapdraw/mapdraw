@@ -29,26 +29,14 @@ function _serializeLayersForAutosave() {
       // Skip the active (unsaved) route — routing state can't be restored
       if (currentRoutePath && layer === currentRoutePath) return;
 
-      const geojson = layer.toGeoJSON();
-      if (!geojson || !geojson.geometry || !geojson.geometry.type) return;
+      // The same portable feature a GeoJSON export writes, saved verbatim. Internal state
+      // rides along in a sibling key - this record is the app's own format, not a GeoJSON
+      // document, so an extra key is fine here.
+      const feature = layerToPortableFeature(layer);
+      if (!feature) return;
 
-      // Extract full precision coordinates directly from layer
-      applyFullPrecisionCoordinates(layer, geojson);
-
-      // Preserve properties that matter for restoring state
-      const props = {};
-      const src = geojson.properties || {};
-      if (src.name) props.name = src.name;
-      if (src.description) props.description = src.description;
-      if (src.color) props.color = src.color;
-      if (src.stravaId) props.stravaId = src.stravaId;
-      if (src.type) props.type = src.type; // Strava activity type (Ride, Run, etc.)
-      props.pathType = src.pathType || "drawn";
-      if (layer.isManuallyHidden) props.hidden = true;
-
-      geojson.properties = props;
-      geojson.type = "Feature";
-      features.push(geojson);
+      feature.internal = { ...layer.internal, pathType: layer.internal?.pathType || "drawn" };
+      features.push(feature);
     } catch (e) {
       console.warn("Autosave: skipping layer", e);
     }
@@ -112,17 +100,33 @@ async function restoreAutosave() {
     geojsonData.features.forEach((feature) => {
       if (!feature.geometry) return;
 
-      // Kept out of props so it can't leak into feature.properties or a GeoJSON export.
-      const { hidden: wasHidden, ...props } = feature.properties || {};
-      const color = parseColor(props.color) || DEFAULT_COLOR;
-      const pathType = props.pathType || "drawn";
+      // Legacy data (saved before internal state moved off feature.properties) carries
+      // pathType/color/hidden inside properties, plus a totalDistance the app no longer
+      // keeps at all - pull them out so they can't leak back into feature.properties or a
+      // GeoJSON export. Newer data has none of these keys and gets its internal state from
+      // the sibling `internal` object instead.
+      const {
+        hidden: legacyHidden,
+        color: legacyColor,
+        pathType: legacyPathType,
+        totalDistance: _droppedTotalDistance,
+        ...props
+      } = feature.properties || {};
+      const internal = feature.internal ?? {
+        pathType: legacyPathType,
+        isManuallyHidden: legacyHidden,
+      };
+      const pathType = internal.pathType || "drawn";
       const geomType = feature.geometry.type;
+      // Legacy color lived under a plain "color" key; current data already carries it
+      // under its simplestyle-spec key, which parseColorFromGeoJsonStyle() reads.
+      const color = parseColor(legacyColor) || parseColorFromGeoJsonStyle(props) || DEFAULT_COLOR;
 
       let layer;
 
       if (geomType === "Point") {
         const coords = feature.geometry.coordinates;
-        const latlng = coordToLatLng(coords).wrap();
+        const latlng = wrapLatLngIfNeeded(coordToLatLng(coords));
         layer = L.marker(latlng, {
           icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
         });
@@ -146,9 +150,17 @@ async function restoreAutosave() {
       // Set feature data
       layer.feature = {
         type: "Feature",
-        properties: { ...props, color, pathType },
+        properties: props,
         geometry: feature.geometry,
       };
+      // Rebuilt field by field rather than spread, so no stray key from older saved data
+      // survives into the live layer. isManuallyHidden starts false and is applied below via
+      // toggleLayerVisibility(), which flips the flag itself and performs the actual hiding.
+      const wasHidden = internal.isManuallyHidden;
+      layer.internal = { pathType, isManuallyHidden: false };
+      // Normalizes the resolved color onto the right simplestyle key, and migrates
+      // legacy data that stored it under a plain "color" key.
+      setLayerColor(layer, color);
       // Safety net for autosave data saved before names were guaranteed at creation time
       if (!layer.feature.properties.name) {
         layer.feature.properties.name = getDefaultLayerName(layer);

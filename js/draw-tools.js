@@ -154,8 +154,8 @@ function initDrawTools() {
     if (pathExtendTarget || pathExtendFinishTarget) return;
     const layer = e.layer;
     layer.feature = layer.feature || { properties: {} };
-    layer.feature.properties.pathType = "drawn";
-    layer.feature.properties.color = DEFAULT_COLOR;
+    layer.internal = { pathType: "drawn" };
+    setLayerColor(layer, DEFAULT_COLOR);
     layer.feature.properties.name = getDefaultLayerName(layer);
     drawnItems.addLayer(layer);
     editableLayers.addLayer(layer);
@@ -171,14 +171,10 @@ function initDrawTools() {
   });
 
   map.on("draw:edited", (e) => {
+    // Reselect to refresh the info panel's length/area readout against the new geometry
+    // (L.Polygon extends L.Polyline, so this covers areas too).
     e.layers.eachLayer((layer) => {
-      if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-        const newDistance = calculatePathDistance(layer);
-        if (layer.feature && layer.feature.properties) {
-          layer.feature.properties.totalDistance = newDistance;
-        }
-        if (globallySelectedItem === layer) selectItem(layer);
-      }
+      if (layer instanceof L.Polyline && globallySelectedItem === layer) selectItem(layer);
     });
     updateDrawControlStates();
     // Also what keeps the GeoJSON Editor tab (data-editor.js) live if it's open - see

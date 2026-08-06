@@ -76,9 +76,10 @@ function toggleLayerVisibility(layerToToggle) {
   if (!layerToToggle) return;
 
   // Toggle the manual hidden state
-  layerToToggle.isManuallyHidden = !layerToToggle.isManuallyHidden;
+  layerToToggle.internal = layerToToggle.internal || {};
+  layerToToggle.internal.isManuallyHidden = !layerToToggle.internal.isManuallyHidden;
 
-  if (layerToToggle.isManuallyHidden) {
+  if (layerToToggle.internal.isManuallyHidden) {
     setLayerEditingEnabled(layerToToggle, false);
 
     // Hide the layer and its potential outline
@@ -128,10 +129,10 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
   if (!layerToDuplicate) return undefined;
 
   let newLayer;
-  const newFeature = JSON.parse(JSON.stringify(layerToDuplicate.feature || { properties: {} }));
-  newFeature.properties.name =
-    (newFeature.properties.name || getDefaultLayerName(layerToDuplicate)) + " (Copy)";
-  const color = newFeature.properties.color || DEFAULT_COLOR;
+  const newName =
+    (layerToDuplicate.feature?.properties?.name || getDefaultLayerName(layerToDuplicate)) +
+    " (Copy)";
+  const color = getLayerColor(layerToDuplicate);
 
   // Create the appropriate layer type (marker, polygon, or polyline)
   if (layerToDuplicate instanceof L.Marker) {
@@ -153,19 +154,15 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
       ...STYLE_CONFIG.path.default,
       color: color,
     });
-    newFeature.properties.totalDistance = calculatePathDistance(newLayer);
   }
 
   if (newLayer) {
-    // Keep only essential properties (name, color) and force pathType to "drawn" -
-    // discard all source-specific metadata. This removes stravaId, imported file
-    // metadata, etc., making duplicates independent drawn paths.
-    const cleanProperties = {
-      name: newFeature.properties.name,
-      color: newFeature.properties.color || DEFAULT_COLOR,
-      pathType: "drawn",
-    };
-    newLayer.feature = { properties: cleanProperties };
+    // Keep only the name and force pathType to "drawn" - discard all source-specific
+    // metadata. This removes stravaId, imported file metadata, etc., making
+    // duplicates independent drawn paths.
+    newLayer.feature = { properties: { name: newName } };
+    newLayer.internal = { pathType: "drawn" };
+    setLayerColor(newLayer, color);
     newLayer.on("click", (ev) => {
       L.DomEvent.stopPropagation(ev);
       selectItem(newLayer);
@@ -271,7 +268,7 @@ function createOverviewListItem(layer) {
 
     toggleLayerVisibility(layerToToggle);
     // Icon state reflects ONLY the manual override, not effective visibility
-    visibilityIcon.textContent = getVisibilityIconName(layerToToggle.isManuallyHidden);
+    visibilityIcon.textContent = getVisibilityIconName(layerToToggle.internal?.isManuallyHidden);
   });
 
   // Duplicate button
@@ -358,7 +355,7 @@ function patchOverviewListItem(listItem, layer) {
     listItem._textSpan.textContent = layerName;
     listItem._textSpan.title = layerName;
   }
-  const iconName = getVisibilityIconName(layer.isManuallyHidden);
+  const iconName = getVisibilityIconName(layer.internal?.isManuallyHidden);
   if (listItem._visibilityIcon.textContent !== iconName) {
     listItem._visibilityIcon.textContent = iconName;
   }
@@ -411,7 +408,11 @@ function createOverviewControlsRow() {
     } else {
       map.addLayer(layerGroup);
       if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, true);
-      if (key === "DrawnItems" && currentRoutePath && !currentRoutePath.isManuallyHidden) {
+      if (
+        key === "DrawnItems" &&
+        currentRoutePath &&
+        !currentRoutePath.internal?.isManuallyHidden
+      ) {
         map.addLayer(currentRoutePath);
       }
     }
@@ -840,7 +841,7 @@ function getGroupTitle(pathType) {
 // ensuring the layer is visible in the list. Always leaves the virtualized window
 // rendered, whether or not the category changed.
 function activateCategoryForItem(layer) {
-  const key = getGroupTitle(layer.feature?.properties?.pathType);
+  const key = getGroupTitle(layer.internal?.pathType);
   if (activeCategory !== key) {
     activeCategory = key;
     updateOverviewList(); // already renders internally
@@ -916,7 +917,7 @@ function updateOverviewList() {
   };
 
   allItems.forEach((layer) => {
-    const key = getGroupTitle(layer.feature?.properties?.pathType);
+    const key = getGroupTitle(layer.internal?.pathType);
     if (!groupedItems[key]) {
       groupedItems[key] = [];
     }
@@ -1065,11 +1066,6 @@ function showInfoPanel(layer) {
     const totalDistance = calculatePathDistance(layer);
     const pointCount = layer.getLatLngs().length;
 
-    // Update the cached property
-    if (layer.feature && layer.feature.properties) {
-      layer.feature.properties.totalDistance = totalDistance;
-    }
-
     details = `Length: ${formatDistance(totalDistance)}<br>Points: ${pointCount}`;
   }
 
@@ -1080,7 +1076,7 @@ function showInfoPanel(layer) {
 
   // Determine layer type for display
   let layerTypeName = "Unknown";
-  switch (layer.feature?.properties?.pathType) {
+  switch (layer.internal?.pathType) {
     case "drawn":
       layerTypeName = "Drawn Item";
       break;
@@ -1115,7 +1111,7 @@ function showInfoPanel(layer) {
   }
 
   // Set the color swatch and update picker state
-  const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+  const color = getLayerColor(layer);
   infoPanelColorSwatch.style.backgroundColor = color;
   infoPanelColorSwatch.innerHTML = ""; // clear any leftover "mixed colors" indicator
   updateColorPickerSelection(color);
@@ -1412,7 +1408,7 @@ function applyColorToSelectedItem(hex, hidePicker = true) {
   if (!globallySelectedItem) return;
 
   // Store the color on the feature
-  globallySelectedItem.feature.properties.color = hex;
+  setLayerColor(globallySelectedItem, hex);
 
   // Update the layer's visual style immediately
   if (globallySelectedItem instanceof L.Polyline || globallySelectedItem instanceof L.Polygon) {

@@ -69,7 +69,7 @@ function createMarkerIcon(
  * @param {L.Layer} layer - The Leaflet layer to reset
  */
 function resetLayerStyle(layer) {
-  const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+  const color = getLayerColor(layer);
   if (layer instanceof L.Marker) {
     layer.setIcon(createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity));
     layer.setZIndexOffset(0);
@@ -184,7 +184,7 @@ function syncSelectedDownloadButtonsState() {
   kmlBtn.title = "Download the selection as KML";
   shareBtn.title = "Copy a share link for the selection";
 
-  const allStrava = layers.every((layer) => layer.feature?.properties?.pathType === "strava");
+  const allStrava = layers.every((layer) => layer.internal?.pathType === "strava");
   stravaRow.style.display = allStrava ? "" : "none";
   if (allStrava) {
     stravaBtn.textContent =
@@ -363,7 +363,7 @@ function selectItem(layer) {
     });
   }
 
-  const highlightColor = layer.feature?.properties?.color || DEFAULT_COLOR;
+  const highlightColor = getLayerColor(layer);
 
   showInfoPanel(layer);
 
@@ -374,7 +374,7 @@ function selectItem(layer) {
       showDistanceLabelsFor(layer);
     }
 
-    if (layer.feature?.properties?.pathType !== "route") {
+    if (layer.internal?.pathType !== "route") {
       // Raising the overlay pane above the marker pane (600) makes the selected
       // path draw over unrelated markers - but the overlay pane is shared by
       // every path on the map, and the marker pane also holds leaflet-draw's own
