@@ -64,10 +64,7 @@ function applyFullPrecisionCoordinates(layer, geojson) {
     if (isRingClockwise(coords)) coords.reverse();
     geojson.geometry.coordinates = [coords];
   } else if (layer instanceof L.Polyline) {
-    let latlngs = layer.getLatLngs();
-    while (Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-      latlngs = latlngs[0];
-    }
+    const latlngs = flattenRingPoints(layer.getLatLngs());
     geojson.geometry.coordinates = latlngs.map((ll) => {
       const coord = [ll.lng, ll.lat];
       if (typeof ll.alt === "number") coord.push(ll.alt);
@@ -1072,25 +1069,18 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
 
   const placemarkEnd = `  </Placemark>`;
 
-  if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
+  if (layer instanceof L.Polyline) {
+    // L.Polygon extends L.Polyline, so areas land here too - they only differ in closing the ring.
     let latlngs;
-    let coords;
     if (layer instanceof L.Polygon) {
-      // Polygon: close the ring by adding the first point at the end
-      latlngs = layer.getLatLngs()[0];
-      const closedLatLngs = [...latlngs, latlngs[0]];
-      coords = closedLatLngs
-        .map((p) => `${p.lng},${p.lat},${typeof p.alt === "number" ? p.alt : 0}`)
-        .join(" ");
-    } else if (layer instanceof L.Polyline) {
-      latlngs = layer.getLatLngs();
-      while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-        latlngs = latlngs[0];
-      }
-      coords = latlngs
-        .map((p) => `${p.lng},${p.lat},${typeof p.alt === "number" ? p.alt : 0}`)
-        .join(" ");
+      const ring = layer.getLatLngs()[0];
+      latlngs = [...ring, ring[0]];
+    } else {
+      latlngs = flattenRingPoints(layer.getLatLngs());
     }
+    const coords = latlngs
+      .map((p) => `${p.lng},${p.lat},${typeof p.alt === "number" ? p.alt : 0}`)
+      .join(" ");
 
     const geometryType = layer instanceof L.Polygon ? "Polygon" : "LineString";
     const geometryTag =

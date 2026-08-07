@@ -144,10 +144,7 @@ function buildCompactObject(layers = null) {
           }
         }
       } else if (layer instanceof L.Polyline) {
-        let latlngs = layer.getLatLngs();
-        while (Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-          latlngs = latlngs[0];
-        }
+        const latlngs = flattenRingPoints(layer.getLatLngs());
         if (latlngs && latlngs.length > 0) {
           feature.t = "p";
           feature.c = L.PolylineUtil.encode(latlngs, 5);

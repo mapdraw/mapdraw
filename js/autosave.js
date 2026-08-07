@@ -3,8 +3,9 @@
 /**
  * AUTOSAVE
  *
- * Periodically saves map layers to IndexedDB as GeoJSON.
- * On page load, restores saved data (unless a share URL is present).
+ * Periodically saves map layers to IndexedDB as GeoJSON features, each carrying its
+ * internal state in a sibling `internal` key (the app's own record format, not a
+ * GeoJSON document). On page load, restores saved data (unless a share URL is present).
  */
 
 const AUTOSAVE_KEY = "mapAutosave";
