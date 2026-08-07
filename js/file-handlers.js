@@ -188,13 +188,15 @@ function explodeMultiGeometries(feature) {
   if (geomType === "GeometryCollection") {
     // Count occurrences of each geometry type to handle duplicates
     const typeCounts = {};
-    return feature.geometry.geometries.map((geom) => {
+    return feature.geometry.geometries.flatMap((geom) => {
       const type = geom.type;
       typeCounts[type] = (typeCounts[type] || 0) + 1;
       const suffix = typeCounts[type] > 1 ? ` ${typeCounts[type]}` : "";
       const typeLabel = labelMap[type] || type;
 
-      return {
+      // Recurse so a nested Multi*/GeometryCollection member is exploded too instead of
+      // passing through as one un-editable multi-geometry; simple members return as-is.
+      return explodeMultiGeometries({
         type: "Feature",
         geometry: geom,
         properties: {
@@ -203,7 +205,7 @@ function explodeMultiGeometries(feature) {
             ? `${feature.properties.name} (${typeLabel}${suffix})`
             : undefined,
         },
-      };
+      });
     });
   }
 
