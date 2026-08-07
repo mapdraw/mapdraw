@@ -246,12 +246,17 @@ function explodeMultiGeometries(feature) {
 
 /**
  * Parses color from standard GeoJSON stroke/marker-color properties.
- * Supports hex values and CSS color names.
+ * Prefers the simplestyle key matching the geometry ("marker-color" for points,
+ * "stroke" for everything else); the other key is kept as a fallback so a color
+ * stored under the wrong key still survives. Supports hex values and CSS color names.
  * @param {object} properties - The GeoJSON feature properties
+ * @param {boolean} isPoint - Whether the feature's geometry is a Point
  * @returns {string|null} Normalized hex color or null
  */
-function parseColorFromGeoJsonStyle(properties) {
-  const raw = properties?.stroke || properties?.["marker-color"];
+function parseColorFromGeoJsonStyle(properties, isPoint) {
+  const raw = isPoint
+    ? properties?.["marker-color"] || properties?.stroke
+    : properties?.stroke || properties?.["marker-color"];
   return parseColor(raw);
 }
 
@@ -327,24 +332,25 @@ function importGeoJsonToMap(geoJsonData, fileType) {
    * Internal helper to resolve the color for a feature.
    * Color resolution: try color property, then format-specific parsing, then default.
    */
-  const resolveColor = (properties) => {
+  const resolveColor = (feature) => {
+    const properties = feature.properties;
     if (!properties) return DEFAULT_COLOR;
     return (
       parseColor(properties.color) || // Normalize color if present
       (isKmlBased
         ? parseColorFromKmlStyle(properties) // KML/KMZ parsing
-        : parseColorFromGeoJsonStyle(properties)) || // GeoJSON stroke/marker-color
+        : parseColorFromGeoJsonStyle(properties, feature.geometry?.type === "Point")) || // GeoJSON stroke/marker-color
       DEFAULT_COLOR
     );
   };
 
   const layerGroup = L.geoJSON(geoJsonData, {
     style: (feature) => {
-      const color = resolveColor(feature.properties);
+      const color = resolveColor(feature);
       return { ...STYLE_CONFIG.path.default, color: color };
     },
     onEachFeature: (feature, layer) => {
-      const color = resolveColor(feature.properties);
+      const color = resolveColor(feature);
 
       // Store the resolved color under its simplestyle-spec key, then drop the style
       // properties the app renders on its own terms (see DISCARDED_STYLE_PROPERTIES).
@@ -366,7 +372,7 @@ function importGeoJsonToMap(geoJsonData, fileType) {
       });
     },
     pointToLayer: (feature, latlng) => {
-      const color = resolveColor(feature.properties);
+      const color = resolveColor(feature);
 
       const marker = L.marker(wrapLatLngIfNeeded(latlng), {
         icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),

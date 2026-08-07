@@ -106,7 +106,7 @@ async function restoreAutosave() {
       const internal = feature.internal || {};
       const pathType = internal.pathType || "drawn";
       const geomType = feature.geometry.type;
-      const color = parseColorFromGeoJsonStyle(props) || DEFAULT_COLOR;
+      const color = parseColorFromGeoJsonStyle(props, geomType === "Point") || DEFAULT_COLOR;
 
       let layer;
 

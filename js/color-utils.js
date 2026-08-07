@@ -261,9 +261,9 @@ function getLayerColor(layer) {
 function setLayerColor(layer, hex) {
   layer.feature = layer.feature || {};
   const props = (layer.feature.properties = layer.feature.properties || {});
-  // The other geometry's key must go: parseColorFromGeoJsonStyle() reads
-  // `stroke || marker-color`, so a leftover stroke on a marker would win on
-  // re-import and restore the wrong color.
+  // The other geometry's key must go: it would be exported as styling that was
+  // never applied, and parseColorFromGeoJsonStyle() would still read it as a
+  // fallback on re-import.
   if (layer instanceof L.Marker) {
     delete props.stroke;
     props["marker-color"] = hex;
