@@ -307,6 +307,11 @@ function parseColorFromKmlStyle(properties) {
  * "color" is the non-standard key resolveColor() reads (set by applyGpxColors(),
  * applyKmlIconColors(), share-link decoding, or the source file itself); it goes once resolved,
  * so it can't linger next to the simplestyle key that now holds the same color.
+ *
+ * styleHash/styleMapHash are bookkeeping toGeoJSON derives from shared KML styles (a hash of
+ * the referenced style's XML; a StyleMap's key/styleUrl pairs) - meaningless without the KML
+ * document they index into. styleUrl and icon stay - they are real KML content, and
+ * parseColorFromKmlStyle() reads them for Organic Maps colors.
  */
 const DISCARDED_STYLE_PROPERTIES = [
   "color",
@@ -315,6 +320,8 @@ const DISCARDED_STYLE_PROPERTIES = [
   "fill",
   "fill-color",
   "fill-opacity",
+  "styleHash",
+  "styleMapHash",
 ];
 
 /**
