@@ -141,8 +141,9 @@ async function restoreAutosave() {
         geometry: feature.geometry,
       };
       // Rebuilt field by field rather than spread, so no stray key from saved data survives
-      // into the live layer. isManuallyHidden starts false and is applied below via
-      // toggleLayerVisibility(), which flips the flag itself and performs the actual hiding.
+      // into the live layer - a new internal field must be restored here explicitly.
+      // isManuallyHidden starts false and is applied below via toggleLayerVisibility(),
+      // which flips the flag itself and performs the actual hiding.
       const wasHidden = internal.isManuallyHidden;
       layer.internal = { pathType, isManuallyHidden: false };
       // Ensures exactly one simplestyle color key even if the saved record had none.
