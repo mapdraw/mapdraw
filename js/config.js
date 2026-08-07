@@ -14,8 +14,9 @@
  *   The app owns presentation, so an imported file's own style keys are dropped on import
  *   rather than kept as styling that was never applied (see DISCARDED_STYLE_PROPERTIES).
  *   layerToPortableFeature() turns this into the feature the GeoJSON Editor tab shows, a
- *   GeoJSON export writes, and autosave stores - all three identical and unfiltered, so
- *   anything put here ends up in the user's exported file.
+ *   GeoJSON export writes, and autosave stores - identical per feature and unfiltered
+ *   (each consumer covers its own set of layers), so anything put here ends up in the
+ *   user's exported file.
  *
  * layer.internal - the app's own state, meaningless outside it:
  *   - pathType: origin/category ("drawn", "route", "strava", or the import's file type).

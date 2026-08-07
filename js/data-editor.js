@@ -3,8 +3,8 @@
 /**
  * GEOJSON EDITOR
  *
- * Desktop-only tab that shows all current map features as editable GeoJSON.
- * Supports applying edited JSON back to the map.
+ * Desktop-only tab that shows all drawn and imported items - but not Strava activities
+ * or the active route - as editable GeoJSON. Supports applying edited JSON back to the map.
  *
  * - Shows layerToPortableFeature() output verbatim: internal state lives on layer.internal, so
  *   what's displayed is byte-for-byte the same feature a GeoJSON export writes.
