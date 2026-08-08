@@ -160,17 +160,19 @@ function resolveExportFilePrefix(singleNamedItem, hasSelection) {
 
 /**
  * Supported geometry types for import.
- * Multi-geometry types (MultiLineString, MultiPolygon, etc.) and GeometryCollections
- * are automatically exploded into separate simple features for editing compatibility.
+ * Multi-geometry types (MultiLineString, MultiPolygon, etc.), GeometryCollections, and
+ * polygons with holes are automatically exploded into separate simple features for
+ * editing compatibility.
  */
 const SUPPORTED_IMPORT_GEOM_TYPES = ["Point", "LineString", "Polygon"];
 
 /**
  * Explodes multi-geometries and GeometryCollections into separate features.
  * Converts MultiLineString, MultiPolygon, MultiPoint, and GeometryCollection
- * into arrays of simple features that can be edited individually.
+ * into arrays of simple features that can be edited individually; a Polygon
+ * with holes is split into one area per ring.
  * @param {object} feature - GeoJSON feature that may contain multi-geometry
- * @returns {Array} Array of features with simple geometries only
+ * @returns {Array} Array of features with simple single-ring geometries only
  */
 function explodeMultiGeometries(feature) {
   if (!feature.geometry) return [];
@@ -212,12 +214,13 @@ function explodeMultiGeometries(feature) {
   // Handle Multi-geometries (MultiLineString, MultiPolygon, MultiPoint)
   if (geomType.startsWith("Multi")) {
     const singleType = geomType.replace("Multi", ""); // MultiLineString -> LineString
-    return feature.geometry.coordinates.map((coords, index) => {
-      const count = feature.geometry.coordinates.length;
+    const count = feature.geometry.coordinates.length;
+    return feature.geometry.coordinates.flatMap((coords, index) => {
       const suffix = count > 1 && index > 0 ? ` ${index + 1}` : "";
       const typeLabel = labelMap[singleType] || singleType;
 
-      return {
+      // Recurse so a MultiPolygon part with holes is split like any standalone polygon.
+      return explodeMultiGeometries({
         type: "Feature",
         geometry: { type: singleType, coordinates: coords },
         properties: {
@@ -226,8 +229,24 @@ function explodeMultiGeometries(feature) {
             ? `${feature.properties.name} (${typeLabel}${suffix})`
             : undefined,
         },
-      };
+      });
     });
+  }
+
+  // A polygon's rings beyond the first are holes (RFC 7946). The app has no hole support,
+  // so each ring becomes its own area - keeping the geometry at the cost of the "excluded
+  // region" meaning, which is invisible here anyway: areas render without fill.
+  if (geomType === "Polygon" && feature.geometry.coordinates.length > 1) {
+    return feature.geometry.coordinates.map((ring, index) => ({
+      type: "Feature",
+      geometry: { type: "Polygon", coordinates: [ring] },
+      properties: {
+        ...feature.properties,
+        name: feature.properties?.name
+          ? `${feature.properties.name} (${labelMap.Polygon}${index > 0 ? ` ${index + 1}` : ""})`
+          : undefined,
+      },
+    }));
   }
 
   // Simple geometry - return as-is if supported
