@@ -192,7 +192,14 @@ function showConnectUI() {
   `;
 
   document.getElementById("strava-connect-btn").addEventListener("click", () => {
-    stravaPanelContent.innerHTML = "<p>Waiting for Strava authentication in the new tab...</p>";
+    stravaPanelContent.innerHTML = `
+      <p>Waiting for Strava authentication in the new tab...</p>
+      <button id="strava-cancel-auth-btn" class="strava-button-secondary" style="margin: 0 auto;">Cancel</button>
+    `;
+    document.getElementById("strava-cancel-auth-btn").addEventListener("click", () => {
+      window.removeEventListener("storage", handleStravaAuthReturn);
+      showConnectUI();
+    });
     const stravaAuthURL = `https://www.strava.com/oauth/authorize?client_id=${stravaClientId}&redirect_uri=${redirectURI}&response_type=code&scope=${scope}`;
     window.open(stravaAuthURL, "_blank");
     window.addEventListener("storage", handleStravaAuthReturn);
