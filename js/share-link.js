@@ -8,6 +8,9 @@
  * map can be shared via link without any server-side storage.
  */
 
+// Share link data format version (the `v` key in the encoded payload).
+const SHARE_LINK_FORMAT_VERSION = 1;
+
 /**
  * Collects all chunks from a ReadableStream into a single Uint8Array.
  *
@@ -167,7 +170,7 @@ function buildCompactObject(layers = null) {
   });
 
   if (features.length === 0) return null;
-  return { v: 1, f: features };
+  return { v: SHARE_LINK_FORMAT_VERSION, f: features };
 }
 
 /**
@@ -238,7 +241,9 @@ async function importMapStateFromUrl(encoded) {
 
     const data = JSON.parse(jsonString);
     if (!data.v) throw new Error("Invalid data format: missing version");
-    if (data.v !== 1) throw new Error(`Unsupported data version: ${data.v}`);
+    if (data.v !== SHARE_LINK_FORMAT_VERSION) {
+      throw new Error(`Unsupported data version: ${data.v}`);
+    }
     if (!data.f || !Array.isArray(data.f)) {
       throw new Error("Invalid data format");
     }

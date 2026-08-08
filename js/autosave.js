@@ -10,6 +10,9 @@
 
 const AUTOSAVE_KEY = "mapAutosave";
 const AUTOSAVE_INTERVAL_MS = 5000;
+// Autosave record format version. Records without `v` are legacy data saved before
+// internal state moved off feature.properties (see restoreAutosave's migration).
+const AUTOSAVE_FORMAT_VERSION = 1;
 
 let _lastAutosaveJson = "";
 let _autosaveWriteFailed = false;
@@ -44,7 +47,7 @@ function _serializeLayersForAutosave() {
   });
 
   if (features.length === 0) return "";
-  return JSON.stringify({ type: "FeatureCollection", features });
+  return JSON.stringify({ v: AUTOSAVE_FORMAT_VERSION, type: "FeatureCollection", features });
 }
 
 /**
@@ -87,14 +90,39 @@ function _autosaveTick() {
  * @returns {Promise<boolean>} true if data was restored
  */
 async function restoreAutosave() {
-  const json = await idbKeyval.get(AUTOSAVE_KEY);
-  if (!json) return false;
-
+  // The idbKeyval.get is inside the try so a broken IndexedDB (e.g. a deleted object
+  // store) costs only the restore, not the rest of the app's initialization.
   try {
+    const json = await idbKeyval.get(AUTOSAVE_KEY);
+    if (!json) return false;
+
     const geojsonData = JSON.parse(json);
     if (!geojsonData || geojsonData.type !== "FeatureCollection" || !geojsonData.features?.length) {
       return false;
     }
+
+    // ---- LEGACY MIGRATION - delete this whole block to drop legacy support ------------
+    // Upgrades records without `v` to the v1 shape; nothing below this block knows
+    // legacy data exists. Legacy features carried pathType/color/hidden inside
+    // properties and had no guaranteed name.
+    if (!geojsonData.v) {
+      geojsonData.v = 1;
+      geojsonData.features.forEach((feature) => {
+        const { hidden, color, pathType, ...props } = feature.properties || {};
+        const hex = parseColor(color);
+        if (hex) props[feature.geometry?.type === "Point" ? "marker-color" : "stroke"] = hex;
+        if (!props.name) {
+          const geomType = feature.geometry?.type;
+          props.name = geomType === "Point" ? "Marker" : geomType === "Polygon" ? "Area" : "Path";
+        }
+        feature.properties = props;
+        feature.internal = { pathType, isManuallyHidden: hidden };
+      });
+    }
+    // ---- END LEGACY MIGRATION ----------------------------------------------------------
+
+    // Any other version can't be fully read - better no restore than a wrong one.
+    if (geojsonData.v !== AUTOSAVE_FORMAT_VERSION) return false;
 
     let restoredCount = 0;
 
@@ -148,10 +176,6 @@ async function restoreAutosave() {
       layer.internal = { pathType, isManuallyHidden: false };
       // Ensures exactly one simplestyle color key even if the saved record had none.
       setLayerColor(layer, color);
-      // Safety net for autosave data saved before names were guaranteed at creation time
-      if (!layer.feature.properties.name) {
-        layer.feature.properties.name = getDefaultLayerName(layer);
-      }
 
       // Click handler
       layer.on("click", (e) => {
