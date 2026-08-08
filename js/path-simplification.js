@@ -105,9 +105,10 @@ function _applyCoordsToEditingLayer(layer, coords) {
   layer._bounds = L.latLngBounds(ring);
   layer.redraw();
   layer.editing.updateMarkers();
-  // leaflet-draw's own Save handler only includes layers with this flag (normally set by
-  // its vertex-drag handlers) in the draw:edited event - without it, a save with no manual
-  // vertex edits would skip draw-tools.js's draw:edited handler and leave totalDistance stale.
+  // leaflet-draw's own Save handler only includes layers with this flag (normally set by its
+  // vertex-drag handlers) in the draw:edited event - without it, a save with no manual vertex
+  // edits would skip draw-tools.js's draw:edited handler and leave the info panel's length/area
+  // readout showing the pre-simplification geometry.
   layer.edited = true;
   // Unlike a manual vertex drag, this geometry change doesn't fire the drag events distance
   // labels normally stay live from, so they need an explicit refresh to match the new points.

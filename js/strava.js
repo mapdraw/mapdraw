@@ -192,7 +192,14 @@ function showConnectUI() {
   `;
 
   document.getElementById("strava-connect-btn").addEventListener("click", () => {
-    stravaPanelContent.innerHTML = "<p>Waiting for Strava authentication in the new tab...</p>";
+    stravaPanelContent.innerHTML = `
+      <p>Waiting for Strava authentication in the new tab...</p>
+      <button id="strava-cancel-auth-btn" class="strava-button-secondary" style="margin: 0 auto;">Cancel</button>
+    `;
+    document.getElementById("strava-cancel-auth-btn").addEventListener("click", () => {
+      window.removeEventListener("storage", handleStravaAuthReturn);
+      showConnectUI();
+    });
     const stravaAuthURL = `https://www.strava.com/oauth/authorize?client_id=${stravaClientId}&redirect_uri=${redirectURI}&response_type=code&scope=${scope}`;
     window.open(stravaAuthURL, "_blank");
     window.addEventListener("storage", handleStravaAuthReturn);
@@ -466,12 +473,16 @@ function displayActivitiesOnMap(activities) {
         polyline.feature = {
           properties: {
             ...activity,
-            totalDistance: activity.distance,
-            color: STRAVA_COLOR,
-            pathType: "strava",
             stravaId: activity.id,
           },
         };
+        polyline.internal = { pathType: "strava" };
+        setLayerColor(polyline, STRAVA_COLOR);
+        // Same guarantee every other creation site makes: a name is never blank downstream
+        // (display, export). Strava supplies one, but an unnamed activity mustn't slip through.
+        if (!polyline.feature.properties.name) {
+          polyline.feature.properties.name = getDefaultLayerName(polyline);
+        }
         polyline.on("click", (e) => {
           L.DomEvent.stopPropagation(e);
           selectItem(polyline);

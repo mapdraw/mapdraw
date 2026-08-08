@@ -319,7 +319,7 @@ function initLayerControlPanel(baseMaps) {
 
     if (itemIsInGroup) {
       if (isAdding) {
-        if (!globallySelectedItem.isManuallyHidden) {
+        if (!globallySelectedItem.internal?.isManuallyHidden) {
           if (selectedPathOutline) selectedPathOutline.addTo(map).bringToBack();
           if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
         }
@@ -337,7 +337,7 @@ function initLayerControlPanel(baseMaps) {
 
     if (isAdding) {
       e.layer.eachLayer((l) => {
-        if (l.isManuallyHidden) {
+        if (l.internal?.isManuallyHidden) {
           map.removeLayer(l);
         }
       });

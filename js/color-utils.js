@@ -238,6 +238,42 @@ function parseColor(input) {
 }
 
 /**
+ * Reads a layer's color from its GeoJSON properties.
+ * Color lives under the simplestyle-spec key matching the geometry:
+ * "marker-color" for markers, "stroke" for paths and polygons.
+ *
+ * @param {L.Layer} layer - The Leaflet layer
+ * @returns {string} Hex color, or DEFAULT_COLOR if unset
+ */
+function getLayerColor(layer) {
+  const props = layer.feature?.properties || {};
+  return (layer instanceof L.Marker ? props["marker-color"] : props.stroke) || DEFAULT_COLOR;
+}
+
+/**
+ * Writes a layer's color into its GeoJSON properties under the simplestyle-spec
+ * key matching the geometry. Only touches data - callers still apply the visual
+ * style themselves via setStyle()/setIcon().
+ *
+ * @param {L.Layer} layer - The Leaflet layer
+ * @param {string} hex - Hex color to store
+ */
+function setLayerColor(layer, hex) {
+  layer.feature = layer.feature || {};
+  const props = (layer.feature.properties = layer.feature.properties || {});
+  // The other geometry's key must go: it would be exported as styling that was
+  // never applied, and parseColorFromGeoJsonStyle() would still read it as a
+  // fallback on re-import.
+  if (layer instanceof L.Marker) {
+    delete props.stroke;
+    props["marker-color"] = hex;
+  } else {
+    delete props["marker-color"];
+    props.stroke = hex;
+  }
+}
+
+/**
  * Converts a CSS hex color (#RRGGBB) to KML AABBGGRR format.
  * KML uses reverse byte order with alpha prefix.
  * Falls back to DEFAULT_COLOR if input is invalid.

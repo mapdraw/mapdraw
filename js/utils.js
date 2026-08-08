@@ -260,6 +260,18 @@ function coordToLatLng(coord) {
 }
 
 /**
+ * Brings a longitude into [-180, 180], but only when it isn't already there.
+ * L.LatLng.wrap() runs its modulo unconditionally, and that round-trip loses precision on
+ * values that never needed wrapping (9.03 comes back as 9.029999999999973) - silently
+ * rewriting imported coordinates and every export made from them afterwards.
+ * @param {L.LatLng} latlng
+ * @returns {L.LatLng} The original latlng, or a wrapped copy if it was out of range
+ */
+function wrapLatLngIfNeeded(latlng) {
+  return latlng.lng < -180 || latlng.lng > 180 ? latlng.wrap() : latlng;
+}
+
+/**
  * Calculates the total distance of a path in meters.
  * @param {L.Polyline | L.Polygon} path - The layer to measure
  * @returns {number} Total distance in meters
@@ -664,12 +676,9 @@ function createAndSaveMarker(lat, lon, name) {
   //   weight: 0,
   // }).addTo(map);
 
-  newMarker.feature = {
-    properties: {
-      color: DEFAULT_COLOR,
-      pathType: "drawn",
-    },
-  };
+  newMarker.feature = { properties: {} };
+  newMarker.internal = { pathType: "drawn" };
+  setLayerColor(newMarker, DEFAULT_COLOR);
 
   newMarker.feature.properties.name = markerName || getDefaultLayerName(newMarker);
 

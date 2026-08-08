@@ -3,12 +3,16 @@
 /**
  * AUTOSAVE
  *
- * Periodically saves map layers to IndexedDB as GeoJSON.
- * On page load, restores saved data (unless a share URL is present).
+ * Periodically saves map layers to IndexedDB as GeoJSON features, each carrying its
+ * internal state in a sibling `internal` key (the app's own record format, not a
+ * GeoJSON document). On page load, restores saved data (unless a share URL is present).
  */
 
 const AUTOSAVE_KEY = "mapAutosave";
 const AUTOSAVE_INTERVAL_MS = 5000;
+// Autosave record format version. Records without `v` are legacy data saved before
+// internal state moved off feature.properties (see restoreAutosave's migration).
+const AUTOSAVE_FORMAT_VERSION = 1;
 
 let _lastAutosaveJson = "";
 let _autosaveWriteFailed = false;
@@ -29,33 +33,21 @@ function _serializeLayersForAutosave() {
       // Skip the active (unsaved) route — routing state can't be restored
       if (currentRoutePath && layer === currentRoutePath) return;
 
-      const geojson = layer.toGeoJSON();
-      if (!geojson || !geojson.geometry || !geojson.geometry.type) return;
+      // The same portable feature a GeoJSON export writes, saved verbatim. Internal state
+      // rides along in a sibling key - this record is the app's own format, not a GeoJSON
+      // document, so an extra key is fine here.
+      const feature = layerToPortableFeature(layer);
+      if (!feature) return;
 
-      // Extract full precision coordinates directly from layer
-      applyFullPrecisionCoordinates(layer, geojson);
-
-      // Preserve properties that matter for restoring state
-      const props = {};
-      const src = geojson.properties || {};
-      if (src.name) props.name = src.name;
-      if (src.description) props.description = src.description;
-      if (src.color) props.color = src.color;
-      if (src.stravaId) props.stravaId = src.stravaId;
-      if (src.type) props.type = src.type; // Strava activity type (Ride, Run, etc.)
-      props.pathType = src.pathType || "drawn";
-      if (layer.isManuallyHidden) props.hidden = true;
-
-      geojson.properties = props;
-      geojson.type = "Feature";
-      features.push(geojson);
+      feature.internal = { ...layer.internal };
+      features.push(feature);
     } catch (e) {
       console.warn("Autosave: skipping layer", e);
     }
   });
 
   if (features.length === 0) return "";
-  return JSON.stringify({ type: "FeatureCollection", features });
+  return JSON.stringify({ v: AUTOSAVE_FORMAT_VERSION, type: "FeatureCollection", features });
 }
 
 /**
@@ -98,31 +90,58 @@ function _autosaveTick() {
  * @returns {Promise<boolean>} true if data was restored
  */
 async function restoreAutosave() {
-  const json = await idbKeyval.get(AUTOSAVE_KEY);
-  if (!json) return false;
-
+  // The idbKeyval.get is inside the try so a broken IndexedDB (e.g. a deleted object
+  // store) costs only the restore, not the rest of the app's initialization.
   try {
+    const json = await idbKeyval.get(AUTOSAVE_KEY);
+    if (!json) return false;
+
     const geojsonData = JSON.parse(json);
     if (!geojsonData || geojsonData.type !== "FeatureCollection" || !geojsonData.features?.length) {
       return false;
     }
+
+    // ---- LEGACY MIGRATION - delete this whole block to drop legacy support ------------
+    // Upgrades records without `v` to the v1 shape; nothing below this block knows
+    // legacy data exists. Legacy features carried pathType/color/hidden inside
+    // properties and had no guaranteed name.
+    if (!geojsonData.v) {
+      geojsonData.v = 1;
+      geojsonData.features.forEach((feature) => {
+        const { hidden, color, pathType, ...props } = feature.properties || {};
+        const hex = parseColor(color);
+        if (hex) props[feature.geometry?.type === "Point" ? "marker-color" : "stroke"] = hex;
+        if (!props.name) {
+          const geomType = feature.geometry?.type;
+          props.name = geomType === "Point" ? "Marker" : geomType === "Polygon" ? "Area" : "Path";
+        }
+        feature.properties = props;
+        feature.internal = { pathType, isManuallyHidden: hidden };
+      });
+    }
+    // ---- END LEGACY MIGRATION ----------------------------------------------------------
+
+    // Any other version can't be fully read - better no restore than a wrong one.
+    if (geojsonData.v !== AUTOSAVE_FORMAT_VERSION) return false;
 
     let restoredCount = 0;
 
     geojsonData.features.forEach((feature) => {
       if (!feature.geometry) return;
 
-      // Kept out of props so it can't leak into feature.properties or a GeoJSON export.
-      const { hidden: wasHidden, ...props } = feature.properties || {};
-      const color = parseColor(props.color) || DEFAULT_COLOR;
-      const pathType = props.pathType || "drawn";
+      // Properties are restored verbatim; internal state comes from the sibling `internal`
+      // object autosave writes next to each feature (see _serializeLayersForAutosave).
+      const props = feature.properties || {};
+      const internal = feature.internal || {};
+      const pathType = internal.pathType || "drawn";
       const geomType = feature.geometry.type;
+      const color = parseColorFromGeoJsonStyle(props, geomType === "Point") || DEFAULT_COLOR;
 
       let layer;
 
       if (geomType === "Point") {
         const coords = feature.geometry.coordinates;
-        const latlng = coordToLatLng(coords).wrap();
+        const latlng = wrapLatLngIfNeeded(coordToLatLng(coords));
         layer = L.marker(latlng, {
           icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
         });
@@ -146,13 +165,17 @@ async function restoreAutosave() {
       // Set feature data
       layer.feature = {
         type: "Feature",
-        properties: { ...props, color, pathType },
+        properties: props,
         geometry: feature.geometry,
       };
-      // Safety net for autosave data saved before names were guaranteed at creation time
-      if (!layer.feature.properties.name) {
-        layer.feature.properties.name = getDefaultLayerName(layer);
-      }
+      // Rebuilt field by field rather than spread, so no stray key from saved data survives
+      // into the live layer - a new internal field must be restored here explicitly.
+      // isManuallyHidden starts false and is applied below via toggleLayerVisibility(),
+      // which flips the flag itself and performs the actual hiding.
+      const wasHidden = internal.isManuallyHidden;
+      layer.internal = { pathType, isManuallyHidden: false };
+      // Ensures exactly one simplestyle color key even if the saved record had none.
+      setLayerColor(layer, color);
 
       // Click handler
       layer.on("click", (e) => {

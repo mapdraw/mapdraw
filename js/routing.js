@@ -312,7 +312,6 @@ function initRouting() {
           if (currentRoutePath) {
             currentRoutePath.setLatLngs(processedCoordinates);
             currentRoutePath.feature.properties.name = newRouteName;
-            currentRoutePath.feature.properties.totalDistance = route.summary.totalDistance;
           } else {
             const newRoutePath = L.polyline(processedCoordinates, {
               ...STYLE_CONFIG.path.default,
@@ -322,11 +321,10 @@ function initRouting() {
             newRoutePath.feature = {
               properties: {
                 name: newRouteName,
-                color: ROUTE_COLOR,
-                totalDistance: route.summary.totalDistance,
-                pathType: "route",
               },
             };
+            newRoutePath.internal = { pathType: "route" };
+            setLayerColor(newRoutePath, ROUTE_COLOR);
 
             let pressTimer = null;
             let wasLongPress = false;
@@ -1095,7 +1093,9 @@ function initRouting() {
       color: currentRoutePath.options.color,
     });
     newPath.feature = JSON.parse(JSON.stringify(currentRoutePath.feature));
-    newPath.feature.properties.pathType = "drawn";
+    // Built fresh rather than copied from the route: the saved path is added to the map
+    // visible, so it must not inherit a hidden route's isManuallyHidden.
+    newPath.internal = { pathType: "drawn" };
     newPath.feature.properties.name = newPath.feature.properties.name || "Saved Route";
     newPath.on("click", (ev) => {
       L.DomEvent.stopPropagation(ev);
