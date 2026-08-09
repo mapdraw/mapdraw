@@ -226,6 +226,19 @@ function initDeleteKeyShortcut() {
 }
 
 /**
+ * updateDrawControlStates() gates Edit on the selected item being on the map. Any path
+ * that hides or shows it (eye button, Layers panel checkbox, bulk hide) goes through
+ * map.addLayer/removeLayer, so one listener here replaces a refresh call in each.
+ */
+function initSelectionVisibilityWatch() {
+  map.on("layeradd layerremove", (e) => {
+    if (e.layer === globallySelectedItem || e.layer === itemBeingEdited) {
+      updateDrawControlStates();
+    }
+  });
+}
+
+/**
  * Deselects the currently selected item and cleans up all associated UI elements
  * (outlines, elevation profile, info panel, etc.).
  */
@@ -517,7 +530,10 @@ function updateDrawControlStates() {
   // at once as soon as Edit mode starts.
   const relevantSelection = isEditMode ? itemBeingEdited : globallySelectedItem;
   // editableLayers.hasLayer() already implies hasEditableLayers - no need to check both.
-  const canEditSelection = relevantSelection && editableLayers.hasLayer(relevantSelection);
+  const selectionInGroup = relevantSelection && editableLayers.hasLayer(relevantSelection);
+  // map.hasLayer() rejects a hidden selection (eye button, or parent group unchecked) -
+  // _hasAvailableLayers (leaflet-draw-patches.js) gates the same way and explains why.
+  const canEditSelection = selectionInGroup && map.hasLayer(relevantSelection);
 
   if (editControlContainer) {
     if (canEditSelection) {
@@ -526,14 +542,17 @@ function updateDrawControlStates() {
       L.DomUtil.addClass(editControlContainer, "leaflet-disabled");
     }
     // _checkDisabled() (leaflet-draw's own toggle) only reacts to layeradd/layerremove and
-    // only knows "any layers exist", not selection - own the title here too so all three
-    // states (nothing to edit / nothing selected / editing one item) get their own message
-    // instead of leaflet-draw's stale "Edit layers", a leftover from before single-item edit.
+    // only knows "any layers exist", not selection - own the title here too so all four
+    // states (nothing to edit / nothing selected / hidden selection / editable selection)
+    // get their own message instead of leaflet-draw's stale "Edit layers", a leftover from
+    // before single-item edit.
     editControlContainer.title = !hasEditableLayers
       ? L.drawLocal.edit.toolbar.buttons.editDisabled
       : canEditSelection
         ? "Edit selected item"
-        : "Select an item in the Drawn Items layer to edit";
+        : selectionInGroup
+          ? "Unhide the selected item to edit"
+          : "Select an item in the Drawn Items layer to edit";
   }
 }
 /**

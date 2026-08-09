@@ -85,6 +85,9 @@ if (L.EditToolbar && L.EditToolbar.Edit) {
 //     selection here, clicking Edit with nothing selected would still start a session, just one
 //     where patch 1 gives handles to nobody. A selected layer that's a featureGroup member
 //     already implies the group is non-empty, so this fully replaces the original check.
+//     map.hasLayer() also rejects a hidden selection (eye button, or parent group unchecked):
+//     editing it would be pointless - and crash for paths/areas, since PolyVerticesEdit.addHooks()
+//     skips _initMarkers() off-map, leaving _markers undefined for refreshEditHandles below.
 if (L.EditToolbar && L.EditToolbar.Edit) {
   const origEnableLayerEdit = L.EditToolbar.Edit.prototype._enableLayerEdit;
   L.EditToolbar.Edit.prototype._enableLayerEdit = function (e) {
@@ -99,7 +102,11 @@ if (L.EditToolbar && L.EditToolbar.Edit) {
   };
 
   L.EditToolbar.Edit.prototype._hasAvailableLayers = function () {
-    return !!globallySelectedItem && this._featureGroup.hasLayer(globallySelectedItem);
+    return (
+      !!globallySelectedItem &&
+      this._featureGroup.hasLayer(globallySelectedItem) &&
+      map.hasLayer(globallySelectedItem)
+    );
   };
 }
 

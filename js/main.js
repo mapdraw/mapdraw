@@ -131,6 +131,7 @@ async function initApp() {
   initFileControls();
   initElevationToggle();
   initClickToDeselect();
+  initSelectionVisibilityWatch();
   updateOverviewList();
 
   initRouting();
