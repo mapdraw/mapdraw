@@ -5,7 +5,7 @@
  *
  * Periodically saves map layers to IndexedDB as GeoJSON features, each carrying its
  * internal state in a sibling `internal` key (the app's own record format, not a
- * GeoJSON document). On page load, restores saved data (unless a share URL is present).
+ * GeoJSON document). On page load, restores saved data; share-URL data is imported on top.
  */
 
 const AUTOSAVE_KEY = "mapAutosave";
@@ -86,7 +86,7 @@ function _autosaveTick() {
 /**
  * Restores map state from IndexedDB.
  * Routes each feature to the correct layer group based on its saved pathType.
- * Should be called after layer groups are initialized and only if no share URL data is present.
+ * Should be called after layer groups are initialized, before any share-URL import.
  * @returns {Promise<boolean>} true if data was restored
  */
 async function restoreAutosave() {

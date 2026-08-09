@@ -41,7 +41,7 @@ function showAttributionToast() {
 /**
  * Creates the map and its panes, restores the last view (URL hash, saved
  * session, or geolocation), creates the core layer groups, and restores
- * autosaved or URL-shared data.
+ * autosaved and URL-shared data.
  * @returns {Object<string, L.Layer>} baseMaps keyed by BASEMAP_CONFIG key, for the layer control panel
  */
 async function initMapView() {
@@ -177,7 +177,9 @@ async function initMapView() {
   // Initialize POI finder first so we can add it to layer control
   initPoiFinder();
 
-  let restoredData = false;
+  // Restore the autosaved session even when the URL contains share data —
+  // the share import below is additive, so it never discards saved work.
+  const restoredData = await restoreAutosave();
 
   // Import shared data from URL if present (now that layer groups are ready)
   if (window._pendingShareData) {
@@ -208,9 +210,6 @@ async function initMapView() {
       });
     }
     delete window._pendingShareData;
-  } else {
-    // No share URL — restore previous session from IndexedDB
-    restoredData = await restoreAutosave();
   }
 
   // Start periodic autosave (every 5s, writes only on change)
