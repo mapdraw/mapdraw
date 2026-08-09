@@ -309,31 +309,11 @@ function calculatePathDistance(path) {
  */
 function calculatePolygonArea(polygon) {
   if (!(polygon instanceof L.Polygon)) return 0;
-  let latlngs = polygon.getLatLngs()[0];
+  const latlngs = polygon.getLatLngs()[0];
   if (!latlngs || latlngs.length < 3) return 0;
 
-  // Use L.GeometryUtil.geodesicArea if available, otherwise use spherical approximation
-  if (L.GeometryUtil && typeof L.GeometryUtil.geodesicArea === "function") {
-    return L.GeometryUtil.geodesicArea(latlngs);
-  }
-
-  // Fallback: simple spherical area calculation
-  const earthRadius = 6378137; // meters
-  let area = 0;
-  const len = latlngs.length;
-
-  if (len > 2) {
-    for (let i = 0; i < len; i++) {
-      const p1 = latlngs[i];
-      const p2 = latlngs[(i + 1) % len];
-      area +=
-        (((p2.lng - p1.lng) * Math.PI) / 180) *
-        (2 + Math.sin((p1.lat * Math.PI) / 180) + Math.sin((p2.lat * Math.PI) / 180));
-    }
-    area = (area * earthRadius * earthRadius) / 2;
-  }
-
-  return Math.abs(area);
+  // L.GeometryUtil.geodesicArea is provided by leaflet.draw, loaded before this file
+  return L.GeometryUtil.geodesicArea(latlngs);
 }
 
 // --- Segment-aware geometry helpers, shared by rectangle-select.js's hit-testing

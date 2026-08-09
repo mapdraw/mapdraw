@@ -56,26 +56,14 @@ function convertPath(latlngs, inSr, outSr) {
     throw new Error(`Unsupported conversion: ${inSr} to ${outSr}`);
   }
 
-  // 2. Get the transformation function from proj4
   const transformer = proj4(fromProj, toProj);
 
-  // 3. Perform the conversion by mapping over the array
-
-  // Case A: WGS84 (Lng, Lat) -> LV95 (Easting, Northing)
-  if (toProj === LV95) {
-    return latlngs.map((p) => {
-      const coords = transformer.forward([p.lng, p.lat]);
-      return [coords[0], coords[1]]; // [easting, northing]
-    });
-  }
-  // Case B: LV95 (Easting, Northing) -> WGS84 (Lng, Lat)
-  // Note: The caller stores Easting in p.lng, Northing in p.lat
-  else {
-    return latlngs.map((p) => {
-      const coords = transformer.forward([p.lng, p.lat]);
-      return [coords[0], coords[1]]; // [lng, lat]
-    });
-  }
+  // The direction is fully encoded in the transformer. For LV95 input,
+  // the caller stores easting in p.lng and northing in p.lat.
+  return latlngs.map((p) => {
+    const coords = transformer.forward([p.lng, p.lat]);
+    return [coords[0], coords[1]];
+  });
 }
 
 /**
@@ -486,7 +474,7 @@ async function addElevationProfileForLayer(layer) {
 
   if (!(layer instanceof L.Polyline)) return;
 
-  let latlngs = layer instanceof L.Polyline ? layer.getLatLngs() : layer.getLatLngs()[0];
+  const latlngs = layer.getLatLngs();
   if (latlngs?.length > 0) {
     const realDistance = calculatePathDistance(layer);
     let pointsWithElev;
