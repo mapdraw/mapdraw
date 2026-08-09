@@ -323,7 +323,7 @@ function parseColorFromKmlStyle(properties) {
  * source's own style keys would mean exporting styling the app never applied - and would leave
  * `fill`/`fill-color` behind as a second, stale color as soon as the user recolors the item.
  *
- * "color" is the non-standard key resolveColor() reads (set by applyGpxColors(),
+ * "color" is the non-standard key resolveColor() reads (set by applyGpxProperties(),
  * applyKmlIconColors(), share-link decoding, or the source file itself); it goes once resolved,
  * so it can't linger next to the simplestyle key that now holds the same color.
  *
@@ -486,68 +486,44 @@ function importGeoJsonFile(file) {
 // Specification: https://www.topografix.com/gpx/1/1/
 
 /**
- * Parses colors from GPX DOM and attaches them to GeoJSON features.
- * Must be called BEFORE explosion to ensure all segments inherit the color.
+ * Attaches colors and Strava IDs from the GPX DOM to GeoJSON features.
+ * Must be called BEFORE explosion so all exploded segments inherit them.
+ *
+ * toGeoJSON emits features in DOM order (tracks, routes, waypoints) but skips
+ * tracks without a >=2-point segment and routes with <2 points, so the DOM
+ * lists are filtered to the nodes that actually produce a feature before the
+ * positional walk - otherwise one dropped track shifts every later match.
  * @param {Document} dom - The parsed GPX XML document
  * @param {object} geojsonData - The GeoJSON data from toGeoJSON.gpx()
  */
-function applyGpxColors(dom, geojsonData) {
-  const tracksInDom = dom.querySelectorAll("trk");
-  const routesInDom = dom.querySelectorAll("rte");
-  const waypointsInDom = dom.querySelectorAll("wpt");
-
-  // Extract colors from tracks (returns hex or null)
-  const trackColors = Array.from(tracksInDom).map((node) => {
-    const colorNode = node.querySelector("gpx_style\\:color, color");
-    return colorNode ? parseColor(colorNode.textContent) : null;
-  });
-
-  // Extract colors from routes (returns hex or null)
-  const routeColors = Array.from(routesInDom).map((node) => {
-    const colorNode = node.querySelector("gpx_style\\:color, color");
-    return colorNode ? parseColor(colorNode.textContent) : null;
-  });
-
-  // Extract colors from waypoints (returns hex or null)
-  const waypointColors = Array.from(waypointsInDom).map((node) => {
-    const colorNode = node.querySelector("gpx_style\\:color, color");
-    return colorNode ? parseColor(colorNode.textContent) : null;
-  });
-
-  // Apply colors to features (toGeoJSON outputs: trk, then rte, then wpt)
-  const trackCount = tracksInDom.length;
-  const routeCount = routesInDom.length;
-  let trackIndex = 0;
-  let routeIndex = 0;
-  let waypointIndex = 0;
+function applyGpxProperties(dom, geojsonData) {
+  const tracks = [...dom.querySelectorAll("trk")].filter((trk) =>
+    [...trk.querySelectorAll("trkseg")].some((seg) => seg.querySelectorAll("trkpt").length >= 2),
+  );
+  const routes = [...dom.querySelectorAll("rte")].filter(
+    (rte) => rte.querySelectorAll("rtept").length >= 2,
+  );
+  const lineNodes = [...tracks, ...routes];
+  const pointNodes = [...dom.querySelectorAll("wpt")];
+  let lineIndex = 0;
+  let pointIndex = 0;
 
   geojsonData.features.forEach((feature) => {
     const type = feature.geometry?.type;
+    const node =
+      type === "LineString" || type === "MultiLineString"
+        ? lineNodes[lineIndex++]
+        : type === "Point"
+          ? pointNodes[pointIndex++]
+          : null;
+    if (!node) return;
 
-    if (type === "LineString" || type === "MultiLineString") {
-      // Tracks come first in toGeoJSON output
-      if (trackIndex < trackCount) {
-        if (trackColors[trackIndex]) {
-          feature.properties = feature.properties || {};
-          feature.properties.color = trackColors[trackIndex];
-        }
-        trackIndex++;
-      }
-      // Routes come after tracks
-      else if (routeIndex < routeCount) {
-        if (routeColors[routeIndex]) {
-          feature.properties = feature.properties || {};
-          feature.properties.color = routeColors[routeIndex];
-        }
-        routeIndex++;
-      }
-    } else if (type === "Point") {
-      // Waypoints come last
-      if (waypointIndex < waypointColors.length && waypointColors[waypointIndex]) {
-        feature.properties = feature.properties || {};
-        feature.properties.color = waypointColors[waypointIndex];
-      }
-      waypointIndex++;
+    const color = parseColor(node.querySelector("gpx_style\\:color, color")?.textContent);
+    const stravaId = node.querySelector("stravaId")?.textContent.trim();
+    if (color || stravaId) {
+      feature.properties = feature.properties || {};
+      if (color) feature.properties.color = color;
+      if (stravaId) feature.properties.stravaId = stravaId;
     }
   });
 }
@@ -575,40 +551,8 @@ function importGpxFile(file) {
         }
       });
 
-      // Extract colors from GPX DOM and attach to features BEFORE explosion
-      applyGpxColors(dom, geojsonData);
-
-      // Extract stravaId from tracks
-      const tracksInDom = dom.querySelectorAll("trk");
-      let trackIndex = 0;
-      geojsonData.features.forEach((feature) => {
-        if (
-          feature.geometry?.type === "LineString" ||
-          feature.geometry?.type === "MultiLineString"
-        ) {
-          if (trackIndex < tracksInDom.length) {
-            const stravaIdNode = tracksInDom[trackIndex].querySelector("stravaId");
-            if (stravaIdNode) {
-              feature.properties = feature.properties || {};
-              feature.properties.stravaId = stravaIdNode.textContent.trim();
-            }
-          }
-          trackIndex++;
-        }
-      });
-
-      // Extract stravaId from waypoints
-      const waypointsInDom = dom.querySelectorAll("wpt");
-      const pointFeatures = geojsonData.features.filter((f) => f.geometry?.type === "Point");
-      if (pointFeatures.length === waypointsInDom.length) {
-        pointFeatures.forEach((feature, index) => {
-          const stravaIdNode = waypointsInDom[index].querySelector("stravaId");
-          if (stravaIdNode) {
-            feature.properties = feature.properties || {};
-            feature.properties.stravaId = stravaIdNode.textContent.trim();
-          }
-        });
-      }
+      // Extract colors and Strava IDs from GPX DOM and attach to features BEFORE explosion
+      applyGpxProperties(dom, geojsonData);
 
       // Explode multi-geometries and filter for supported geometry types
       geojsonData.features = geojsonData.features.flatMap((f) => explodeMultiGeometries(f));
