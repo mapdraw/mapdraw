@@ -796,10 +796,9 @@ function createPOIMarker(element, cat) {
         <a href="https://www.openstreetmap.org/${element.type}/${element.id}" target="_blank">View on OpenStreetMap</a>
       </small>
     </div>
-    <div style="text-align:center;margin-top:8px;">
-      <button id="save-poi-marker-${element.type}-${element.id}" style="padding:5px 10px;border-radius:var(--border-radius);cursor:pointer;">
-        Save to Map
-      </button>
+    <div class="poi-popup-actions">
+      <button id="save-poi-marker-${element.type}-${element.id}" class="poi-popup-btn">Save to Map</button>
+      <button id="delete-poi-marker-${element.type}-${element.id}" class="poi-popup-btn">Delete</button>
     </div>
   `;
 
@@ -814,6 +813,22 @@ function createPOIMarker(element, cat) {
         () => {
           createAndSaveMarker(lat, lon, name);
           marker.closePopup();
+        },
+        { once: true },
+      );
+    }
+    const delBtn = document.getElementById(`delete-poi-marker-${element.type}-${element.id}`);
+    if (delBtn) {
+      delBtn.addEventListener(
+        "click",
+        () => {
+          const state = poiState[cat.id];
+          const key = `${element.type}/${element.id}`;
+          state.layer.removeLayer(marker);
+          state.markers.delete(key);
+          state.rawElements.delete(key);
+          _savePoiDb();
+          updateCategoryRowUI(cat.id, !!state.loadingController, state.markers.size);
         },
         { once: true },
       );

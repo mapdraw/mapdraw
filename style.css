@@ -3029,6 +3029,22 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   color: white;
 }
 
+.poi-popup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Metrics match .layer-import-button; colors from the .leaflet-popup-content-wrapper button rule. */
+.poi-popup-btn {
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: var(--font-size-12);
+  line-height: 1.25;
+  border-radius: var(--border-radius);
+}
+
 #search-btn {
   width: 32px;
   padding: 0;
