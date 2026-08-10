@@ -462,6 +462,10 @@ async function handleStravaAuthReturnForUserKeys(event) {
  */
 function displayActivitiesOnMap(activities) {
   if (!stravaActivitiesLayer) return;
+  // Deselect first: clearLayers() below would leave the selection UI referencing a removed layer.
+  if (globallySelectedItem && stravaActivitiesLayer.hasLayer(globallySelectedItem)) {
+    deselectCurrentItem();
+  }
   stravaActivitiesLayer.clearLayers();
   let processedCount = 0;
 
