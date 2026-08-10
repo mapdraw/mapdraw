@@ -28,7 +28,7 @@ async function showSearchModal(title, placeholder, currentValue, callback) {
           id="search-modal-input"
           class="swal2-input swal-input-field"
           placeholder="${title}"
-          value="${currentValue || ""}"
+          value="${escHtml(currentValue || "")}"
           autocomplete="off"
         />
         <div id="search-modal-suggestions" class="search-modal-suggestions"></div>
