@@ -308,17 +308,28 @@ function showApiKeysModal() {
           // Preserve current input values before the modal is destroyed by the toast
           tempUserClientId = clientIdInput.value.trim();
           tempUserClientSecret = clientSecretInput.value.trim();
-          copyToClipboard(APP_DOMAIN).then(() => {
-            Swal.fire({
-              toast: true,
-              icon: "success",
-              title: "Domain Copied!",
-              showConfirmButton: false,
-              timer: 1500,
-            }).then(() => {
+          copyToClipboard(APP_DOMAIN)
+            .then(() =>
+              Swal.fire({
+                toast: true,
+                icon: "success",
+                title: "Domain Copied!",
+                showConfirmButton: false,
+                timer: 1500,
+              }),
+            )
+            .catch(() =>
+              Swal.fire({
+                toast: true,
+                icon: "error",
+                title: "Failed to Copy",
+                showConfirmButton: false,
+                timer: 1500,
+              }),
+            )
+            .then(() => {
               Swal.fire(buildModalOptions());
             });
-          });
         });
       },
       preConfirm: () => {

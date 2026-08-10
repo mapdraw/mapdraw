@@ -165,21 +165,32 @@ function initFileControls() {
             timer: 2000,
           });
         } else {
-          await copyToClipboard(shareUrl);
+          try {
+            await copyToClipboard(shareUrl);
 
-          // Warn users about URL length limits
-          if (shareUrl.length > 2000) {
-            Swal.fire({
-              icon: "warning",
-              title: "Large Share Link Copied!",
-              html: `This link is <strong>${shareUrl.length}</strong> characters and may not work in all browsers or messaging apps.`,
-              confirmButtonText: "OK",
-            });
-          } else {
+            // Warn users about URL length limits
+            if (shareUrl.length > 2000) {
+              Swal.fire({
+                icon: "warning",
+                title: "Large Share Link Copied!",
+                html: `This link is <strong>${shareUrl.length}</strong> characters and may not work in all browsers or messaging apps.`,
+                confirmButtonText: "OK",
+              });
+            } else {
+              Swal.fire({
+                toast: true,
+                icon: "success",
+                title: `Share Link Copied!<br>(${shareUrl.length} characters)`,
+                position: "top",
+                showConfirmButton: false,
+                timer: 2000,
+              });
+            }
+          } catch {
             Swal.fire({
               toast: true,
-              icon: "success",
-              title: `Share Link Copied!<br>(${shareUrl.length} characters)`,
+              icon: "error",
+              title: "Failed to Copy",
               position: "top",
               showConfirmButton: false,
               timer: 2000,
