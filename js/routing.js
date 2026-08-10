@@ -22,6 +22,8 @@ function initRouting() {
 
   let intermediateViaMarkers = [];
   let shouldFitBounds = true;
+  // Last route name this module wrote; lets recalculation detect a user rename
+  let lastGeneratedRouteName = null;
   let isUnitRefreshInProgress = false;
   let wasRouteSelectedOnUnitRefresh = false;
 
@@ -311,7 +313,11 @@ function initRouting() {
 
           if (currentRoutePath) {
             currentRoutePath.setLatLngs(processedCoordinates);
-            currentRoutePath.feature.properties.name = newRouteName;
+            // Refresh the auto-generated name, but never clobber a user rename
+            if (currentRoutePath.feature.properties.name === lastGeneratedRouteName) {
+              currentRoutePath.feature.properties.name = newRouteName;
+              lastGeneratedRouteName = newRouteName;
+            }
           } else {
             const newRoutePath = L.polyline(processedCoordinates, {
               ...STYLE_CONFIG.path.default,
@@ -323,6 +329,7 @@ function initRouting() {
                 name: newRouteName,
               },
             };
+            lastGeneratedRouteName = newRouteName;
             newRoutePath.internal = { pathType: "route" };
             setLayerColor(newRoutePath, ROUTE_COLOR);
 
