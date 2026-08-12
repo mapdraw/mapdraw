@@ -492,6 +492,7 @@
   function onKeyDown(e) {
     if (!isActive) return;
     if (e.target.matches("input, textarea")) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if ((e.key === "Delete" || e.key === "Backspace") && selectedLayers.size > 0) {
       e.preventDefault();
       performBulkDelete();

@@ -218,6 +218,7 @@ function initClickToDeselect() {
 function initDeleteKeyShortcut() {
   document.addEventListener("keydown", (e) => {
     if (e.target.matches("input, textarea")) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if ((e.key === "Delete" || e.key === "Backspace") && globallySelectedItem) {
       e.preventDefault();
       deleteLayerImmediately(globallySelectedItem);

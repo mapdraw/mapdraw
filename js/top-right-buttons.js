@@ -10,14 +10,13 @@ function initTopRightButtons() {
   // Fullscreen button
   const fullscreenBtn = document.getElementById("fullscreen-btn");
 
+  // The button's active state is managed solely by the fullscreenchange
+  // listener below, which also covers Esc-exit and failed requests.
   function toggleFullscreen() {
-    const btn = document.getElementById("fullscreen-btn");
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      btn.classList.add("fullscreen-active");
+      document.documentElement.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen();
-      btn.classList.remove("fullscreen-active");
     }
   }
 
@@ -27,12 +26,7 @@ function initTopRightButtons() {
   });
 
   document.addEventListener("fullscreenchange", () => {
-    const btn = document.getElementById("fullscreen-btn");
-    if (document.fullscreenElement) {
-      btn.classList.add("fullscreen-active");
-    } else {
-      btn.classList.remove("fullscreen-active");
-    }
+    fullscreenBtn.classList.toggle("fullscreen-active", !!document.fullscreenElement);
   });
 
   // Auto-enter fullscreen on first tap when running as installed mobile PWA
@@ -51,6 +45,7 @@ function initTopRightButtons() {
 
   document.addEventListener("keydown", (e) => {
     if (e.target.matches("input, textarea")) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key.toLowerCase() === "f") {
       e.preventDefault();
       toggleFullscreen();
