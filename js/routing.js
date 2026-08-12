@@ -65,7 +65,6 @@ function initRouting() {
       if (globallySelectedItem === currentRoutePath) {
         deselectCurrentItem();
       }
-      editableLayers.removeLayer(currentRoutePath);
       drawnItems.removeLayer(currentRoutePath);
       map.removeLayer(currentRoutePath);
       currentRoutePath = null;
@@ -509,62 +508,15 @@ function initRouting() {
     });
   });
 
-  // Use search modal for start input
-  attachSearchModalToInput(startInput, "Set Start Point", (latlng, label) => {
-    if (penModeActive) exitPenMode();
-    currentStartLatLng = latlng;
-    startInput.style.color = "var(--color-black)";
-    if (startMarker) {
-      startMarker.setLatLng(latlng);
-    } else {
-      startMarker = L.marker(latlng, {
-        icon: createMarkerIcon(ROUTING_COLOR_START, 1),
-        title: ROUTING_MARKER_HINT,
-        draggable: true,
-      }).addTo(map);
-      addDragHandlersToRoutingMarker(startMarker, "start");
-    }
-    updateClearButtonState();
-    calculateNewRoute();
-  });
-
-  // Use search modal for end input
-  attachSearchModalToInput(endInput, "Set End Point", (latlng, label) => {
-    if (penModeActive) exitPenMode();
-    currentEndLatLng = latlng;
-    endInput.style.color = "var(--color-black)";
-    if (endMarker) {
-      endMarker.setLatLng(latlng);
-    } else {
-      endMarker = L.marker(latlng, {
-        icon: createMarkerIcon(ROUTING_COLOR_END, 1),
-        title: ROUTING_MARKER_HINT,
-        draggable: true,
-      }).addTo(map);
-      addDragHandlersToRoutingMarker(endMarker, "end");
-    }
-    updateClearButtonState();
-    calculateNewRoute();
-  });
-
-  // Use search modal for via input
-  attachSearchModalToInput(viaInput, "Set Via Point", (latlng, label) => {
-    if (penModeActive) exitPenMode();
-    currentViaLatLng = latlng;
-    viaInput.style.color = "var(--color-black)";
-    if (viaMarker) {
-      viaMarker.setLatLng(latlng);
-    } else {
-      viaMarker = L.marker(latlng, {
-        icon: createMarkerIcon(ROUTING_COLOR_VIA, 1),
-        title: ROUTING_MARKER_HINT,
-        draggable: true,
-      }).addTo(map);
-      addDragHandlersToRoutingMarker(viaMarker, "via");
-    }
-    updateClearButtonState();
-    updateRouteWithIntermediateVias();
-  });
+  attachSearchModalToInput(startInput, "Set Start Point", (latlng, label) =>
+    updateRoutingPoint(latlng, "start", label),
+  );
+  attachSearchModalToInput(endInput, "Set End Point", (latlng, label) =>
+    updateRoutingPoint(latlng, "end", label),
+  );
+  attachSearchModalToInput(viaInput, "Set Via Point", (latlng, label) =>
+    updateRoutingPoint(latlng, "via", label),
+  );
 
   const updateClearButtonState = () => {
     const hasContent =
@@ -663,7 +615,6 @@ function initRouting() {
       if (globallySelectedItem === currentRoutePath) {
         deselectCurrentItem();
       }
-      editableLayers.removeLayer(currentRoutePath);
       drawnItems.removeLayer(currentRoutePath);
       map.removeLayer(currentRoutePath);
       currentRoutePath = null;
@@ -682,55 +633,47 @@ function initRouting() {
   });
 
   /**
+   * Creates the start/via/end routing marker at the given location, or moves
+   * it there if it already exists. Returns true if the marker was newly created.
+   */
+  const ensureRoutingMarker = (type, latlng) => {
+    const isStart = type === "start";
+    const isVia = type === "via";
+    const existing = isStart ? startMarker : isVia ? viaMarker : endMarker;
+    if (existing) {
+      existing.setLatLng(latlng);
+      return false;
+    }
+    const color = isStart ? ROUTING_COLOR_START : isVia ? ROUTING_COLOR_VIA : ROUTING_COLOR_END;
+    const marker = L.marker(latlng, {
+      icon: createMarkerIcon(color, 1),
+      title: ROUTING_MARKER_HINT,
+      draggable: true,
+    }).addTo(map);
+    addDragHandlersToRoutingMarker(marker, type);
+    if (isStart) startMarker = marker;
+    else if (isVia) viaMarker = marker;
+    else endMarker = marker;
+    return true;
+  };
+
+  /**
    * Updates a routing point (start/via/end) with a new location and optional label.
    */
   const updateRoutingPoint = (latlng, type, label) => {
     if (penModeActive) exitPenMode();
-    const locationString = label || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+    const isVia = type === "via";
+    const input = type === "start" ? startInput : isVia ? viaInput : endInput;
 
-    if (type === "start") {
-      currentStartLatLng = latlng;
-      startInput.value = locationString;
-      if (startMarker) {
-        startMarker.setLatLng(latlng);
-      } else {
-        startMarker = L.marker(latlng, {
-          icon: createMarkerIcon(ROUTING_COLOR_START, 1),
-          title: ROUTING_MARKER_HINT,
-          draggable: true,
-        }).addTo(map);
-        addDragHandlersToRoutingMarker(startMarker, "start");
-      }
-    } else if (type === "via") {
-      currentViaLatLng = latlng;
-      viaInput.value = locationString;
-      if (viaMarker) {
-        viaMarker.setLatLng(latlng);
-      } else {
-        viaMarker = L.marker(latlng, {
-          icon: createMarkerIcon(ROUTING_COLOR_VIA, 1),
-          title: ROUTING_MARKER_HINT,
-          draggable: true,
-        }).addTo(map);
-        addDragHandlersToRoutingMarker(viaMarker, "via");
-      }
-    } else {
-      currentEndLatLng = latlng;
-      endInput.value = locationString;
-      if (endMarker) {
-        endMarker.setLatLng(latlng);
-      } else {
-        endMarker = L.marker(latlng, {
-          icon: createMarkerIcon(ROUTING_COLOR_END, 1),
-          title: ROUTING_MARKER_HINT,
-          draggable: true,
-        }).addTo(map);
-        addDragHandlersToRoutingMarker(endMarker, "end");
-      }
-    }
+    if (type === "start") currentStartLatLng = latlng;
+    else if (isVia) currentViaLatLng = latlng;
+    else currentEndLatLng = latlng;
+    input.value = label || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+    input.style.color = "var(--color-black)";
+    ensureRoutingMarker(type, latlng);
     updateClearButtonState();
 
-    if (type === "via") {
+    if (isVia) {
       updateRouteWithIntermediateVias();
     } else {
       calculateNewRoute();
@@ -983,30 +926,13 @@ function initRouting() {
         currentStartLatLng = latlng;
         startInput.value = locStr;
         startInput.style.color = "var(--color-black)";
-        if (startMarker) {
-          startMarker.setLatLng(latlng);
-        } else {
-          startMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_START, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(startMarker, "start");
-        }
+        ensureRoutingMarker("start", latlng);
         penModeClickCount = 1;
       } else if (penModeClickCount === 1) {
         currentEndLatLng = latlng;
         endInput.value = locStr;
         endInput.style.color = "var(--color-black)";
-        if (endMarker) {
-          endMarker.setLatLng(latlng);
-        } else {
-          endMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_END, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(endMarker, "end");
+        if (ensureRoutingMarker("end", latlng)) {
           endMarker.on("click", (e) => {
             if (penModeActive && penModeClickCount >= 2) {
               L.DomEvent.stop(e);
@@ -1032,65 +958,7 @@ function initRouting() {
     }
 
     if (routePointSelectionMode) {
-      const latlng = e.latlng;
-      const input =
-        routePointSelectionMode === "start"
-          ? startInput
-          : routePointSelectionMode === "via"
-            ? viaInput
-            : endInput;
-      input.value = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
-
-      if (routePointSelectionMode === "start") {
-        currentStartLatLng = latlng;
-        startInput.style.color = "var(--color-black)";
-        if (startMarker) {
-          startMarker.setLatLng(latlng);
-        } else {
-          startMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_START, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(startMarker, "start");
-        }
-      } else if (routePointSelectionMode === "via") {
-        currentViaLatLng = latlng;
-        viaInput.style.color = "var(--color-black)";
-        if (viaMarker) {
-          viaMarker.setLatLng(latlng);
-        } else {
-          viaMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_VIA, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(viaMarker, "via");
-        }
-      } else {
-        currentEndLatLng = latlng;
-        endInput.style.color = "var(--color-black)";
-        if (endMarker) {
-          endMarker.setLatLng(latlng);
-        } else {
-          endMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_END, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(endMarker, "end");
-        }
-      }
-
-      updateClearButtonState();
-
-      if (routePointSelectionMode === "via") {
-        if (startMarker && endMarker) updateRouteWithIntermediateVias();
-      } else {
-        calculateNewRoute();
-      }
-
-      exitRoutePointSelectionMode();
+      updateRoutingPoint(e.latlng, routePointSelectionMode);
     }
   });
 
