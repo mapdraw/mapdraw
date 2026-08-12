@@ -486,6 +486,8 @@ function displayActivitiesOnMap(activities) {
         const latlngs = L.Polyline.fromEncoded(activity.map.summary_polyline).getLatLngs();
         const polyline = L.polyline(latlngs, { ...STYLE_CONFIG.path.default, color: STRAVA_COLOR });
         polyline.feature = {
+          // Full activity kept deliberately: properties carry source data untouched
+          // (see config.js data model), so GeoJSON export is a complete backup.
           properties: {
             ...activity,
             stravaId: activity.id,
