@@ -95,9 +95,9 @@ function applyDataEditor() {
       // The same explosion every file import does before calling importGeoJsonToMap(), which
       // doesn't do it itself. Leaflet builds one layer with nested latlngs from a pasted
       // MultiLineString/MultiPolygon, and an L.FeatureGroup from a MultiPoint/GeometryCollection
-      // - neither survives layerToPortableFeature(): the first writes flattened coordinates
-      // under the untouched Multi* geometry type, the second has no geometry at all and is
-      // dropped from this editor and every export while still sitting on the map. Runs before
+      // - neither survives layerToPortableFeature(): the first is cut down to a plain
+      // LineString/Polygon keeping at most its first part, the second has no usable geometry and
+      // is dropped from this editor and every export while still sitting on the map. Runs before
       // the check below so that validates what actually gets imported, and inside the try so a
       // malformed feature reports an error instead of throwing past the map-clearing step.
       parsed.features = parsed.features.flatMap((f) => explodeMultiGeometries(f));

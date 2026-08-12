@@ -41,54 +41,44 @@ function isRingClockwise(ring) {
 }
 
 /**
- * Overwrites a GeoJSON geometry's coordinates with full precision values
- * read directly from the Leaflet layer (avoids toGeoJSON precision loss).
- * @param {L.Layer} layer - The Leaflet layer
- * @param {object} geojson - The GeoJSON object whose geometry.coordinates will be updated
- */
-function applyFullPrecisionCoordinates(layer, geojson) {
-  if (layer instanceof L.Marker) {
-    const ll = layer.getLatLng();
-    const coords = [ll.lng, ll.lat];
-    if (typeof ll.alt === "number") coords.push(ll.alt);
-    geojson.geometry.coordinates = coords;
-  } else if (layer instanceof L.Polygon) {
-    const latlngs = layer.getLatLngs()[0];
-    const coords = latlngs.map((ll) => {
-      const coord = [ll.lng, ll.lat];
-      if (typeof ll.alt === "number") coord.push(ll.alt);
-      return coord;
-    });
-    coords.push(coords[0]); // Close the polygon
-    // RFC 7946 section 3.1.6: exterior rings MUST wind counterclockwise.
-    if (isRingClockwise(coords)) coords.reverse();
-    geojson.geometry.coordinates = [coords];
-  } else if (layer instanceof L.Polyline) {
-    const latlngs = flattenRingPoints(layer.getLatLngs());
-    geojson.geometry.coordinates = latlngs.map((ll) => {
-      const coord = [ll.lng, ll.lat];
-      if (typeof ll.alt === "number") coord.push(ll.alt);
-      return coord;
-    });
-  }
-}
-
-/**
  * Converts a layer into the portable GeoJSON feature that represents it everywhere its data
  * leaves the map: the GeoJSON Editor tab, a GeoJSON export, and autosave (which adds its
  * internal state in a sibling key afterwards). Exactly type/properties/geometry - an imported
  * layer's feature can carry extra top-level keys from its source file, and layer.internal is
  * deliberately not part of layer.feature at all. See the LAYER DATA MODEL note in config.js.
+ * Builds the geometry straight from the layer's latlngs at full precision - layer.toGeoJSON()
+ * would round every coordinate to 6 decimal places and materialize the whole array a second time.
  * @param {L.Layer} layer - The layer to convert
  * @returns {object|null} A GeoJSON Feature, or null if the layer has no usable geometry
  */
 function layerToPortableFeature(layer) {
-  const geojson = layer.toGeoJSON();
-  if (!geojson?.geometry?.type) return null;
-  applyFullPrecisionCoordinates(layer, geojson);
-  // Shallow copy - callers can add or drop top-level properties without touching the live
-  // layer; nested values stay shared.
-  return { type: "Feature", properties: { ...geojson.properties }, geometry: geojson.geometry };
+  const toCoord = (ll) => {
+    const coord = [ll.lng, ll.lat];
+    if (typeof ll.alt === "number") coord.push(ll.alt);
+    return coord;
+  };
+
+  let geometry;
+  if (layer instanceof L.Marker) {
+    geometry = { type: "Point", coordinates: toCoord(layer.getLatLng()) };
+  } else if (layer instanceof L.Polygon) {
+    const coords = layer.getLatLngs()[0].map(toCoord);
+    coords.push(coords[0]); // Close the polygon
+    // RFC 7946 section 3.1.6: exterior rings MUST wind counterclockwise.
+    if (isRingClockwise(coords)) coords.reverse();
+    geometry = { type: "Polygon", coordinates: [coords] };
+  } else if (layer instanceof L.Polyline) {
+    geometry = {
+      type: "LineString",
+      coordinates: flattenRingPoints(layer.getLatLngs()).map(toCoord),
+    };
+  } else {
+    return null; // No usable geometry (e.g. an L.FeatureGroup from a pasted GeometryCollection)
+  }
+
+  // Shallow property copy - callers can add or drop top-level properties without touching the
+  // live layer; nested values stay shared.
+  return { type: "Feature", properties: { ...layer.feature?.properties }, geometry };
 }
 
 /**
