@@ -147,6 +147,24 @@ function initRouting() {
   };
 
   /**
+   * Returns the index of the current route path vertex closest to latlng,
+   * or Infinity when there is no route path to measure against.
+   */
+  const nearestRouteCoordIndex = (latlng) => {
+    if (!currentRoutePath) return Infinity;
+    let nearestIndex = Infinity;
+    let nearestDist = Infinity;
+    currentRoutePath.getLatLngs().forEach((coord, i) => {
+      const dist = latlng.distanceTo(coord);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestIndex = i;
+      }
+    });
+    return nearestIndex;
+  };
+
+  /**
    * Creates and registers an intermediate via marker without triggering route recalculation.
    */
   const createIntermediateViaMarker = (latlng) => {
@@ -184,7 +202,16 @@ function initRouting() {
     });
 
     newViaMarker.on("dragend", updateRouteWithIntermediateVias);
-    intermediateViaMarkers.push(newViaMarker);
+    // Insert by position along the route so via order matches geography, not click order
+    newViaMarker.routeCoordIndex = nearestRouteCoordIndex(latlng);
+    const insertAt = intermediateViaMarkers.findIndex(
+      (marker) => (marker.routeCoordIndex ?? Infinity) > newViaMarker.routeCoordIndex,
+    );
+    if (insertAt === -1) {
+      intermediateViaMarkers.push(newViaMarker);
+    } else {
+      intermediateViaMarkers.splice(insertAt, 0, newViaMarker);
+    }
     return newViaMarker;
   };
 
@@ -251,6 +278,14 @@ function initRouting() {
         if (routes.length > 0) {
           const route = routes[0];
           let processedCoordinates = route.coordinates;
+
+          // Refresh each via marker's coordinate index on the new geometry; waypoints
+          // were [start, ...intermediateViaMarkers, via?, end], so markers map to 1..n.
+          if (route.waypointIndices && route.waypointIndices.length === this._waypoints.length) {
+            intermediateViaMarkers.forEach((marker, i) => {
+              marker.routeCoordIndex = route.waypointIndices[i + 1];
+            });
+          }
 
           const startInput = document.getElementById("route-start");
           const endInput = document.getElementById("route-end");
