@@ -379,14 +379,18 @@ function initRouting() {
           if (wasRouteSelectedOnUnitRefresh || !isUnitRefreshInProgress) {
             selectItem(currentRoutePath);
           }
-          isUnitRefreshInProgress = false;
-          wasRouteSelectedOnUnitRefresh = false;
 
           saveRouteBtn.disabled = false;
         }
+        // Reset unconditionally so an empty result can't leave the flags stale
+        isUnitRefreshInProgress = false;
+        wasRouteSelectedOnUnitRefresh = false;
       },
 
       _handleRoutingError: function (error) {
+        // Reset so a failed unit refresh can't suppress selecting the next route
+        isUnitRefreshInProgress = false;
+        wasRouteSelectedOnUnitRefresh = false;
         console.error("Routing error:", error);
         if (error && error.target && error.target.responseText) {
           try {
