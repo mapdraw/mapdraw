@@ -496,6 +496,8 @@ async function addElevationProfileForLayer(layer) {
       }
       const provider = localStorage.getItem("elevationProvider") || "google";
       pointsWithElev = await fetchElevationForPath(latlngs, realDistance);
+      // Drop stale response if the selection changed during the fetch
+      if (selectedElevationPath !== layer) return;
       source = provider === "geoadmin" ? "GeoAdmin" : "Google";
     }
 
