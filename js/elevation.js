@@ -523,6 +523,7 @@ async function removeElevationFromPath() {
   for (let i = 0; i < latlngs.length; i++) {
     latlngs[i].alt = undefined;
   }
+  scheduleDataEditorRefresh();
 
   // Keep the cache entry — the cache key is coordinate-based, so the
   // cached API data is still valid for these same coordinates.  This
@@ -594,6 +595,7 @@ async function addElevationToPath() {
       latlngs[i].alt = e1 + t * (e2 - e1);
     }
   }
+  scheduleDataEditorRefresh();
 
   // Keep the cache entry so that removing and re-adding elevation
   // does not trigger another API call for the same coordinates.
