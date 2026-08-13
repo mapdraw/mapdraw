@@ -31,12 +31,21 @@ function isPathLayer(layer) {
 
 /**
  * Ensures the Google Maps API is loaded only once. Returns a promise that resolves
- * when the API is ready, handling concurrent load requests gracefully.
+ * when the API is ready, handling concurrent load requests gracefully. Only a
+ * successful (or in-flight) load is cached, so a failed load is retried on the
+ * next call.
  * @returns {Promise<void>} Promise that resolves when the API is loaded
  */
 function ensureGoogleApiIsLoaded() {
   if (window.googleMapsApiPromise) {
     return window.googleMapsApiPromise;
+  }
+
+  // typeof guard: googleApiKey doesn't exist at all when secrets.js is missing
+  if (typeof googleApiKey === "undefined" || !googleApiKey) {
+    const errorMsg = "Google API key is not configured.";
+    console.error(errorMsg);
+    return Promise.reject(new Error(errorMsg));
   }
 
   window.googleMapsApiPromise = new Promise((resolve, reject) => {
@@ -45,17 +54,16 @@ function ensureGoogleApiIsLoaded() {
       delete window.onGoogleMapsApiReady;
     };
 
-    if (!googleApiKey) {
-      const errorMsg = "Google API key is not configured.";
-      console.error(errorMsg);
-      return reject(new Error(errorMsg));
-    }
-
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${googleApiKey}&loading=async&libraries=elevation,maps&callback=onGoogleMapsApiReady`;
     script.async = true;
     script.defer = true;
-    script.onerror = () => reject(new Error("Failed to load the Google Maps script."));
+    script.onerror = () => {
+      window.googleMapsApiPromise = null;
+      delete window.onGoogleMapsApiReady;
+      script.remove();
+      reject(new Error("Failed to load the Google Maps script."));
+    };
     document.head.appendChild(script);
   });
 
