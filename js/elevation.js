@@ -2,6 +2,15 @@
 
 const elevationCache = new Map();
 
+/**
+ * Builds the elevation cache key for a set of path coordinates.
+ * @param {L.LatLng[]} latlngs - Path coordinates
+ * @returns {string} Cache key
+ */
+function elevationCacheKey(latlngs) {
+  return JSON.stringify(latlngs.map((p) => [p.lat.toFixed(6), p.lng.toFixed(6)]));
+}
+
 // Define our coordinate system names
 const WGS84 = "EPSG:4326"; // Standard Lat/Lng
 const LV95 = "EPSG:2056"; // Swiss Grid
@@ -349,7 +358,7 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
  * @returns {Promise<L.LatLng[]|null>} Array of coordinates with elevation or null on error
  */
 async function fetchElevationForPath(latlngs, realDistance) {
-  const cacheKey = JSON.stringify(latlngs.map((p) => [p.lat.toFixed(6), p.lng.toFixed(6)]));
+  const cacheKey = elevationCacheKey(latlngs);
 
   if (elevationCache.has(cacheKey)) {
     console.log("Returning cached elevation data.");
@@ -550,7 +559,7 @@ async function addElevationToPath() {
   if (!latlngs || latlngs.length === 0) return;
 
   // Get cached API data
-  const cacheKey = JSON.stringify(latlngs.map((p) => [p.lat.toFixed(6), p.lng.toFixed(6)]));
+  const cacheKey = elevationCacheKey(latlngs);
   const apiData = elevationCache.get(cacheKey);
   if (!apiData || apiData.length === 0) {
     console.warn("No cached API elevation data to add.");
