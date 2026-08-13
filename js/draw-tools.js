@@ -196,6 +196,22 @@ function initDrawTools() {
   }
   window.app.cancelPendingReselect = cancelPendingReselect;
 
+  function onDrawVertex(evt) {
+    const newPoints = evt.layers.getLayers().map((l) => l.getLatLng());
+    // path-extend.js's own listener (bound after this one) seeds the label for
+    // the first vertex once pathExtendTarget is set; nothing to show before that.
+    if (newPoints.length < 2) return;
+    // Extending an existing path: prepend its points so its labels stay visible.
+    // newPoints[0] is the marker path-extend.js snapped onto that same path's
+    // endpoint - already the lead-in's own last point - so drop it to avoid a
+    // zero-length segment at the join (mirrors path-extend.js's own draw:created
+    // handler, which slices its drawnPoints the same way for the final shape).
+    const points = pathExtendTarget
+      ? [...pathExtendLeadInPoints(pathExtendTarget), ...newPoints.slice(1)]
+      : newPoints;
+    showDistanceLabelsFor(points);
+  }
+
   map.on(L.Draw.Event.DRAWSTART, function (e) {
     // draw:created (which selects the newly-drawn shape) fires before
     // draw:drawstop deactivates this mode, so selection must stay allowed
@@ -210,21 +226,7 @@ function initDrawTools() {
       // Matches leaflet-draw's own shapeOptions.color above - keeps the in-progress
       // vertex handles (style.css) the same color the shape will get once created.
       document.documentElement.style.setProperty("--active-item-color", DEFAULT_COLOR);
-      map.on("draw:drawvertex", function (evt) {
-        const newPoints = evt.layers.getLayers().map((l) => l.getLatLng());
-        // path-extend.js's own listener (bound after this one) seeds the label for
-        // the first vertex once pathExtendTarget is set; nothing to show before that.
-        if (newPoints.length < 2) return;
-        // Extending an existing path: prepend its points so its labels stay visible.
-        // newPoints[0] is the marker path-extend.js snapped onto that same path's
-        // endpoint - already the lead-in's own last point - so drop it to avoid a
-        // zero-length segment at the join (mirrors path-extend.js's own draw:created
-        // handler, which slices its drawnPoints the same way for the final shape).
-        const points = pathExtendTarget
-          ? [...pathExtendLeadInPoints(pathExtendTarget), ...newPoints.slice(1)]
-          : newPoints;
-        showDistanceLabelsFor(points);
-      });
+      map.on("draw:drawvertex", onDrawVertex);
     }
   });
 
@@ -238,7 +240,9 @@ function initDrawTools() {
     if (isDistanceLabelSourceInProgress()) {
       hideDistanceLabels();
     }
-    map.off("draw:drawvertex");
+    // Precisely, not map.off("draw:drawvertex") - the no-handler form would also
+    // remove path-extend.js's listener on the same event.
+    map.off("draw:drawvertex", onDrawVertex);
   });
 
   map.on(L.Draw.Event.EDITSTART, () => {
