@@ -229,7 +229,9 @@ function initRouting() {
    */
   function setupRoutingControl(provider) {
     if (routingControl) {
-      routingControl = null;
+      // Orphan any in-flight route callback on the outgoing control so a late
+      // response from the old provider can't overwrite the new provider's route
+      routingControl._requestId++;
     }
     const router = PROVIDER_CONFIG[provider]?.router || PROVIDER_CONFIG["mapbox"].router;
 
