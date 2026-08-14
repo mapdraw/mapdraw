@@ -20,7 +20,7 @@ function initLocateControl() {
   // that rotates based on device heading
   const locationCompassArrowIcon = L.Control.Locate.LocationMarker.extend({
     initialize(latlng, heading, options) {
-      leaflet.setOptions(this, options);
+      L.setOptions(this, options);
       this._latlng = latlng;
       this._heading = heading;
       this.createIcon();
@@ -47,7 +47,7 @@ function initLocateControl() {
 
       const icon = this._getIconSVG(opt, style);
 
-      this._locationIcon = leaflet.divIcon({
+      this._locationIcon = L.divIcon({
         className: icon.className,
         html: icon.html,
         iconSize: [icon.w, icon.h],
