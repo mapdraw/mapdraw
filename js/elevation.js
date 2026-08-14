@@ -246,9 +246,8 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
 
     const allResponses = await Promise.all(allRequests);
 
-    // Step 4: Process responses and stitch them together
-    let swissProfilePoints = [];
-    let previousDist = 0;
+    // Step 4: Process responses and collect their points, chunk order preserved
+    const swissProfilePoints = [];
 
     for (const profileResponse of allResponses) {
       if (!profileResponse.ok) {
@@ -263,16 +262,11 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
         throw new Error("Profile API returned no data for a chunk.");
       }
 
-      // Adjust distance values to account for previous chunks
-      const adjustedPoints = chunkPoints.map((point) => ({
-        ...point,
-        dist: point.dist + previousDist,
-      }));
-
-      swissProfilePoints = swissProfilePoints.concat(adjustedPoints);
-      previousDist = swissProfilePoints[swissProfilePoints.length - 1].dist;
+      for (const point of chunkPoints) {
+        swissProfilePoints.push(point);
+      }
     }
-    if (!swissProfilePoints || swissProfilePoints.length === 0) {
+    if (swissProfilePoints.length === 0) {
       throw new Error("Profile API returned no data.");
     }
 
@@ -296,7 +290,7 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
 
     // Step 4: Merge the data into L.LatLng objects with altitude
     const pointsWithElev = [];
-    let debugDataForTable = [];
+    const debugDataForTable = [];
 
     for (let i = 0; i < validSwissPoints.length; i++) {
       const swissPoint = validSwissPoints[i];
@@ -309,7 +303,6 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
 
       if (ENABLE_GEOADMIN_DEBUG) {
         debugDataForTable.push({
-          Distance: swissPoint.dist,
           Altitude: altitude,
           Easting: swissPoint.easting,
           Northing: swissPoint.northing,
@@ -323,9 +316,9 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
       console.log("--- GeoAdmin Debug Data (View Only) ---");
       console.table(debugDataForTable);
 
-      let csvContent = "Distance;Altitude;Easting;Northing;Longitude;Latitude\n";
+      let csvContent = "Altitude;Easting;Northing;Longitude;Latitude\n";
       debugDataForTable.forEach((row) => {
-        csvContent += `${row.Distance};${row.Altitude};${row.Easting};${row.Northing};${row.Longitude};${row.Latitude}\n`;
+        csvContent += `${row.Altitude};${row.Easting};${row.Northing};${row.Longitude};${row.Latitude}\n`;
       });
 
       window.copyGeoAdminCSV = () => {
