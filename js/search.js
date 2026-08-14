@@ -10,13 +10,12 @@
 
 /**
  * Shows a search modal
- * @param {string} title - Modal title (e.g., "Search Location", "Set Start Point")
- * @param {string} placeholder - Input placeholder text
+ * @param {string} title - Shown as the input's placeholder (e.g., "Search Location", "Set Start Point")
  * @param {string} currentValue - Current value of the input (if any)
  * @param {function(L.LatLng, string): void} callback - Callback when location is selected
  * @returns {Promise<void>}
  */
-async function showSearchModal(title, placeholder, currentValue, callback) {
+async function showSearchModal(title, currentValue, callback) {
   await Swal.fire({
     html: `
       <div>
@@ -81,7 +80,7 @@ async function showSearchModal(title, placeholder, currentValue, callback) {
 /**
  * Attaches click handler to an input element to show the unified search modal
  * @param {HTMLInputElement} inputEl - The input element to enhance
- * @param {string} modalTitle - Title for the search modal
+ * @param {string} modalTitle - Shown as the placeholder inside the search modal
  * @param {function(L.LatLng, string): void} callback - Callback when location is selected
  */
 function attachSearchModalToInput(inputEl, modalTitle, callback) {
@@ -90,9 +89,6 @@ function attachSearchModalToInput(inputEl, modalTitle, callback) {
     return;
   }
   inputEl._searchModalAttached = true;
-
-  // Store original placeholder for offline state handling
-  const originalPlaceholder = inputEl.placeholder;
 
   // Make input look clickable
   inputEl.style.cursor = "pointer";
@@ -119,7 +115,7 @@ function attachSearchModalToInput(inputEl, modalTitle, callback) {
     // For buttons, always start with empty value. For inputs, use current value.
     const currentValue = inputEl.tagName === "BUTTON" ? "" : inputEl.value;
 
-    showSearchModal(modalTitle, originalPlaceholder, currentValue, (latLng, label) => {
+    showSearchModal(modalTitle, currentValue, (latLng, label) => {
       // Update input display (only works for input elements, not buttons)
       if (inputEl.tagName !== "BUTTON") {
         inputEl.value = label;
