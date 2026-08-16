@@ -89,20 +89,10 @@ function toggleLayerVisibility(layerToToggle) {
       if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);
     }
   } else {
-    // Show the layer (if its parent group is on the map)
-    // Check if any of its parent groups are on the map
-    let isParentVisible = false;
-    Object.values(displayLayerGroups).forEach((group) => {
-      if (group.hasLayer(layerToToggle) && map.hasLayer(group)) {
-        isParentVisible = true;
-      }
-    });
-
-    // Special case for route (it's not in a group)
-    // But it's now visually part of "Drawn Items" (layerGroup DrawnItems)
-    if (layerToToggle === currentRoutePath) {
-      isParentVisible = map.hasLayer(drawnItems);
-    }
+    // Show the layer only if its parent category group is on the map
+    const isParentVisible = Object.values(displayLayerGroups).some(
+      (group) => group.hasLayer(layerToToggle) && map.hasLayer(group),
+    );
 
     if (isParentVisible) {
       map.addLayer(layerToToggle);
