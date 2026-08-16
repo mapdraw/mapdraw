@@ -56,14 +56,21 @@ function _serializeLayersForAutosave() {
 function _autosaveTick() {
   const json = _serializeLayersForAutosave();
   if (json === _lastAutosaveJson) return;
-  _lastAutosaveJson = json;
 
+  // _lastAutosaveJson is committed only after the write succeeds, so a failed
+  // write leaves it stale and the next tick retries instead of early-returning.
   if (json === "") {
-    idbKeyval.del(AUTOSAVE_KEY).catch(() => {});
+    idbKeyval
+      .del(AUTOSAVE_KEY)
+      .then(() => {
+        _lastAutosaveJson = json;
+      })
+      .catch(() => {});
   } else {
     idbKeyval
       .set(AUTOSAVE_KEY, json)
       .then(() => {
+        _lastAutosaveJson = json;
         _autosaveWriteFailed = false;
       })
       .catch((e) => {
