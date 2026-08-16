@@ -157,9 +157,9 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
   }
 
   if (newLayer) {
-    // Keep only the name and force pathType to "drawn" - discard all source-specific
-    // metadata. This removes stravaId, imported file metadata, etc., making
-    // duplicates independent drawn paths.
+    // Keep only the name and force pathType to "drawn" - discard all other
+    // metadata, including stravaId, imported file metadata, and (deliberately)
+    // description, making duplicates independent drawn paths.
     newLayer.feature = { properties: { name: newName } };
     newLayer.internal = { pathType: "drawn" };
     setLayerColor(newLayer, color);
