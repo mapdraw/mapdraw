@@ -79,10 +79,9 @@ function convertPath(latlngs, inSr, outSr) {
  * Fetches elevation data from Google Maps Elevation API.
  * Implements adaptive point sampling based on path complexity.
  * @param {L.LatLng[]} latlngs - Path coordinates
- * @param {number} realDistance - Actual path distance in meters
  * @returns {Promise<L.LatLng[]|null>} Array of coordinates with elevation or null on error
  */
-async function fetchElevationForPathGoogle(latlngs, realDistance) {
+async function fetchElevationForPathGoogle(latlngs) {
   console.log("Fetching elevation data from: Google");
   if (!latlngs || latlngs.length < 2) return latlngs;
 
@@ -347,10 +346,9 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
  * Main dispatcher function for fetching elevation data.
  * Routes to either Google or GeoAdmin API based on user preference.
  * @param {L.LatLng[]} latlngs - Path coordinates
- * @param {number} realDistance - Actual path distance in meters
  * @returns {Promise<L.LatLng[]|null>} Array of coordinates with elevation or null on error
  */
-async function fetchElevationForPath(latlngs, realDistance) {
+async function fetchElevationForPath(latlngs) {
   const cacheKey = elevationCacheKey(latlngs);
 
   if (elevationCache.has(cacheKey)) {
@@ -365,7 +363,7 @@ async function fetchElevationForPath(latlngs, realDistance) {
   if (elevationProvider === "geoadmin") {
     pointsWithElev = await fetchElevationForPathGeoAdminAPI(latlngs);
   } else {
-    pointsWithElev = await fetchElevationForPathGoogle(latlngs, realDistance);
+    pointsWithElev = await fetchElevationForPathGoogle(latlngs);
   }
 
   if (pointsWithElev) {
@@ -497,7 +495,7 @@ async function addElevationProfileForLayer(layer) {
         console.log("No elevation data in file, fetching from API...");
       }
       const provider = localStorage.getItem("elevationProvider") || "google";
-      pointsWithElev = await fetchElevationForPath(latlngs, realDistance);
+      pointsWithElev = await fetchElevationForPath(latlngs);
       // Drop stale response if the selection changed during the fetch
       if (selectedElevationPath !== layer) return;
       source = provider === "geoadmin" ? "GeoAdmin" : "Google";
