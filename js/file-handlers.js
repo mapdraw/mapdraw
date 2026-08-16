@@ -759,19 +759,8 @@ function notifyExportSuccess(shouldNotify, title, text) {
  * Exports map items to a GeoJSON file with color preservation.
  * @param {Object} options - Export options
  * @param {string} options.mode - Export mode: "all" (default), "selection", or "strava"
- * @param {string} options.filePrefix - Prefix for the filename (defaults based on mode)
- * @param {string} options.successTitle - Success dialog title (defaults based on mode)
- * @param {string} options.successText - Success dialog text (defaults based on mode)
  */
-function exportGeoJson(options = {}) {
-  const {
-    mode = "all",
-    layers = null,
-    filePrefix = null,
-    successTitle = "Export Successful!",
-    successText = null,
-  } = options;
-
+function exportGeoJson({ mode = "all", layers = null } = {}) {
   const features = [];
   let allLayers = [];
 
@@ -836,29 +825,24 @@ function exportGeoJson(options = {}) {
 
   const singleNamedItem = mode === "selection" ? getSingleNamedItem(allLayers) : null;
 
-  // Determine filename prefix
-  let finalFilePrefix = filePrefix;
-  if (!finalFilePrefix) {
-    finalFilePrefix =
-      mode === "strava"
-        ? "Strava_Export"
-        : resolveExportFilePrefix(singleNamedItem, mode === "selection");
-  }
+  const filePrefix =
+    mode === "strava"
+      ? "Strava_Export"
+      : resolveExportFilePrefix(singleNamedItem, mode === "selection");
 
   const fileName = singleNamedItem
-    ? `${finalFilePrefix}.geojson`
-    : generateTimestampedFilename(finalFilePrefix, "geojson");
+    ? `${filePrefix}.geojson`
+    : generateTimestampedFilename(filePrefix, "geojson");
 
   // Download file
   downloadFile(fileName, JSON.stringify(geojsonDoc, null, 2));
 
   notifyExportSuccess(
     mode === "all" || (mode === "selection" && allLayers.length > 1),
-    successTitle,
-    successText ||
-      (mode === "all"
-        ? "All items have been exported to GeoJSON."
-        : `${allLayers.length} selected items have been exported to GeoJSON.`),
+    "Export Successful!",
+    mode === "all"
+      ? "All items have been exported to GeoJSON."
+      : `${allLayers.length} selected items have been exported to GeoJSON.`,
   );
 }
 
