@@ -2695,6 +2695,11 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   background-color: var(--background2-color);
   cursor: not-allowed;
 }
+/* Control buttons are <a> elements, and dragging one swallows its click.
+   The layers button did not respond in Chrome fullscreen on macOS. */
+.leaflet-control a {
+  -webkit-user-drag: none;
+}
 /* This rule targets the first custom control to round its top corners */
 .leaflet-left > .leaflet-control-custom:first-child a {
   border-radius: 50px 50px 0 0 !important;
