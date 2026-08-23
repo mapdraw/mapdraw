@@ -177,7 +177,7 @@ const CSS_COLOR_NAMES = {
  * @returns {string|null} Normalized hex color or null if invalid
  */
 function normalizeHexColor(raw) {
-  if (!raw) return null;
+  if (typeof raw !== "string" || !raw) return null;
   let color = raw.trim().toLowerCase();
 
   // Remove # prefix if present
@@ -224,7 +224,7 @@ function normalizeHexColor(raw) {
  * @returns {string|null} Normalized hex color or null if invalid
  */
 function parseColor(input) {
-  if (!input) return null;
+  if (typeof input !== "string" || !input) return null;
   const str = input.trim().toLowerCase();
 
   // Check if it's a hex color
@@ -300,7 +300,7 @@ function cssToKmlColor(cssColor) {
  * @returns {string|null} CSS color string (e.g., "#FF0000") or null if invalid
  */
 function kmlToCssColor(kmlColor) {
-  if (!kmlColor) return null;
+  if (typeof kmlColor !== "string" || !kmlColor) return null;
   let color = kmlColor.trim().toLowerCase();
 
   // Remove # prefix if present
