@@ -6,9 +6,23 @@
  */
 
 const WmsImport = (function () {
-  let customWmsLayers = {}; // Store custom WMS layers by ID
-  let layerIdCounter = 0;
   const STORAGE_KEY = "wmsCustomLayers";
+  const store = createCustomLayerStore({
+    storageKey: STORAGE_KEY,
+    idPrefix: "wms-custom-",
+    kind: "WMS",
+    createLayer: (layerData) =>
+      L.tileLayer.wms.gutter(layerData.wmsUrl, {
+        layers: layerData.wmsLayerName,
+        format: "image/png",
+        transparent: true,
+        pane: "customLayersPane",
+        tileSize: 512,
+        gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
+        noWrap: true,
+        bounds: WORLD_BOUNDS,
+      }),
+  });
 
   /**
    * Shows the main WMS import dialog
@@ -206,7 +220,7 @@ const WmsImport = (function () {
    * @returns {boolean} True if layer is already imported
    */
   function isLayerAlreadyImported(wmsUrl, layerName) {
-    return Object.values(customWmsLayers).some(
+    return Object.values(store.layers).some(
       (layerData) => layerData.wmsUrl === wmsUrl && layerData.wmsLayerName === layerName,
     );
   }
@@ -401,231 +415,11 @@ const WmsImport = (function () {
    * @param {boolean} [autoEnable=true] - Whether to auto-enable the layers (default: true)
    */
   function addWmsOverlays(selectedLayers, wmsUrl, map, autoEnable = true) {
-    selectedLayers.forEach((layer) => {
-      const layerId = `wms-custom-${layerIdCounter++}`;
-
-      // Create WMS tile layer with gutter support to prevent icon cutoff
-      const wmsLayer = L.tileLayer.wms.gutter(wmsUrl, {
-        layers: layer.name,
-        format: "image/png",
-        transparent: true,
-        pane: "customLayersPane",
-        tileSize: 512,
-        gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
-        noWrap: true,
-        bounds: WORLD_BOUNDS,
-      });
-
-      // Store layer information
-      customWmsLayers[layerId] = {
-        id: layerId,
-        layer: wmsLayer,
-        name: layer.title,
-        wmsUrl: wmsUrl,
-        wmsLayerName: layer.name,
-        addedToMap: false,
-      };
-
-      // Add to layers control
-      addToLayersControl(layerId, layer.title, wmsLayer, map, autoEnable);
-    });
-
-    // Save to localStorage
-    saveLayersToStorage();
-  }
-
-  /**
-   * Adds a custom WMS layer to the layers control panel
-   * @param {string} layerId - Unique layer ID
-   * @param {string} displayName - Display name for the layer
-   * @param {L.TileLayer.WMS} wmsLayer - Leaflet WMS layer
-   * @param {L.Map} map - Leaflet map instance
-   * @param {boolean} autoEnable - Whether to auto-enable the layer (default: true)
-   */
-  function addToLayersControl(layerId, displayName, wmsLayer, map, autoEnable = true) {
-    const customPanel = document.getElementById("custom-layers-panel");
-    if (!customPanel) return;
-
-    const overlaysSection = customPanel.querySelector(".leaflet-control-layers-overlays");
-    if (!overlaysSection) return;
-
-    const label = document.createElement("label");
-    label.className = "custom-layer";
-    label.setAttribute("data-layer-id", layerId);
-    const checkedAttr = autoEnable ? 'checked="checked"' : "";
-    const safeName = escHtml(displayName);
-    label.innerHTML = `
-      <div>
-        <input
-          type="checkbox"
-          class="leaflet-control-layers-selector"
-          data-layer-id="${layerId}"
-          data-layer-type="wms-custom"
-          ${checkedAttr}
-        />
-        <span class="layer-name-container" style="padding-left: 0;">
-          <span class="layer-name-text" title="${safeName}"><span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${safeName}</span>
-          <span
-            class="material-symbols material-symbols-fill layer-icon layer-remove-icon"
-            data-layer-id="${layerId}"
-            title="Remove this layer"
-            style="cursor: pointer;"
-          >cancel</span>
-        </span>
-      </div>
-    `;
-
-    // Prepend so newly imported layers appear at top; restoreOverlayOrder() corrects order on reload.
-    overlaysSection.prepend(label);
-
-    // Auto-enable the layer on import if requested
-    if (autoEnable) {
-      map.addLayer(wmsLayer);
-      customWmsLayers[layerId].addedToMap = true;
-    }
-
-    // Reapply z-index to ensure visual order matches list order
-    if (typeof window.reapplyOverlayZIndex === "function") {
-      window.reapplyOverlayZIndex();
-    }
-
-    // Save the updated overlay order to localStorage
-    if (typeof window.saveOverlayOrder === "function") {
-      window.saveOverlayOrder();
-    }
-
-    // Add event listener for checkbox toggle
-    const checkbox = label.querySelector("input");
-    checkbox.addEventListener("change", (e) => {
-      if (e.target.checked) {
-        map.addLayer(wmsLayer);
-        customWmsLayers[layerId].addedToMap = true;
-        // Reapply z-index to ensure layer respects list order
-        if (typeof window.reapplyOverlayZIndex === "function") {
-          window.reapplyOverlayZIndex();
-        }
-      } else {
-        map.removeLayer(wmsLayer);
-        customWmsLayers[layerId].addedToMap = false;
-      }
-      // Save the updated state to localStorage
-      saveLayersToStorage();
-    });
-
-    // Add event listener for remove icon
-    const removeIcon = label.querySelector(".layer-remove-icon");
-    removeIcon.addEventListener("click", (e) => {
-      e.stopPropagation();
-      removeWmsLayer(layerId, map);
-    });
-  }
-
-  /**
-   * Removes a custom WMS layer
-   * @param {string} layerId - Layer ID to remove
-   * @param {L.Map} map - Leaflet map instance
-   */
-  function removeWmsLayer(layerId, map) {
-    const layerData = customWmsLayers[layerId];
-    if (!layerData) return;
-
-    // Remove from map
-    if (layerData.addedToMap) {
-      map.removeLayer(layerData.layer);
-    }
-
-    // Remove from control panel
-    const customPanel = document.getElementById("custom-layers-panel");
-    const checkbox = customPanel?.querySelector(`input[data-layer-id="${layerId}"]`);
-    if (checkbox) {
-      checkbox.closest("label").remove();
-    }
-
-    // Remove from storage
-    delete customWmsLayers[layerId];
-
-    // Update localStorage
-    saveLayersToStorage();
-
-    // Update overlay order to remove deleted layer reference
-    if (typeof window.saveOverlayOrder === "function") {
-      window.saveOverlayOrder();
-    }
-  }
-
-  /**
-   * Saves current WMS layers to localStorage
-   */
-  function saveLayersToStorage() {
-    const layersToSave = Object.values(customWmsLayers).map((layerData) => ({
-      id: layerData.id,
-      name: layerData.name,
-      wmsUrl: layerData.wmsUrl,
-      wmsLayerName: layerData.wmsLayerName,
-      addedToMap: layerData.addedToMap,
-    }));
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(layersToSave));
-    } catch (e) {
-      console.warn("Failed to save WMS layers to localStorage:", e);
-    }
-  }
-
-  /**
-   * Loads WMS layers from localStorage and adds them to the map
-   * @param {L.Map} map - Leaflet map instance
-   */
-  function loadLayersFromStorage(map) {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
-
-    let layersData;
-    try {
-      layersData = JSON.parse(saved);
-    } catch (e) {
-      console.warn("Failed to load WMS layers from localStorage:", e);
-      return;
-    }
-
-    if (!Array.isArray(layersData)) return;
-
-    layersData.forEach((layerData) => {
-      try {
-        // Create WMS tile layer with gutter support to prevent icon cutoff
-        const wmsLayer = L.tileLayer.wms.gutter(layerData.wmsUrl, {
-          layers: layerData.wmsLayerName,
-          format: "image/png",
-          transparent: true,
-          pane: "customLayersPane",
-          tileSize: 512,
-          gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
-          noWrap: true,
-          bounds: WORLD_BOUNDS,
-        });
-
-        // Store layer information
-        customWmsLayers[layerData.id] = {
-          id: layerData.id,
-          layer: wmsLayer,
-          name: layerData.name,
-          wmsUrl: layerData.wmsUrl,
-          wmsLayerName: layerData.wmsLayerName,
-          addedToMap: layerData.addedToMap,
-        };
-
-        // Add to layers control with saved visibility state
-        addToLayersControl(layerData.id, layerData.name, wmsLayer, map, layerData.addedToMap);
-
-        // Update layerIdCounter to avoid ID conflicts
-        const idNum = parseInt(layerData.id.replace("wms-custom-", ""), 10);
-        if (!isNaN(idNum) && idNum >= layerIdCounter) {
-          layerIdCounter = idNum + 1;
-        }
-      } catch (e) {
-        console.warn("Failed to restore WMS layer:", layerData?.id, e);
-      }
-    });
+    store.add(
+      selectedLayers.map((layer) => ({ name: layer.title, wmsUrl, wmsLayerName: layer.name })),
+      map,
+      autoEnable,
+    );
   }
 
   /**
@@ -649,9 +443,9 @@ const WmsImport = (function () {
   // Public API
   return {
     showWmsImportDialog,
-    loadLayersFromStorage,
+    loadLayersFromStorage: store.load,
     seedDefaultLayers,
-    getCustomWmsLayers: () => customWmsLayers, // Expose custom WMS layers for layer management
+    getCustomWmsLayers: () => store.layers, // Expose custom WMS layers for layer management
   };
 })();
 

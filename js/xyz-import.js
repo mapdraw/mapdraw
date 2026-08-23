@@ -8,127 +8,18 @@
  */
 
 const XyzImport = (function () {
-  let customXyzLayers = {}; // Store custom XYZ layers by ID
-  let layerIdCounter = 0;
-  const STORAGE_KEY = "xyzCustomLayers";
-
-  /**
-   * Adds a custom XYZ layer to the layers control panel
-   * @param {string} layerId - Unique layer ID
-   * @param {string} displayName - Display name for the layer
-   * @param {L.TileLayer} xyzLayer - Leaflet tile layer instance
-   * @param {L.Map} map - Leaflet map instance
-   * @param {boolean} autoEnable - Whether to auto-enable the layer (default: true)
-   */
-  function addToLayersControl(layerId, displayName, xyzLayer, map, autoEnable = true) {
-    const customPanel = document.getElementById("custom-layers-panel");
-    if (!customPanel) return;
-    const overlaysSection = customPanel.querySelector(".leaflet-control-layers-overlays");
-    if (!overlaysSection) return;
-
-    const label = document.createElement("label");
-    label.className = "custom-layer";
-    label.setAttribute("data-layer-id", layerId);
-    const checkedAttr = autoEnable ? 'checked="checked"' : "";
-    const safeName = escHtml(displayName);
-    label.innerHTML = `
-      <div>
-        <input
-          type="checkbox"
-          class="leaflet-control-layers-selector"
-          data-layer-id="${layerId}"
-          data-layer-type="xyz-custom"
-          ${checkedAttr}
-        />
-        <span class="layer-name-container" style="padding-left: 0;">
-          <span class="layer-name-text" title="${safeName}"><span class="drag-handle material-symbols layer-icon" title="Drag to reorder" style="cursor: move;">drag_indicator</span> ${safeName}</span>
-          <span
-            class="material-symbols material-symbols-fill layer-icon layer-remove-icon"
-            data-layer-id="${layerId}"
-            title="Remove this layer"
-            style="cursor: pointer;"
-          >cancel</span>
-        </span>
-      </div>
-    `;
-
-    // Prepend so newly imported layers appear at top; restoreOverlayOrder() corrects order on reload.
-    overlaysSection.prepend(label);
-
-    // Auto-enable the layer on import if requested
-    if (autoEnable) {
-      map.addLayer(xyzLayer);
-      customXyzLayers[layerId].addedToMap = true;
-    }
-
-    // Reapply z-index to ensure visual order matches list order
-    if (typeof window.reapplyOverlayZIndex === "function") {
-      window.reapplyOverlayZIndex();
-    }
-
-    // Save the updated overlay order to localStorage
-    if (typeof window.saveOverlayOrder === "function") {
-      window.saveOverlayOrder();
-    }
-
-    // Add event listener for checkbox toggle
-    const checkbox = label.querySelector("input");
-    checkbox.addEventListener("change", (e) => {
-      if (e.target.checked) {
-        map.addLayer(xyzLayer);
-        customXyzLayers[layerId].addedToMap = true;
-        // Reapply z-index to ensure layer respects list order
-        if (typeof window.reapplyOverlayZIndex === "function") {
-          window.reapplyOverlayZIndex();
-        }
-      } else {
-        map.removeLayer(xyzLayer);
-        customXyzLayers[layerId].addedToMap = false;
-      }
-      // Save the updated state to localStorage
-      saveLayersToStorage();
-    });
-
-    // Add event listener for remove icon
-    const removeIcon = label.querySelector(".layer-remove-icon");
-    removeIcon.addEventListener("click", (e) => {
-      e.stopPropagation();
-      removeXyzLayer(layerId, map);
-    });
-  }
-
-  /**
-   * Removes a custom XYZ layer
-   * @param {string} layerId - Layer ID to remove
-   * @param {L.Map} map - Leaflet map instance
-   */
-  function removeXyzLayer(layerId, map) {
-    const layerData = customXyzLayers[layerId];
-    if (!layerData) return;
-
-    // Remove from map
-    if (layerData.addedToMap) {
-      map.removeLayer(layerData.layer);
-    }
-
-    // Remove from control panel
-    const customPanel = document.getElementById("custom-layers-panel");
-    const checkbox = customPanel?.querySelector(`input[data-layer-id="${layerId}"]`);
-    if (checkbox) {
-      checkbox.closest("label").remove();
-    }
-
-    // Remove from storage
-    delete customXyzLayers[layerId];
-
-    // Update localStorage
-    saveLayersToStorage();
-
-    // Update overlay order to remove deleted layer reference
-    if (typeof window.saveOverlayOrder === "function") {
-      window.saveOverlayOrder();
-    }
-  }
+  const store = createCustomLayerStore({
+    storageKey: "xyzCustomLayers",
+    idPrefix: "xyz-custom-",
+    kind: "XYZ",
+    createLayer: (layerData) =>
+      L.tileLayer(layerData.url, {
+        maxZoom: 19,
+        pane: "customLayersPane",
+        noWrap: true,
+        bounds: WORLD_BOUNDS,
+      }),
+  });
 
   /**
    * Creates and adds an XYZ overlay layer to the map
@@ -138,90 +29,7 @@ const XyzImport = (function () {
    * @param {boolean} autoEnable - Whether to auto-enable the layer (default: true)
    */
   function addXyzLayer(name, url, map, autoEnable = true) {
-    const layerId = `xyz-custom-${layerIdCounter++}`;
-    const xyzLayer = L.tileLayer(url, {
-      maxZoom: 19,
-      pane: "customLayersPane",
-      noWrap: true,
-      bounds: WORLD_BOUNDS,
-    });
-    customXyzLayers[layerId] = {
-      id: layerId,
-      layer: xyzLayer,
-      name: name,
-      url: url,
-      addedToMap: false,
-    };
-    addToLayersControl(layerId, name, xyzLayer, map, autoEnable);
-    saveLayersToStorage();
-  }
-
-  /**
-   * Saves current XYZ layers to localStorage
-   */
-  function saveLayersToStorage() {
-    const layersToSave = Object.values(customXyzLayers).map((layerData) => ({
-      id: layerData.id,
-      name: layerData.name,
-      url: layerData.url,
-      addedToMap: layerData.addedToMap,
-    }));
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(layersToSave));
-    } catch (e) {
-      console.warn("Failed to save XYZ layers to localStorage:", e);
-    }
-  }
-
-  /**
-   * Loads XYZ layers from localStorage and adds them to the map
-   * @param {L.Map} map - Leaflet map instance
-   */
-  function loadLayersFromStorage(map) {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
-
-    let layersData;
-    try {
-      layersData = JSON.parse(saved);
-    } catch (e) {
-      console.warn("Failed to load XYZ layers from localStorage:", e);
-      return;
-    }
-
-    if (!Array.isArray(layersData)) return;
-
-    layersData.forEach((layerData) => {
-      try {
-        // Create XYZ tile layer
-        const xyzLayer = L.tileLayer(layerData.url, {
-          maxZoom: 19,
-          pane: "customLayersPane",
-          noWrap: true,
-          bounds: WORLD_BOUNDS,
-        });
-
-        // Store layer information
-        customXyzLayers[layerData.id] = {
-          id: layerData.id,
-          layer: xyzLayer,
-          name: layerData.name,
-          url: layerData.url,
-          addedToMap: layerData.addedToMap,
-        };
-
-        // Add to layers control with saved visibility state
-        addToLayersControl(layerData.id, layerData.name, xyzLayer, map, layerData.addedToMap);
-
-        // Update layerIdCounter to avoid ID conflicts
-        const idNum = parseInt(layerData.id.replace("xyz-custom-", ""), 10);
-        if (!isNaN(idNum) && idNum >= layerIdCounter) {
-          layerIdCounter = idNum + 1;
-        }
-      } catch (e) {
-        console.warn("Failed to restore XYZ layer:", layerData?.id, e);
-      }
-    });
+    store.add([{ name, url }], map, autoEnable);
   }
 
   /**
@@ -304,7 +112,7 @@ const XyzImport = (function () {
           return false;
         }
 
-        if (Object.values(customXyzLayers).some((l) => l.url === url)) {
+        if (Object.values(store.layers).some((l) => l.url === url)) {
           const errorEl = document.getElementById("xyz-error-msg");
           errorEl.textContent = "Error: This tile URL is already added.";
           errorEl.style.display = "block";
@@ -329,8 +137,8 @@ const XyzImport = (function () {
   // Public API
   return {
     showXyzImportDialog,
-    loadLayersFromStorage,
-    getCustomXyzLayers: () => customXyzLayers, // Expose custom XYZ layers for layer management
+    loadLayersFromStorage: store.load,
+    getCustomXyzLayers: () => store.layers, // Expose custom XYZ layers for layer management
   };
 })();
 
