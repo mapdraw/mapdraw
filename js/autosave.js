@@ -54,6 +54,9 @@ function _serializeLayersForAutosave() {
  * Saves current map state to IndexedDB if it changed.
  */
 function _autosaveTick() {
+  // Serializes first and compares after, deliberately: the compare is correct no matter
+  // where a change came from, while a dirty flag would silently lose changes from any
+  // mutation site that forgets to set it.
   const json = _serializeLayersForAutosave();
   if (json === _lastAutosaveJson) return;
 
