@@ -384,9 +384,9 @@ function selectItem(layer) {
   syncSelectedDownloadButtonsState();
 
   if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-    if (map.hasLayer(layer) && !isEditMode) {
-      showDistanceLabelsFor(layer);
-    }
+    // Armed even for a layer currently hidden - refreshDistanceLabels() no-ops off-map,
+    // and the layeradd listener it arms shows the labels the moment the layer is unhidden.
+    if (!isEditMode) showDistanceLabelsFor(layer);
 
     if (layer.internal?.pathType !== "route") {
       // Raising the overlay pane above the marker pane (600) makes the selected
