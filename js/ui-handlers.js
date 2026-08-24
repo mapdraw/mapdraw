@@ -392,19 +392,9 @@ function createOverviewControlsRow() {
     if (isRemoving) {
       if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, false);
       map.removeLayer(layerGroup);
-      if (key === "DrawnItems" && currentRoutePath) {
-        map.removeLayer(currentRoutePath);
-      }
     } else {
       map.addLayer(layerGroup);
       if (key === "DrawnItems") setGroupEditingEnabled(layerGroup, true);
-      if (
-        key === "DrawnItems" &&
-        currentRoutePath &&
-        !currentRoutePath.internal?.isManuallyHidden
-      ) {
-        map.addLayer(currentRoutePath);
-      }
     }
     if (typeof window.onOverlayToggle === "function") {
       window.onOverlayToggle({
