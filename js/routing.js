@@ -477,12 +477,6 @@ function initRouting() {
   customCursorEnd = document.getElementById("custom-cursor-end");
   customCursorVia = document.getElementById("custom-cursor-via");
 
-  [startInput, viaInput, endInput].forEach((input) => {
-    input.addEventListener("focus", function () {
-      this.select();
-    });
-  });
-
   clearRouteBtn.disabled = true;
 
   profileButtons.forEach((button) => {
@@ -560,10 +554,6 @@ function initRouting() {
       startInput.value || endInput.value || viaInput.value || startMarker || endMarker;
     clearRouteBtn.disabled = !hasContent;
   };
-
-  startInput.addEventListener("input", updateClearButtonState);
-  endInput.addEventListener("input", updateClearButtonState);
-  viaInput.addEventListener("input", updateClearButtonState);
 
   /**
    * Adds drag and delete handlers to routing markers (start/end/via).
@@ -809,29 +799,6 @@ function initRouting() {
       });
     }
   });
-
-  const handleManualInputChange = (type) => {
-    let input, currentLatLngValue;
-
-    if (type === "start") {
-      input = startInput;
-      currentLatLngValue = currentStartLatLng;
-    } else if (type === "via") {
-      input = viaInput;
-      currentLatLngValue = currentViaLatLng;
-    } else {
-      input = endInput;
-      currentLatLngValue = currentEndLatLng;
-    }
-
-    if (input.value.trim() === "" && currentLatLngValue) {
-      clearRoutingPoint(type);
-    }
-  };
-
-  startInput.addEventListener("input", () => handleManualInputChange("start"));
-  viaInput.addEventListener("input", () => handleManualInputChange("via"));
-  endInput.addEventListener("input", () => handleManualInputChange("end"));
 
   function updateCustomCursorPosition(e) {
     if (!routePointSelectionMode) return;
