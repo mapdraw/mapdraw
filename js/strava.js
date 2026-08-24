@@ -79,18 +79,27 @@ async function getAccessToken(code, clientId, clientSecret) {
 }
 
 /**
+ * Checks whether developer API keys are provided in secrets.js.
+ * @returns {boolean} True if both keys are present
+ */
+function hasDeveloperKeys() {
+  return Boolean(
+    typeof stravaClientId !== "undefined" &&
+    stravaClientId &&
+    typeof stravaClientSecret !== "undefined" &&
+    stravaClientSecret,
+  );
+}
+
+/**
  * Fetches activities from the Strava API, handling pagination and time-based filtering.
+ * On any fetch error the partial buffer is discarded and existing state is kept.
  */
 async function fetchAllActivities() {
   const accessToken = sessionStorage.getItem("strava_access_token");
   if (!accessToken) {
     // Determine which UI to show if the token is missing.
-    if (
-      typeof stravaClientId !== "undefined" &&
-      stravaClientId &&
-      typeof stravaClientSecret !== "undefined" &&
-      stravaClientSecret
-    ) {
+    if (hasDeveloperKeys()) {
       showConnectUI();
     } else {
       renderUserKeysPanel();
@@ -136,6 +145,7 @@ async function fetchAllActivities() {
   let page = 1;
   const perPage = 100;
   let keepFetching = true;
+  let fetchFailed = false;
 
   while (keepFetching) {
     try {
@@ -158,16 +168,28 @@ async function fetchAllActivities() {
       }
     } catch (error) {
       console.error("Error fetching Strava activities:", error);
-      if (progressText) progressText.innerText = "Error fetching activities.";
+      fetchFailed = true;
       keepFetching = false;
     }
   }
 
+  if (fetchFailed) {
+    // All-or-nothing: keep previously loaded activities and allFetchedActivities untouched.
+    if (hasDeveloperKeys()) {
+      showFetchUI(stravaActivitiesLayer.getLayers().length);
+    } else {
+      renderUserKeysPanel();
+    }
+    Swal.fire({
+      icon: "error",
+      title: "Fetch Failed",
+      text: "Could not load activities from Strava. Previously loaded activities were kept.",
+    });
+    return;
+  }
+
   allFetchedActivities = activitiesBuffer;
   hasFetchedActivities = true;
-
-  if (progressText)
-    progressText.innerText = `Found ${activitiesBuffer.length} total activities. Processing...`;
   displayActivitiesOnMap(activitiesBuffer);
 }
 
@@ -523,20 +545,10 @@ function displayActivitiesOnMap(activities) {
   updateDrawControlStates();
 
   // Determine which UI needs updating
-  if (
-    typeof stravaClientId !== "undefined" &&
-    stravaClientId &&
-    typeof stravaClientSecret !== "undefined" &&
-    stravaClientSecret
-  ) {
+  if (hasDeveloperKeys()) {
     showFetchUI(processedCount);
   } else {
     renderUserKeysPanel();
-  }
-
-  const progressText = document.getElementById("strava-progress");
-  if (progressText) {
-    progressText.innerText = `Displayed ${processedCount} activities on the map.`;
   }
 }
 
@@ -584,13 +596,8 @@ function initStrava() {
   stravaPanelContent = document.getElementById("strava-panel-content");
   sessionStorage.removeItem("strava_access_token");
 
-  // This logic checks if developer keys are provided in secrets.js.
-  if (
-    typeof stravaClientId !== "undefined" &&
-    stravaClientId &&
-    typeof stravaClientSecret !== "undefined" &&
-    stravaClientSecret
-  ) {
+  // Developer keys in secrets.js decide which auth flow is offered.
+  if (hasDeveloperKeys()) {
     showConnectUI();
   } else {
     renderUserKeysPanel();
