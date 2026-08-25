@@ -77,6 +77,8 @@ Deployment to GitHub Pages is handled automatically by the GitHub Action located
 
 **In addition to deploying the site, the workflow also performs critical performance optimizations. It bundles all JavaScript files located between the `<!-- START-BUNDLE -->` and `<!-- END-BUNDLE -->` comments in `index.html` into a single script, minifies it to reduce its size, and updates `index.html` to load the final optimized file (`app.min.js`).**
 
+> The workflow also replaces the branding placeholders in `index.html` and `manifest.json` with the values from `js/config.js`. **You do not need to edit these files manually.**
+
 ---
 
 ## Configuring API Keys
@@ -124,24 +126,6 @@ To enable features that rely on external services, you must provide your own API
 > **GeoAdmin API Note:** The GeoAdmin API is free and does not require an API key. It only works for paths within Switzerland.
 
 > **Strava API Note:** If you leave the `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` fields empty or do not provide them as secrets, the application will instead prompt end-users to provide their own personal API keys to use the integration.
-
----
-
-## Customizing & Forking
-
-This project is designed to be easily forked and customized. All primary branding can be configured in one place.
-
-1.  **Edit the Configuration File**
-    Open `js/config.js` and change the values of the `APP_NAME`, `APP_TITLE`, `APP_DESCRIPTION` and `APP_DOMAIN` variables to match your project.
-
-    > The placeholders in `index.html` and `manifest.json` are replaced automatically by the GitHub deployment action. **You do not need to edit these files manually.**
-
-2.  **Update Other Files**
-    For a complete re-branding, you should also manually update the following:
-    - **`README.md`**: Update the documentation with your project's information.
-    - **`privacy.html`**: This is a legal document. You **must** review it and update it with your own contact information and policies.
-    - **Contact & Repo URLs**: Change the email and GitHub links in `credits.html` and `privacy.html`.
-    - **Copyright & Author**: Update your name and the year in the copyright headers of the source files and in `AUTHORS.md`.
 
 ---
 
