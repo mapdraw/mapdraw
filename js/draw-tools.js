@@ -166,14 +166,9 @@ function initDrawTools() {
     updateOverviewList();
   });
 
-  map.on("draw:edited", (e) => {
-    // Reselect to refresh the info panel's length/area readout against the new geometry
-    // (L.Polygon extends L.Polyline, so this covers areas too).
-    e.layers.eachLayer((layer) => {
-      if (layer instanceof L.Polyline && globallySelectedItem === layer) selectItem(layer);
-    });
+  map.on("draw:edited", () => {
     updateDrawControlStates();
-    // Also what keeps the GeoJSON Editor tab (data-editor.js) live if it's open - see
+    // What keeps the GeoJSON Editor tab (data-editor.js) live if it's open - see
     // updateOverviewList()'s own doc comment for why.
     updateOverviewList();
   });
