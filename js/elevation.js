@@ -367,6 +367,10 @@ async function fetchElevationForPath(latlngs) {
   }
 
   if (pointsWithElev) {
+    // Cap the cache: evict the oldest entry (Map iterates in insertion order).
+    if (elevationCache.size >= 32) {
+      elevationCache.delete(elevationCache.keys().next().value);
+    }
     elevationCache.set(cacheKey, pointsWithElev);
   }
 
