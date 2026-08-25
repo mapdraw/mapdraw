@@ -93,6 +93,28 @@ function _autosaveTick() {
   }
 }
 
+let _autosaveTickPending = false;
+
+/**
+ * Interval callback: defers _autosaveTick() into browser idle time, so its
+ * serialization cost (tens of ms on large maps) doesn't land mid-gesture and drop
+ * frames. The timeout bounds the deferral on a busy tab; the pending flag keeps
+ * ticks from piling up when the tab is throttled.
+ */
+function _scheduleAutosaveTick() {
+  if (_autosaveTickPending) return;
+  _autosaveTickPending = true;
+  const run = () => {
+    _autosaveTickPending = false;
+    _autosaveTick();
+  };
+  if (window.requestIdleCallback) {
+    requestIdleCallback(run, { timeout: 2000 });
+  } else {
+    setTimeout(run, 0);
+  }
+}
+
 /**
  * Restores map state from IndexedDB.
  * Routes each feature to the correct layer group based on its saved pathType.
@@ -268,5 +290,5 @@ let _autosaveIntervalId = null;
  */
 function startAutosave() {
   if (_autosaveIntervalId) return; // Guard against double-init
-  _autosaveIntervalId = setInterval(_autosaveTick, AUTOSAVE_INTERVAL_MS);
+  _autosaveIntervalId = setInterval(_scheduleAutosaveTick, AUTOSAVE_INTERVAL_MS);
 }
