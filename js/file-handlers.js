@@ -869,12 +869,12 @@ function exportGeoJson({ mode = "all", layers = null } = {}) {
 // GPX
 // Specification: https://www.topografix.com/gpx/1/1/
 
+// The app namespace holds data with no standard GPX home (waypoint color, Strava ID);
+// the GPX 1.1 schema requires <extensions> children to be in a non-GPX namespace.
 const GPX_HEADER = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="${APP_NAME}" xmlns="http://www.topografix.com/GPX/1/1"
-    xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"
     xmlns:gpx_style="http://www.topografix.com/GPX/gpx_style/0/2"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.topografix.com/GPX/1/1 https://www.topografix.com/GPX/1/1/gpx.xsd http://www.topografix.com/GPX/gpx_style/0/2 https://www.topografix.com/GPX/gpx_style/0/2/gpx_style.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 https://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd">`;
+    xmlns:app="https://${APP_DOMAIN}">`;
 const GPX_FOOTER = "\n</gpx>";
 
 /**
@@ -924,8 +924,7 @@ function convertLayerToGpxSnippet(layer) {
     <extensions>
       <gpx_style:line>
         <gpx_style:color>${gpxColorHex}</gpx_style:color>
-      </gpx_style:line>
-      <color>#FF${gpxColorHex}</color>${stravaId ? `\n      <stravaId>${stravaId}</stravaId>` : ""}
+      </gpx_style:line>${stravaId ? `\n      <app:stravaId>${stravaId}</app:stravaId>` : ""}
     </extensions>
     <trkseg>
       ${pathPoints}
@@ -935,8 +934,8 @@ function convertLayerToGpxSnippet(layer) {
     const latlng = layer.getLatLng();
     const hasElevation = typeof latlng.alt === "number";
     const wptExtensions =
-      `\n    <extensions>\n      <color>#FF${gpxColorHex}</color>` +
-      (stravaId ? `\n      <stravaId>${stravaId}</stravaId>` : "") +
+      `\n    <extensions>\n      <app:color>#FF${gpxColorHex}</app:color>` +
+      (stravaId ? `\n      <app:stravaId>${stravaId}</app:stravaId>` : "") +
       `\n    </extensions>`;
     return `
   <wpt lat="${latlng.lat}" lon="${latlng.lng}">${hasElevation ? `\n    <ele>${latlng.alt}</ele>` : ""}
