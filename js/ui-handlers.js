@@ -401,6 +401,9 @@ function createOverviewControlsRow() {
         layer: layerGroup,
       });
     }
+    // Re-shown layers get appended on top of the shared overlay pane - restore the
+    // canonical stacking order, same as the Layers panel's activateOverlay() does.
+    if (!isRemoving) window.reapplyOverlayZIndex?.();
     updateOverviewList();
   });
   row._eyeBtn = eyeBtnSlot;

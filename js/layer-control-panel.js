@@ -250,8 +250,9 @@ function initLayerControlPanel(baseMaps) {
       }
     });
 
-    // Then, always bring user content layers to the very top
-    const userContentLayers = ["DrawnItems", "ImportedFiles", "StravaActivities", "FoundPlaces"];
+    // Then, always bring user content layers to the very top. Listed bottom-to-top:
+    // drawn paths stack above imported/Strava tracks so the user's own work wins overlaps.
+    const userContentLayers = ["ImportedFiles", "StravaActivities", "DrawnItems", "FoundPlaces"];
     userContentLayers.forEach((name) => {
       if (allOverlayMaps[name] && map.hasLayer(allOverlayMaps[name])) {
         const layer = allOverlayMaps[name];
