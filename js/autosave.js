@@ -97,7 +97,7 @@ function _autosaveTick() {
  * Restores map state from IndexedDB.
  * Routes each feature to the correct layer group based on its saved pathType.
  * Should be called after layer groups are initialized, before any share-URL import.
- * @returns {Promise<boolean>} true if data was restored
+ * @returns {Promise<boolean>} true if a restore toast was shown (features restored or dropped)
  */
 async function restoreAutosave() {
   // The idbKeyval.get is inside the try so a broken IndexedDB (e.g. a deleted object
@@ -135,13 +135,18 @@ async function restoreAutosave() {
     if (geojsonData.v !== AUTOSAVE_FORMAT_VERSION) return false;
 
     let restoredCount = 0;
+    let skippedCount = 0;
 
     geojsonData.features.forEach((feature) => {
       // Isolated per feature, mirroring _serializeLayersForAutosave: one bad record
-      // costs one feature. An unwound loop would leave _lastAutosaveJson stale and let
-      // the next tick overwrite the stored record with the partially restored map.
+      // costs one feature, not the whole restore. Skipped features are gone for good
+      // once the next tick writes the reduced map; the warning toast below is the
+      // user's only notice of that loss.
       try {
-        if (!feature.geometry) return;
+        if (!feature.geometry) {
+          skippedCount++;
+          return;
+        }
 
         // Properties are restored verbatim; internal state comes from the sibling `internal`
         // object autosave writes next to each feature (see _serializeLayersForAutosave).
@@ -173,6 +178,7 @@ async function restoreAutosave() {
           const latlngs = feature.geometry.coordinates.map(coordToLatLng);
           layer = L.polyline(latlngs, { ...STYLE_CONFIG.path.default, color });
         } else {
+          skippedCount++;
           return; // Unsupported geometry
         }
 
@@ -213,6 +219,7 @@ async function restoreAutosave() {
 
         restoredCount++;
       } catch (e) {
+        skippedCount++;
         console.warn("Autosave: skipping feature", e);
       }
     });
@@ -225,7 +232,18 @@ async function restoreAutosave() {
     _lastAutosaveJson = json; // Prevent immediate re-save of what we just loaded
     console.log("Autosave: restored", restoredCount, "features");
 
-    if (restoredCount > 0) {
+    if (skippedCount > 0) {
+      Swal.fire({
+        toast: true,
+        icon: "warning",
+        title:
+          `Restored ${restoredCount} item${restoredCount !== 1 ? "s" : ""}; ` +
+          `${skippedCount} could not be read and will be dropped`,
+        position: "top",
+        showConfirmButton: false,
+        timer: 5000,
+      });
+    } else if (restoredCount > 0) {
       Swal.fire({
         toast: true,
         icon: "success",
@@ -236,7 +254,7 @@ async function restoreAutosave() {
       });
     }
 
-    return restoredCount > 0;
+    return restoredCount > 0 || skippedCount > 0;
   } catch (e) {
     console.warn("Autosave: restore failed", e);
     return false;

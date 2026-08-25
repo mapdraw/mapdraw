@@ -216,8 +216,9 @@ async function initMapView() {
   startAutosave();
 
   // Show welcome popup once for new visitors (bare domain, never shown before)
-  // Delay attribution toast if restore toast is already showing (matches restoreAutosave's 3000ms timer)
-  const attributionDelay = restoredData ? 3500 : 0;
+  // Delay attribution toast if a restore toast is already showing (covers restoreAutosave's
+  // longest toast timer, 5000ms) - Swal.fire would otherwise replace it.
+  const attributionDelay = restoredData ? 5500 : 0;
   if (!initialView && !localStorage.getItem("hasSeenWelcome")) {
     localStorage.setItem("hasSeenWelcome", "true");
     showCreditsPopup(true).then(() => showAttributionToast());
