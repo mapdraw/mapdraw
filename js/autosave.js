@@ -137,77 +137,84 @@ async function restoreAutosave() {
     let restoredCount = 0;
 
     geojsonData.features.forEach((feature) => {
-      if (!feature.geometry) return;
+      // Isolated per feature, mirroring _serializeLayersForAutosave: one bad record
+      // costs one feature. An unwound loop would leave _lastAutosaveJson stale and let
+      // the next tick overwrite the stored record with the partially restored map.
+      try {
+        if (!feature.geometry) return;
 
-      // Properties are restored verbatim; internal state comes from the sibling `internal`
-      // object autosave writes next to each feature (see _serializeLayersForAutosave).
-      const props = feature.properties || {};
-      const internal = feature.internal || {};
-      const pathType = internal.pathType || "drawn";
-      const geomType = feature.geometry.type;
-      const color = parseColorFromGeoJsonStyle(props, geomType === "Point") || DEFAULT_COLOR;
+        // Properties are restored verbatim; internal state comes from the sibling `internal`
+        // object autosave writes next to each feature (see _serializeLayersForAutosave).
+        const props = feature.properties || {};
+        const internal = feature.internal || {};
+        const pathType = internal.pathType || "drawn";
+        const geomType = feature.geometry.type;
+        const color = parseColorFromGeoJsonStyle(props, geomType === "Point") || DEFAULT_COLOR;
 
-      let layer;
+        let layer;
 
-      if (geomType === "Point") {
-        const coords = feature.geometry.coordinates;
-        const latlng = wrapLatLngIfNeeded(coordToLatLng(coords));
-        layer = L.marker(latlng, {
-          icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
-        });
-      } else if (geomType === "Polygon") {
-        const ring = feature.geometry.coordinates[0];
-        const latlngs = ring.map(coordToLatLng);
-        // Remove closing duplicate if present
-        if (latlngs.length > 1) {
-          const first = latlngs[0],
-            last = latlngs[latlngs.length - 1];
-          if (first.equals(last)) latlngs.pop();
+        if (geomType === "Point") {
+          const coords = feature.geometry.coordinates;
+          const latlng = wrapLatLngIfNeeded(coordToLatLng(coords));
+          layer = L.marker(latlng, {
+            icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
+          });
+        } else if (geomType === "Polygon") {
+          const ring = feature.geometry.coordinates[0];
+          const latlngs = ring.map(coordToLatLng);
+          // Remove closing duplicate if present
+          if (latlngs.length > 1) {
+            const first = latlngs[0],
+              last = latlngs[latlngs.length - 1];
+            if (first.equals(last)) latlngs.pop();
+          }
+          layer = L.polygon(latlngs, { ...STYLE_CONFIG.path.default, color });
+        } else if (geomType === "LineString") {
+          const latlngs = feature.geometry.coordinates.map(coordToLatLng);
+          layer = L.polyline(latlngs, { ...STYLE_CONFIG.path.default, color });
+        } else {
+          return; // Unsupported geometry
         }
-        layer = L.polygon(latlngs, { ...STYLE_CONFIG.path.default, color });
-      } else if (geomType === "LineString") {
-        const latlngs = feature.geometry.coordinates.map(coordToLatLng);
-        layer = L.polyline(latlngs, { ...STYLE_CONFIG.path.default, color });
-      } else {
-        return; // Unsupported geometry
+
+        // Set feature data
+        layer.feature = {
+          type: "Feature",
+          properties: props,
+          geometry: feature.geometry,
+        };
+        // Rebuilt field by field rather than spread, so no stray key from saved data survives
+        // into the live layer - a new internal field must be restored here explicitly.
+        // isManuallyHidden starts false and is applied below via toggleLayerVisibility(),
+        // which flips the flag itself and performs the actual hiding.
+        const wasHidden = internal.isManuallyHidden;
+        layer.internal = { pathType, isManuallyHidden: false };
+        // Ensures exactly one simplestyle color key even if the saved record had none.
+        setLayerColor(layer, color);
+
+        // Click handler
+        layer.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
+          selectItem(layer);
+        });
+
+        // Route to the correct layer group - shares ui-handlers.js's getGroupTitle() so
+        // grouping logic can't drift between restore and the overview list.
+        const groupKey = getGroupTitle(pathType);
+        if (groupKey === "StravaActivities") {
+          stravaActivitiesLayer.addLayer(layer);
+        } else if (groupKey === "DrawnItems") {
+          drawnItems.addLayer(layer);
+          editableLayers.addLayer(layer);
+        } else {
+          importedItems.addLayer(layer);
+        }
+
+        if (wasHidden) toggleLayerVisibility(layer);
+
+        restoredCount++;
+      } catch (e) {
+        console.warn("Autosave: skipping feature", e);
       }
-
-      // Set feature data
-      layer.feature = {
-        type: "Feature",
-        properties: props,
-        geometry: feature.geometry,
-      };
-      // Rebuilt field by field rather than spread, so no stray key from saved data survives
-      // into the live layer - a new internal field must be restored here explicitly.
-      // isManuallyHidden starts false and is applied below via toggleLayerVisibility(),
-      // which flips the flag itself and performs the actual hiding.
-      const wasHidden = internal.isManuallyHidden;
-      layer.internal = { pathType, isManuallyHidden: false };
-      // Ensures exactly one simplestyle color key even if the saved record had none.
-      setLayerColor(layer, color);
-
-      // Click handler
-      layer.on("click", (e) => {
-        L.DomEvent.stopPropagation(e);
-        selectItem(layer);
-      });
-
-      // Route to the correct layer group - shares ui-handlers.js's getGroupTitle() so
-      // grouping logic can't drift between restore and the overview list.
-      const groupKey = getGroupTitle(pathType);
-      if (groupKey === "StravaActivities") {
-        stravaActivitiesLayer.addLayer(layer);
-      } else if (groupKey === "DrawnItems") {
-        drawnItems.addLayer(layer);
-        editableLayers.addLayer(layer);
-      } else {
-        importedItems.addLayer(layer);
-      }
-
-      if (wasHidden) toggleLayerVisibility(layer);
-
-      restoredCount++;
     });
 
     // Update UI state
