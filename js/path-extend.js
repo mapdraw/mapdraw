@@ -266,9 +266,7 @@ function initPathExtend() {
     // Mirrors draw-tools.js's own draw:created handler - if "Drawn Items" was hidden
     // mid-draw (e.g. via the layers panel), the extended/joined result should be visible
     // like a freshly drawn item would be, not left hidden inside a hidden category.
-    if (!map.hasLayer(drawnItems)) {
-      map.addLayer(drawnItems);
-    }
+    window.app.ensureDrawnItemsVisible();
     selectItem(target);
     updateOverviewList();
   });

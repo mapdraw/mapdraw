@@ -631,6 +631,18 @@ function formatDistance(meters, includeSecondary = false) {
 }
 
 /**
+ * Adds a layer as an editable drawn item, un-hiding the "Drawn Items" category if needed
+ * so an explicitly created item is never left invisible inside a hidden category.
+ * Not used by autosave restore, which must respect the saved hidden state.
+ * @param {L.Layer} layer - The layer to add
+ */
+function addAsDrawnItem(layer) {
+  drawnItems.addLayer(layer);
+  editableLayers.addLayer(layer);
+  window.app.ensureDrawnItemsVisible();
+}
+
+/**
  * Creates and saves a new marker to the map at the specified location.
  * This is a shared utility used by search results, POI finder, and context menu.
  * @param {number|L.LatLng} lat - Latitude or LatLng object
@@ -670,8 +682,7 @@ function createAndSaveMarker(lat, lon, name) {
 
   newMarker.feature.properties.name = markerName || getDefaultLayerName(newMarker);
 
-  drawnItems.addLayer(newMarker);
-  editableLayers.addLayer(newMarker);
+  addAsDrawnItem(newMarker);
 
   newMarker.on("click", (ev) => {
     L.DomEvent.stopPropagation(ev);

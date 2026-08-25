@@ -157,16 +157,12 @@ function initDrawTools() {
     layer.internal = { pathType: "drawn" };
     setLayerColor(layer, DEFAULT_COLOR);
     layer.feature.properties.name = getDefaultLayerName(layer);
-    drawnItems.addLayer(layer);
-    editableLayers.addLayer(layer);
+    addAsDrawnItem(layer);
     layer.on("click", (ev) => {
       L.DomEvent.stopPropagation(ev);
       selectItem(layer);
     });
     selectItem(layer);
-    if (!map.hasLayer(drawnItems)) {
-      map.addLayer(drawnItems);
-    }
     updateOverviewList();
   });
 

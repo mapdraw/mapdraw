@@ -157,8 +157,7 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
       L.DomEvent.stopPropagation(ev);
       selectItem(newLayer);
     });
-    drawnItems.addLayer(newLayer);
-    editableLayers.addLayer(newLayer);
+    addAsDrawnItem(newLayer);
     if (!skipUiUpdate) {
       updateOverviewList();
       selectItem(newLayer);

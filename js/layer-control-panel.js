@@ -359,6 +359,16 @@ function initLayerControlPanel(baseMaps) {
     saveActiveOverlays();
   }
 
+  // Canonical un-hide for "Drawn Items": syncs the panel checkbox and goes through
+  // activateOverlay() so z-index, attribution, and persistence stay consistent. Used by
+  // every path that creates a drawn item into a hidden category (addAsDrawnItem() in
+  // utils.js) and by the forced-visible behavior below.
+  window.app.ensureDrawnItemsVisible = () => {
+    if (map.hasLayer(drawnItems)) return;
+    if (drawnItemsCheckbox) drawnItemsCheckbox.checked = true;
+    activateOverlay("DrawnItems", drawnItems);
+  };
+
   // Locked for the duration of any draw or Edit session (draw-tools.js) - path-extend.js's
   // endpoint dots and leaflet-draw's own vertex handles are added straight to the map/layer,
   // independent of this checkbox, so toggling "Drawn Items" off and back on mid-session would
@@ -367,8 +377,7 @@ function initLayerControlPanel(baseMaps) {
   // hidden would leave the very thing being drawn/edited invisible.
   window.app.setDrawnItemsCheckboxLocked = (locked) => {
     if (locked && !map.hasLayer(drawnItems)) {
-      if (drawnItemsCheckbox) drawnItemsCheckbox.checked = true;
-      activateOverlay("DrawnItems", drawnItems);
+      window.app.ensureDrawnItemsVisible();
       if (typeof updateOverviewList === "function") updateOverviewList();
     }
     if (drawnItemsCheckbox) drawnItemsCheckbox.disabled = locked;

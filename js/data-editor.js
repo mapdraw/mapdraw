@@ -129,8 +129,7 @@ function applyDataEditor() {
     layerGroup.eachLayer((layer) => {
       layer.internal.pathType = "drawn";
       importedItems.removeLayer(layer);
-      drawnItems.addLayer(layer);
-      editableLayers.addLayer(layer);
+      addAsDrawnItem(layer);
     });
   }
 

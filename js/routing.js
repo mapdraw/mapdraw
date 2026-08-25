@@ -406,9 +406,7 @@ function initRouting() {
             currentRoutePath = newRoutePath;
           }
 
-          if (!map.hasLayer(drawnItems)) {
-            map.addLayer(drawnItems);
-          }
+          window.app.ensureDrawnItemsVisible();
           updateOverviewList();
           updateDrawControlStates();
 
@@ -984,8 +982,7 @@ function initRouting() {
       L.DomEvent.stopPropagation(ev);
       selectItem(newPath);
     });
-    drawnItems.addLayer(newPath);
-    editableLayers.addLayer(newPath);
+    addAsDrawnItem(newPath);
     clearRouting();
     updateOverviewList();
     updateDrawControlStates();
