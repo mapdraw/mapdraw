@@ -157,15 +157,28 @@ function resolveExportFilePrefix(singleNamedItem, hasSelection) {
 const SUPPORTED_IMPORT_GEOM_TYPES = ["Point", "LineString", "Polygon"];
 
 /**
+ * True when coordinates nest down to [lng, lat(, alt)] positions with finite numbers.
+ * Leaflet's LatLng constructor throws on non-numeric values, which would abort an
+ * entire import over one bad feature - such features are dropped instead.
+ */
+function hasFiniteCoords(coords) {
+  if (!Array.isArray(coords)) return false;
+  return Array.isArray(coords[0])
+    ? coords.every(hasFiniteCoords)
+    : coords.length >= 2 && Number.isFinite(coords[0]) && Number.isFinite(coords[1]);
+}
+
+/**
  * Explodes multi-geometries and GeometryCollections into separate features.
  * Converts MultiLineString, MultiPolygon, MultiPoint, and GeometryCollection
  * into arrays of simple features that can be edited individually; a Polygon
- * with holes is split into one area per ring.
+ * with holes is split into one area per ring. Malformed features (non-finite
+ * or missing coordinates) are dropped so one bad record can't abort an import.
  * @param {object} feature - GeoJSON feature that may contain multi-geometry
  * @returns {Array} Array of features with simple single-ring geometries only
  */
 function explodeMultiGeometries(feature) {
-  if (!feature.geometry) return [];
+  if (!feature?.geometry || typeof feature.geometry.type !== "string") return [];
 
   const geomType = feature.geometry.type;
 
@@ -178,6 +191,7 @@ function explodeMultiGeometries(feature) {
 
   // Handle GeometryCollection (from KML MultiGeometry)
   if (geomType === "GeometryCollection") {
+    if (!Array.isArray(feature.geometry.geometries)) return [];
     // Count occurrences of each geometry type to handle duplicates
     const typeCounts = {};
     return feature.geometry.geometries.flatMap((geom) => {
@@ -200,6 +214,9 @@ function explodeMultiGeometries(feature) {
       });
     });
   }
+
+  // Every remaining branch reads coordinates; a feature without an array there is malformed.
+  if (!Array.isArray(feature.geometry.coordinates)) return [];
 
   // Handle Multi-geometries (MultiLineString, MultiPolygon, MultiPoint)
   if (geomType.startsWith("Multi")) {
@@ -227,21 +244,24 @@ function explodeMultiGeometries(feature) {
   // so each ring becomes its own area - keeping the geometry at the cost of the "excluded
   // region" meaning, which is invisible here anyway: areas render without fill.
   if (geomType === "Polygon" && feature.geometry.coordinates.length > 1) {
-    return feature.geometry.coordinates.map((ring, index) => ({
-      type: "Feature",
-      geometry: { type: "Polygon", coordinates: [ring] },
-      properties: {
-        ...feature.properties,
-        name: feature.properties?.name
-          ? `${feature.properties.name} (${labelMap.Polygon}${index > 0 ? ` ${index + 1}` : ""})`
-          : undefined,
-      },
-    }));
+    // Recurse so each single-ring polygon passes the coordinate validation below.
+    return feature.geometry.coordinates.flatMap((ring, index) =>
+      explodeMultiGeometries({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [ring] },
+        properties: {
+          ...feature.properties,
+          name: feature.properties?.name
+            ? `${feature.properties.name} (${labelMap.Polygon}${index > 0 ? ` ${index + 1}` : ""})`
+            : undefined,
+        },
+      }),
+    );
   }
 
-  // Simple geometry - return as-is if supported
+  // Simple geometry - return as-is if supported and its coordinates can't crash Leaflet
   if (SUPPORTED_IMPORT_GEOM_TYPES.includes(geomType)) {
-    return [feature];
+    return hasFiniteCoords(feature.geometry.coordinates) ? [feature] : [];
   }
 
   return []; // Unsupported type
@@ -447,7 +467,7 @@ function importGeoJsonFile(file) {
       if (explodedFeatures.length === 0) {
         return Swal.fire({
           title: "No Supported Geometries",
-          text: "The GeoJSON file contains no Point, LineString, or Polygon features.",
+          text: "The GeoJSON file contains no Point, LineString, or Polygon features with valid coordinates.",
         });
       }
 
