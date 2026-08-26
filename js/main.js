@@ -91,6 +91,7 @@ async function initApp() {
       html: `The <strong>secrets.js</strong> file is missing or misconfigured.<br><br>Please ensure the file exists in the 'js/' folder and contains all required API keys.`,
       allowOutsideClick: false,
     });
+    return;
   }
 
   const creditsLink = document.getElementById("credits-link");
