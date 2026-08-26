@@ -144,7 +144,8 @@ function computeDistanceLabelStepMeters(metersPerPx) {
 
 // Checks the segment's endpoints, then its 4 crossings with bounds' edges (via
 // utils.js's segmentsIntersect) - catches a segment passing through the viewport
-// with both endpoints outside it, not just endpoints alone.
+// with both endpoints outside it, not just endpoints alone. Only used by
+// leaflet-draw-patches.js's editMidpointEligible().
 function segmentCrossesBounds(prev, next, bounds) {
   if (bounds.contains(prev) || bounds.contains(next)) return true;
   const corners = [
@@ -158,37 +159,29 @@ function segmentCrossesBounds(prev, next, bounds) {
   );
 }
 
-// Walks the path once, placing a label at every multiple of stepMeters crossed. Every
-// segment is checked in O(1), but a segment outside the viewport skips the interpolation
-// and label placement below - so that more expensive work stays bounded to what's
-// actually on screen, even for a path far longer than what's visible.
+// Walks the path once, visiting every multiple of stepMeters crossed. Interpolation
+// runs between the segment's *projected* endpoints - the straight line Leaflet
+// actually draws - not in raw lat/lng, whose chord can sit tens of km off that line
+// on a long segment. bounds is in the same projected pixel space; only multiples
+// landing inside it become markers, so the DOM work stays bounded to the padded
+// viewport, however long the path is. The off-screen multiples still cost a few float
+// ops each, capped at one per km/mi of total length (computeDistanceLabelStepMeters).
 function walkDistanceLabels(points, cumulative, stepMeters, bounds) {
   let nextMultiple = stepMeters;
 
   for (let i = 1; i < points.length; i++) {
-    const prev = points[i - 1];
-    const next = points[i];
     const segStartAbs = cumulative[i - 1];
     const segEndAbs = cumulative[i];
     if (nextMultiple > segEndAbs) continue;
 
-    if (!segmentCrossesBounds(prev, next, bounds)) {
-      nextMultiple = Math.max(nextMultiple, Math.ceil(segEndAbs / stepMeters) * stepMeters);
-      continue;
-    }
-
+    const prev = map.project(points[i - 1]);
+    const next = map.project(points[i]);
     const segLength = segEndAbs - segStartAbs;
     while (nextMultiple <= segEndAbs) {
-      // Always true under exact arithmetic - the continue and bounds-skip branches
-      // above both guarantee nextMultiple is already >= this segment's start. Kept
-      // as a guard against float drift between two independently-computed values.
-      if (nextMultiple >= segStartAbs) {
-        const fraction = segLength === 0 ? 0 : (nextMultiple - segStartAbs) / segLength;
-        const latlng = L.latLng(
-          prev.lat + (next.lat - prev.lat) * fraction,
-          prev.lng + (next.lng - prev.lng) * fraction,
-        );
-        placeDistanceLabel(latlng, formatDistanceLabelInterval(nextMultiple));
+      const fraction = segLength === 0 ? 0 : (nextMultiple - segStartAbs) / segLength;
+      const point = prev.add(next.subtract(prev).multiplyBy(fraction));
+      if (bounds.contains(point)) {
+        placeDistanceLabel(map.unproject(point), formatDistanceLabelInterval(nextMultiple));
       }
       nextMultiple += stepMeters;
     }
@@ -330,7 +323,7 @@ function refreshDistanceLabels() {
       : [startBounds, endBounds];
 
   const stepMeters = computeDistanceLabelStepMeters(metersPerPx);
-  const bounds = map.getBounds().pad(0.25);
+  const bounds = map.getPixelBounds().pad(0.25);
   walkDistanceLabels(points, cumulative, stepMeters, bounds);
   dropDistanceLabelsNearEndpoints(protectionBounds);
   // No interval label survived to be confused with - a ring's area label is never at
