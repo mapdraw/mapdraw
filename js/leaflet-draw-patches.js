@@ -47,6 +47,13 @@ if (L.EditToolbar) {
   };
 }
 
+// cloneLatLng() drops `alt`, so Edit mode's backup/revert (Cancel, Escape, another tool
+// taking over) strips the edited item's elevation. An undefined alt still sets no alt
+// property, so paths without elevation clone exactly as before.
+if (L.LatLngUtil) {
+  L.LatLngUtil.cloneLatLng = (latlng) => L.latLng(latlng.lat, latlng.lng, latlng.alt);
+}
+
 // A hidden marker has no marker.dragging (deleted by Leaflet on removal, recreated on
 // add). leaflet-draw touches it unconditionally, throwing "Cannot read properties of
 // undefined (reading 'enable'/'disable')" when Edit mode is entered while a marker is
