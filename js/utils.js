@@ -90,20 +90,26 @@ function ensureGoogleApiIsLoaded() {
  * @returns {L.LatLng|null} Leaflet LatLng object if valid, otherwise null
  */
 function parseCoordinateString(inputString) {
+  // Only one alternative of dmsSubPattern() can match, so exactly one suffixed group is set.
+  const pick = (captures, prefix, key) =>
+    captures[`${prefix}${key}1`] ?? captures[`${prefix}${key}2`] ?? captures[`${prefix}${key}3`];
+
   const dmsToDecimal = (captures, Hemi) => {
-    const degrees = parseFloat(captures[`${Hemi}d`] || 0);
-    const minutes = parseFloat(captures[`${Hemi}m`] || 0);
-    const seconds = parseFloat(captures[`${Hemi}s`] || 0);
+    const degrees = parseFloat(pick(captures, Hemi, "d") || 0);
+    const minutes = parseFloat(pick(captures, Hemi, "m") || 0);
+    const seconds = parseFloat(pick(captures, Hemi, "s") || 0);
     const sign =
       captures[Hemi].toLowerCase() === "s" || captures[Hemi].toLowerCase() === "w" ? -1 : 1;
     return sign * (degrees + minutes / 60 + seconds / 3600);
   };
 
+  // Group names are unique per alternative (d1 / d2,m2 / d3,m3,s3): duplicate names
+  // across alternatives are ES2025 syntax and throw on older engines.
   const dmsSubPattern = (prefix) => {
     return (
-      `(?:(?<${prefix}d>\\d{1,3}(?:\\.\\d+)?)[°]?)` +
-      `|(?:(?<${prefix}d>\\d{1,3})[°]?\\s*(?<${prefix}m>\\d{1,2}(?:\\.\\d+)?)[\\'′]?)` +
-      `|(?:(?<${prefix}d>\\d{1,3})[°]?\\s*(?<${prefix}m>\\d{1,2})[\\'′]?\\s*(?<${prefix}s>\\d{1,2}(?:\\.\\d+)?)[\\"″]?)`
+      `(?:(?<${prefix}d1>\\d{1,3}(?:\\.\\d+)?)[°]?)` +
+      `|(?:(?<${prefix}d2>\\d{1,3})[°]?\\s*(?<${prefix}m2>\\d{1,2}(?:\\.\\d+)?)[\\'′]?)` +
+      `|(?:(?<${prefix}d3>\\d{1,3})[°]?\\s*(?<${prefix}m3>\\d{1,2})[\\'′]?\\s*(?<${prefix}s3>\\d{1,2}(?:\\.\\d+)?)[\\"″]?)`
     );
   };
 
