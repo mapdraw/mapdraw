@@ -96,6 +96,22 @@ function applyLayerHighlight(layer, highlightColor) {
 }
 
 /**
+ * Attaches the current selection's outline(s) to the map with the canonical
+ * stacking: outline above every other path, the selected item above its own
+ * outline. No-ops while nothing is selected, during Edit mode, or while the
+ * selected item is off the map. Sole owner of this attach logic - shared by
+ * selectItem() and the hide/show paths so their stacking can't diverge.
+ */
+function attachSelectionOutlines() {
+  if (!globallySelectedItem || isEditMode || !map.hasLayer(globallySelectedItem)) return;
+  if (selectedPathOutline) {
+    selectedPathOutline.addTo(map).bringToFront();
+    globallySelectedItem.bringToFront();
+  }
+  if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
+}
+
+/**
  * Keeps the marker outline synchronized with its parent marker during drag operations.
  */
 function updateMarkerOutlinePosition() {
@@ -437,9 +453,6 @@ function selectItem(layer) {
           interactive: false,
         });
       }
-      if (map.hasLayer(layer) && !isEditMode) {
-        selectedPathOutline.addTo(map).bringToFront();
-      }
     }
 
     applyLayerHighlight(layer, highlightColor);
@@ -462,16 +475,14 @@ function selectItem(layer) {
         zIndexOffset: 1001,
         interactive: false,
       });
-
-      if (map.hasLayer(layer) && !isEditMode) {
-        selectedMarkerOutline.addTo(map);
-      }
     }
 
     applyLayerHighlight(layer, highlightColor);
 
     layer.on("drag", updateMarkerOutlinePosition);
   }
+
+  attachSelectionOutlines();
 
   updateElevationToggleIconColor();
   updateDrawControlStates();

@@ -320,10 +320,7 @@ function initLayerControlPanel(baseMaps) {
 
     if (itemIsInGroup) {
       if (isAdding) {
-        if (!globallySelectedItem.internal?.isManuallyHidden) {
-          if (selectedPathOutline) selectedPathOutline.addTo(map).bringToBack();
-          if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
-        }
+        if (!globallySelectedItem.internal?.isManuallyHidden) attachSelectionOutlines();
       } else {
         if (selectedPathOutline) map.removeLayer(selectedPathOutline);
         if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);

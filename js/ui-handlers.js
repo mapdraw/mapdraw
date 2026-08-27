@@ -96,10 +96,7 @@ function toggleLayerVisibility(layerToToggle) {
 
     if (isParentVisible) {
       map.addLayer(layerToToggle);
-      if (layerToToggle === globallySelectedItem) {
-        if (selectedPathOutline) selectedPathOutline.addTo(map).bringToBack();
-        if (selectedMarkerOutline) selectedMarkerOutline.addTo(map);
-      }
+      if (layerToToggle === globallySelectedItem) attachSelectionOutlines();
 
       setLayerEditingEnabled(layerToToggle, true);
     }
