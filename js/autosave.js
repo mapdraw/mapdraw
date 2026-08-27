@@ -291,4 +291,13 @@ let _autosaveIntervalId = null;
 function startAutosave() {
   if (_autosaveIntervalId) return; // Guard against double-init
   _autosaveIntervalId = setInterval(_scheduleAutosaveTick, AUTOSAVE_INTERVAL_MS);
+
+  // The deferred interval tick leaves up to ~7s of changes unwritten - what a tab
+  // close or mobile page discard would lose. Flush without idle deferral once the
+  // page goes hidden or unloads; both events, because neither alone fires reliably
+  // across browsers. Duplicate calls are cheap: _autosaveTick skips unchanged writes.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") _autosaveTick();
+  });
+  window.addEventListener("pagehide", _autosaveTick);
 }
