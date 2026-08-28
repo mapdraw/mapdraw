@@ -193,7 +193,7 @@ async function fetchAllActivities() {
   if (fetchFailed) {
     // All-or-nothing: keep previously loaded activities and allFetchedActivities untouched.
     if (hasDeveloperKeys()) {
-      showFetchUI(stravaActivitiesLayer.getLayers().length);
+      showFetchUI();
     } else {
       renderUserKeysPanel();
     }
@@ -255,8 +255,7 @@ function renderUserKeysPanel() {
 
   if (accessToken) {
     // User is authenticated - show fetch controls
-    stravaPanelContent.innerHTML = _getFetchControlsHTML(stravaActivitiesLayer.getLayers().length);
-    _addFetchControlsListeners(fetchAllActivities, stravaActivitiesLayer.getLayers().length);
+    showFetchUI();
   } else {
     // No authentication - show single CTA button
     stravaPanelContent.innerHTML = `
@@ -397,21 +396,13 @@ function showApiKeysModal() {
 }
 
 /**
- * Generates HTML for the Strava fetch/export controls.
- * @param {number} activityCount - The number of currently loaded activities
+ * Generates HTML for the Strava fetch/export controls. The status line and the
+ * export buttons' enabled state are filled in by refreshStravaActivityCount().
  * @returns {string} The HTML string for the controls
  */
-function _getFetchControlsHTML(activityCount = 0) {
-  let message;
-  if (activityCount > 0) {
-    message = `${activityCount} activities loaded.`;
-  } else if (hasFetchedActivities) {
-    message = "No activities found for the selected period.";
-  } else {
-    message = "Select a time period and fetch your activities.";
-  }
+function _getFetchControlsHTML() {
   return `
-      <p>Successfully connected to Strava.<br>${message}</p>
+      <p>Successfully connected to Strava.<br><span id="strava-status"></span></p>
       <div id="strava-controls" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%;">
         <select id="strava-fetch-count" class="strava-button-secondary" style="flex: 2; min-width: 120px;">
           <option value="30d"${lastSelectedPeriod === "30d" ? " selected" : ""}>Last 30 Days</option>
@@ -433,28 +424,49 @@ function _getFetchControlsHTML(activityCount = 0) {
 }
 
 /**
- * Attaches event listeners to the fetch/export controls.
- * @param {function} fetchFunction - The fetch function to call
- * @param {number} activityCount - The number of loaded activities
+ * Builds the status line, telling a fetch that returned nothing apart from a
+ * fetch whose activities were all deleted from the map afterwards.
+ * @param {number} activityCount - The number of activities currently on the map
+ * @returns {string} The status line text
  */
-function _addFetchControlsListeners(fetchFunction, activityCount = 0) {
-  document.getElementById("fetch-strava-btn").addEventListener("click", fetchFunction);
-  const exportGeoJsonBtn = document.getElementById("export-strava-geojson-btn");
-  exportGeoJsonBtn.addEventListener("click", () => exportGeoJson({ mode: "strava" }));
-  exportGeoJsonBtn.disabled = activityCount === 0;
-  const exportJsonBtn = document.getElementById("export-strava-json-btn");
-  exportJsonBtn.addEventListener("click", exportStravaActivitiesAsJson);
-  exportJsonBtn.disabled = activityCount === 0;
+function _getStatusMessage(activityCount) {
+  if (activityCount > 0 || allFetchedActivities.length > 0) {
+    return `${activityCount} ${activityCount === 1 ? "activity" : "activities"} loaded.`;
+  }
+  return hasFetchedActivities
+    ? "No activities found for the selected period."
+    : "Select a time period and fetch your activities.";
 }
 
 /**
- * Displays the UI for fetching/exporting (developer keys flow).
- * @param {number} [activityCount=0] - The number of loaded activities
+ * Syncs the status line and export buttons with the activities currently on the map,
+ * so deleting activities keeps the count honest. No-op unless the fetch UI is shown.
+ * Each button tracks what it actually exports: GeoJSON writes the map layers, raw
+ * JSON writes the last fetch's response - which outlives the layers being deleted.
  */
-function showFetchUI(activityCount = 0) {
+function refreshStravaActivityCount() {
+  const status = document.getElementById("strava-status");
+  if (!status) return;
+  const activityCount = stravaActivitiesLayer.getLayers().length;
+  status.textContent = _getStatusMessage(activityCount);
+  document.getElementById("export-strava-geojson-btn").disabled = activityCount === 0;
+  document.getElementById("export-strava-json-btn").disabled = allFetchedActivities.length === 0;
+}
+
+/**
+ * Displays the UI for fetching/exporting activities.
+ */
+function showFetchUI() {
   if (!stravaPanelContent) return;
-  stravaPanelContent.innerHTML = _getFetchControlsHTML(activityCount);
-  _addFetchControlsListeners(fetchAllActivities, activityCount);
+  stravaPanelContent.innerHTML = _getFetchControlsHTML();
+  document.getElementById("fetch-strava-btn").addEventListener("click", fetchAllActivities);
+  document
+    .getElementById("export-strava-geojson-btn")
+    .addEventListener("click", () => exportGeoJson({ mode: "strava" }));
+  document
+    .getElementById("export-strava-json-btn")
+    .addEventListener("click", exportStravaActivitiesAsJson);
+  refreshStravaActivityCount();
 }
 
 // Authentication Callback Handlers
@@ -517,7 +529,6 @@ function displayActivitiesOnMap(activities) {
     deselectCurrentItem();
   }
   stravaActivitiesLayer.clearLayers();
-  let processedCount = 0;
 
   activities.forEach((activity) => {
     if (activity.map && activity.map.summary_polyline) {
@@ -544,7 +555,6 @@ function displayActivitiesOnMap(activities) {
           selectItem(polyline);
         });
         stravaActivitiesLayer.addLayer(polyline);
-        processedCount++;
       } catch (e) {
         console.warn("Could not decode polyline for activity:", activity.id, e);
       }
@@ -563,7 +573,7 @@ function displayActivitiesOnMap(activities) {
 
   // Determine which UI needs updating
   if (hasDeveloperKeys()) {
-    showFetchUI(processedCount);
+    showFetchUI();
   } else {
     renderUserKeysPanel();
   }
@@ -618,7 +628,7 @@ function initStrava() {
   if (!hasDeveloperKeys()) {
     renderUserKeysPanel();
   } else if (sessionStorage.getItem("strava_access_token")) {
-    showFetchUI(stravaActivitiesLayer.getLayers().length);
+    showFetchUI();
   } else {
     showConnectUI();
   }

@@ -848,6 +848,8 @@ function updateOverviewList() {
   const controlsContainer = document.getElementById("overview-panel-controls");
   if (!listContainer || !controlsContainer) return;
   scheduleDataEditorRefresh();
+  // Every add/delete path ends here, so this is where the Strava panel's count stays honest.
+  refreshStravaActivityCount();
   const overviewPanel = document.getElementById("overview-panel"); // Get the parent panel
 
   // 1. Collect all items into a single array
