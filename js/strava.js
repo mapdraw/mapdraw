@@ -62,8 +62,6 @@ async function getAccessToken(code, clientId, clientSecret) {
 
     if (data.access_token) {
       sessionStorage.setItem("strava_access_token", data.access_token);
-      sessionStorage.setItem("strava_refresh_token", data.refresh_token);
-      sessionStorage.setItem("strava_expires_at", data.expires_at);
       return true;
     } else {
       throw new Error("Access token was not received from Strava.");
@@ -146,6 +144,7 @@ async function fetchAllActivities() {
   const perPage = 100;
   let keepFetching = true;
   let fetchFailed = false;
+  let tokenInvalid = false;
 
   while (keepFetching) {
     try {
@@ -155,6 +154,8 @@ async function fetchAllActivities() {
       }
       const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!response.ok) {
+        // Strava sends 401 for any invalidated token (expired after 6h, or access revoked)
+        if (response.status === 401) tokenInvalid = true;
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const activities = await response.json();
@@ -171,6 +172,22 @@ async function fetchAllActivities() {
       fetchFailed = true;
       keepFetching = false;
     }
+  }
+
+  if (tokenInvalid) {
+    // Clear the invalidated token so the auth UIs below offer reconnecting.
+    sessionStorage.removeItem("strava_access_token");
+    if (hasDeveloperKeys()) {
+      showConnectUI();
+    } else {
+      renderUserKeysPanel();
+    }
+    Swal.fire({
+      icon: "info",
+      title: "Strava Session Expired",
+      text: "Your Strava session has expired or been revoked. Please reconnect.",
+    });
+    return;
   }
 
   if (fetchFailed) {
@@ -594,12 +611,15 @@ function downloadOriginalStravaGpx(activityId, activityName) {
  */
 function initStrava() {
   stravaPanelContent = document.getElementById("strava-panel-content");
-  sessionStorage.removeItem("strava_access_token");
 
-  // Developer keys in secrets.js decide which auth flow is offered.
-  if (hasDeveloperKeys()) {
-    showConnectUI();
-  } else {
+  // The token lives in sessionStorage (cleared on tab close, per privacy.html),
+  // so a reload keeps the connected state. Developer keys in secrets.js decide
+  // which auth flow is offered.
+  if (!hasDeveloperKeys()) {
     renderUserKeysPanel();
+  } else if (sessionStorage.getItem("strava_access_token")) {
+    showFetchUI(stravaActivitiesLayer.getLayers().length);
+  } else {
+    showConnectUI();
   }
 }
