@@ -296,6 +296,9 @@ function initLayerControlPanel(baseMaps) {
   // Recomputes the active OVERLAY_CONFIG keys (e.g. Waymarked Trails) straight
   // from map state and saves them - called on every overlay toggle so it can
   // never drift, regardless of which specific overlay triggered the change.
+  // User-content groups (DrawnItems etc.) are deliberately not persisted: they
+  // always start visible so a reload can't look like data loss - only per-item
+  // isManuallyHidden survives reloads (autosave.js).
   function saveActiveOverlays() {
     const active = OVERLAY_CONFIG.filter((o) => map.hasLayer(allOverlayMaps[o.key])).map(
       (o) => o.key,
