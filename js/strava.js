@@ -282,7 +282,7 @@ function showApiKeysModal() {
             class="swal2-input swal-input-field"
             placeholder="Strava Client ID"
             autocomplete="off"
-            value="${tempUserClientId}"
+            value="${escHtml(tempUserClientId)}"
             style="margin-bottom: 10px;"
           />
           <input
@@ -291,7 +291,7 @@ function showApiKeysModal() {
             class="swal2-input swal-input-field"
             placeholder="Strava Client Secret"
             autocomplete="off"
-            value="${tempUserClientSecret}"
+            value="${escHtml(tempUserClientSecret)}"
           />
         </div>
       `,
