@@ -156,6 +156,10 @@ function initSettingsPanel() {
     lineThicknessValue.innerText = lineThickness;
     STYLE_CONFIG.path.default.weight = lineThickness;
     STYLE_CONFIG.path.highlight.weight = lineThickness;
+    // leaflet-draw styles the in-progress shape from a shapeOptions copy taken
+    // at init; refresh it. setOptions swaps the object whole, so pass it complete.
+    const shapeOptions = { ...STYLE_CONFIG.path.default, color: DEFAULT_COLOR };
+    drawControl.setDrawingOptions({ polyline: { shapeOptions }, polygon: { shapeOptions } });
     localStorage.setItem("lineThickness", lineThickness);
     Object.values(displayLayerGroups).forEach((group) => {
       group.eachLayer((layer) => {
