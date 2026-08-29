@@ -291,38 +291,22 @@ function parseColorFromGeoJsonStyle(properties, isPoint) {
 /**
  * Parses a color from KML style properties (after toGeoJSON conversion).
  *
- * Standard KML: LineStyle colors are parsed by toGeoJSON into properties.stroke
- * Our exports: Inline IconStyle colors are handled separately by applyKmlIconColors()
+ * Paths: LineStyle colors are parsed by toGeoJSON into properties.stroke.
+ * Points: Google Earth encodes marker color as an icon URL parameter; it wins
+ * over stroke, which is just a default line style there. IconStyle colors
+ * are handled separately by applyKmlIconColors().
  *
  * @param {object} properties - The feature properties from toGeoJSON
+ * @param {boolean} isPoint - Whether the feature's geometry is a Point
  * @returns {string} Hex color or DEFAULT_COLOR
  */
-function parseColorFromKmlStyle(properties) {
-  // Standard KML: LineStyle colors parsed by toGeoJSON
-  if (properties.stroke) {
-    const parsed = parseColor(properties.stroke);
-    if (parsed) return parsed;
+function parseColorFromKmlStyle(properties, isPoint) {
+  if (isPoint) {
+    const match = properties.icon?.match(/[?&]color=([0-9a-f]{6})(?:[&#]|$)/i);
+    const iconColor = match && parseColor(match[1]);
+    if (iconColor) return iconColor;
   }
-
-  // --- Organic Maps specific ---
-  // Organic Maps uses styleUrl like #placemark-red or icon URLs like placemark-red.png
-  if (properties.styleUrl) {
-    const match = properties.styleUrl.match(/#placemark-(\w+)/i);
-    if (match) {
-      const parsed = parseColor(match[1]);
-      if (parsed) return parsed;
-    }
-  }
-  if (properties.icon) {
-    const match = properties.icon.match(/placemark-(\w+)\.png/i);
-    if (match) {
-      const parsed = parseColor(match[1]);
-      if (parsed) return parsed;
-    }
-  }
-  // --- End Organic Maps specific ---
-
-  return DEFAULT_COLOR;
+  return parseColor(properties.stroke) || DEFAULT_COLOR;
 }
 
 /**
@@ -340,7 +324,7 @@ function parseColorFromKmlStyle(properties) {
  * styleHash/styleMapHash are bookkeeping toGeoJSON derives from shared KML styles (a hash of
  * the referenced style's XML; a StyleMap's key/styleUrl pairs) - meaningless without the KML
  * document they index into. styleUrl and icon stay - they are real KML content, and
- * parseColorFromKmlStyle() reads them for Organic Maps colors.
+ * parseColorFromKmlStyle() reads icon for Google Earth marker colors.
  */
 const DISCARDED_STYLE_PROPERTIES = [
   "color",
@@ -370,11 +354,12 @@ function importGeoJsonToMap(geoJsonData, fileType) {
   const resolveColor = (feature) => {
     const properties = feature.properties;
     if (!properties) return DEFAULT_COLOR;
+    const isPoint = feature.geometry?.type === "Point";
     return (
       parseColor(properties.color) || // Normalize color if present
       (isKmlBased
-        ? parseColorFromKmlStyle(properties) // KML/KMZ parsing
-        : parseColorFromGeoJsonStyle(properties, feature.geometry?.type === "Point")) || // GeoJSON stroke/marker-color
+        ? parseColorFromKmlStyle(properties, isPoint) // KML/KMZ parsing
+        : parseColorFromGeoJsonStyle(properties, isPoint)) || // GeoJSON stroke/marker-color
       DEFAULT_COLOR
     );
   };
@@ -586,12 +571,13 @@ function importGpxFile(file) {
 // Specification: https://developers.google.com/kml/documentation/kmlreference
 
 /**
- * Extracts inline IconStyle colors from KML DOM and attaches them to GeoJSON features.
+ * Extracts KML IconStyle colors and attaches them to point-only GeoJSON features.
  *
  * Why this is needed:
  * - toGeoJSON parses LineStyle/PolyStyle colors but ignores IconStyle colors
- * - This handles KML files with inline <Style><IconStyle><color> elements
- * - Primary use case: Re-importing our own KML/KMZ exports which use inline styles
+ * - Inline <Style><IconStyle><color>: our own KML/KMZ exports
+ * - Shared <Style id> referenced by styleUrl, possibly via a StyleMap:
+ *   Organic Maps and Google Earth exports
  *
  * Must be called AFTER toGeoJSON conversion but BEFORE explosion.
  *
@@ -606,13 +592,42 @@ function applyKmlIconColors(dom, geojsonData) {
     return;
   }
 
+  // Shared styles are referenced by many placemarks - resolve each id only once
+  const sharedIconColors = new Map();
+
   geojsonData.features.forEach((feature, index) => {
-    if (feature.geometry?.type !== "Point") {
+    // Only placemarks made purely of points take an icon color: in a mixed
+    // MultiGeometry the line parts must keep their LineStyle stroke.
+    const geometries =
+      feature.geometry?.type === "GeometryCollection"
+        ? feature.geometry.geometries
+        : [feature.geometry];
+    if (!geometries.every((geometry) => geometry?.type === "Point")) {
       return;
     }
 
     const placemark = placemarks[index];
-    const iconStyleColor = placemark.querySelector("Style IconStyle color");
+    let iconStyleColor = placemark.querySelector("Style IconStyle color");
+
+    // Shared style (Organic Maps, Google Earth): resolve the styleUrl to a
+    // document-level Style, following a StyleMap's normal pair if needed
+    if (!iconStyleColor) {
+      const id = placemark.querySelector("styleUrl")?.textContent.trim().replace(/^#/, "");
+      if (id) {
+        if (!sharedIconColors.has(id)) {
+          const normalUrl = [...dom.querySelectorAll(`StyleMap[id="${CSS.escape(id)}"] Pair`)]
+            .find((pair) => pair.querySelector("key")?.textContent.trim() === "normal")
+            ?.querySelector("styleUrl")
+            ?.textContent.trim();
+          const styleId = normalUrl ? normalUrl.replace(/^#/, "") : id;
+          sharedIconColors.set(
+            id,
+            dom.querySelector(`Style[id="${CSS.escape(styleId)}"] IconStyle color`),
+          );
+        }
+        iconStyleColor = sharedIconColors.get(id);
+      }
+    }
 
     if (iconStyleColor) {
       const kmlColor = iconStyleColor.textContent.trim();
@@ -632,7 +647,17 @@ function applyKmlIconColors(dom, geojsonData) {
  */
 function parseKmlContent(kmlText) {
   const dom = new DOMParser().parseFromString(kmlText, "text/xml");
-  const geojsonData = toGeoJSON.kml(dom, { styles: true });
+
+  // Google Earth wraps shared styles in <gx:CascadingStyle kml:id="...">, which
+  // toGeoJSON can't index (it reads plain id attributes on Style elements).
+  // Mirror the wrapper's id onto the inner Style so StyleMap references resolve.
+  dom.querySelectorAll("CascadingStyle, gx\\:CascadingStyle").forEach((wrapper) => {
+    const style = wrapper.querySelector("Style");
+    const id = wrapper.getAttribute("kml:id") || wrapper.getAttribute("id");
+    if (style && id && !style.hasAttribute("id")) style.setAttribute("id", id);
+  });
+
+  const geojsonData = toGeoJSON.kml(dom);
 
   // Extract stravaId from ExtendedData for all placemarks
   const placemarks = dom.querySelectorAll("Placemark");
@@ -647,7 +672,7 @@ function parseKmlContent(kmlText) {
     });
   }
 
-  // Extract inline IconStyle colors (for re-importing our own KML/KMZ exports)
+  // Extract IconStyle colors (inline and shared) for point features
   // Must be called BEFORE explosion so colors propagate to all exploded features
   applyKmlIconColors(dom, geojsonData);
 
