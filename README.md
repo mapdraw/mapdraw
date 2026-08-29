@@ -105,8 +105,6 @@ To enable features that rely on external services, you must provide your own API
     - `GOOGLE_API_KEY`
     - `MAPBOX_ACCESS_TOKEN`
     - `OSM_CLIENT_ID`
-    - `STRAVA_CLIENT_ID` (Optional)
-    - `STRAVA_CLIENT_SECRET` (Optional)
     - `GA_MEASUREMENT_ID` (Optional — Google Analytics)
 
 ### Important API Notes
@@ -125,7 +123,7 @@ To enable features that rely on external services, you must provide your own API
 
 > **GeoAdmin API Note:** The GeoAdmin API is free and does not require an API key. It only works for paths within Switzerland.
 
-> **Strava API Note:** If you leave the `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` fields empty or do not provide them as secrets, the application will instead prompt end-users to provide their own personal API keys to use the integration.
+> **Strava API Note:** Production always prompts end-users for their own Strava API keys. Developer keys are read only from a local `js/secrets.js` and are never deployed.
 
 ---
 

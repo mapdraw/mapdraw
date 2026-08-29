@@ -33,8 +33,9 @@ jobs:
           echo "const googleApiKey = \"${{ secrets.GOOGLE_API_KEY }}\";" > js/secrets.js
           echo "const mapboxAccessToken = \"${{ secrets.MAPBOX_ACCESS_TOKEN }}\";" >> js/secrets.js
           echo "const osmClientId = \"${{ secrets.OSM_CLIENT_ID }}\";" >> js/secrets.js
-          echo "const stravaClientId = \"${{ secrets.STRAVA_CLIENT_ID }}\";" >> js/secrets.js
-          echo "const stravaClientSecret = \"${{ secrets.STRAVA_CLIENT_SECRET }}\";" >> js/secrets.js
+          # Strava declined our API app, so production offers only the user-keys flow.
+          # echo "const stravaClientId = \"${{ secrets.STRAVA_CLIENT_ID }}\";" >> js/secrets.js
+          # echo "const stravaClientSecret = \"${{ secrets.STRAVA_CLIENT_SECRET }}\";" >> js/secrets.js
 
       - name: Set production flags
         run: |
