@@ -10,7 +10,6 @@ const scope = "read,activity:read_all";
 const tokenURL = "https://www.strava.com/oauth/token";
 // TODO June 1 2027: change base URL to https://www.api-v3.strava.com (ERR_NAME_NOT_RESOLVED as of June 2026)
 const activitiesURL = "https://www.strava.com/api/v3/athlete/activities";
-const streamsURL = "https://www.strava.com/api/v3/activities";
 
 // DOM Elements
 let stravaPanelContent;

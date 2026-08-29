@@ -587,7 +587,7 @@ async function loadCategory(cat) {
     customLastSearchedQuery = customQueryValue;
     try {
       await idbKeyval.set(POI_CUSTOM_QUERY_KEY, customQueryValue);
-    } catch (e) {}
+    } catch {}
   }
 
   if (!poiMasterLayer.hasLayer(state.layer)) {

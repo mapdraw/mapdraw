@@ -322,7 +322,7 @@
     counts.forEach(({ label, get }) => {
       try {
         html += `<div><span>${label}:</span> <b>${get()}</b></div>`;
-      } catch (e) {}
+      } catch {}
     });
 
     div.innerHTML = html || "No data";

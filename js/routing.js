@@ -27,8 +27,6 @@ function initRouting() {
   let isUnitRefreshInProgress = false;
   let wasRouteSelectedOnUnitRefresh = false;
 
-  const geocoder = new GeoSearch.OpenStreetMapProvider();
-
   const mapboxRouter = L.Routing.mapbox(mapboxAccessToken);
   const osrmRouter = L.Routing.osrmv1({
     serviceUrl: "https://router.project-osrm.org/route/v1",
