@@ -533,11 +533,11 @@ function initOSM(settingsPanel) {
     });
   });
 
-  const signInBtn = L.DomUtil.create("button", "osm-auth-btn", osmRow);
+  const signInBtn = L.DomUtil.create("button", "link-button", osmRow);
   signInBtn.id = "osm-sign-in-btn";
   signInBtn.innerText = "Sign in";
 
-  const signOutBtn = L.DomUtil.create("button", "osm-auth-btn", osmRow);
+  const signOutBtn = L.DomUtil.create("button", "link-button", osmRow);
   signOutBtn.id = "osm-sign-out-btn";
   signOutBtn.innerText = "Sign out";
   signOutBtn.style.display = "none";
@@ -546,7 +546,6 @@ function initOSM(settingsPanel) {
   usernameEl.id = "osm-username";
   usernameEl.target = "_blank";
   usernameEl.rel = "noopener noreferrer";
-  usernameEl.style.color = "var(--link-color)";
   usernameEl.style.display = "none";
 
   const osmUserLinks = L.DomUtil.create("div", "osm-user-links", osmContainer);

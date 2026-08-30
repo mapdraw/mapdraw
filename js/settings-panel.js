@@ -261,7 +261,6 @@ function initSettingsPanel() {
   const creditsLink = L.DomUtil.create("a", "", aboutContainer);
   creditsLink.href = "#";
   creditsLink.innerText = "View Credits";
-  creditsLink.classList.add("credits-link");
 
   L.DomEvent.on(creditsLink, "click", (e) => {
     L.DomEvent.stop(e);
@@ -276,8 +275,6 @@ function initSettingsPanel() {
   privacyPolicyLink.href = "/privacy.html";
   privacyPolicyLink.target = "_blank";
   privacyPolicyLink.innerText = "View Privacy Policy";
-  privacyPolicyLink.style.fontSize = "var(--font-size-14)";
-  privacyPolicyLink.style.color = "var(--link-color)";
 
   const devPanelContainer = L.DomUtil.create("div", "settings-control-item", settingsPanel);
   devPanelContainer.id = "settings-dev-panel";
@@ -287,8 +284,6 @@ function initSettingsPanel() {
   const devPanelLink = L.DomUtil.create("a", "", devPanelContainer);
   devPanelLink.href = "#";
   devPanelLink.innerText = "Open Developer Panel";
-  devPanelLink.style.fontSize = "var(--font-size-14)";
-  devPanelLink.style.color = "var(--link-color)";
 
   L.DomEvent.on(devPanelLink, "click", (e) => {
     L.DomEvent.stop(e);

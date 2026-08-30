@@ -95,12 +95,7 @@ function hasDeveloperKeys() {
 async function fetchAllActivities() {
   const accessToken = sessionStorage.getItem("strava_access_token");
   if (!accessToken) {
-    // Determine which UI to show if the token is missing.
-    if (hasDeveloperKeys()) {
-      showConnectUI();
-    } else {
-      renderUserKeysPanel();
-    }
+    renderStravaPanel();
     return;
   }
 
@@ -174,13 +169,9 @@ async function fetchAllActivities() {
   }
 
   if (tokenInvalid) {
-    // Clear the invalidated token so the auth UIs below offer reconnecting.
+    // Clear the invalidated token so renderStravaPanel() offers reconnecting.
     sessionStorage.removeItem("strava_access_token");
-    if (hasDeveloperKeys()) {
-      showConnectUI();
-    } else {
-      renderUserKeysPanel();
-    }
+    renderStravaPanel();
     Swal.fire({
       icon: "info",
       title: "Strava Session Expired",
@@ -191,11 +182,7 @@ async function fetchAllActivities() {
 
   if (fetchFailed) {
     // All-or-nothing: keep previously loaded activities and allFetchedActivities untouched.
-    if (hasDeveloperKeys()) {
-      showFetchUI();
-    } else {
-      renderUserKeysPanel();
-    }
+    renderStravaPanel();
     Swal.fire({
       icon: "error",
       title: "Fetch Failed",
@@ -212,6 +199,20 @@ async function fetchAllActivities() {
 // UI Rendering and Event Handling
 
 /**
+ * Renders the panel matching the current auth state: fetch controls when a
+ * token exists, otherwise the auth UI of the active flow.
+ */
+function renderStravaPanel() {
+  if (sessionStorage.getItem("strava_access_token")) {
+    showFetchUI();
+  } else if (hasDeveloperKeys()) {
+    showConnectUI();
+  } else {
+    showUserKeysUI();
+  }
+}
+
+/**
  * Displays the "Connect with Strava" button (for developer keys flow).
  */
 function showConnectUI() {
@@ -224,7 +225,7 @@ function showConnectUI() {
       </button>
       <p style="font-size: var(--font-size-12); color: var(--text-color); margin-top: 5px;">
         By connecting, you agree to the ${APP_NAME}<br>
-        <a href="/privacy.html" target="_blank" style="color: var(--link-color);">Privacy Policy</a>
+        <a href="/privacy.html" target="_blank">Privacy Policy</a>
       </p>
     </div>
   `;
@@ -245,32 +246,23 @@ function showConnectUI() {
 }
 
 /**
- * Renders the Strava panel for user-provided keys.
- * Shows either a single CTA button (not authenticated) or fetch controls (authenticated).
+ * Displays the CTA button for providing API keys (user keys flow).
  */
-function renderUserKeysPanel() {
+function showUserKeysUI() {
   if (!stravaPanelContent) return;
-  const accessToken = sessionStorage.getItem("strava_access_token");
-
-  if (accessToken) {
-    // User is authenticated - show fetch controls
-    showFetchUI();
-  } else {
-    // No authentication - show single CTA button
-    stravaPanelContent.innerHTML = `
-      <div style="padding: 0; text-align: center;">
-        <p style="margin-bottom: 10px;">To see your activities on the map:</p>
-        <button id="strava-provide-keys-btn" class="strava-button-primary" style="width: 100%;">
-          Provide your Strava API Keys
-        </button>
-      </div>
-    `;
-    document.getElementById("strava-provide-keys-btn").addEventListener("click", () => {
-      tempUserClientId = "";
-      tempUserClientSecret = "";
-      showApiKeysModal();
-    });
-  }
+  stravaPanelContent.innerHTML = `
+    <div style="padding: 0; text-align: center;">
+      <p style="margin-bottom: 10px;">To see your activities on the map:</p>
+      <button id="strava-provide-keys-btn" class="strava-button-primary" style="width: 100%;">
+        Provide your Strava API Keys
+      </button>
+    </div>
+  `;
+  document.getElementById("strava-provide-keys-btn").addEventListener("click", () => {
+    tempUserClientId = "";
+    tempUserClientSecret = "";
+    showApiKeysModal();
+  });
 }
 
 /**
@@ -284,6 +276,7 @@ function showApiKeysModal() {
       html: `
         <div style="text-align: left;">
           <p style="margin-bottom: 15px;">This application uses your personal Strava API credentials for performance and data control.</p>
+          <p style="margin-bottom: 15px;"><strong>Note:</strong> Strava requires an active Strava subscription to create and use an API app.</p>
           <p><strong>How to get your keys:</strong></p>
           <ol style="padding-left: 20px; margin-bottom: 15px;">
             <li>Go to your <a href="https://www.strava.com/settings/api" target="_blank" style="color: var(--highlight-color);">Strava API Settings</a>.</li>
@@ -401,7 +394,7 @@ function showApiKeysModal() {
  */
 function _getFetchControlsHTML() {
   return `
-      <p>Successfully connected to Strava.<br><span id="strava-status"></span></p>
+      <p>Successfully connected to Strava. <button id="strava-disconnect-btn" class="link-button">Disconnect</button><br><span id="strava-status"></span></p>
       <div id="strava-controls" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%;">
         <select id="strava-fetch-count" class="strava-button-secondary" style="flex: 2; min-width: 120px;">
           <option value="30d"${lastSelectedPeriod === "30d" ? " selected" : ""}>Last 30 Days</option>
@@ -458,6 +451,7 @@ function refreshStravaActivityCount() {
 function showFetchUI() {
   if (!stravaPanelContent) return;
   stravaPanelContent.innerHTML = _getFetchControlsHTML();
+  document.getElementById("strava-disconnect-btn").addEventListener("click", disconnectStrava);
   document.getElementById("fetch-strava-btn").addEventListener("click", fetchAllActivities);
   document
     .getElementById("export-strava-geojson-btn")
@@ -466,6 +460,17 @@ function showFetchUI() {
     .getElementById("export-strava-json-btn")
     .addEventListener("click", exportStravaActivitiesAsJson);
   refreshStravaActivityCount();
+}
+
+/**
+ * Clears the Strava session and returns the panel to its auth UI.
+ * Activities already on the map are kept.
+ */
+function disconnectStrava() {
+  sessionStorage.removeItem("strava_access_token");
+  tempUserClientId = "";
+  tempUserClientSecret = "";
+  renderStravaPanel();
 }
 
 // Authentication Callback Handlers
@@ -481,17 +486,13 @@ async function handleStravaAuthReturn(event) {
     window.removeEventListener("storage", handleStravaAuthReturn);
     stravaPanelContent.innerHTML = "<p>Authenticating...</p>";
 
-    const success = await getAccessToken(authCode, stravaClientId, stravaClientSecret);
-    if (success) {
-      showFetchUI();
-    } else {
-      showConnectUI();
-    }
+    await getAccessToken(authCode, stravaClientId, stravaClientSecret);
+    renderStravaPanel();
   } else if (event.key === "stravaAuthError") {
     console.error("Strava authentication error:", event.newValue);
     localStorage.removeItem("stravaAuthError");
     window.removeEventListener("storage", handleStravaAuthReturn);
-    showConnectUI();
+    renderStravaPanel();
   }
 }
 
@@ -507,7 +508,7 @@ async function handleStravaAuthReturnForUserKeys(event) {
     Swal.close();
 
     await getAccessToken(authCode, tempUserClientId, tempUserClientSecret);
-    renderUserKeysPanel();
+    renderStravaPanel();
   } else if (event.key === "stravaAuthError") {
     console.error("Strava authentication error:", event.newValue);
     localStorage.removeItem("stravaAuthError");
@@ -569,13 +570,7 @@ function displayActivitiesOnMap(activities) {
   }
   updateOverviewList();
   updateDrawControlStates();
-
-  // Determine which UI needs updating
-  if (hasDeveloperKeys()) {
-    showFetchUI();
-  } else {
-    renderUserKeysPanel();
-  }
+  renderStravaPanel();
 }
 
 /**
@@ -620,15 +615,7 @@ function downloadOriginalStravaGpx(activityId, activityName) {
  */
 function initStrava() {
   stravaPanelContent = document.getElementById("strava-panel-content");
-
   // The token lives in sessionStorage (cleared on tab close, per privacy.html),
-  // so a reload keeps the connected state. Developer keys in secrets.js decide
-  // which auth flow is offered.
-  if (!hasDeveloperKeys()) {
-    renderUserKeysPanel();
-  } else if (sessionStorage.getItem("strava_access_token")) {
-    showFetchUI();
-  } else {
-    showConnectUI();
-  }
+  // so a reload keeps the connected state.
+  renderStravaPanel();
 }

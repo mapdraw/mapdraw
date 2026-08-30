@@ -246,9 +246,7 @@ body.glass-mode.force-desktop-layout #bottom-left-credits {
 body.glass-mode #strava-panel a,
 body.glass-mode #settings-panel a,
 body.glass-mode #credits-link,
-body.glass-mode .osm-user-links a,
-body.glass-mode .osm-username,
-body.glass-mode .osm-auth-btn,
+body.glass-mode .link-button,
 body.glass-mode .leaflet-popup-content a {
   color: var(--link-color) !important;
   text-decoration: underline;
@@ -1659,16 +1657,6 @@ body.glass-mode .overview-category-pill.active {
   cursor: not-allowed;
 }
 
-/* Link styles */
-#strava-panel a {
-  color: var(--link-color);
-  text-decoration: none;
-}
-
-#strava-panel a:hover {
-  text-decoration: underline;
-}
-
 #strava-domain-copy .copy-icon {
   vertical-align: middle;
 }
@@ -1900,14 +1888,33 @@ body.glass-mode .overview-category-pill.active {
   line-height: 1;
 }
 
-/* Link styles */
-#settings-panel a {
+/* Panel links: one look for anchors and link-styled buttons in the side panels */
+#settings-panel a,
+#strava-panel a,
+.link-button {
   color: var(--link-color);
   text-decoration: none;
 }
 
-#settings-panel a:hover {
+#settings-panel a:hover,
+#strava-panel a:hover,
+.link-button:hover {
   text-decoration: underline;
+}
+
+/* Settings links are 14px; Strava-panel anchors inherit their context */
+#settings-panel a,
+.link-button {
+  font-size: var(--font-size-14);
+}
+
+/* Buttons shed their browser chrome */
+.link-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
 }
 
 /* OSM Settings */
@@ -1928,12 +1935,6 @@ body.glass-mode .overview-category-pill.active {
   gap: 12px;
 }
 
-.osm-username,
-.osm-user-links a {
-  font-size: var(--font-size-14);
-  color: var(--link-color);
-}
-
 .osm-username {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1944,20 +1945,6 @@ body.glass-mode .overview-category-pill.active {
   border: none;
   border-top: 1px solid var(--border-color);
   margin: 2px 0 0;
-}
-
-.osm-auth-btn {
-  font-size: var(--font-size-14);
-  color: var(--link-color);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  font-family: inherit;
-}
-
-.osm-auth-btn:hover {
-  text-decoration: underline;
 }
 
 .osm-contribute-search::placeholder {
@@ -2026,17 +2013,6 @@ body.glass-mode .overview-category-pill.active {
   background: none;
   border: none;
   color: var(--color-red);
-}
-
-/* Style for credits link in settings panel */
-.credits-link {
-  font-size: var(--font-size-14);
-  color: var(--link-color);
-  text-decoration: none;
-}
-
-.credits-link:hover {
-  text-decoration: underline;
 }
 
 /* ELEVATION */
