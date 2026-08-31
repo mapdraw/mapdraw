@@ -296,7 +296,8 @@ function _elementLatLon(element) {
  * (tag changes, renames, etc.) are always reflected after a search.
  *
  * Elements outside the queried bounds are left untouched: we have no fresh data
- * for those areas so we cannot tell whether they still exist.
+ * for those areas so we cannot tell whether they still exist. For the same
+ * reason callers must not use this with a truncated response.
  */
 function _computePoiDiff(rawElements, newResults, bounds) {
   const toRemove = [];
@@ -619,7 +620,14 @@ async function loadCategory(cat) {
       return;
     }
 
-    const { toRemove, toAdd } = _computePoiDiff(state.rawElements, results, bounds);
+    // A capped response is an incomplete snapshot of the area, so it must not
+    // replace elements found by earlier, narrower searches.
+    const truncated =
+      results.filter((e) => e.type !== "node").length >= POI_RESULT_LIMIT ||
+      results.filter((e) => e.type === "node").length >= POI_RESULT_LIMIT;
+    const { toRemove, toAdd } = truncated
+      ? { toRemove: [], toAdd: results }
+      : _computePoiDiff(state.rawElements, results, bounds);
 
     toRemove.forEach((key) => {
       const marker = state.markers.get(key);
@@ -648,10 +656,7 @@ async function loadCategory(cat) {
           : `No ${cat.name.toLowerCase()} found in current view.`,
         true,
       );
-    } else if (
-      results.filter((e) => e.type !== "node").length >= POI_RESULT_LIMIT ||
-      results.filter((e) => e.type === "node").length >= POI_RESULT_LIMIT
-    ) {
+    } else if (truncated) {
       showCategoryMsg(cat.id, `Too many results to show. Zoom in and search again.`, true);
     }
   } catch (err) {
