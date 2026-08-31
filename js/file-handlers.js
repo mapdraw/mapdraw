@@ -927,10 +927,10 @@ function convertLayerToGpxSnippet(layer) {
   const color = getLayerColor(layer);
   // Remove # prefix for GPX format
   const gpxColorHex = color.substring(1).toUpperCase();
-  const stravaId = layer.feature?.properties?.stravaId;
-
   const safeName = escapeXml(name);
   const safeDescription = escapeXml(description);
+  // stravaId is read verbatim from imported files, so it needs escaping like any text.
+  const stravaId = escapeXml(layer.feature?.properties?.stravaId);
 
   if (layer instanceof L.Polyline) {
     // L.Polygon extends L.Polyline, so areas land here too - they only differ in closing the ring.
@@ -1056,7 +1056,8 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
 
   const safeName = escapeXml(name);
   const safeDescription = description ? escapeXml(description) : "";
-  const stravaId = layer.feature?.properties?.stravaId;
+  // stravaId is read verbatim from imported files, so it needs escaping like any text.
+  const stravaId = escapeXml(layer.feature?.properties?.stravaId);
 
   const placemarkStart =
     `  <Placemark>\n` +
@@ -1132,7 +1133,9 @@ function buildKmlFolder(name, placemarks) {
   return (
     `  <Folder>\n` +
     `    <name>${safeName}</name>\n` +
-    placemarks.map((p) => p.replace(/^/gm, "  ")).join("\n") +
+    // Indent tag lines only: text content never starts with "<" (escapeXml() writes "&lt;"),
+    // so continuation lines of a multi-line name or description keep their exact characters.
+    placemarks.map((p) => p.replace(/^(?=\s*<)/gm, "  ")).join("\n") +
     `\n  </Folder>`
   );
 }
