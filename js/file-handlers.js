@@ -109,20 +109,26 @@ function getAllExportableLayers() {
  */
 function escapeXml(unsafe) {
   if (!unsafe) return "";
-  return unsafe.toString().replace(/[<>&'"]/g, (c) => {
-    switch (c) {
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case "&":
-        return "&amp;";
-      case "'":
-        return "&apos;";
-      case '"':
-        return "&quot;";
-    }
-  });
+  return (
+    unsafe
+      .toString()
+      // XML 1.0 forbids these characters even as character references, so drop them.
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]/g, "")
+      .replace(/[<>&'"]/g, (c) => {
+        switch (c) {
+          case "<":
+            return "&lt;";
+          case ">":
+            return "&gt;";
+          case "&":
+            return "&amp;";
+          case "'":
+            return "&apos;";
+          case '"':
+            return "&quot;";
+        }
+      })
+  );
 }
 
 /**
