@@ -10,6 +10,7 @@
 // movement stops, so round here. Rounding runs after `predrag` because Map.Drag
 // rewrites _newPos in that handler. Mirrors _updatePosition as of
 // 2.0.0-alpha.1 - recheck the upstream body when upgrading Leaflet.
+// Reported upstream: https://github.com/Leaflet/Leaflet/issues/9731
 L.Draggable.prototype._updatePosition = function () {
   var e = { originalEvent: this._lastEvent };
   this.fire("predrag", e);
