@@ -3,6 +3,8 @@
 
 # MapDraw
 
+**[www.mapdraw.net](https://www.mapdraw.net/)**
+
 </div>
 
 MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, Strava activity integration, and OpenStreetMap contributions.
@@ -54,7 +56,7 @@ This project is self-contained and does not require a package manager (`npm`).
 1.  **Clone the Repository**
 
     ```bash
-    git clone [https://github.com/mapdraw/mapdraw](https://github.com/mapdraw/mapdraw)
+    git clone https://github.com/mapdraw/mapdraw.git
     ```
 
 2.  **Provide API Keys**
