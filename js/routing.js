@@ -1,10 +1,10 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 /**
  * Initializes the routing functionality including routing control, markers,
  * user input handlers, and provider configuration.
  */
-function initializeRouting() {
+function initRouting() {
   const ROUTING_MARKER_HINT = "Drag to move, long-press to remove";
   let routingControl,
     startMarker,
@@ -22,10 +22,10 @@ function initializeRouting() {
 
   let intermediateViaMarkers = [];
   let shouldFitBounds = true;
+  // Last route name this module wrote; lets recalculation detect a user rename
+  let lastGeneratedRouteName = null;
   let isUnitRefreshInProgress = false;
   let wasRouteSelectedOnUnitRefresh = false;
-
-  const geocoder = new GeoSearch.OpenStreetMapProvider();
 
   const mapboxRouter = L.Routing.mapbox(mapboxAccessToken);
   const osrmRouter = L.Routing.osrmv1({
@@ -36,6 +36,7 @@ function initializeRouting() {
   const PROVIDER_CONFIG = {
     mapbox: {
       router: mapboxRouter,
+      displayName: "Mapbox",
       profiles: {
         driving: "driving",
         bike: "cycling",
@@ -45,6 +46,7 @@ function initializeRouting() {
     },
     osrm: {
       router: osrmRouter,
+      displayName: "OSRM",
       profiles: {
         driving: "driving",
         bike: "bike",
@@ -54,20 +56,27 @@ function initializeRouting() {
     },
   };
 
-  const clearRouteLine = () => {
+  const getCurrentRoutingProvider = () => localStorage.getItem("routingProvider") || "mapbox";
+
+  const clearRouteLine = (preserveViaMarkers = false) => {
     if (currentRoutePath) {
       if (globallySelectedItem === currentRoutePath) {
         deselectCurrentItem();
       }
-      editableLayers.removeLayer(currentRoutePath);
       drawnItems.removeLayer(currentRoutePath);
       map.removeLayer(currentRoutePath);
       currentRoutePath = null;
       updateOverviewList();
+      // Must run after currentRoutePath is nulled above, not just after deselectCurrentItem()
+      // (which can run earlier, while currentRoutePath is still set) - hasAnyItems()
+      // (rectangle-select.js), which drives the Download/Rectangle-select buttons, checks it.
+      updateDrawControlStates();
     }
 
-    intermediateViaMarkers.forEach((marker) => map.removeLayer(marker));
-    intermediateViaMarkers = [];
+    if (!preserveViaMarkers) {
+      intermediateViaMarkers.forEach((marker) => map.removeLayer(marker));
+      intermediateViaMarkers = [];
+    }
 
     routingControl.setWaypoints([]);
     document.getElementById("routing-summary-container").style.display = "none";
@@ -87,7 +96,7 @@ function initializeRouting() {
 
     const selectedProfile = document.querySelector("#routing-profile-selector .profile-btn.active")
       .dataset.profile;
-    const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
+    const currentProvider = getCurrentRoutingProvider();
 
     const config = PROVIDER_CONFIG[currentProvider];
     if (!config) {
@@ -112,9 +121,8 @@ function initializeRouting() {
    * Sets waypoints on the routing control and logs the provider being used.
    */
   const setWaypointsAndLog = (waypoints) => {
-    const providerMap = { mapbox: "Mapbox", osrm: "OSRM" };
-    const currentProvider = localStorage.getItem("routingProvider") || "mapbox";
-    const providerDisplayName = providerMap[currentProvider] || currentProvider;
+    const currentProvider = getCurrentRoutingProvider();
+    const providerDisplayName = PROVIDER_CONFIG[currentProvider]?.displayName || currentProvider;
     console.log(`Fetching route from: ${providerDisplayName}`);
     routingControl.setWaypoints(waypoints);
   };
@@ -134,6 +142,24 @@ function initializeRouting() {
     }
     waypoints.push(L.latLng(currentEndLatLng));
     setWaypointsAndLog(waypoints);
+  };
+
+  /**
+   * Returns the index of the current route path vertex closest to latlng,
+   * or Infinity when there is no route path to measure against.
+   */
+  const nearestRouteCoordIndex = (latlng) => {
+    if (!currentRoutePath) return Infinity;
+    let nearestIndex = Infinity;
+    let nearestDist = Infinity;
+    currentRoutePath.getLatLngs().forEach((coord, i) => {
+      const dist = latlng.distanceTo(coord);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestIndex = i;
+      }
+    });
+    return nearestIndex;
   };
 
   /**
@@ -174,7 +200,16 @@ function initializeRouting() {
     });
 
     newViaMarker.on("dragend", updateRouteWithIntermediateVias);
-    intermediateViaMarkers.push(newViaMarker);
+    // Insert by position along the route so via order matches geography, not click order
+    newViaMarker.routeCoordIndex = nearestRouteCoordIndex(latlng);
+    const insertAt = intermediateViaMarkers.findIndex(
+      (marker) => (marker.routeCoordIndex ?? Infinity) > newViaMarker.routeCoordIndex,
+    );
+    if (insertAt === -1) {
+      intermediateViaMarkers.push(newViaMarker);
+    } else {
+      intermediateViaMarkers.splice(insertAt, 0, newViaMarker);
+    }
     return newViaMarker;
   };
 
@@ -192,7 +227,9 @@ function initializeRouting() {
    */
   function setupRoutingControl(provider) {
     if (routingControl) {
-      routingControl = null;
+      // Orphan any in-flight route callback on the outgoing control so a late
+      // response from the old provider can't overwrite the new provider's route
+      routingControl._requestId++;
     }
     const router = PROVIDER_CONFIG[provider]?.router || PROVIDER_CONFIG["mapbox"].router;
 
@@ -200,6 +237,7 @@ function initializeRouting() {
     routingControl = {
       _router: router,
       _waypoints: [],
+      _requestId: 0,
 
       getRouter: function () {
         return this._router;
@@ -214,13 +252,16 @@ function initializeRouting() {
           return L.Routing.waypoint(wp);
         });
 
+        // Always increment so any in-flight request is cancelled, even on clear
+        const requestId = ++this._requestId;
+
         // Don't route if waypoints array is empty or has less than 2 points
         if (this._waypoints.length < 2) {
           return;
         }
 
-        // Call the router directly
         this._router.route(this._waypoints, (err, routes) => {
+          if (requestId !== this._requestId) return;
           if (err) {
             this._handleRoutingError(err);
           } else {
@@ -238,6 +279,14 @@ function initializeRouting() {
           const route = routes[0];
           let processedCoordinates = route.coordinates;
 
+          // Refresh each via marker's coordinate index on the new geometry; waypoints
+          // were [start, ...intermediateViaMarkers, via?, end], so markers map to 1..n.
+          if (route.waypointIndices && route.waypointIndices.length === this._waypoints.length) {
+            intermediateViaMarkers.forEach((marker, i) => {
+              marker.routeCoordIndex = route.waypointIndices[i + 1];
+            });
+          }
+
           const startInput = document.getElementById("route-start");
           const endInput = document.getElementById("route-end");
           const startName = startInput.value.trim() || "Start";
@@ -253,12 +302,20 @@ function initializeRouting() {
               const m = Math.floor((seconds % 3600) / 60);
               let parts = [];
               if (h > 0) parts.push(h + " h");
-              if (m > 0 || h === 0) parts.push(m + " m");
+              if (m > 0 || h === 0) parts.push(m + " min");
               return parts.join(" ");
             }
             const formattedTime = formatDuration(route.summary.totalTime);
 
-            summaryContainer.innerHTML = `<b>Distance:</b> ${distanceDisplay} &nbsp;&nbsp; <b>Time:</b> ${formattedTime}`;
+            const currentProvider = getCurrentRoutingProvider();
+            const providerDisplayName =
+              PROVIDER_CONFIG[currentProvider]?.displayName || currentProvider;
+
+            const itemStyle = "display: inline-block; white-space: nowrap; margin: 0 4px;";
+            summaryContainer.innerHTML =
+              `<span style="${itemStyle}">Distance: ${distanceDisplay}</span>` +
+              `<span style="${itemStyle}">Time: ${formattedTime}</span>` +
+              `<span style="${itemStyle}">Source: ${providerDisplayName}</span>`;
             summaryContainer.style.display = "block";
           }
 
@@ -290,8 +347,11 @@ function initializeRouting() {
 
           if (currentRoutePath) {
             currentRoutePath.setLatLngs(processedCoordinates);
-            currentRoutePath.feature.properties.name = newRouteName;
-            currentRoutePath.feature.properties.totalDistance = route.summary.totalDistance;
+            // Refresh the auto-generated name, but never clobber a user rename
+            if (currentRoutePath.feature.properties.name === lastGeneratedRouteName) {
+              currentRoutePath.feature.properties.name = newRouteName;
+              lastGeneratedRouteName = newRouteName;
+            }
           } else {
             const newRoutePath = L.polyline(processedCoordinates, {
               ...STYLE_CONFIG.path.default,
@@ -301,11 +361,11 @@ function initializeRouting() {
             newRoutePath.feature = {
               properties: {
                 name: newRouteName,
-                color: ROUTE_COLOR,
-                totalDistance: route.summary.totalDistance,
               },
             };
-            newRoutePath.pathType = "route";
+            lastGeneratedRouteName = newRouteName;
+            newRoutePath.internal = { pathType: "route" };
+            setLayerColor(newRoutePath, ROUTE_COLOR);
 
             let pressTimer = null;
             let wasLongPress = false;
@@ -344,23 +404,25 @@ function initializeRouting() {
             currentRoutePath = newRoutePath;
           }
 
-          if (!map.hasLayer(drawnItems)) {
-            map.addLayer(drawnItems);
-          }
+          window.app.ensureDrawnItemsVisible();
           updateOverviewList();
           updateDrawControlStates();
 
           if (wasRouteSelectedOnUnitRefresh || !isUnitRefreshInProgress) {
             selectItem(currentRoutePath);
           }
-          isUnitRefreshInProgress = false;
-          wasRouteSelectedOnUnitRefresh = false;
 
           saveRouteBtn.disabled = false;
         }
+        // Reset unconditionally so an empty result can't leave the flags stale
+        isUnitRefreshInProgress = false;
+        wasRouteSelectedOnUnitRefresh = false;
       },
 
       _handleRoutingError: function (error) {
+        // Reset so a failed unit refresh can't suppress selecting the next route
+        isUnitRefreshInProgress = false;
+        wasRouteSelectedOnUnitRefresh = false;
         console.error("Routing error:", error);
         if (error && error.target && error.target.responseText) {
           try {
@@ -391,8 +453,7 @@ function initializeRouting() {
     };
   }
 
-  const savedProvider = localStorage.getItem("routingProvider") || "mapbox";
-  setupRoutingControl(savedProvider);
+  setupRoutingControl(getCurrentRoutingProvider());
 
   const routingPanelContainer = document.getElementById("routing-panel");
   L.DomEvent.disableClickPropagation(routingPanelContainer);
@@ -412,12 +473,6 @@ function initializeRouting() {
   customCursorEnd = document.getElementById("custom-cursor-end");
   customCursorVia = document.getElementById("custom-cursor-via");
 
-  [startInput, viaInput, endInput].forEach((input) => {
-    input.addEventListener("focus", function () {
-      this.select();
-    });
-  });
-
   clearRouteBtn.disabled = true;
 
   profileButtons.forEach((button) => {
@@ -427,8 +482,15 @@ function initializeRouting() {
       profileButtons.forEach((btn) => btn.classList.remove("active"));
       button.classList.add("active");
 
+      const currentProvider = getCurrentRoutingProvider();
+      const config = PROVIDER_CONFIG[currentProvider];
+      if (config) {
+        const apiProfile = config.profiles[button.dataset.profile] || config.profiles["driving"];
+        routingControl.getRouter().options.profile = config.profileFormatter(apiProfile);
+      }
+
       if (startMarker && endMarker) {
-        calculateNewRoute();
+        updateRouteWithIntermediateVias();
       }
     });
   });
@@ -439,69 +501,55 @@ function initializeRouting() {
     directionsPanel.classList.toggle("collapsed");
   });
 
-  // Use search modal for start input
-  attachSearchModalToInput(startInput, "Set Start Point", (latlng, label) => {
-    currentStartLatLng = latlng;
-    startInput.style.color = "var(--color-black)";
-    if (startMarker) {
-      startMarker.setLatLng(latlng);
-    } else {
-      startMarker = L.marker(latlng, {
-        icon: createMarkerIcon(ROUTING_COLOR_START, 1),
-        title: ROUTING_MARKER_HINT,
-        draggable: true,
-      }).addTo(map);
-      addDragHandlersToRoutingMarker(startMarker, "start");
-    }
-    updateClearButtonState();
-    calculateNewRoute();
+  const directionsCopyBtn = document.getElementById("directions-copy-btn");
+  directionsCopyBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const directionsText = Array.from(document.querySelectorAll("#directions-list .direction-item"))
+      .map((item) => item.textContent.trim())
+      .join("\n");
+    copyToClipboard(directionsText)
+      .then(() => {
+        Swal.fire({
+          toast: true,
+          icon: "success",
+          title: "Directions Copied!",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      })
+      .catch((err) => {
+        console.error("Could not copy directions: ", err);
+        Swal.fire({
+          toast: true,
+          icon: "error",
+          title: "Failed to Copy",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      });
   });
 
-  // Use search modal for end input
-  attachSearchModalToInput(endInput, "Set End Point", (latlng, label) => {
-    currentEndLatLng = latlng;
-    endInput.style.color = "var(--color-black)";
-    if (endMarker) {
-      endMarker.setLatLng(latlng);
-    } else {
-      endMarker = L.marker(latlng, {
-        icon: createMarkerIcon(ROUTING_COLOR_END, 1),
-        title: ROUTING_MARKER_HINT,
-        draggable: true,
-      }).addTo(map);
-      addDragHandlersToRoutingMarker(endMarker, "end");
-    }
-    updateClearButtonState();
-    calculateNewRoute();
+  [startInput, viaInput, endInput].forEach((input) => {
+    input.addEventListener("click", () => {
+      if (penModeActive) exitPenMode();
+    });
   });
 
-  // Use search modal for via input
-  attachSearchModalToInput(viaInput, "Set Via Point", (latlng, label) => {
-    currentViaLatLng = latlng;
-    viaInput.style.color = "var(--color-black)";
-    if (viaMarker) {
-      viaMarker.setLatLng(latlng);
-    } else {
-      viaMarker = L.marker(latlng, {
-        icon: createMarkerIcon(ROUTING_COLOR_VIA, 1),
-        title: ROUTING_MARKER_HINT,
-        draggable: true,
-      }).addTo(map);
-      addDragHandlersToRoutingMarker(viaMarker, "via");
-    }
-    updateClearButtonState();
-    updateRouteWithIntermediateVias();
-  });
+  attachSearchModalToInput(startInput, "Set Start Point", (latlng, label) =>
+    updateRoutingPoint(latlng, "start", label),
+  );
+  attachSearchModalToInput(endInput, "Set End Point", (latlng, label) =>
+    updateRoutingPoint(latlng, "end", label),
+  );
+  attachSearchModalToInput(viaInput, "Set Via Point", (latlng, label) =>
+    updateRoutingPoint(latlng, "via", label),
+  );
 
   const updateClearButtonState = () => {
     const hasContent =
       startInput.value || endInput.value || viaInput.value || startMarker || endMarker;
     clearRouteBtn.disabled = !hasContent;
   };
-
-  startInput.addEventListener("input", updateClearButtonState);
-  endInput.addEventListener("input", updateClearButtonState);
-  viaInput.addEventListener("input", updateClearButtonState);
 
   /**
    * Adds drag and delete handlers to routing markers (start/end/via).
@@ -521,7 +569,7 @@ function initializeRouting() {
       if (isStart) currentStartLatLng = newLatLng;
       else if (isVia) currentViaLatLng = newLatLng;
       else currentEndLatLng = newLatLng;
-      input.value = `${newLatLng.lat.toFixed(5)}, ${newLatLng.lng.toFixed(5)}`;
+      input.value = `${newLatLng.lat.toFixed(6)}, ${newLatLng.lng.toFixed(6)}`;
       input.style.color = "var(--color-black)";
       if (startMarker && endMarker) {
         updateRouteWithIntermediateVias();
@@ -551,7 +599,7 @@ function initializeRouting() {
   /**
    * Clears all routing markers, inputs, and route path from the map.
    */
-  const clearRouting = () => {
+  const clearRouting = ({ skipUiUpdate = false } = {}) => {
     if (penModeActive) exitPenMode();
     if (routingControl) {
       routingControl.setWaypoints([]);
@@ -590,12 +638,13 @@ function initializeRouting() {
       if (globallySelectedItem === currentRoutePath) {
         deselectCurrentItem();
       }
-      editableLayers.removeLayer(currentRoutePath);
       drawnItems.removeLayer(currentRoutePath);
       map.removeLayer(currentRoutePath);
       currentRoutePath = null;
-      updateOverviewList();
-      updateDrawControlStates();
+      if (!skipUiUpdate) {
+        updateOverviewList();
+        updateDrawControlStates();
+      }
     }
     if (saveRouteBtn) saveRouteBtn.disabled = true;
 
@@ -607,54 +656,47 @@ function initializeRouting() {
   });
 
   /**
+   * Creates the start/via/end routing marker at the given location, or moves
+   * it there if it already exists. Returns true if the marker was newly created.
+   */
+  const ensureRoutingMarker = (type, latlng) => {
+    const isStart = type === "start";
+    const isVia = type === "via";
+    const existing = isStart ? startMarker : isVia ? viaMarker : endMarker;
+    if (existing) {
+      existing.setLatLng(latlng);
+      return false;
+    }
+    const color = isStart ? ROUTING_COLOR_START : isVia ? ROUTING_COLOR_VIA : ROUTING_COLOR_END;
+    const marker = L.marker(latlng, {
+      icon: createMarkerIcon(color, 1),
+      title: ROUTING_MARKER_HINT,
+      draggable: true,
+    }).addTo(map);
+    addDragHandlersToRoutingMarker(marker, type);
+    if (isStart) startMarker = marker;
+    else if (isVia) viaMarker = marker;
+    else endMarker = marker;
+    return true;
+  };
+
+  /**
    * Updates a routing point (start/via/end) with a new location and optional label.
    */
   const updateRoutingPoint = (latlng, type, label) => {
-    const locationString = label || `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+    if (penModeActive) exitPenMode();
+    const isVia = type === "via";
+    const input = type === "start" ? startInput : isVia ? viaInput : endInput;
 
-    if (type === "start") {
-      currentStartLatLng = latlng;
-      startInput.value = locationString;
-      if (startMarker) {
-        startMarker.setLatLng(latlng);
-      } else {
-        startMarker = L.marker(latlng, {
-          icon: createMarkerIcon(ROUTING_COLOR_START, 1),
-          title: ROUTING_MARKER_HINT,
-          draggable: true,
-        }).addTo(map);
-        addDragHandlersToRoutingMarker(startMarker, "start");
-      }
-    } else if (type === "via") {
-      currentViaLatLng = latlng;
-      viaInput.value = locationString;
-      if (viaMarker) {
-        viaMarker.setLatLng(latlng);
-      } else {
-        viaMarker = L.marker(latlng, {
-          icon: createMarkerIcon(ROUTING_COLOR_VIA, 1),
-          title: ROUTING_MARKER_HINT,
-          draggable: true,
-        }).addTo(map);
-        addDragHandlersToRoutingMarker(viaMarker, "via");
-      }
-    } else {
-      currentEndLatLng = latlng;
-      endInput.value = locationString;
-      if (endMarker) {
-        endMarker.setLatLng(latlng);
-      } else {
-        endMarker = L.marker(latlng, {
-          icon: createMarkerIcon(ROUTING_COLOR_END, 1),
-          title: ROUTING_MARKER_HINT,
-          draggable: true,
-        }).addTo(map);
-        addDragHandlersToRoutingMarker(endMarker, "end");
-      }
-    }
+    if (type === "start") currentStartLatLng = latlng;
+    else if (isVia) currentViaLatLng = latlng;
+    else currentEndLatLng = latlng;
+    input.value = label || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+    input.style.color = "var(--color-black)";
+    ensureRoutingMarker(type, latlng);
     updateClearButtonState();
 
-    if (type === "via") {
+    if (isVia) {
       updateRouteWithIntermediateVias();
     } else {
       calculateNewRoute();
@@ -714,6 +756,13 @@ function initializeRouting() {
         startMarker = null;
         currentStartLatLng = null;
         startInput.value = "";
+        if (penModeActive) {
+          if (endMarker) map.removeLayer(endMarker);
+          endMarker = null;
+          currentEndLatLng = null;
+          endInput.value = "";
+          exitPenMode();
+        }
         clearRouteLine();
         break;
       case "end":
@@ -721,7 +770,8 @@ function initializeRouting() {
         endMarker = null;
         currentEndLatLng = null;
         endInput.value = "";
-        clearRouteLine();
+        clearRouteLine(penModeActive);
+        if (penModeActive) penModeClickCount = 1;
         break;
       case "via":
         if (viaMarker) map.removeLayer(viaMarker);
@@ -746,29 +796,6 @@ function initializeRouting() {
     }
   });
 
-  const handleManualInputChange = (type) => {
-    let input, currentLatLngValue;
-
-    if (type === "start") {
-      input = startInput;
-      currentLatLngValue = currentStartLatLng;
-    } else if (type === "via") {
-      input = viaInput;
-      currentLatLngValue = currentViaLatLng;
-    } else {
-      input = endInput;
-      currentLatLngValue = currentEndLatLng;
-    }
-
-    if (input.value.trim() === "" && currentLatLngValue) {
-      clearRoutingPoint(type);
-    }
-  };
-
-  startInput.addEventListener("input", () => handleManualInputChange("start"));
-  viaInput.addEventListener("input", () => handleManualInputChange("via"));
-  endInput.addEventListener("input", () => handleManualInputChange("end"));
-
   function updateCustomCursorPosition(e) {
     if (!routePointSelectionMode) return;
     const mapContainer = map.getContainer();
@@ -789,6 +816,7 @@ function initializeRouting() {
     if (penModeActive) exitPenMode();
     exitRoutePointSelectionMode();
     if (!mode) return;
+    deselectCurrentItem();
     if (mode === "start" && startMarker) {
       map.removeLayer(startMarker);
       startMarker = null;
@@ -801,6 +829,14 @@ function initializeRouting() {
       map.removeLayer(viaMarker);
       viaMarker = null;
     }
+    // Only guards against selecting some other, unrelated existing layer while
+    // placing route points - it was never meant to stop the route from
+    // selecting/highlighting itself, which is a normal and expected part of
+    // creating it via this flow.
+    window.app.activateMode("route-select", {
+      onCancel: exitRoutePointSelectionMode,
+      canSelect: (layer) => layer === currentRoutePath,
+    });
     routePointSelectionMode = mode;
     document.body.classList.add("route-point-select-mode");
     selectStartBtn.classList.toggle("active", mode === "start");
@@ -820,6 +856,7 @@ function initializeRouting() {
   };
 
   const exitRoutePointSelectionMode = () => {
+    window.app.deactivateMode("route-select");
     routePointSelectionMode = null;
     document.body.classList.remove("route-point-select-mode");
     selectStartBtn.classList.remove("active");
@@ -848,14 +885,22 @@ function initializeRouting() {
 
   const enterPenMode = () => {
     exitRoutePointSelectionMode();
+    deselectCurrentItem();
     clearRouting();
     penModeActive = true;
     penModeClickCount = 0;
     penModeBtn.classList.add("active");
     document.body.classList.add("pen-draw-mode");
+    // Same carve-out as route-select above: selecting the route being built
+    // is expected, selecting anything else while placing points is not.
+    window.app.activateMode("pen", {
+      onCancel: exitPenMode,
+      canSelect: (layer) => layer === currentRoutePath,
+    });
   };
 
   const exitPenMode = () => {
+    window.app.deactivateMode("pen");
     penModeActive = false;
     penModeClickCount = 0;
     penModeBtn.classList.remove("active");
@@ -875,39 +920,28 @@ function initializeRouting() {
   map.on("click", (e) => {
     if (penModeActive) {
       const latlng = e.latlng;
-      const locStr = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+      const locStr = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
 
       if (penModeClickCount === 0) {
         currentStartLatLng = latlng;
         startInput.value = locStr;
         startInput.style.color = "var(--color-black)";
-        if (startMarker) {
-          startMarker.setLatLng(latlng);
-        } else {
-          startMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_START, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(startMarker, "start");
-        }
+        ensureRoutingMarker("start", latlng);
         penModeClickCount = 1;
       } else if (penModeClickCount === 1) {
         currentEndLatLng = latlng;
         endInput.value = locStr;
         endInput.style.color = "var(--color-black)";
-        if (endMarker) {
-          endMarker.setLatLng(latlng);
-        } else {
-          endMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_END, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(endMarker, "end");
+        if (ensureRoutingMarker("end", latlng)) {
+          endMarker.on("click", (e) => {
+            if (penModeActive && penModeClickCount >= 2) {
+              L.DomEvent.stop(e);
+              exitPenMode();
+            }
+          });
         }
         penModeClickCount = 2;
-        calculateNewRoute();
+        updateRouteWithIntermediateVias();
         shouldFitBounds = false;
       } else {
         createIntermediateViaMarker(currentEndLatLng);
@@ -924,65 +958,7 @@ function initializeRouting() {
     }
 
     if (routePointSelectionMode) {
-      const latlng = e.latlng;
-      const input =
-        routePointSelectionMode === "start"
-          ? startInput
-          : routePointSelectionMode === "via"
-            ? viaInput
-            : endInput;
-      input.value = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
-
-      if (routePointSelectionMode === "start") {
-        currentStartLatLng = latlng;
-        startInput.style.color = "var(--color-black)";
-        if (startMarker) {
-          startMarker.setLatLng(latlng);
-        } else {
-          startMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_START, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(startMarker, "start");
-        }
-      } else if (routePointSelectionMode === "via") {
-        currentViaLatLng = latlng;
-        viaInput.style.color = "var(--color-black)";
-        if (viaMarker) {
-          viaMarker.setLatLng(latlng);
-        } else {
-          viaMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_VIA, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(viaMarker, "via");
-        }
-      } else {
-        currentEndLatLng = latlng;
-        endInput.style.color = "var(--color-black)";
-        if (endMarker) {
-          endMarker.setLatLng(latlng);
-        } else {
-          endMarker = L.marker(latlng, {
-            icon: createMarkerIcon(ROUTING_COLOR_END, 1),
-            title: ROUTING_MARKER_HINT,
-            draggable: true,
-          }).addTo(map);
-          addDragHandlersToRoutingMarker(endMarker, "end");
-        }
-      }
-
-      updateClearButtonState();
-
-      if (routePointSelectionMode === "via") {
-        if (startMarker && endMarker) updateRouteWithIntermediateVias();
-      } else {
-        calculateNewRoute();
-      }
-
-      exitRoutePointSelectionMode();
+      updateRoutingPoint(e.latlng, routePointSelectionMode);
     }
   });
 
@@ -991,57 +967,31 @@ function initializeRouting() {
       return;
     }
 
-    let coordsToUse = currentRoutePath.getLatLngs();
-    let simplificationHappened = false;
-
-    if (enablePathSimplification) {
-      const originalCoords = coordsToUse.map((latlng) => [latlng.lng, latlng.lat]);
-      const simplifiedResult = simplifyPath(
-        originalCoords,
-        "LineString",
-        routeSimplificationConfig,
-      );
-
-      if (simplifiedResult.simplified) {
-        coordsToUse = simplifiedResult.coords.map((c) => L.latLng(c[1], c[0]));
-        simplificationHappened = true;
-      }
-    }
-
-    const newPath = L.polyline(coordsToUse, {
+    const newPath = L.polyline(currentRoutePath.getLatLngs(), {
       ...STYLE_CONFIG.path.default,
       color: currentRoutePath.options.color,
     });
     newPath.feature = JSON.parse(JSON.stringify(currentRoutePath.feature));
-    newPath.pathType = "drawn";
+    // Built fresh rather than copied from the route: the saved path is added to the map
+    // visible, so it must not inherit a hidden route's isManuallyHidden.
+    newPath.internal = { pathType: "drawn" };
     newPath.feature.properties.name = newPath.feature.properties.name || "Saved Route";
     newPath.on("click", (ev) => {
       L.DomEvent.stopPropagation(ev);
       selectItem(newPath);
     });
-    drawnItems.addLayer(newPath);
-    editableLayers.addLayer(newPath);
+    addAsDrawnItem(newPath);
     clearRouting();
     updateOverviewList();
     updateDrawControlStates();
 
-    if (simplificationHappened) {
-      Swal.fire({
-        icon: "success",
-        title: "Route Saved & Optimized!",
-        text: 'The route was simplified and added to the "Drawn Items" layer.',
-        timer: 2500,
-        showConfirmButton: false,
-      });
-    } else {
-      Swal.fire({
-        icon: "success",
-        title: "Route Saved!",
-        text: 'The route has been added to the "Drawn Items" layer.',
-        timer: 2500,
-        showConfirmButton: false,
-      });
-    }
+    Swal.fire({
+      icon: "success",
+      title: "Route Saved!",
+      text: 'The route has been added to the "Drawn Items" layer.',
+      timer: 2500,
+      showConfirmButton: false,
+    });
   };
 
   saveRouteBtn.addEventListener("click", saveRoute);
@@ -1063,13 +1013,35 @@ function initializeRouting() {
     }
   };
 
+  /**
+   * Switches the active routing provider and re-requests the current route
+   * with the same waypoints and travel profile, instead of clearing it.
+   */
+  const switchRoutingProvider = (newProvider) => {
+    const waypoints = routingControl ? routingControl.getWaypoints() : [];
+    setupRoutingControl(newProvider);
+
+    const config = PROVIDER_CONFIG[newProvider];
+    if (config) {
+      const selectedProfile = document.querySelector(
+        "#routing-profile-selector .profile-btn.active",
+      ).dataset.profile;
+      const apiProfile = config.profiles[selectedProfile] || config.profiles["driving"];
+      routingControl.getRouter().options.profile = config.profileFormatter(apiProfile);
+    }
+
+    const validWaypoints = waypoints.filter((wp) => wp.latLng);
+    if (validWaypoints.length > 1) {
+      shouldFitBounds = false;
+      routingControl.setWaypoints(validWaypoints);
+    }
+  };
+
   window.app = window.app || {};
   window.app.setupRoutingControl = setupRoutingControl;
   window.app.clearRouting = clearRouting;
+  window.app.switchRoutingProvider = switchRoutingProvider;
   window.app.saveRoute = saveRoute;
   window.app.redisplayCurrentRoute = redisplayCurrentRoute;
   window.app.updateRoutingPoint = updateRoutingPoint;
-  window.app.exitRoutePointSelectionMode = exitRoutePointSelectionMode;
-  window.app.exitPenMode = exitPenMode;
-  window.app.isPenModeActive = () => penModeActive;
 }

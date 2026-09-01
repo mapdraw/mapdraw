@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // Strava Integration Module
 // This module handles the integration with Strava's API, including OAuth authentication,
@@ -10,7 +10,6 @@ const scope = "read,activity:read_all";
 const tokenURL = "https://www.strava.com/oauth/token";
 // TODO June 1 2027: change base URL to https://www.api-v3.strava.com (ERR_NAME_NOT_RESOLVED as of June 2026)
 const activitiesURL = "https://www.strava.com/api/v3/athlete/activities";
-const streamsURL = "https://www.strava.com/api/v3/activities";
 
 // DOM Elements
 let stravaPanelContent;
@@ -62,8 +61,6 @@ async function getAccessToken(code, clientId, clientSecret) {
 
     if (data.access_token) {
       sessionStorage.setItem("strava_access_token", data.access_token);
-      sessionStorage.setItem("strava_refresh_token", data.refresh_token);
-      sessionStorage.setItem("strava_expires_at", data.expires_at);
       return true;
     } else {
       throw new Error("Access token was not received from Strava.");
@@ -79,22 +76,26 @@ async function getAccessToken(code, clientId, clientSecret) {
 }
 
 /**
+ * Checks whether developer API keys are provided in secrets.js.
+ * @returns {boolean} True if both keys are present
+ */
+function hasDeveloperKeys() {
+  return Boolean(
+    typeof stravaClientId !== "undefined" &&
+    stravaClientId &&
+    typeof stravaClientSecret !== "undefined" &&
+    stravaClientSecret,
+  );
+}
+
+/**
  * Fetches activities from the Strava API, handling pagination and time-based filtering.
+ * On any fetch error the partial buffer is discarded and existing state is kept.
  */
 async function fetchAllActivities() {
   const accessToken = sessionStorage.getItem("strava_access_token");
   if (!accessToken) {
-    // Determine which UI to show if the token is missing.
-    if (
-      typeof stravaClientId !== "undefined" &&
-      stravaClientId &&
-      typeof stravaClientSecret !== "undefined" &&
-      stravaClientSecret
-    ) {
-      showConnectUI();
-    } else {
-      renderUserKeysPanel();
-    }
+    renderStravaPanel();
     return;
   }
 
@@ -136,6 +137,8 @@ async function fetchAllActivities() {
   let page = 1;
   const perPage = 100;
   let keepFetching = true;
+  let fetchFailed = false;
+  let tokenInvalid = false;
 
   while (keepFetching) {
     try {
@@ -145,6 +148,8 @@ async function fetchAllActivities() {
       }
       const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!response.ok) {
+        // Strava sends 401 for any invalidated token (expired after 6h, or access revoked)
+        if (response.status === 401) tokenInvalid = true;
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const activities = await response.json();
@@ -158,20 +163,54 @@ async function fetchAllActivities() {
       }
     } catch (error) {
       console.error("Error fetching Strava activities:", error);
-      if (progressText) progressText.innerText = "Error fetching activities.";
+      fetchFailed = true;
       keepFetching = false;
     }
   }
 
+  if (tokenInvalid) {
+    // Clear the invalidated token so renderStravaPanel() offers reconnecting.
+    sessionStorage.removeItem("strava_access_token");
+    renderStravaPanel();
+    Swal.fire({
+      icon: "info",
+      title: "Strava Session Expired",
+      text: "Your Strava session has expired or been revoked. Please reconnect.",
+    });
+    return;
+  }
+
+  if (fetchFailed) {
+    // All-or-nothing: keep previously loaded activities and allFetchedActivities untouched.
+    renderStravaPanel();
+    Swal.fire({
+      icon: "error",
+      title: "Fetch Failed",
+      text: "Could not load activities from Strava. Previously loaded activities were kept.",
+    });
+    return;
+  }
+
   allFetchedActivities = activitiesBuffer;
   hasFetchedActivities = true;
-
-  if (progressText)
-    progressText.innerText = `Found ${activitiesBuffer.length} total activities. Processing...`;
   displayActivitiesOnMap(activitiesBuffer);
 }
 
 // UI Rendering and Event Handling
+
+/**
+ * Renders the panel matching the current auth state: fetch controls when a
+ * token exists, otherwise the auth UI of the active flow.
+ */
+function renderStravaPanel() {
+  if (sessionStorage.getItem("strava_access_token")) {
+    showFetchUI();
+  } else if (hasDeveloperKeys()) {
+    showConnectUI();
+  } else {
+    showUserKeysUI();
+  }
+}
 
 /**
  * Displays the "Connect with Strava" button (for developer keys flow).
@@ -186,13 +225,20 @@ function showConnectUI() {
       </button>
       <p style="font-size: var(--font-size-12); color: var(--text-color); margin-top: 5px;">
         By connecting, you agree to the ${APP_NAME}<br>
-        <a href="/privacy.html" target="_blank" style="color: var(--highlight-color);">Privacy Policy</a>
+        <a href="/privacy.html" target="_blank">Privacy Policy</a>
       </p>
     </div>
   `;
 
   document.getElementById("strava-connect-btn").addEventListener("click", () => {
-    stravaPanelContent.innerHTML = "<p>Waiting for Strava authentication in the new tab...</p>";
+    stravaPanelContent.innerHTML = `
+      <p>Waiting for Strava authentication in the new tab...</p>
+      <button id="strava-cancel-auth-btn" class="strava-button-secondary" style="margin: 0 auto;">Cancel</button>
+    `;
+    document.getElementById("strava-cancel-auth-btn").addEventListener("click", () => {
+      window.removeEventListener("storage", handleStravaAuthReturn);
+      showConnectUI();
+    });
     const stravaAuthURL = `https://www.strava.com/oauth/authorize?client_id=${stravaClientId}&redirect_uri=${redirectURI}&response_type=code&scope=${scope}`;
     window.open(stravaAuthURL, "_blank");
     window.addEventListener("storage", handleStravaAuthReturn);
@@ -200,33 +246,23 @@ function showConnectUI() {
 }
 
 /**
- * Renders the Strava panel for user-provided keys.
- * Shows either a single CTA button (not authenticated) or fetch controls (authenticated).
+ * Displays the CTA button for providing API keys (user keys flow).
  */
-function renderUserKeysPanel() {
+function showUserKeysUI() {
   if (!stravaPanelContent) return;
-  const accessToken = sessionStorage.getItem("strava_access_token");
-
-  if (accessToken) {
-    // User is authenticated - show fetch controls
-    stravaPanelContent.innerHTML = _getFetchControlsHTML(stravaActivitiesLayer.getLayers().length);
-    _addFetchControlsListeners(fetchAllActivities, stravaActivitiesLayer.getLayers().length);
-  } else {
-    // No authentication - show single CTA button
-    stravaPanelContent.innerHTML = `
-      <div style="padding: 0; text-align: center;">
-        <p style="margin-bottom: 10px;">To see your activities on the map:</p>
-        <button id="strava-provide-keys-btn" class="strava-button-primary" style="width: 100%;">
-          Provide your Strava API Keys
-        </button>
-      </div>
-    `;
-    document.getElementById("strava-provide-keys-btn").addEventListener("click", () => {
-      tempUserClientId = "";
-      tempUserClientSecret = "";
-      showApiKeysModal();
-    });
-  }
+  stravaPanelContent.innerHTML = `
+    <div style="padding: 0; text-align: center;">
+      <p style="margin-bottom: 10px;">To see your activities on the map:</p>
+      <button id="strava-provide-keys-btn" class="strava-button-primary" style="width: 100%;">
+        Provide your Strava API Keys
+      </button>
+    </div>
+  `;
+  document.getElementById("strava-provide-keys-btn").addEventListener("click", () => {
+    tempUserClientId = "";
+    tempUserClientSecret = "";
+    showApiKeysModal();
+  });
 }
 
 /**
@@ -240,6 +276,7 @@ function showApiKeysModal() {
       html: `
         <div style="text-align: left;">
           <p style="margin-bottom: 15px;">This application uses your personal Strava API credentials for performance and data control.</p>
+          <p style="margin-bottom: 15px;"><strong>Note:</strong> Strava requires an active Strava subscription to create and use an API app.</p>
           <p><strong>How to get your keys:</strong></p>
           <ol style="padding-left: 20px; margin-bottom: 15px;">
             <li>Go to your <a href="https://www.strava.com/settings/api" target="_blank" style="color: var(--highlight-color);">Strava API Settings</a>.</li>
@@ -253,7 +290,7 @@ function showApiKeysModal() {
             class="swal2-input swal-input-field"
             placeholder="Strava Client ID"
             autocomplete="off"
-            value="${tempUserClientId}"
+            value="${escHtml(tempUserClientId)}"
             style="margin-bottom: 10px;"
           />
           <input
@@ -262,7 +299,7 @@ function showApiKeysModal() {
             class="swal2-input swal-input-field"
             placeholder="Strava Client Secret"
             autocomplete="off"
-            value="${tempUserClientSecret}"
+            value="${escHtml(tempUserClientSecret)}"
           />
         </div>
       `,
@@ -301,17 +338,28 @@ function showApiKeysModal() {
           // Preserve current input values before the modal is destroyed by the toast
           tempUserClientId = clientIdInput.value.trim();
           tempUserClientSecret = clientSecretInput.value.trim();
-          copyToClipboard(APP_DOMAIN).then(() => {
-            Swal.fire({
-              toast: true,
-              icon: "success",
-              title: "Domain Copied!",
-              showConfirmButton: false,
-              timer: 1500,
-            }).then(() => {
+          copyToClipboard(APP_DOMAIN)
+            .then(() =>
+              Swal.fire({
+                toast: true,
+                icon: "success",
+                title: "Domain Copied!",
+                showConfirmButton: false,
+                timer: 1500,
+              }),
+            )
+            .catch(() =>
+              Swal.fire({
+                toast: true,
+                icon: "error",
+                title: "Failed to Copy",
+                showConfirmButton: false,
+                timer: 1500,
+              }),
+            )
+            .then(() => {
               Swal.fire(buildModalOptions());
             });
-          });
         });
       },
       preConfirm: () => {
@@ -340,21 +388,13 @@ function showApiKeysModal() {
 }
 
 /**
- * Generates HTML for the Strava fetch/export controls.
- * @param {number} activityCount - The number of currently loaded activities
+ * Generates HTML for the Strava fetch/export controls. The status line and the
+ * export buttons' enabled state are filled in by refreshStravaActivityCount().
  * @returns {string} The HTML string for the controls
  */
-function _getFetchControlsHTML(activityCount = 0) {
-  let message;
-  if (activityCount > 0) {
-    message = `${activityCount} activities loaded.`;
-  } else if (hasFetchedActivities) {
-    message = "No activities found for the selected period.";
-  } else {
-    message = "Select a time period and fetch your activities.";
-  }
+function _getFetchControlsHTML() {
   return `
-      <p>Successfully connected to Strava.<br>${message}</p>
+      <p>Successfully connected to Strava. <button id="strava-disconnect-btn" class="link-button">Disconnect</button><br><span id="strava-status"></span></p>
       <div id="strava-controls" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%;">
         <select id="strava-fetch-count" class="strava-button-secondary" style="flex: 2; min-width: 120px;">
           <option value="30d"${lastSelectedPeriod === "30d" ? " selected" : ""}>Last 30 Days</option>
@@ -376,28 +416,61 @@ function _getFetchControlsHTML(activityCount = 0) {
 }
 
 /**
- * Attaches event listeners to the fetch/export controls.
- * @param {function} fetchFunction - The fetch function to call
- * @param {number} activityCount - The number of loaded activities
+ * Builds the status line, telling a fetch that returned nothing apart from a
+ * fetch whose activities were all deleted from the map afterwards.
+ * @param {number} activityCount - The number of activities currently on the map
+ * @returns {string} The status line text
  */
-function _addFetchControlsListeners(fetchFunction, activityCount = 0) {
-  document.getElementById("fetch-strava-btn").addEventListener("click", fetchFunction);
-  const exportGeoJsonBtn = document.getElementById("export-strava-geojson-btn");
-  exportGeoJsonBtn.addEventListener("click", () => exportGeoJson({ mode: "strava" }));
-  exportGeoJsonBtn.disabled = activityCount === 0;
-  const exportJsonBtn = document.getElementById("export-strava-json-btn");
-  exportJsonBtn.addEventListener("click", exportStravaActivitiesAsJson);
-  exportJsonBtn.disabled = activityCount === 0;
+function _getStatusMessage(activityCount) {
+  if (activityCount > 0 || allFetchedActivities.length > 0) {
+    return `${activityCount} ${activityCount === 1 ? "activity" : "activities"} loaded.`;
+  }
+  return hasFetchedActivities
+    ? "No activities found for the selected period."
+    : "Select a time period and fetch your activities.";
 }
 
 /**
- * Displays the UI for fetching/exporting (developer keys flow).
- * @param {number} [activityCount=0] - The number of loaded activities
+ * Syncs the status line and export buttons with the activities currently on the map,
+ * so deleting activities keeps the count honest. No-op unless the fetch UI is shown.
+ * Each button tracks what it actually exports: GeoJSON writes the map layers, raw
+ * JSON writes the last fetch's response - which outlives the layers being deleted.
  */
-function showFetchUI(activityCount = 0) {
+function refreshStravaActivityCount() {
+  const status = document.getElementById("strava-status");
+  if (!status) return;
+  const activityCount = stravaActivitiesLayer.getLayers().length;
+  status.textContent = _getStatusMessage(activityCount);
+  document.getElementById("export-strava-geojson-btn").disabled = activityCount === 0;
+  document.getElementById("export-strava-json-btn").disabled = allFetchedActivities.length === 0;
+}
+
+/**
+ * Displays the UI for fetching/exporting activities.
+ */
+function showFetchUI() {
   if (!stravaPanelContent) return;
-  stravaPanelContent.innerHTML = _getFetchControlsHTML(activityCount);
-  _addFetchControlsListeners(fetchAllActivities, activityCount);
+  stravaPanelContent.innerHTML = _getFetchControlsHTML();
+  document.getElementById("strava-disconnect-btn").addEventListener("click", disconnectStrava);
+  document.getElementById("fetch-strava-btn").addEventListener("click", fetchAllActivities);
+  document
+    .getElementById("export-strava-geojson-btn")
+    .addEventListener("click", () => exportGeoJson({ mode: "strava" }));
+  document
+    .getElementById("export-strava-json-btn")
+    .addEventListener("click", exportStravaActivitiesAsJson);
+  refreshStravaActivityCount();
+}
+
+/**
+ * Clears the Strava session and returns the panel to its auth UI.
+ * Activities already on the map are kept.
+ */
+function disconnectStrava() {
+  sessionStorage.removeItem("strava_access_token");
+  tempUserClientId = "";
+  tempUserClientSecret = "";
+  renderStravaPanel();
 }
 
 // Authentication Callback Handlers
@@ -413,17 +486,13 @@ async function handleStravaAuthReturn(event) {
     window.removeEventListener("storage", handleStravaAuthReturn);
     stravaPanelContent.innerHTML = "<p>Authenticating...</p>";
 
-    const success = await getAccessToken(authCode, stravaClientId, stravaClientSecret);
-    if (success) {
-      showFetchUI();
-    } else {
-      showConnectUI();
-    }
+    await getAccessToken(authCode, stravaClientId, stravaClientSecret);
+    renderStravaPanel();
   } else if (event.key === "stravaAuthError") {
     console.error("Strava authentication error:", event.newValue);
     localStorage.removeItem("stravaAuthError");
     window.removeEventListener("storage", handleStravaAuthReturn);
-    showConnectUI();
+    renderStravaPanel();
   }
 }
 
@@ -439,7 +508,7 @@ async function handleStravaAuthReturnForUserKeys(event) {
     Swal.close();
 
     await getAccessToken(authCode, tempUserClientId, tempUserClientSecret);
-    renderUserKeysPanel();
+    renderStravaPanel();
   } else if (event.key === "stravaAuthError") {
     console.error("Strava authentication error:", event.newValue);
     localStorage.removeItem("stravaAuthError");
@@ -455,8 +524,11 @@ async function handleStravaAuthReturnForUserKeys(event) {
  */
 function displayActivitiesOnMap(activities) {
   if (!stravaActivitiesLayer) return;
+  // Deselect first: clearLayers() below would leave the selection UI referencing a removed layer.
+  if (globallySelectedItem && stravaActivitiesLayer.hasLayer(globallySelectedItem)) {
+    deselectCurrentItem();
+  }
   stravaActivitiesLayer.clearLayers();
-  let processedCount = 0;
 
   activities.forEach((activity) => {
     if (activity.map && activity.map.summary_polyline) {
@@ -464,21 +536,25 @@ function displayActivitiesOnMap(activities) {
         const latlngs = L.Polyline.fromEncoded(activity.map.summary_polyline).getLatLngs();
         const polyline = L.polyline(latlngs, { ...STYLE_CONFIG.path.default, color: STRAVA_COLOR });
         polyline.feature = {
+          // Full activity kept deliberately: properties carry source data untouched
+          // (see config.js data model), so GeoJSON export is a complete backup.
           properties: {
             ...activity,
-            totalDistance: activity.distance,
-            color: STRAVA_COLOR,
-            pathType: "strava",
             stravaId: activity.id,
           },
         };
-        polyline.pathType = "strava";
+        polyline.internal = { pathType: "strava" };
+        setLayerColor(polyline, STRAVA_COLOR);
+        // Same guarantee every other creation site makes: a name is never blank downstream
+        // (display, export). Strava supplies one, but an unnamed activity mustn't slip through.
+        if (!polyline.feature.properties.name) {
+          polyline.feature.properties.name = getDefaultLayerName(polyline);
+        }
         polyline.on("click", (e) => {
           L.DomEvent.stopPropagation(e);
           selectItem(polyline);
         });
         stravaActivitiesLayer.addLayer(polyline);
-        processedCount++;
       } catch (e) {
         console.warn("Could not decode polyline for activity:", activity.id, e);
       }
@@ -494,23 +570,7 @@ function displayActivitiesOnMap(activities) {
   }
   updateOverviewList();
   updateDrawControlStates();
-
-  // Determine which UI needs updating
-  if (
-    typeof stravaClientId !== "undefined" &&
-    stravaClientId &&
-    typeof stravaClientSecret !== "undefined" &&
-    stravaClientSecret
-  ) {
-    showFetchUI(processedCount);
-  } else {
-    renderUserKeysPanel();
-  }
-
-  const progressText = document.getElementById("strava-progress");
-  if (progressText) {
-    progressText.innerText = `Displayed ${processedCount} activities on the map.`;
-  }
+  renderStravaPanel();
 }
 
 /**
@@ -528,13 +588,22 @@ async function exportStravaActivitiesAsJson() {
 }
 
 /**
+ * Builds the URL of an activity's original GPX export on Strava's website.
+ * @param {string} activityId - The ID of the Strava activity
+ * @returns {string} The export_gpx URL
+ */
+function stravaGpxExportUrl(activityId) {
+  return `https://www.strava.com/activities/${activityId}/export_gpx`;
+}
+
+/**
  * Triggers a browser download of the original GPX file from Strava's website.
  * @param {string} activityId - The ID of the Strava activity
  * @param {string} activityName - The name of the activity, used for the filename
  */
 function downloadOriginalStravaGpx(activityId, activityName) {
   const link = document.createElement("a");
-  link.href = `https://www.strava.com/activities/${activityId}/export_gpx`;
+  link.href = stravaGpxExportUrl(activityId);
   link.download = `${activityName.replace(/[^a-z0-9]/gi, "_")}.gpx`;
   document.body.appendChild(link);
   link.click();
@@ -544,19 +613,9 @@ function downloadOriginalStravaGpx(activityId, activityName) {
 /**
  * Initializes the Strava integration.
  */
-function initializeStrava() {
+function initStrava() {
   stravaPanelContent = document.getElementById("strava-panel-content");
-  sessionStorage.removeItem("strava_access_token");
-
-  // This logic checks if developer keys are provided in secrets.js.
-  if (
-    typeof stravaClientId !== "undefined" &&
-    stravaClientId &&
-    typeof stravaClientSecret !== "undefined" &&
-    stravaClientSecret
-  ) {
-    showConnectUI();
-  } else {
-    renderUserKeysPanel();
-  }
+  // The token lives in sessionStorage (cleared on tab close, per privacy.html),
+  // so a reload keeps the connected state.
+  renderStravaPanel();
 }

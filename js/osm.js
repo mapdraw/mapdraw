@@ -1,0 +1,787 @@
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
+
+// OpenStreetMap Integration Module
+// Handles OAuth 2.0 PKCE authentication and settings panel UI.
+
+const OSM_TEST_MODE = true; // Overridden to false in production by deploy.yml
+
+const OSM_BASE = OSM_TEST_MODE
+  ? "https://master.apis.dev.openstreetmap.org"
+  : "https://www.openstreetmap.org";
+const OSM_AUTH_URL = `${OSM_BASE}/oauth2/authorize`;
+const OSM_TOKEN_URL = `${OSM_BASE}/oauth2/token`;
+const OSM_API_URL = OSM_TEST_MODE
+  ? "https://master.apis.dev.openstreetmap.org/api/0.6"
+  : "https://api.openstreetmap.org/api/0.6";
+const OSM_REDIRECT_URI = `${window.location.origin}/osm-callback.html`;
+const OSM_SCOPE = "read_prefs write_api write_notes";
+
+const OSM_CONTRIBUTE_CATEGORIES = [
+  { id: "viewpoint", name: "Viewpoint", icon: "landscape", tags: { tourism: "viewpoint" } },
+  { id: "playground", name: "Playground", icon: "playground", tags: { leisure: "playground" } },
+  { id: "bench", name: "Bench", icon: "chair", tags: { amenity: "bench" } },
+  { id: "picnic_table", name: "Picnic Table", icon: "deck", tags: { leisure: "picnic_table" } },
+  {
+    id: "drinking_water",
+    name: "Drinking Water",
+    icon: "water_drop",
+    tags: { amenity: "drinking_water" },
+  },
+  { id: "fountain", name: "Fountain", icon: "water", tags: { amenity: "fountain" } },
+  { id: "firepit", name: "Fire Pit", icon: "local_fire_department", tags: { leisure: "firepit" } },
+  { id: "bbq", name: "BBQ", icon: "outdoor_grill", tags: { amenity: "bbq" } },
+  { id: "toilets", name: "Toilets", icon: "wc", tags: { amenity: "toilets" } },
+  { id: "shelter", name: "Shelter", icon: "roofing", tags: { amenity: "shelter" } },
+  { id: "waste_basket", name: "Waste Basket", icon: "delete", tags: { amenity: "waste_basket" } },
+  { id: "recycling", name: "Recycling", icon: "recycling", tags: { amenity: "recycling" } },
+  {
+    id: "bicycle_parking",
+    name: "Bicycle Parking",
+    icon: "pedal_bike",
+    tags: { amenity: "bicycle_parking" },
+  },
+  {
+    id: "fitness_station",
+    name: "Fitness Station",
+    icon: "fitness_center",
+    tags: { leisure: "fitness_station" },
+  },
+];
+
+function osmRandomBase64url(byteCount) {
+  const array = new Uint8Array(byteCount);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+}
+
+function osmGeneratePKCEPlain() {
+  const codeVerifier = osmRandomBase64url(32);
+  return { codeVerifier, codeChallenge: codeVerifier, method: "plain" };
+}
+
+async function osmGeneratePKCES256() {
+  const codeVerifier = osmRandomBase64url(32);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(codeVerifier));
+  const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+  return { codeVerifier, codeChallenge, method: "S256" };
+}
+
+let _osmPKCEPair = null;
+osmGeneratePKCES256()
+  .then((pair) => {
+    _osmPKCEPair = pair;
+  })
+  .catch(() => {
+    _osmPKCEPair = osmGeneratePKCEPlain();
+  });
+
+function osmSignIn() {
+  if (typeof osmClientId === "undefined" || !osmClientId) {
+    Swal.fire({
+      title: "OSM not configured",
+      text: "Set osmClientId in secrets.js to enable OpenStreetMap sign-in.",
+    });
+    return;
+  }
+
+  if (!_osmPKCEPair) _osmPKCEPair = osmGeneratePKCEPlain();
+  const { codeVerifier, codeChallenge, method } = _osmPKCEPair;
+  _osmPKCEPair = null;
+  osmGeneratePKCES256()
+    .then((pair) => {
+      _osmPKCEPair = pair;
+    })
+    .catch(() => {
+      _osmPKCEPair = osmGeneratePKCEPlain();
+    });
+
+  localStorage.removeItem("osmAuthCode");
+  localStorage.removeItem("osmAuthState");
+  localStorage.removeItem("osmAuthError");
+
+  const state = osmRandomBase64url(16);
+
+  sessionStorage.setItem("osmCodeVerifier", codeVerifier);
+  sessionStorage.setItem("osmAuthState", state);
+
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: osmClientId,
+    redirect_uri: OSM_REDIRECT_URI,
+    scope: OSM_SCOPE,
+    state,
+    code_challenge: codeChallenge,
+    code_challenge_method: method,
+  });
+
+  const popup = window.open(`${OSM_AUTH_URL}?${params}`, "_blank");
+  if (!popup) {
+    sessionStorage.removeItem("osmCodeVerifier");
+    sessionStorage.removeItem("osmAuthState");
+    Swal.fire({
+      title: "Popup Blocked",
+      text: "Please allow popups for this site to sign in with OpenStreetMap.",
+    });
+    return;
+  }
+
+  const poll = setInterval(async () => {
+    const error = localStorage.getItem("osmAuthError");
+    if (error) {
+      clearInterval(poll);
+      localStorage.removeItem("osmAuthError");
+      sessionStorage.removeItem("osmCodeVerifier");
+      sessionStorage.removeItem("osmAuthState");
+      const text =
+        error === "access_denied"
+          ? "You denied access. Please try again and click Accept to sign in."
+          : `Authorization failed: ${error}`;
+      Swal.fire({ title: "Authentication Failed", text });
+      return;
+    }
+
+    const code = localStorage.getItem("osmAuthCode");
+    if (code) {
+      clearInterval(poll);
+      localStorage.removeItem("osmAuthCode");
+
+      const returnedState = localStorage.getItem("osmAuthState");
+      localStorage.removeItem("osmAuthState");
+      const expectedState = sessionStorage.getItem("osmAuthState");
+      sessionStorage.removeItem("osmAuthState");
+
+      if (returnedState !== expectedState) {
+        sessionStorage.removeItem("osmCodeVerifier");
+        Swal.fire({ title: "Authentication Failed", text: "State mismatch. Please try again." });
+        return;
+      }
+
+      const success = await osmExchangeCode(code);
+      if (success) {
+        await osmUpdateSettingsUI();
+      }
+    }
+  }, 500);
+
+  setTimeout(
+    () => {
+      clearInterval(poll);
+      sessionStorage.removeItem("osmCodeVerifier");
+      sessionStorage.removeItem("osmAuthState");
+    },
+    5 * 60 * 1000,
+  );
+}
+
+async function osmExchangeCode(code) {
+  const codeVerifier = sessionStorage.getItem("osmCodeVerifier");
+  if (!codeVerifier) {
+    Swal.fire({
+      title: "Authentication Failed",
+      text: "Code verifier not found. Please try again.",
+    });
+    return false;
+  }
+
+  try {
+    const tokenParams = {
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: OSM_REDIRECT_URI,
+      client_id: osmClientId,
+      code_verifier: codeVerifier,
+    };
+
+    const response = await fetch(OSM_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(tokenParams),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      throw new Error(data.error_description || data.error || "Token exchange failed");
+    }
+    if (!data.access_token) throw new Error("No access token received");
+
+    localStorage.setItem("osmAccessToken", data.access_token);
+    sessionStorage.removeItem("osmCodeVerifier");
+    return true;
+  } catch (error) {
+    console.error("OSM token exchange error:", error);
+    Swal.fire({ title: "Authentication Failed", html: `Error: ${error.message}` });
+    return false;
+  }
+}
+
+async function osmFetchUser() {
+  const token = localStorage.getItem("osmAccessToken");
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`${OSM_API_URL}/user/details.json`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem("osmAccessToken");
+      return null;
+    }
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data.user || null;
+  } catch {
+    return null;
+  }
+}
+
+function osmSignOut() {
+  localStorage.removeItem("osmAccessToken");
+  osmUpdateSettingsUI();
+}
+
+async function osmUpdateSettingsUI() {
+  const signInBtn = document.getElementById("osm-sign-in-btn");
+  const signOutBtn = document.getElementById("osm-sign-out-btn");
+  const usernameEl = document.getElementById("osm-username");
+  const userLinksEl = document.getElementById("osm-user-links");
+
+  if (!signInBtn) return;
+
+  const token = localStorage.getItem("osmAccessToken");
+
+  if (token) {
+    const user = await osmFetchUser();
+    if (user) {
+      signInBtn.style.display = "none";
+      usernameEl.textContent = user.display_name;
+      usernameEl.href = `${OSM_BASE}/user/${encodeURIComponent(user.display_name)}`;
+      usernameEl.style.display = "";
+      signOutBtn.style.display = "";
+      if (userLinksEl) {
+        const encoded = encodeURIComponent(user.display_name);
+        userLinksEl.innerHTML = `<a href="#" id="osm-contributions-link">Contributions</a><a href="${OSM_BASE}/user/${encoded}/history" target="_blank" rel="noopener noreferrer">History</a><a href="${OSM_BASE}/user/${encoded}/notes" target="_blank" rel="noopener noreferrer">Notes</a>`;
+        userLinksEl.querySelector("#osm-contributions-link").addEventListener("click", (e) => {
+          e.preventDefault();
+          osmShowContributions(user);
+        });
+        userLinksEl.style.display = "";
+      }
+      return;
+    }
+  }
+
+  signInBtn.style.display = "";
+  usernameEl.style.display = "none";
+  signOutBtn.style.display = "none";
+  if (userLinksEl) userLinksEl.style.display = "none";
+}
+
+function osmRenderCategories(filter = "") {
+  return OSM_CONTRIBUTE_CATEGORIES.filter(
+    (cat) => !filter || cat.name.toLowerCase().includes(filter.toLowerCase()),
+  )
+    .map(
+      (cat) => `
+    <button class="osm-contribute-category-btn osm-contribute-btn" data-id="${cat.id}">
+      <span class="material-symbols" style="font-size: 20px;">${cat.icon}</span>
+      <span>${cat.name}</span>
+    </button>`,
+    )
+    .join("");
+}
+
+function osmAttachCategoryHandlers(grid, latlng) {
+  grid.querySelectorAll(".osm-contribute-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const cat = OSM_CONTRIBUTE_CATEGORIES.find((c) => c.id === btn.dataset.id);
+      if (!cat) return;
+      Swal.close();
+      const { isConfirmed } = await Swal.fire({
+        title: `Add ${cat.name}?`,
+        text: "This will be submitted to OpenStreetMap. Make sure it doesn't already exist nearby.",
+        showCancelButton: true,
+        confirmButtonText: "Submit",
+      });
+      if (!isConfirmed) return;
+      try {
+        const nodeId = await osmSubmitNode(latlng, cat.tags);
+        Swal.fire({
+          toast: true,
+          icon: "success",
+          title: "Contributed to OpenStreetMap",
+          html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank">Node: ${nodeId}</a>`,
+          showConfirmButton: false,
+          timer: 4000,
+        });
+      } catch (error) {
+        Swal.fire({ title: "Contribution Failed", html: error.message });
+      }
+    });
+  });
+}
+
+const OSM_MIN_ZOOM = 19;
+
+async function osmRequireZoom(latlng, text) {
+  if (map.getZoom() >= OSM_MIN_ZOOM) return true;
+  const result = await Swal.fire({
+    icon: "warning",
+    title: "Zoom In Required",
+    text,
+    showCancelButton: true,
+    confirmButtonText: "Zoom In",
+    cancelButtonText: "Cancel",
+  });
+  if (result.isConfirmed) {
+    map.setView(latlng, OSM_MIN_ZOOM);
+  }
+  return false;
+}
+
+async function osmShowContributePicker(latlng) {
+  const ok = await osmRequireZoom(
+    latlng,
+    "Please zoom in closer before adding a point for better accuracy and to avoid duplicates.",
+  );
+  if (!ok) return;
+
+  await Swal.fire({
+    title: "Add to OpenStreetMap",
+    html: `
+      <div style="text-align: left;">
+        <input
+          id="osm-contribute-search"
+          type="text"
+          placeholder="Search"
+          class="osm-contribute-search"
+          style="width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--background-color); color: var(--text-color); font-size: var(--font-size-14);"
+        />
+        <div class="osm-contribute-grid" id="osm-contribute-grid">
+          ${osmRenderCategories()}
+        </div>
+      </div>
+    `,
+    confirmButtonText: "Cancel",
+    customClass: { popup: "poi-finder-modal" },
+    didOpen: () => {
+      const grid = document.getElementById("osm-contribute-grid");
+      const search = document.getElementById("osm-contribute-search");
+      osmAttachCategoryHandlers(grid, latlng);
+      search.addEventListener("input", () => {
+        grid.innerHTML = osmRenderCategories(search.value);
+        osmAttachCategoryHandlers(grid, latlng);
+      });
+    },
+  });
+}
+
+function osmIsSignedIn() {
+  return !!localStorage.getItem("osmAccessToken");
+}
+
+async function osmSubmitNote(latlng, text) {
+  const token = localStorage.getItem("osmAccessToken");
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const params = new URLSearchParams({ lat: latlng.lat, lon: latlng.lng, text });
+  const response = await fetch(`${OSM_API_URL}/notes.json?${params}`, {
+    method: "POST",
+    headers,
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) throw new Error("Rate limit reached. Please try again later.");
+    throw new Error(`Failed to submit note: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.properties?.id;
+}
+
+async function osmShowNotePicker(latlng) {
+  const ok = await osmRequireZoom(
+    latlng,
+    "Please zoom in closer before leaving a note to place it accurately.",
+  );
+  if (!ok) return;
+
+  const { value: text } = await Swal.fire({
+    title: "Leave a Note on OpenStreetMap",
+    input: "textarea",
+    inputPlaceholder: "Describe what's missing or incorrect...",
+    confirmButtonText: "Submit",
+    showCancelButton: true,
+    didOpen: () => {
+      const confirmButton = Swal.getConfirmButton();
+      confirmButton.disabled = true;
+      Swal.getInput().addEventListener("input", (e) => {
+        confirmButton.disabled = !e.target.value.trim();
+      });
+    },
+  });
+
+  if (!text) return;
+
+  try {
+    const noteId = await osmSubmitNote(latlng, text.trim());
+    Swal.fire({
+      toast: true,
+      icon: "success",
+      title: "Submitted to OpenStreetMap",
+      html: noteId
+        ? `<a href="${OSM_BASE}/note/${noteId}" target="_blank">Note #${noteId}</a>`
+        : undefined,
+      showConfirmButton: false,
+      timer: 4000,
+    });
+  } catch (error) {
+    Swal.fire({ title: "Submission Failed", html: error.message });
+  }
+}
+
+async function osmWithChangeset(comment, token, fn) {
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "text/xml" };
+  const xml = `<osm><changeset><tag k="created_by" v="${OSM_TEST_MODE ? OSM_CREATED_BY + "Test" : OSM_CREATED_BY}"/>${comment ? `<tag k="comment" v="${comment}"/>` : ""}</changeset></osm>`;
+  const res = await fetch(`${OSM_API_URL}/changeset/create`, { method: "PUT", headers, body: xml });
+  if (!res.ok) {
+    if (res.status === 429) throw new Error("Rate limit reached. Please try again later.");
+    throw new Error(`Could not create changeset: ${res.status}`);
+  }
+  const changesetId = (await res.text()).trim();
+  try {
+    return await fn(changesetId, headers);
+  } finally {
+    await fetch(`${OSM_API_URL}/changeset/${changesetId}/close`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
+}
+
+async function osmSubmitNode(latlng, tags) {
+  const token = localStorage.getItem("osmAccessToken");
+  if (!token) throw new Error("Not signed in");
+
+  const tagComment = Object.entries(tags)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(", ");
+
+  try {
+    return await osmWithChangeset(`Created ${tagComment}`, token, async (changesetId, headers) => {
+      const tagsXml = Object.entries(tags)
+        .map(([k, v]) => `<tag k="${k}" v="${v}"/>`)
+        .join("");
+      const nodeXml = `<osm><node lat="${latlng.lat}" lon="${latlng.lng}" changeset="${changesetId}">${tagsXml}</node></osm>`;
+      const nodeRes = await fetch(`${OSM_API_URL}/nodes`, {
+        method: "POST",
+        headers,
+        body: nodeXml,
+      });
+      if (!nodeRes.ok) {
+        if (nodeRes.status === 409) throw new Error("Changeset conflict. Please try again.");
+        if (nodeRes.status === 429) throw new Error("Rate limit reached. Please try again later.");
+        throw new Error(`Failed to create node: ${nodeRes.status}`);
+      }
+      return (await nodeRes.text()).trim();
+    });
+  } catch (error) {
+    console.error("OSM submit error:", error);
+    throw error;
+  }
+}
+
+function initOSM(settingsPanel) {
+  const osmContainer = L.DomUtil.create(
+    "div",
+    "settings-control-item osm-profile-item",
+    settingsPanel,
+  );
+
+  const osmRow = L.DomUtil.create("div", "osm-profile-row", osmContainer);
+
+  const osmLabelGroup = L.DomUtil.create("div", "", osmRow);
+  osmLabelGroup.style.display = "flex";
+  osmLabelGroup.style.alignItems = "center";
+  const osmLabel = L.DomUtil.create("label", "", osmLabelGroup);
+  osmLabel.innerText = "OpenStreetMap Profile";
+
+  const osmInfoIcon = L.DomUtil.create("span", "settings-info-icon", osmLabelGroup);
+  osmInfoIcon.innerHTML = '<span class="material-symbols">help</span>';
+  osmInfoIcon.title = "What's this?";
+  L.DomEvent.on(osmInfoIcon, "click", () => {
+    Swal.fire({
+      title: "Contribute to OpenStreetMap",
+      html: `
+<p style="text-align: left; margin: 0 0 18px 0">
+  After signing in, the context menu lets you <strong>add missing places</strong> and <strong>leave notes</strong> directly on OpenStreetMap. To open the context menu:
+</p>
+<p style="text-align: left; margin: 0">
+  <strong>Desktop:</strong> Right-click on the map.<br>
+  <strong>Mobile:</strong> Long press on the map.
+</p>`,
+      confirmButtonText: "Got it!",
+    });
+  });
+
+  const signInBtn = L.DomUtil.create("button", "link-button", osmRow);
+  signInBtn.id = "osm-sign-in-btn";
+  signInBtn.innerText = "Sign in";
+
+  const signOutBtn = L.DomUtil.create("button", "link-button", osmRow);
+  signOutBtn.id = "osm-sign-out-btn";
+  signOutBtn.innerText = "Sign out";
+  signOutBtn.style.display = "none";
+
+  const usernameEl = L.DomUtil.create("a", "osm-username", osmContainer);
+  usernameEl.id = "osm-username";
+  usernameEl.target = "_blank";
+  usernameEl.rel = "noopener noreferrer";
+  usernameEl.style.display = "none";
+
+  const osmUserLinks = L.DomUtil.create("div", "osm-user-links", osmContainer);
+  osmUserLinks.id = "osm-user-links";
+  osmUserLinks.style.display = "none";
+
+  L.DomUtil.create("hr", "osm-separator", osmContainer);
+
+  L.DomEvent.on(signInBtn, "click", osmSignIn);
+  L.DomEvent.on(signOutBtn, "click", osmSignOut);
+  L.DomEvent.on(osmContainer, "dblclick mousedown wheel", L.DomEvent.stopPropagation);
+
+  osmUpdateSettingsUI();
+}
+
+async function osmShowContributions(user) {
+  const token = localStorage.getItem("osmAccessToken");
+  if (!token || !user) return;
+
+  Swal.fire({
+    title: "Loading contributions…",
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  try {
+    // Fetch recent changesets
+    const csRes = await fetch(`${OSM_API_URL}/changesets?user=${user.id}&limit=30`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!csRes.ok) throw new Error(`Changesets fetch failed: ${csRes.status}`);
+    const csXml = new DOMParser().parseFromString(await csRes.text(), "text/xml");
+    const changesets = [...csXml.querySelectorAll("changeset")];
+
+    // Download changesets in batches of 10 and collect created nodes
+    const fetchChangeset = async (cs) => {
+      const csId = cs.getAttribute("id");
+      const comment = cs.querySelector('tag[k="comment"]')?.getAttribute("v") ?? "";
+      const createdAt = cs.getAttribute("created_at") ?? "";
+      let dlRes;
+      try {
+        dlRes = await fetch(`${OSM_API_URL}/changeset/${csId}/download`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        return [];
+      }
+      if (!dlRes.ok) return [];
+      const dlXml = new DOMParser().parseFromString(await dlRes.text(), "text/xml");
+      return [...dlXml.querySelectorAll("create > node")].map((n) => ({
+        id: n.getAttribute("id"),
+        lat: n.getAttribute("lat"),
+        lon: n.getAttribute("lon"),
+        comment,
+        createdAt,
+      }));
+    };
+    const nodes = [];
+    for (let i = 0; i < changesets.length; i += 10) {
+      const batch = await Promise.all(changesets.slice(i, i + 10).map(fetchChangeset));
+      nodes.push(...batch.flat());
+    }
+
+    // Verify each node is still live in batches of 10 (410 = deleted)
+    const liveFlags = [];
+    for (let i = 0; i < nodes.length; i += 10) {
+      const batch = nodes.slice(i, i + 10);
+      const flags = await Promise.all(
+        batch.map((n) =>
+          fetch(`${OSM_API_URL}/node/${n.id}`, { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.ok || (r.status !== 410 && r.status !== 404 && r.status !== 401))
+            .catch(() => true),
+        ),
+      );
+      liveFlags.push(...flags);
+    }
+    const liveNodes = nodes.filter((_, i) => liveFlags[i]);
+
+    if (liveNodes.length === 0) {
+      Swal.fire({
+        title: "No contributions found",
+        html: "No contributed points found in your recent changesets.<br><br>To add points via this app, right-click (desktop) or long press (mobile) the map.",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+
+    const renderList = (items) =>
+      items
+        .map((n) => {
+          const displayName = escHtml(n.comment || `#${n.id}`);
+          const d = new Date(n.createdAt);
+          const valid = !isNaN(d);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const date = valid ? `${yyyy}-${mm}-${dd}` : "Unknown";
+          const time = valid
+            ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+            : "";
+          const coords = `${parseFloat(n.lat).toFixed(6)}, ${parseFloat(n.lon).toFixed(6)}`;
+          return `
+        <div class="osm-contribution-row" data-id="${n.id}">
+          <div class="osm-contribution-info">
+            <strong><a href="${OSM_BASE}/node/${n.id}" target="_blank" rel="noopener noreferrer">Node: ${n.id}</a></strong>
+            <span>${displayName}</span>
+            <small class="osm-contribution-meta"><span>${date}</span><span>${time}</span><a href="#" class="osm-goto-btn" data-lat="${n.lat}" data-lon="${n.lon}">${coords}</a></small>
+          </div>
+          <div class="osm-contribution-actions">
+            <button class="osm-delete-btn" data-id="${n.id}" title="Delete node"><span class="material-symbols material-symbols-fill">cancel</span></button>
+          </div>
+        </div>`;
+        })
+        .join("");
+
+    const show = (items, scrollTop = 0) => {
+      Swal.fire({
+        title: "My OSM Contributions",
+        html: `<div id="osm-contributions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
+        confirmButtonText: "Close",
+        didOpen: () => {
+          const scroller = document.getElementById("osm-contributions-scroll");
+          if (scroller) scroller.scrollTop = scrollTop;
+          Swal.getPopup()
+            .querySelectorAll(".osm-goto-btn")
+            .forEach((btn) => {
+              btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                const lat = parseFloat(btn.dataset.lat);
+                const lon = parseFloat(btn.dataset.lon);
+                const row = btn.closest(".osm-contribution-row");
+                const nodeId = row.dataset.id;
+                Swal.close();
+                window.showSearchMarker(L.latLng(lat, lon), `Node: ${nodeId}`);
+              });
+            });
+          Swal.getPopup()
+            .querySelectorAll(".osm-delete-btn")
+            .forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const nodeId = btn.dataset.id;
+                const savedScroll =
+                  document.getElementById("osm-contributions-scroll")?.scrollTop ?? 0;
+                const { isConfirmed } = await Swal.fire({
+                  title: "Delete node?",
+                  text: "This will permanently remove it from OpenStreetMap.",
+                  confirmButtonText: "Delete",
+                  showCancelButton: true,
+                  customClass: { confirmButton: "swal-confirm-danger" },
+                });
+                if (!isConfirmed) return show(items, savedScroll);
+                try {
+                  await osmDeleteNode(nodeId, token);
+                  const remaining = items.filter((n) => n.id !== nodeId);
+                  await Swal.fire({
+                    toast: true,
+                    icon: "success",
+                    title: "Deleted from OpenStreetMap",
+                    html: `<a href="${OSM_BASE}/node/${nodeId}" target="_blank" rel="noopener noreferrer">Node: ${nodeId}</a>`,
+                    timer: 1500,
+                    showConfirmButton: false,
+                  });
+                  if (remaining.length > 0) {
+                    show(remaining, savedScroll);
+                  } else {
+                    Swal.fire({
+                      toast: true,
+                      title: "No more contributions",
+                      icon: "info",
+                      timer: 2000,
+                      showConfirmButton: false,
+                    });
+                  }
+                } catch (err) {
+                  const alreadyGone = /\b(404|410)\b/.test(err.message);
+                  if (alreadyGone) {
+                    const remaining = items.filter((n) => n.id !== nodeId);
+                    if (remaining.length > 0) {
+                      show(remaining, savedScroll);
+                    } else {
+                      Swal.fire({
+                        toast: true,
+                        title: "No more contributions",
+                        icon: "info",
+                        timer: 2000,
+                        showConfirmButton: false,
+                      });
+                    }
+                  } else {
+                    await Swal.fire({ icon: "error", title: "Delete failed", text: err.message });
+                    show(items, savedScroll);
+                  }
+                }
+              });
+            });
+        },
+      });
+    };
+
+    show(liveNodes);
+  } catch (err) {
+    Swal.fire({ icon: "error", title: "Failed to load contributions", text: err.message });
+  }
+}
+
+async function osmDeleteNode(nodeId, token) {
+  token = token ?? localStorage.getItem("osmAccessToken");
+  if (!token) throw new Error("Not signed in");
+
+  // Fetch current version
+  const nodeRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!nodeRes.ok) throw new Error(`Could not fetch node: ${nodeRes.status}`);
+  const nodeXml = new DOMParser().parseFromString(await nodeRes.text(), "text/xml");
+  const nodeEl = nodeXml.querySelector("node");
+  const version = nodeEl?.getAttribute("version");
+  const lat = nodeEl?.getAttribute("lat");
+  const lon = nodeEl?.getAttribute("lon");
+  if (!version || !lat || !lon) throw new Error("Could not read node data");
+
+  await osmWithChangeset("Deleted", token, async (changesetId, headers) => {
+    const deleteXml = `<osm><node id="${nodeId}" lat="${lat}" lon="${lon}" version="${version}" changeset="${changesetId}"/></osm>`;
+    const delRes = await fetch(`${OSM_API_URL}/node/${nodeId}`, {
+      method: "DELETE",
+      headers,
+      body: deleteXml,
+    });
+    if (!delRes.ok) {
+      const msg = await delRes.text();
+      if (delRes.status === 412)
+        throw new Error("Node is still used by a way or relation and cannot be deleted.");
+      if (delRes.status === 403) throw new Error("You don't have permission to delete this node.");
+      throw new Error(msg || `Delete failed: ${delRes.status}`);
+    }
+  });
+}

@@ -3,12 +3,19 @@
 /**
  * GEOJSON EDITOR
  *
- * Desktop-only tab that shows all current map features as editable GeoJSON.
- * Auto-refreshes when the map changes. Supports applying edited JSON back to the map.
+ * Desktop-only tab that shows all drawn and imported items - but not Strava activities
+ * or the active route - as editable GeoJSON. Supports applying edited JSON back to the map.
  *
- * - pathType is serialized into each feature so drawn vs. imported items survive a round-trip.
- * - Apply validates JSON, GeoJSON structure, and geometry before clearing the map.
+ * - Shows layerToPortableFeature() output verbatim: internal state lives on layer.internal, so
+ *   what's displayed is byte-for-byte the same feature a GeoJSON export writes.
+ * - Apply validates JSON, GeoJSON structure, and geometry before clearing the map, and
+ *   turns every applied feature into a drawn item.
  * - isDirty blocks auto-refresh while the user has unsaved edits in the editor.
+ * - Auto-refresh is explicit: anything that changes layer data calls scheduleDataEditorRefresh()
+ *   directly (updateOverviewList() does; so do the two color-write spots in ui-handlers.js that
+ *   bypass it). refreshDataEditor() itself doesn't check tab visibility - only
+ *   scheduleDataEditorRefresh() does - so opening the tab and clicking Reset call
+ *   refreshDataEditor() directly for an immediate, non-debounced result.
  */
 
 const CM_THEME_LIGHT = "eclipse";
@@ -23,33 +30,8 @@ function buildDataEditorGeoJSON() {
 
   allLayers.forEach((layer) => {
     try {
-      const geojson = layer.toGeoJSON();
-      if (!geojson || !geojson.geometry || !geojson.geometry.type) return;
-
-      applyFullPrecisionCoordinates(layer, geojson);
-
-      const color = layer.feature?.properties?.color || DEFAULT_COLOR;
-
-      const filteredProperties = Object.keys(geojson.properties || {}).reduce((acc, key) => {
-        if (!GEOJSON_EXPORT_EXCLUDED_PROPERTIES.includes(key)) {
-          acc[key] = geojson.properties[key];
-        }
-        return acc;
-      }, {});
-
-      geojson.properties = { ...filteredProperties, pathType: layer.pathType || "drawn" };
-
-      if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-        geojson.properties.stroke = color;
-      } else if (layer instanceof L.Marker) {
-        geojson.properties["marker-color"] = color;
-      }
-
-      features.push({
-        type: "Feature",
-        properties: geojson.properties,
-        geometry: geojson.geometry,
-      });
+      const feature = layerToPortableFeature(layer);
+      if (feature) features.push(feature);
     } catch (e) {
       console.error("GeoJSON editor: error serializing layer", e);
     }
@@ -66,6 +48,20 @@ function refreshDataEditor() {
   cmEditor.setValue(newJson);
   error.textContent = "";
   error.style.display = "none";
+}
+
+let dataEditorRefreshTimer = null;
+
+/**
+ * Call after any layer-data change (name, color, geometry, add/remove, ...) to keep the
+ * GeoJSON Editor tab in sync while it's open. Debounced so bursts of changes only trigger one
+ * rebuild. No-ops while the tab is closed - opening it refreshes directly instead (see the
+ * tabBtn click handler below).
+ */
+function scheduleDataEditorRefresh() {
+  if (!document.getElementById("data-editor-panel")?.classList.contains("active")) return;
+  clearTimeout(dataEditorRefreshTimer);
+  dataEditorRefreshTimer = setTimeout(refreshDataEditor, 300);
 }
 
 function applyDataEditor() {
@@ -96,6 +92,15 @@ function applyDataEditor() {
 
   if (parsed.features?.length > 0) {
     try {
+      // The same explosion every file import does before calling importGeoJsonToMap(), which
+      // doesn't do it itself. Leaflet builds one layer with nested latlngs from a pasted
+      // MultiLineString/MultiPolygon, and an L.FeatureGroup from a MultiPoint/GeometryCollection
+      // - neither survives layerToPortableFeature(): the first is cut down to a plain
+      // LineString/Polygon keeping at most its first part, the second has no usable geometry and
+      // is dropped from this editor and every export while still sitting on the map. Runs before
+      // the check below so that validates what actually gets imported, and inside the try so a
+      // malformed feature reports an error instead of throwing past the map-clearing step.
+      parsed.features = parsed.features.flatMap((f) => explodeMultiGeometries(f));
       if (L.geoJSON(parsed).getLayers().length === 0) {
         error.textContent = "No valid features found — check geometry types and coordinates.";
         error.style.display = "block";
@@ -112,40 +117,24 @@ function applyDataEditor() {
   error.style.display = "none";
 
   deselectCurrentItem();
+  window.app?.clearRouting?.({ skipUiUpdate: true });
   drawnItems.clearLayers();
   editableLayers.clearLayers();
   importedItems.clearLayers();
 
-  const drawnFeatures = [];
-  const importedFeatures = [];
-
-  (parsed.features ?? []).forEach((f) => {
-    const pt = f.properties?.pathType;
-    if (pt === "drawn" || pt === "route") {
-      drawnFeatures.push(f);
-    } else {
-      importedFeatures.push(f);
-    }
-  });
-
-  if (importedFeatures.length > 0) {
-    importGeoJsonToMap({ type: "FeatureCollection", features: importedFeatures }, "geojson");
-  }
-
-  if (drawnFeatures.length > 0) {
-    const layerGroup = importGeoJsonToMap(
-      { type: "FeatureCollection", features: drawnFeatures },
-      "geojson",
-    );
+  // Everything applied from the editor becomes a directly-editable drawn item: the
+  // edited text is pure GeoJSON and carries no pathType to route features by.
+  if (parsed.features?.length > 0) {
+    const layerGroup = importGeoJsonToMap(parsed, "geojson");
     layerGroup.eachLayer((layer) => {
+      layer.internal.pathType = "drawn";
       importedItems.removeLayer(layer);
-      drawnItems.addLayer(layer);
-      editableLayers.addLayer(layer);
-      layer.pathType = layer.feature?.properties?.pathType || "drawn";
+      addAsDrawnItem(layer);
     });
   }
 
   updateOverviewList();
+  updateDrawControlStates();
   isDirty = false;
 
   Swal.fire({
@@ -163,7 +152,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const panel = document.getElementById("data-editor-panel");
 
   const getCmTheme = () =>
-    document.body.classList.contains("dark-mode") ? CM_THEME_DARK : CM_THEME_LIGHT;
+    document.body.classList.contains("dark-mode") || document.body.classList.contains("glass-mode")
+      ? CM_THEME_DARK
+      : CM_THEME_LIGHT;
 
   // Lazily initialize CodeMirror on first tab click so it measures correct dimensions
   // regardless of whether the tab was hidden at page load (e.g. mobile with force-desktop-layout).
@@ -227,6 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("data-editor-restore").addEventListener("click", () => {
     const hadEdits = isDirty;
     isDirty = false;
+    // Direct call: tab's already open, and Reset should feel instant, not debounced.
     refreshDataEditor();
     if (hadEdits) {
       Swal.fire({
@@ -280,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
         Swal.fire({
           toast: true,
           icon: "success",
-          title: stripProperties ? "Clean GeoJSON Copied!" : "GeoJSON Copied!",
+          title: stripProperties ? "Clean GeoJSON Copied!" : "Raw GeoJSON Copied!",
           showConfirmButton: false,
           timer: 1500,
         }),
@@ -304,7 +296,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("data-editor-apply").addEventListener("click", applyDataEditor);
 
   document.getElementById("data-editor-find").addEventListener("click", () => {
-    if (!globallySelectedItem) {
+    const target = getEffectiveSelectedLayer();
+    if (!target) {
       Swal.fire({
         toast: true,
         icon: "info",
@@ -325,7 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const allLayers = [...editableLayers.getLayers(), ...importedItems.getLayers()];
-    const index = allLayers.indexOf(globallySelectedItem);
+    const index = allLayers.indexOf(target);
     if (index === -1) {
       Swal.fire({
         toast: true,
@@ -361,36 +354,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   tabBtn.addEventListener("click", () => {
     initCodeMirror();
+    // Direct call: this listener runs before tab-navigation.js adds the panel's "active" class
+    // (data-editor.js loads first), so scheduleDataEditorRefresh()'s check would wrongly skip it.
     refreshDataEditor();
     // CodeMirror needs a refresh after becoming visible
     setTimeout(() => cmEditor.refresh(), 0);
   });
 
   // Tab is desktop-only — fall back to Contents if viewport shrinks to mobile while active
-  window.matchMedia("(max-width: 768px)").addEventListener("change", (e) => {
+  window.matchMedia(`(max-width: ${BREAKPOINT_MOBILE}px)`).addEventListener("change", (e) => {
     if (e.matches && panel.classList.contains("active")) {
       document.getElementById("tab-btn-overview").click();
     }
-  });
-
-  let refreshTimer = null;
-  const scheduleRefresh = () => {
-    if (!panel.classList.contains("active")) return;
-    clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(refreshDataEditor, 300);
-  };
-
-  const observer = new MutationObserver(scheduleRefresh);
-  observer.observe(document.getElementById("overview-panel-list"), {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
-
-  // Color changes don't update the overview list DOM, so observe the color swatch directly
-  const colorObserver = new MutationObserver(scheduleRefresh);
-  colorObserver.observe(document.getElementById("info-panel-color-swatch"), {
-    attributes: true,
-    attributeFilter: ["style"],
   });
 });

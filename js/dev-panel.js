@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // Dev Panel
 (function () {
@@ -67,7 +67,7 @@
     panel.innerHTML = `
       <div id="dev-header">
         <span>Developer Panel</span>
-        <button id="dev-close">✕</button>
+        <button id="dev-close"><span class="material-symbols">close</span></button>
       </div>
       <div id="dev-content">
         <div id="dev-console-hint">
@@ -107,7 +107,6 @@
         background: var(--background-color);
         border: 1px solid var(--border-color);
         border-radius: var(--border-radius);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         z-index: 10000;
         display: none;
         flex-direction: column;
@@ -127,11 +126,13 @@
         border-radius: var(--border-radius) var(--border-radius) 0 0;
       }
       #dev-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         background: none;
         border: none;
         color: var(--text-color);
         cursor: pointer;
-        font-size: 18px;
         padding: 0;
         width: 20px;
         height: 20px;
@@ -183,6 +184,17 @@
       #dev-counts div {
         display: flex;
         justify-content: space-between;
+      }
+      body.glass-mode #dev-panel {
+        background: var(--glass-bg);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+      }
+      body.glass-mode #dev-header {
+        background: var(--glass-btn-bg);
+      }
+      body.glass-mode .dev-section button {
+        background: var(--glass-btn-bg);
       }
     `;
 
@@ -310,7 +322,7 @@
     counts.forEach(({ label, get }) => {
       try {
         html += `<div><span>${label}:</span> <b>${get()}</b></div>`;
-      } catch (e) {}
+      } catch {}
     });
 
     div.innerHTML = html || "No data";

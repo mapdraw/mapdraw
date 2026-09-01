@@ -1,6 +1,15 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 const elevationCache = new Map();
+
+/**
+ * Builds the elevation cache key for a set of path coordinates.
+ * @param {L.LatLng[]} latlngs - Path coordinates
+ * @returns {string} Cache key
+ */
+function elevationCacheKey(latlngs) {
+  return JSON.stringify(latlngs.map((p) => [p.lat.toFixed(6), p.lng.toFixed(6)]));
+}
 
 // Define our coordinate system names
 const WGS84 = "EPSG:4326"; // Standard Lat/Lng
@@ -56,36 +65,23 @@ function convertPath(latlngs, inSr, outSr) {
     throw new Error(`Unsupported conversion: ${inSr} to ${outSr}`);
   }
 
-  // 2. Get the transformation function from proj4
   const transformer = proj4(fromProj, toProj);
 
-  // 3. Perform the conversion by mapping over the array
-
-  // Case A: WGS84 (Lng, Lat) -> LV95 (Easting, Northing)
-  if (toProj === LV95) {
-    return latlngs.map((p) => {
-      const coords = transformer.forward([p.lng, p.lat]);
-      return [coords[0], coords[1]]; // [easting, northing]
-    });
-  }
-  // Case B: LV95 (Easting, Northing) -> WGS84 (Lng, Lat)
-  // Note: The caller stores Easting in p.lng, Northing in p.lat
-  else {
-    return latlngs.map((p) => {
-      const coords = transformer.forward([p.lng, p.lat]);
-      return [coords[0], coords[1]]; // [lng, lat]
-    });
-  }
+  // The direction is fully encoded in the transformer. For LV95 input,
+  // the caller stores easting in p.lng and northing in p.lat.
+  return latlngs.map((p) => {
+    const coords = transformer.forward([p.lng, p.lat]);
+    return [coords[0], coords[1]];
+  });
 }
 
 /**
  * Fetches elevation data from Google Maps Elevation API.
  * Implements adaptive point sampling based on path complexity.
  * @param {L.LatLng[]} latlngs - Path coordinates
- * @param {number} realDistance - Actual path distance in meters
  * @returns {Promise<L.LatLng[]|null>} Array of coordinates with elevation or null on error
  */
-async function fetchElevationForPathGoogle(latlngs, realDistance) {
+async function fetchElevationForPathGoogle(latlngs) {
   console.log("Fetching elevation data from: Google");
   if (!latlngs || latlngs.length < 2) return latlngs;
 
@@ -135,8 +131,12 @@ async function fetchElevationForPathGoogle(latlngs, realDistance) {
     try {
       const response = await elevator.getElevationForLocations({ locations: batch });
       if (response && response.results) {
-        const batchResults = response.results.map((result) =>
-          L.latLng(result.location.lat(), result.location.lng(), result.elevation),
+        // Use the coordinate we actually queried, not result.location - Google's Elevation
+        // API snaps/interpolates to its own DEM sample grid and can return a location that
+        // drifts off the real path geometry, which showed up as a zig-zag in the elevation
+        // profile's hover marker. We only need result.elevation; the position is already known.
+        const batchResults = response.results.map((result, j) =>
+          L.latLng(batch[j].lat, batch[j].lng, result.elevation),
         );
         allResults = allResults.concat(batchResults);
       } else {
@@ -245,9 +245,8 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
 
     const allResponses = await Promise.all(allRequests);
 
-    // Step 4: Process responses and stitch them together
-    let swissProfilePoints = [];
-    let previousDist = 0;
+    // Step 4: Process responses and collect their points, chunk order preserved
+    const swissProfilePoints = [];
 
     for (const profileResponse of allResponses) {
       if (!profileResponse.ok) {
@@ -262,16 +261,11 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
         throw new Error("Profile API returned no data for a chunk.");
       }
 
-      // Adjust distance values to account for previous chunks
-      const adjustedPoints = chunkPoints.map((point) => ({
-        ...point,
-        dist: point.dist + previousDist,
-      }));
-
-      swissProfilePoints = swissProfilePoints.concat(adjustedPoints);
-      previousDist = swissProfilePoints[swissProfilePoints.length - 1].dist;
+      for (const point of chunkPoints) {
+        swissProfilePoints.push(point);
+      }
     }
-    if (!swissProfilePoints || swissProfilePoints.length === 0) {
+    if (swissProfilePoints.length === 0) {
       throw new Error("Profile API returned no data.");
     }
 
@@ -295,7 +289,7 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
 
     // Step 4: Merge the data into L.LatLng objects with altitude
     const pointsWithElev = [];
-    let debugDataForTable = [];
+    const debugDataForTable = [];
 
     for (let i = 0; i < validSwissPoints.length; i++) {
       const swissPoint = validSwissPoints[i];
@@ -308,7 +302,6 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
 
       if (ENABLE_GEOADMIN_DEBUG) {
         debugDataForTable.push({
-          Distance: swissPoint.dist,
           Altitude: altitude,
           Easting: swissPoint.easting,
           Northing: swissPoint.northing,
@@ -322,9 +315,9 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
       console.log("--- GeoAdmin Debug Data (View Only) ---");
       console.table(debugDataForTable);
 
-      let csvContent = "Distance;Altitude;Easting;Northing;Longitude;Latitude\n";
+      let csvContent = "Altitude;Easting;Northing;Longitude;Latitude\n";
       debugDataForTable.forEach((row) => {
-        csvContent += `${row.Distance};${row.Altitude};${row.Easting};${row.Northing};${row.Longitude};${row.Latitude}\n`;
+        csvContent += `${row.Altitude};${row.Easting};${row.Northing};${row.Longitude};${row.Latitude}\n`;
       });
 
       window.copyGeoAdminCSV = () => {
@@ -353,11 +346,10 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
  * Main dispatcher function for fetching elevation data.
  * Routes to either Google or GeoAdmin API based on user preference.
  * @param {L.LatLng[]} latlngs - Path coordinates
- * @param {number} realDistance - Actual path distance in meters
  * @returns {Promise<L.LatLng[]|null>} Array of coordinates with elevation or null on error
  */
-async function fetchElevationForPath(latlngs, realDistance) {
-  const cacheKey = JSON.stringify(latlngs.map((p) => [p.lat.toFixed(5), p.lng.toFixed(5)]));
+async function fetchElevationForPath(latlngs) {
+  const cacheKey = elevationCacheKey(latlngs);
 
   if (elevationCache.has(cacheKey)) {
     console.log("Returning cached elevation data.");
@@ -371,10 +363,14 @@ async function fetchElevationForPath(latlngs, realDistance) {
   if (elevationProvider === "geoadmin") {
     pointsWithElev = await fetchElevationForPathGeoAdminAPI(latlngs);
   } else {
-    pointsWithElev = await fetchElevationForPathGoogle(latlngs, realDistance);
+    pointsWithElev = await fetchElevationForPathGoogle(latlngs);
   }
 
   if (pointsWithElev) {
+    // Cap the cache: evict the oldest entry (Map iterates in insertion order).
+    if (elevationCache.size >= 32) {
+      elevationCache.delete(elevationCache.keys().next().value);
+    }
     elevationCache.set(cacheKey, pointsWithElev);
   }
 
@@ -391,10 +387,60 @@ function updateElevationToggleIconColor() {
       .querySelector(".material-symbols");
     if (materialSymbolsIcon) {
       materialSymbolsIcon.style.color = isElevationProfileVisible
-        ? "var(--color-red)"
+        ? "var(--highlight-color)"
         : "var(--icon-color)";
     }
   }
+}
+
+/**
+ * Creates the elevation panel toggle button, and adds it to the map disabled
+ * until a path/area is selected.
+ */
+function initElevationToggle() {
+  const ElevationToggleControl = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd: function (map) {
+      const container = L.DomUtil.create(
+        "div",
+        "leaflet-bar leaflet-control leaflet-control-custom",
+      );
+      container.id = "elevation-button";
+      container.title = "Select a path to show elevation";
+      container.innerHTML = '<a href="#" role="button"></a>';
+      const hideElevationPanel = () => {
+        isElevationProfileVisible = false;
+        document.getElementById("elevation-div").style.visibility = "hidden";
+        window.elevationProfile.clearElevationProfile();
+        updateElevationToggleIconColor();
+      };
+
+      L.DomEvent.on(container, "click", (ev) => {
+        L.DomEvent.stop(ev);
+        if (L.DomUtil.hasClass(container, "disabled")) return;
+        const elevationDiv = document.getElementById("elevation-div");
+        togglePanelMode(
+          "elevation-panel",
+          () => elevationDiv.style.visibility === "visible",
+          () => {
+            isElevationProfileVisible = true;
+            elevationDiv.style.visibility = "visible";
+            if (selectedElevationPath) {
+              window.elevationProfile.clearElevationProfile();
+              addElevationProfileForLayer(selectedElevationPath);
+            }
+            updateElevationToggleIconColor();
+          },
+          hideElevationPanel,
+        );
+      });
+      return container;
+    },
+  });
+
+  elevationToggleControl = new ElevationToggleControl({ position: "topleft" }).addTo(map);
+  L.DomUtil.addClass(elevationToggleControl.getContainer(), "disabled");
+  updateElevationToggleIconColor();
 }
 
 /**
@@ -432,7 +478,7 @@ async function addElevationProfileForLayer(layer) {
 
   if (!(layer instanceof L.Polyline)) return;
 
-  let latlngs = layer instanceof L.Polyline ? layer.getLatLngs() : layer.getLatLngs()[0];
+  const latlngs = layer.getLatLngs();
   if (latlngs?.length > 0) {
     const realDistance = calculatePathDistance(layer);
     let pointsWithElev;
@@ -453,8 +499,10 @@ async function addElevationProfileForLayer(layer) {
         console.log("No elevation data in file, fetching from API...");
       }
       const provider = localStorage.getItem("elevationProvider") || "google";
-      pointsWithElev = await fetchElevationForPath(latlngs, realDistance);
-      source = provider === "geoadmin" ? "GeoAdmin API" : "Google API";
+      pointsWithElev = await fetchElevationForPath(latlngs);
+      // Drop stale response if the selection changed during the fetch
+      if (selectedElevationPath !== layer) return;
+      source = provider === "geoadmin" ? "GeoAdmin" : "Google";
     }
 
     if (pointsWithElev?.length > 0) {
@@ -479,6 +527,7 @@ async function removeElevationFromPath() {
   for (let i = 0; i < latlngs.length; i++) {
     latlngs[i].alt = undefined;
   }
+  scheduleDataEditorRefresh();
 
   // Keep the cache entry — the cache key is coordinate-based, so the
   // cached API data is still valid for these same coordinates.  This
@@ -505,7 +554,7 @@ async function addElevationToPath() {
   if (!latlngs || latlngs.length === 0) return;
 
   // Get cached API data
-  const cacheKey = JSON.stringify(latlngs.map((p) => [p.lat.toFixed(5), p.lng.toFixed(5)]));
+  const cacheKey = elevationCacheKey(latlngs);
   const apiData = elevationCache.get(cacheKey);
   if (!apiData || apiData.length === 0) {
     console.warn("No cached API elevation data to add.");
@@ -550,6 +599,7 @@ async function addElevationToPath() {
       latlngs[i].alt = e1 + t * (e2 - e1);
     }
   }
+  scheduleDataEditorRefresh();
 
   // Keep the cache entry so that removing and re-adding elevation
   // does not trigger another API call for the same coordinates.

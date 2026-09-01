@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 // D3 Elevation Chart Module
 // This module contains all logic for our custom D3 elevation chart.
@@ -12,12 +12,12 @@ let chartTargetDivId;
 let totalWidth, totalHeight; // Container dimensions
 let currentRealDistance = 0;
 let currentRawData = [];
+let currentSource = null;
 
 let verticalLine, hoverOverlay;
 
 // Responsive & Margin constants
-const BREAKPOINT_NARROW = 768; // 768px matches your style.css
-const MARGIN_BOTTOM_NARROW = 60;
+const MARGIN_BOTTOM_NARROW = 65;
 const MARGIN_BOTTOM_WIDE = 30;
 const SUMMARY_PADDING_BOTTOM = 10; // Space between summary text and chart
 const MIN_TOP_MARGIN = 10; // Minimum top margin even if text is empty
@@ -27,6 +27,12 @@ const margin = {
   bottom: MARGIN_BOTTOM_WIDE,
   left: 55,
 };
+
+/** Formats an elevation (in meters) respecting the module's useImperial setting. */
+function formatElevation(meters) {
+  const feet = meters * 3.28084;
+  return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
+}
 
 /**
  * Converts Leaflet data (L.latLng(lat, lng, alt)) into D3 format.
@@ -117,7 +123,7 @@ function calculateSwissHikingTime(points) {
  * Adapted from map.geo.admin.ch
  * @see https://github.com/geoadmin/web-mapviewer/blob/develop/packages/geoadmin-elevation-profile/src/utils.ts
  * @param {number} minutes - Total minutes
- * @returns {string} Formatted time (e.g., '20h 30min', '55min', or '-')
+ * @returns {string} Formatted time (e.g., '20 h 30 min', '55 min', or '-')
  */
 function formatHikingTime(minutes) {
   if (!minutes || isNaN(minutes)) {
@@ -127,12 +133,12 @@ function formatHikingTime(minutes) {
   if (minutes >= 60) {
     const hours = Math.floor(minutes / 60);
     minutes = minutes - hours * 60;
-    result += `${hours}h`;
+    result += `${hours} h`;
     if (minutes > 0) {
-      result += ` ${minutes}min`;
+      result += ` ${minutes} min`;
     }
   } else {
-    result += `${minutes}min`;
+    result += `${minutes} min`;
   }
   return result;
 }
@@ -142,7 +148,7 @@ function formatHikingTime(minutes) {
  * @param {number} containerWidth - The current width of the target div
  */
 function updateBottomMargin(containerWidth) {
-  const isNarrow = containerWidth < BREAKPOINT_NARROW;
+  const isNarrow = containerWidth < BREAKPOINT_MOBILE;
   margin.bottom = isNarrow ? MARGIN_BOTTOM_NARROW : MARGIN_BOTTOM_WIDE;
 }
 
@@ -212,12 +218,14 @@ function redrawChartData() {
     .y0(height)
     .y1((d) => y(d.elevation));
 
+  const lineGenerator = d3
+    .line()
+    .x((d) => x(d.distance))
+    .y((d) => y(d.elevation));
+
   chartGroup.select(".altitude-area").datum(currentRawData).attr("d", areaGenerator);
+  chartGroup.select(".altitude-line").datum(currentRawData).attr("d", lineGenerator);
   const distanceFormatter = (meters) => formatDistance(meters);
-  const elevationFormatter = (meters) => {
-    const feet = meters * 3.28084;
-    return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
-  };
 
   const tickValues = [0, maxDistance / 2, maxDistance];
   xAxis.call(d3.axisBottom(x).tickValues(tickValues).tickFormat(distanceFormatter));
@@ -228,7 +236,7 @@ function redrawChartData() {
   });
 
   const yTickValues = [minElev, (minElev + maxElev) / 2, maxElev];
-  yAxis.call(d3.axisRight(y).tickValues(yTickValues).tickFormat(elevationFormatter));
+  yAxis.call(d3.axisRight(y).tickValues(yTickValues).tickFormat(formatElevation));
   yAxis
     .selectAll(".tick text")
     .attr("dy", null)
@@ -243,12 +251,8 @@ function redrawChartData() {
  * Draws empty axes when no data is present.
  */
 function drawEmptyAxes() {
-  const elevationFormatter = (meters) => {
-    const feet = meters * 3.28084;
-    return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
-  };
   xAxis.call(d3.axisBottom(x).ticks(0).tickFormat(""));
-  yAxis.call(d3.axisRight(y).ticks(4).tickFormat(elevationFormatter));
+  yAxis.call(d3.axisRight(y).ticks(4).tickFormat(formatElevation));
   yAxis.selectAll("text").text("");
 }
 
@@ -295,6 +299,7 @@ function createElevationChart(targetDivId, isImperial) {
   y = d3.scaleLinear();
 
   chartGroup.append("path").attr("class", "altitude-area");
+  chartGroup.append("path").attr("class", "altitude-line");
 
   verticalLine = chartGroup
     .append("line")
@@ -364,6 +369,7 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
   }
 
   currentRealDistance = realDistance || 0;
+  currentSource = source;
   const calculatedMaxDistance =
     currentRawData.length > 0 ? currentRawData[currentRawData.length - 1].distance : 0;
 
@@ -391,25 +397,20 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
   const hikingTimeMinutes = calculateSwissHikingTime(currentRawData);
   const hikingTimeFormatted = formatHikingTime(hikingTimeMinutes);
 
-  const elevationFormatter = (meters) => {
-    const feet = meters * 3.28084;
-    return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
-  };
-
   const summaryDiv = svg.select("#d3-summary-html");
   if (summaryDiv) {
     const itemStyle = "display: inline-block; white-space: nowrap; margin: 0 4px;";
     summaryDiv.html(
-      `<span style="${itemStyle}">Ascent: ${elevationFormatter(ascent)}</span>` +
-        `<span style="${itemStyle}">Descent: ${elevationFormatter(descent)}</span>` +
-        `<span style="${itemStyle}">Highest point: ${elevationFormatter(maxElev)}</span>` +
-        `<span style="${itemStyle}">Lowest point: ${elevationFormatter(minElev)}</span>` +
+      `<span style="${itemStyle}">Ascent: ${formatElevation(ascent)}</span>` +
+        `<span style="${itemStyle}">Descent: ${formatElevation(descent)}</span>` +
+        `<span style="${itemStyle}">Highest point: ${formatElevation(maxElev)}</span>` +
+        `<span style="${itemStyle}">Lowest point: ${formatElevation(minElev)}</span>` +
         `<span style="${itemStyle}">Hiking time: ${hikingTimeFormatted}</span>` +
         // Show add/remove buttons only when "prefer file elevation" is enabled (default)
         // and the path is not an active route (unsaved routes may change anytime).
         (source &&
         localStorage.getItem("preferFileElevation") !== "false" &&
-        selectedElevationPath?.pathType !== "route"
+        selectedElevationPath?.internal?.pathType !== "route"
           ? `<span style="${itemStyle}">Source: ${source}` +
             (source === "File"
               ? ` <span onclick="removeElevationFromPath()" title="Remove elevation data from path" class="material-symbols material-symbols-fill elevation-action-icon">cancel</span>`
@@ -431,6 +432,7 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
 function clearElevationProfile() {
   currentRawData = [];
   currentRealDistance = 0;
+  currentSource = null;
 
   const summaryDiv = svg.select("#d3-summary-html");
   if (summaryDiv) {
@@ -438,6 +440,7 @@ function clearElevationProfile() {
   }
 
   chartGroup.select(".altitude-area").attr("d", null);
+  chartGroup.select(".altitude-line").attr("d", null);
 
   if (verticalLine) verticalLine.style("display", "none");
   if (chartGroup) chartGroup.select(".elevation-hover-tooltip-group").style("display", "none");
@@ -457,6 +460,7 @@ function updateElevationChartUnits(isImperial) {
     drawElevationProfile(
       currentRawData.map((d) => d.latlng),
       currentRealDistance,
+      currentSource,
     );
   } else {
     updateChartLayout();
@@ -512,11 +516,7 @@ function onHoverMove(event) {
 
   if (dataPoint) {
     const distanceText = `Distance: ${formatDistance(dataPoint.distance)}`;
-    const elevationFormatter = (meters) => {
-      const feet = meters * 3.28084;
-      return useImperial ? `${Math.round(feet)} ft` : `${Math.round(meters)} m`;
-    };
-    const elevationText = `Elevation: ${elevationFormatter(dataPoint.elevation)}`;
+    const elevationText = `Elevation: ${formatElevation(dataPoint.elevation)}`;
 
     const textDist = chartGroup.select("#tooltip-distance-text").text(distanceText);
     const textElev = chartGroup.select("#tooltip-elevation-text").text(elevationText);

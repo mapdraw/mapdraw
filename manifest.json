@@ -1,6 +1,6 @@
 {
-  "name": "__APP_NAME__",
-  "short_name": "__APP_NAME__",
+  "name": "__APP_NAME_PWA__",
+  "short_name": "__APP_NAME_PWA__",
   "description": "__APP_DESCRIPTION__",
   "start_url": "/",
   "display": "standalone",

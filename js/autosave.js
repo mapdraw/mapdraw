@@ -3,12 +3,16 @@
 /**
  * AUTOSAVE
  *
- * Periodically saves map layers to IndexedDB as GeoJSON.
- * On page load, restores saved data (unless a share URL is present).
+ * Periodically saves map layers to IndexedDB as GeoJSON features, each carrying its
+ * internal state in a sibling `internal` key (the app's own record format, not a
+ * GeoJSON document). On page load, restores saved data; share-URL data is imported on top.
  */
 
 const AUTOSAVE_KEY = "mapAutosave";
 const AUTOSAVE_INTERVAL_MS = 5000;
+// Autosave record format version. Records without `v` are legacy data saved before
+// internal state moved off feature.properties (see restoreAutosave's migration).
+const AUTOSAVE_FORMAT_VERSION = 1;
 
 let _lastAutosaveJson = "";
 let _autosaveWriteFailed = false;
@@ -29,48 +33,47 @@ function _serializeLayersForAutosave() {
       // Skip the active (unsaved) route — routing state can't be restored
       if (currentRoutePath && layer === currentRoutePath) return;
 
-      const geojson = layer.toGeoJSON();
-      if (!geojson || !geojson.geometry || !geojson.geometry.type) return;
+      // The same portable feature a GeoJSON export writes, saved verbatim. Internal state
+      // rides along in a sibling key - this record is the app's own format, not a GeoJSON
+      // document, so an extra key is fine here.
+      const feature = layerToPortableFeature(layer);
+      if (!feature) return;
 
-      // Extract full precision coordinates directly from layer
-      applyFullPrecisionCoordinates(layer, geojson);
-
-      // Preserve properties that matter for restoring state
-      const props = {};
-      const src = geojson.properties || {};
-      if (src.name) props.name = src.name;
-      if (src.description) props.description = src.description;
-      if (src.color) props.color = src.color;
-      if (src.stravaId) props.stravaId = src.stravaId;
-      if (src.type) props.type = src.type; // Strava activity type (Ride, Run, etc.)
-      props.pathType = layer.pathType || "drawn";
-
-      geojson.properties = props;
-      geojson.type = "Feature";
-      features.push(geojson);
+      feature.internal = { ...layer.internal };
+      features.push(feature);
     } catch (e) {
       console.warn("Autosave: skipping layer", e);
     }
   });
 
   if (features.length === 0) return "";
-  return JSON.stringify({ type: "FeatureCollection", features });
+  return JSON.stringify({ v: AUTOSAVE_FORMAT_VERSION, type: "FeatureCollection", features });
 }
 
 /**
  * Saves current map state to IndexedDB if it changed.
  */
 function _autosaveTick() {
+  // Serializes first and compares after, deliberately: the compare is correct no matter
+  // where a change came from, while a dirty flag would silently lose changes from any
+  // mutation site that forgets to set it.
   const json = _serializeLayersForAutosave();
   if (json === _lastAutosaveJson) return;
-  _lastAutosaveJson = json;
 
+  // _lastAutosaveJson is committed only after the write succeeds, so a failed
+  // write leaves it stale and the next tick retries instead of early-returning.
   if (json === "") {
-    idbKeyval.del(AUTOSAVE_KEY).catch(() => {});
+    idbKeyval
+      .del(AUTOSAVE_KEY)
+      .then(() => {
+        _lastAutosaveJson = json;
+      })
+      .catch(() => {});
   } else {
     idbKeyval
       .set(AUTOSAVE_KEY, json)
       .then(() => {
+        _lastAutosaveJson = json;
         _autosaveWriteFailed = false;
       })
       .catch((e) => {
@@ -90,90 +93,157 @@ function _autosaveTick() {
   }
 }
 
+let _autosaveTickPending = false;
+
+/**
+ * Interval callback: defers _autosaveTick() into browser idle time, so its
+ * serialization cost (tens of ms on large maps) doesn't land mid-gesture and drop
+ * frames. The timeout bounds the deferral on a busy tab; the pending flag keeps
+ * ticks from piling up when the tab is throttled.
+ */
+function _scheduleAutosaveTick() {
+  if (_autosaveTickPending) return;
+  _autosaveTickPending = true;
+  const run = () => {
+    _autosaveTickPending = false;
+    _autosaveTick();
+  };
+  if (window.requestIdleCallback) {
+    requestIdleCallback(run, { timeout: 2000 });
+  } else {
+    setTimeout(run, 0);
+  }
+}
+
 /**
  * Restores map state from IndexedDB.
  * Routes each feature to the correct layer group based on its saved pathType.
- * Should be called after layer groups are initialized and only if no share URL data is present.
- * @returns {Promise<boolean>} true if data was restored
+ * Should be called after layer groups are initialized, before any share-URL import.
+ * @returns {Promise<boolean>} true if a restore toast was shown (features restored or dropped)
  */
 async function restoreAutosave() {
-  const json = await idbKeyval.get(AUTOSAVE_KEY);
-  if (!json) return false;
-
+  // The idbKeyval.get is inside the try so a broken IndexedDB (e.g. a deleted object
+  // store) costs only the restore, not the rest of the app's initialization.
   try {
+    const json = await idbKeyval.get(AUTOSAVE_KEY);
+    if (!json) return false;
+
     const geojsonData = JSON.parse(json);
     if (!geojsonData || geojsonData.type !== "FeatureCollection" || !geojsonData.features?.length) {
       return false;
     }
 
+    // ---- LEGACY MIGRATION - delete this whole block to drop legacy support ------------
+    // Upgrades records without `v` to the v1 shape; nothing below this block knows
+    // legacy data exists. Legacy features carried pathType/color/hidden inside
+    // properties and had no guaranteed name.
+    if (!geojsonData.v) {
+      geojsonData.v = 1;
+      geojsonData.features.forEach((feature) => {
+        const { hidden, color, pathType, ...props } = feature.properties || {};
+        const hex = parseColor(color);
+        if (hex) props[feature.geometry?.type === "Point" ? "marker-color" : "stroke"] = hex;
+        if (!props.name) {
+          const geomType = feature.geometry?.type;
+          props.name = geomType === "Point" ? "Marker" : geomType === "Polygon" ? "Area" : "Path";
+        }
+        feature.properties = props;
+        feature.internal = { pathType, isManuallyHidden: hidden };
+      });
+    }
+    // ---- END LEGACY MIGRATION ----------------------------------------------------------
+
+    // Any other version can't be fully read - better no restore than a wrong one.
+    if (geojsonData.v !== AUTOSAVE_FORMAT_VERSION) return false;
+
     let restoredCount = 0;
+    let skippedCount = 0;
 
     geojsonData.features.forEach((feature) => {
-      if (!feature.geometry) return;
-
-      const props = feature.properties || {};
-      const color = parseColor(props.color) || DEFAULT_COLOR;
-      const pathType = props.pathType || "drawn";
-      const geomType = feature.geometry.type;
-
-      let layer;
-
-      if (geomType === "Point") {
-        const coords = feature.geometry.coordinates;
-        const latlng =
-          coords.length > 2
-            ? L.latLng(coords[1], coords[0], coords[2])
-            : L.latLng(coords[1], coords[0]);
-        layer = L.marker(latlng, {
-          icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
-        });
-      } else if (geomType === "Polygon") {
-        const ring = feature.geometry.coordinates[0];
-        const latlngs = ring.map((c) =>
-          c.length > 2 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]),
-        );
-        // Remove closing duplicate if present
-        if (latlngs.length > 1) {
-          const first = latlngs[0],
-            last = latlngs[latlngs.length - 1];
-          if (first.equals(last)) latlngs.pop();
+      // Isolated per feature, mirroring _serializeLayersForAutosave: one bad record
+      // costs one feature, not the whole restore. Skipped features are gone for good
+      // once the next tick writes the reduced map; the warning toast below is the
+      // user's only notice of that loss.
+      try {
+        if (!feature.geometry) {
+          skippedCount++;
+          return;
         }
-        layer = L.polygon(latlngs, { ...STYLE_CONFIG.path.default, color });
-      } else if (geomType === "LineString") {
-        const latlngs = feature.geometry.coordinates.map((c) =>
-          c.length > 2 ? L.latLng(c[1], c[0], c[2]) : L.latLng(c[1], c[0]),
-        );
-        layer = L.polyline(latlngs, { ...STYLE_CONFIG.path.default, color });
-      } else {
-        return; // Unsupported geometry
+
+        // Properties are restored verbatim; internal state comes from the sibling `internal`
+        // object autosave writes next to each feature (see _serializeLayersForAutosave).
+        const props = feature.properties || {};
+        const internal = feature.internal || {};
+        const pathType = internal.pathType || "drawn";
+        const geomType = feature.geometry.type;
+        const color = parseColorFromGeoJsonStyle(props, geomType === "Point") || DEFAULT_COLOR;
+
+        let layer;
+
+        if (geomType === "Point") {
+          const coords = feature.geometry.coordinates;
+          const latlng = wrapLatLngIfNeeded(coordToLatLng(coords));
+          layer = L.marker(latlng, {
+            icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
+          });
+        } else if (geomType === "Polygon") {
+          const ring = feature.geometry.coordinates[0];
+          const latlngs = ring.map(coordToLatLng);
+          // Remove closing duplicate if present
+          if (latlngs.length > 1) {
+            const first = latlngs[0],
+              last = latlngs[latlngs.length - 1];
+            if (first.equals(last)) latlngs.pop();
+          }
+          layer = L.polygon(latlngs, { ...STYLE_CONFIG.path.default, color });
+        } else if (geomType === "LineString") {
+          const latlngs = feature.geometry.coordinates.map(coordToLatLng);
+          layer = L.polyline(latlngs, { ...STYLE_CONFIG.path.default, color });
+        } else {
+          skippedCount++;
+          return; // Unsupported geometry
+        }
+
+        // Set feature data
+        layer.feature = {
+          type: "Feature",
+          properties: props,
+          geometry: feature.geometry,
+        };
+        // Rebuilt field by field rather than spread, so no stray key from saved data survives
+        // into the live layer - a new internal field must be restored here explicitly.
+        // isManuallyHidden starts false and is applied below via toggleLayerVisibility(),
+        // which flips the flag itself and performs the actual hiding.
+        const wasHidden = internal.isManuallyHidden;
+        layer.internal = { pathType, isManuallyHidden: false };
+        // Ensures exactly one simplestyle color key even if the saved record had none.
+        setLayerColor(layer, color);
+
+        // Click handler
+        layer.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
+          selectItem(layer);
+        });
+
+        // Route to the correct layer group - shares ui-handlers.js's getGroupTitle() so
+        // grouping logic can't drift between restore and the overview list.
+        const groupKey = getGroupTitle(pathType);
+        if (groupKey === "StravaActivities") {
+          stravaActivitiesLayer.addLayer(layer);
+        } else if (groupKey === "DrawnItems") {
+          drawnItems.addLayer(layer);
+          editableLayers.addLayer(layer);
+        } else {
+          importedItems.addLayer(layer);
+        }
+
+        if (wasHidden) toggleLayerVisibility(layer);
+
+        restoredCount++;
+      } catch (e) {
+        skippedCount++;
+        console.warn("Autosave: skipping feature", e);
       }
-
-      // Set feature data
-      layer.feature = {
-        type: "Feature",
-        properties: { ...props, color },
-        geometry: feature.geometry,
-      };
-      layer.pathType = pathType;
-
-      // Click handler
-      layer.on("click", (e) => {
-        L.DomEvent.stopPropagation(e);
-        selectItem(layer);
-      });
-
-      // Route to the correct layer group
-      if (pathType === "strava") {
-        stravaActivitiesLayer.addLayer(layer);
-      } else if (pathType === "drawn" || pathType === "route") {
-        drawnItems.addLayer(layer);
-        editableLayers.addLayer(layer);
-      } else {
-        // Imported types: geojson, gpx, kml, kmz
-        importedItems.addLayer(layer);
-      }
-
-      restoredCount++;
     });
 
     // Update UI state
@@ -184,7 +254,18 @@ async function restoreAutosave() {
     _lastAutosaveJson = json; // Prevent immediate re-save of what we just loaded
     console.log("Autosave: restored", restoredCount, "features");
 
-    if (restoredCount > 0) {
+    if (skippedCount > 0) {
+      Swal.fire({
+        toast: true,
+        icon: "warning",
+        title:
+          `Restored ${restoredCount} item${restoredCount !== 1 ? "s" : ""}; ` +
+          `${skippedCount} could not be read and will be dropped`,
+        position: "top",
+        showConfirmButton: false,
+        timer: 5000,
+      });
+    } else if (restoredCount > 0) {
       Swal.fire({
         toast: true,
         icon: "success",
@@ -195,7 +276,7 @@ async function restoreAutosave() {
       });
     }
 
-    return restoredCount > 0;
+    return restoredCount > 0 || skippedCount > 0;
   } catch (e) {
     console.warn("Autosave: restore failed", e);
     return false;
@@ -209,5 +290,14 @@ let _autosaveIntervalId = null;
  */
 function startAutosave() {
   if (_autosaveIntervalId) return; // Guard against double-init
-  _autosaveIntervalId = setInterval(_autosaveTick, AUTOSAVE_INTERVAL_MS);
+  _autosaveIntervalId = setInterval(_scheduleAutosaveTick, AUTOSAVE_INTERVAL_MS);
+
+  // The deferred interval tick leaves up to ~7s of changes unwritten - what a tab
+  // close or mobile page discard would lose. Flush without idle deferral once the
+  // page goes hidden or unloads; both events, because neither alone fires reliably
+  // across browsers. Duplicate calls are cheap: _autosaveTick skips unchanged writes.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") _autosaveTick();
+  });
+  window.addEventListener("pagehide", _autosaveTick);
 }

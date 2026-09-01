@@ -1,13 +1,51 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
+
+function escHtml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * The single source of truth for what an unnamed item is called, by geometry
+ * type. Used everywhere a layer needs a name and has none yet.
+ * @param {L.Layer} layer - The Leaflet layer (Marker, Polygon, or Polyline)
+ * @returns {string} "Marker", "Area", or "Path"
+ */
+function getDefaultLayerName(layer) {
+  return layer instanceof L.Marker ? "Marker" : layer instanceof L.Polygon ? "Area" : "Path";
+}
+
+/**
+ * True for an actual path (a Polyline that isn't also a Polygon) - L.Polygon
+ * extends L.Polyline, so a plain instanceof check alone would also match areas.
+ * @param {L.Layer} layer - The Leaflet layer to check
+ * @returns {boolean}
+ */
+function isPathLayer(layer) {
+  return layer instanceof L.Polyline && !(layer instanceof L.Polygon);
+}
 
 /**
  * Ensures the Google Maps API is loaded only once. Returns a promise that resolves
- * when the API is ready, handling concurrent load requests gracefully.
+ * when the API is ready, handling concurrent load requests gracefully. Only a
+ * successful (or in-flight) load is cached, so a failed load is retried on the
+ * next call.
  * @returns {Promise<void>} Promise that resolves when the API is loaded
  */
 function ensureGoogleApiIsLoaded() {
   if (window.googleMapsApiPromise) {
     return window.googleMapsApiPromise;
+  }
+
+  // typeof guard: googleApiKey doesn't exist at all when secrets.js is missing
+  if (typeof googleApiKey === "undefined" || !googleApiKey) {
+    const errorMsg = "Google API key is not configured.";
+    console.error(errorMsg);
+    return Promise.reject(new Error(errorMsg));
   }
 
   window.googleMapsApiPromise = new Promise((resolve, reject) => {
@@ -16,17 +54,16 @@ function ensureGoogleApiIsLoaded() {
       delete window.onGoogleMapsApiReady;
     };
 
-    if (!googleApiKey) {
-      const errorMsg = "Google API key is not configured.";
-      console.error(errorMsg);
-      return reject(new Error(errorMsg));
-    }
-
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${googleApiKey}&loading=async&libraries=elevation,maps&callback=onGoogleMapsApiReady`;
     script.async = true;
     script.defer = true;
-    script.onerror = () => reject(new Error("Failed to load the Google Maps script."));
+    script.onerror = () => {
+      window.googleMapsApiPromise = null;
+      delete window.onGoogleMapsApiReady;
+      script.remove();
+      reject(new Error("Failed to load the Google Maps script."));
+    };
     document.head.appendChild(script);
   });
 
@@ -53,20 +90,26 @@ function ensureGoogleApiIsLoaded() {
  * @returns {L.LatLng|null} Leaflet LatLng object if valid, otherwise null
  */
 function parseCoordinateString(inputString) {
+  // Only one alternative of dmsSubPattern() can match, so exactly one suffixed group is set.
+  const pick = (captures, prefix, key) =>
+    captures[`${prefix}${key}1`] ?? captures[`${prefix}${key}2`] ?? captures[`${prefix}${key}3`];
+
   const dmsToDecimal = (captures, Hemi) => {
-    const degrees = parseFloat(captures[`${Hemi}d`] || 0);
-    const minutes = parseFloat(captures[`${Hemi}m`] || 0);
-    const seconds = parseFloat(captures[`${Hemi}s`] || 0);
+    const degrees = parseFloat(pick(captures, Hemi, "d") || 0);
+    const minutes = parseFloat(pick(captures, Hemi, "m") || 0);
+    const seconds = parseFloat(pick(captures, Hemi, "s") || 0);
     const sign =
       captures[Hemi].toLowerCase() === "s" || captures[Hemi].toLowerCase() === "w" ? -1 : 1;
     return sign * (degrees + minutes / 60 + seconds / 3600);
   };
 
+  // Group names are unique per alternative (d1 / d2,m2 / d3,m3,s3): duplicate names
+  // across alternatives are ES2025 syntax and throw on older engines.
   const dmsSubPattern = (prefix) => {
     return (
-      `(?:(?<${prefix}d>\\d{1,3}(?:\\.\\d+)?)[°]?)` +
-      `|(?:(?<${prefix}d>\\d{1,3})[°]?\\s*(?<${prefix}m>\\d{1,2}(?:\\.\\d+)?)[\\'′]?)` +
-      `|(?:(?<${prefix}d>\\d{1,3})[°]?\\s*(?<${prefix}m>\\d{1,2})[\\'′]?\\s*(?<${prefix}s>\\d{1,2}(?:\\.\\d+)?)[\\"″]?)`
+      `(?:(?<${prefix}d1>\\d{1,3}(?:\\.\\d+)?)[°]?)` +
+      `|(?:(?<${prefix}d2>\\d{1,3})[°]?\\s*(?<${prefix}m2>\\d{1,2}(?:\\.\\d+)?)[\\'′]?)` +
+      `|(?:(?<${prefix}d3>\\d{1,3})[°]?\\s*(?<${prefix}m3>\\d{1,2})[\\'′]?\\s*(?<${prefix}s3>\\d{1,2}(?:\\.\\d+)?)[\\"″]?)`
     );
   };
 
@@ -107,70 +150,6 @@ function parseCoordinateString(inputString) {
   }
 
   return null;
-}
-
-/**
- * Simplifies a geometry's coordinates using the simplify.js library and provided configuration.
- * @param {Array} coordinates - Array of coordinates in [lng, lat] format
- * @param {string} type - Geometry type ('LineString', 'Polygon', or 'MultiLineString')
- * @param {object} config - Configuration object with TOLERANCE and MIN_POINTS properties
- * @returns {{simplified: boolean, coords: Array}} Object with simplification flag and resulting coordinates
- */
-function simplifyPath(coordinates, type, config) {
-  let overallSimplified = false;
-  let newCoordinates;
-
-  const simplifySinglePath = (pathCoords) => {
-    if (pathCoords.length <= config.MIN_POINTS) {
-      return { simplified: false, coords: pathCoords };
-    }
-
-    // Check if coordinates have altitude data (3D coordinates)
-    const hasAltitude = pathCoords.some((c) => c.length === 3 && c[2] !== undefined);
-
-    // Add index to each point so we can track which ones are kept after simplification
-    const points = pathCoords.map((c, i) => ({ x: c[0], y: c[1], idx: i }));
-    const simplifiedPoints = simplify(points, config.TOLERANCE, true);
-
-    if (simplifiedPoints.length < pathCoords.length) {
-      console.log(
-        `Path segment simplified: ${pathCoords.length} -> ${simplifiedPoints.length} points`,
-      );
-
-      // If original had altitude, restore it using the index
-      if (hasAltitude) {
-        const simplifiedWithAlt = simplifiedPoints.map((p) => {
-          const originalCoord = pathCoords[p.idx];
-          return originalCoord.length === 3 ? [p.x, p.y, originalCoord[2]] : [p.x, p.y];
-        });
-        return { simplified: true, coords: simplifiedWithAlt };
-      }
-
-      return { simplified: true, coords: simplifiedPoints.map((p) => [p.x, p.y]) };
-    }
-
-    return { simplified: false, coords: pathCoords };
-  };
-
-  if (type === "LineString" || type === "Polygon") {
-    // LineString and Polygon are both single arrays of coordinates
-    // Polygon is treated as a closed LineString for simplification purposes
-    const result = simplifySinglePath(coordinates);
-    overallSimplified = result.simplified;
-    newCoordinates = result.coords;
-  } else if (type === "MultiLineString") {
-    newCoordinates = coordinates.map((line) => {
-      const result = simplifySinglePath(line);
-      if (result.simplified) {
-        overallSimplified = true;
-      }
-      return result.coords;
-    });
-  } else {
-    return { simplified: false, coords: coordinates };
-  }
-
-  return { simplified: overallSimplified, coords: newCoordinates };
 }
 
 /**
@@ -262,16 +241,58 @@ function generateTimestampedFilename(baseName, extension) {
 }
 
 /**
+ * Unwraps a layer's getLatLngs() down to its outermost ring/path's own flat array
+ * of L.LatLng, stripping the extra nesting Leaflet uses for multi-geometries and
+ * polygons with holes. Only the first (outer) ring is kept.
+ * @param {L.LatLng[]} latlngs - Return value of layer.getLatLngs()
+ * @returns {L.LatLng[]}
+ */
+function flattenRingPoints(latlngs) {
+  while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
+    latlngs = latlngs[0];
+  }
+  return latlngs;
+}
+
+/**
+ * Converts an L.LatLng to a plain [lng, lat] array (or [lng, lat, alt] when altitude is set) -
+ * the coordinate order GeoJSON and simplify.js expect.
+ * @param {L.LatLng} latlng
+ * @returns {number[]}
+ */
+function latLngToCoord(latlng) {
+  return latlng.alt !== undefined ? [latlng.lng, latlng.lat, latlng.alt] : [latlng.lng, latlng.lat];
+}
+
+/**
+ * Converts a [lng, lat] or [lng, lat, alt] coordinate (GeoJSON/simplify.js order) to an L.LatLng.
+ * @param {number[]} coord
+ * @returns {L.LatLng}
+ */
+function coordToLatLng(coord) {
+  return coord.length > 2 ? L.latLng(coord[1], coord[0], coord[2]) : L.latLng(coord[1], coord[0]);
+}
+
+/**
+ * Brings a longitude into [-180, 180], but only when it isn't already there.
+ * L.LatLng.wrap() runs its modulo unconditionally, and that round-trip loses precision on
+ * values that never needed wrapping (9.03 comes back as 9.029999999999973) - silently
+ * rewriting imported coordinates and every export made from them afterwards.
+ * @param {L.LatLng} latlng
+ * @returns {L.LatLng} The original latlng, or a wrapped copy if it was out of range
+ */
+function wrapLatLngIfNeeded(latlng) {
+  return latlng.lng < -180 || latlng.lng > 180 ? latlng.wrap() : latlng;
+}
+
+/**
  * Calculates the total distance of a path in meters.
  * @param {L.Polyline | L.Polygon} path - The layer to measure
  * @returns {number} Total distance in meters
  */
 function calculatePathDistance(path) {
   if (!(path instanceof L.Polyline) && !(path instanceof L.Polygon)) return 0;
-  let latlngs = path.getLatLngs();
-  while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-    latlngs = latlngs[0];
-  }
+  const latlngs = flattenRingPoints(path.getLatLngs());
   if (latlngs.length < 2) return 0;
 
   let cumulativeDistance = 0;
@@ -302,31 +323,78 @@ function calculatePathDistance(path) {
  */
 function calculatePolygonArea(polygon) {
   if (!(polygon instanceof L.Polygon)) return 0;
-  let latlngs = polygon.getLatLngs()[0];
+  const latlngs = polygon.getLatLngs()[0];
   if (!latlngs || latlngs.length < 3) return 0;
 
-  // Use L.GeometryUtil.geodesicArea if available, otherwise use spherical approximation
-  if (L.GeometryUtil && typeof L.GeometryUtil.geodesicArea === "function") {
-    return L.GeometryUtil.geodesicArea(latlngs);
-  }
+  // L.GeometryUtil.geodesicArea is provided by leaflet.draw, loaded before this file
+  return L.GeometryUtil.geodesicArea(latlngs);
+}
 
-  // Fallback: simple spherical area calculation
-  const earthRadius = 6378137; // meters
-  let area = 0;
-  const len = latlngs.length;
+// --- Segment-aware geometry helpers, shared by rectangle-select.js's hit-testing
+// and isSelfIntersectingRing() below. ---
 
-  if (len > 2) {
-    for (let i = 0; i < len; i++) {
-      const p1 = latlngs[i];
-      const p2 = latlngs[(i + 1) % len];
-      area +=
-        (((p2.lng - p1.lng) * Math.PI) / 180) *
-        (2 + Math.sin((p1.lat * Math.PI) / 180) + Math.sin((p2.lat * Math.PI) / 180));
+function pointOrientation(p, q, r) {
+  const val = (q.lng - p.lng) * (r.lat - q.lat) - (q.lat - p.lat) * (r.lng - q.lng);
+  if (Math.abs(val) < 1e-12) return 0;
+  return val > 0 ? 1 : 2;
+}
+
+function onSegment(p, q, r) {
+  return (
+    q.lng <= Math.max(p.lng, r.lng) &&
+    q.lng >= Math.min(p.lng, r.lng) &&
+    q.lat <= Math.max(p.lat, r.lat) &&
+    q.lat >= Math.min(p.lat, r.lat)
+  );
+}
+
+function segmentsIntersect(p1, q1, p2, q2) {
+  const o1 = pointOrientation(p1, q1, p2);
+  const o2 = pointOrientation(p1, q1, q2);
+  const o3 = pointOrientation(p2, q2, p1);
+  const o4 = pointOrientation(p2, q2, q1);
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+  if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+  if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+  if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+  return false;
+}
+
+/**
+ * Checks whether a polygon ring's edges cross each other (a "bowtie" shape),
+ * which makes the shoelace-based geodesicArea() figure meaningless - self-crossing
+ * lobes wind in opposite directions and partially cancel out in that single
+ * running sum instead of adding, understating the true combined area.
+ * @param {L.LatLng[]} latlngs - Ring vertices, as returned by polygon.getLatLngs()[0]
+ * @returns {boolean} True if any two non-adjacent edges cross
+ */
+function isSelfIntersectingRing(latlngs) {
+  if (!latlngs || latlngs.length < 4) return false;
+
+  // A closing point duplicating the first vertex (common in hand-written/pasted
+  // GeoJSON) would otherwise register as a zero-length edge and confuse the
+  // adjacency checks below - drop it so the ring is just its distinct vertices.
+  const first = latlngs[0];
+  const last = latlngs[latlngs.length - 1];
+  const ring = last.lat === first.lat && last.lng === first.lng ? latlngs.slice(0, -1) : latlngs;
+  const n = ring.length;
+  if (n < 4) return false;
+
+  // O(n^2) below - skip it for very large rings (e.g. huge imported/traced
+  // polygons) rather than block the UI; falls back to the pre-existing
+  // behavior of just showing the (possibly wrong, if self-intersecting) area.
+  if (n > 2000) return false;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      // Adjacent edges (including the wraparound pair) always share an endpoint -
+      // that's normal connectivity, not a self-intersection, so skip them.
+      if (j === i + 1 || (i === 0 && j === n - 1)) continue;
+      if (segmentsIntersect(ring[i], ring[(i + 1) % n], ring[j], ring[(j + 1) % n])) return true;
     }
-    area = (area * earthRadius * earthRadius) / 2;
   }
-
-  return Math.abs(area);
+  return false;
 }
 
 /**
@@ -462,7 +530,7 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
       suggestionsEl.innerHTML = "";
       suggestionsEl.style.display = "none";
 
-      callback(latLng, `${latLng.lat.toFixed(5)}, ${latLng.lng.toFixed(5)}`);
+      callback(latLng, `${latLng.lat.toFixed(6)}, ${latLng.lng.toFixed(6)}`);
 
       return;
     }
@@ -549,14 +617,10 @@ function formatDistance(meters, includeSecondary = false) {
   let primaryDisplay, secondaryDisplay;
 
   if (useImperialUnits) {
-    if (miles < 0.1 && miles > 0) {
+    if (miles < 0.1) {
       primaryDisplay = `${Math.round(meters * METERS_TO_FEET)} ft`;
     } else {
-      if (meters === 0) {
-        primaryDisplay = "0 mi";
-      } else {
-        primaryDisplay = `${miles.toFixed(2)} mi`;
-      }
+      primaryDisplay = `${miles.toFixed(2)} mi`;
     }
     secondaryDisplay = km < 1 ? `${Math.round(meters)} m` : `${km.toFixed(2)} km`;
   } else {
@@ -570,6 +634,18 @@ function formatDistance(meters, includeSecondary = false) {
   }
 
   return includeSecondary ? `${primaryDisplay} (${secondaryDisplay})` : primaryDisplay;
+}
+
+/**
+ * Adds a layer as an editable drawn item, un-hiding the "Drawn Items" category if needed
+ * so an explicitly created item is never left invisible inside a hidden category.
+ * Not used by autosave restore, which must respect the saved hidden state.
+ * @param {L.Layer} layer - The layer to add
+ */
+function addAsDrawnItem(layer) {
+  drawnItems.addLayer(layer);
+  editableLayers.addLayer(layer);
+  window.app.ensureDrawnItemsVisible();
 }
 
 /**
@@ -597,20 +673,22 @@ function createAndSaveMarker(lat, lon, name) {
     icon: createMarkerIcon(DEFAULT_COLOR, STYLE_CONFIG.marker.default.opacity),
   });
 
-  newMarker.pathType = "drawn";
-  newMarker.feature = {
-    properties: {
-      color: DEFAULT_COLOR,
-    },
-  };
+  // DEBUG: red dot at exact latlng to verify marker alignment
+  // L.circleMarker(latLng, {
+  //   radius: 4,
+  //   color: "red",
+  //   fillColor: "red",
+  //   fillOpacity: 1,
+  //   weight: 0,
+  // }).addTo(map);
 
-  // Add name if provided
-  if (markerName) {
-    newMarker.feature.properties.name = markerName;
-  }
+  newMarker.feature = { properties: {} };
+  newMarker.internal = { pathType: "drawn" };
+  setLayerColor(newMarker, DEFAULT_COLOR);
 
-  drawnItems.addLayer(newMarker);
-  editableLayers.addLayer(newMarker);
+  newMarker.feature.properties.name = markerName || getDefaultLayerName(newMarker);
+
+  addAsDrawnItem(newMarker);
 
   newMarker.on("click", (ev) => {
     L.DomEvent.stopPropagation(ev);
@@ -618,7 +696,6 @@ function createAndSaveMarker(lat, lon, name) {
   });
 
   selectItem(newMarker);
-  updateDrawControlStates();
   updateOverviewList();
 
   return newMarker;

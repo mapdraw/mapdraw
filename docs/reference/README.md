@@ -10,7 +10,7 @@ This folder contains original source files from third-party projects that were u
 - **Used In:** `js/elevation-profile.js`
 - **Purpose:** This file is the original source for the core statistical logic in `elevation-profile.js`.
   - It served as the reference for calculating `ascent` and `descent` directly from raw, unsmoothed data points.
-  - The `calculateSwissHikingTime` and `formatHikingTime` functions were adapted from this file. (Note: A bug in the original `hikingTime` loop, `points.length - 2`, was corrected to `points.length - 1` in our implementation. This bug was [reported and acknowledged](https://github.com/geoadmin/web-mapviewer/issues/1477) by the GeoAdmin team).
+  - The `calculateSwissHikingTime` and `formatHikingTime` functions were adapted from this file. (Note: A bug in the original `hikingTime` loop, `points.length - 2`, skipped the last segment; our implementation uses `points.length - 1`. [Reported](https://github.com/geoadmin/web-mapviewer/issues/1477) and fixed upstream, but the fix has not reached `develop`, so this copy still shows it.)
 
 ---
 
@@ -19,9 +19,9 @@ This folder contains original source files from third-party projects that were u
 - **Source:** `https://github.com/geoadmin/web-mapviewer/blob/develop/packages/geoadmin-elevation-profile/src/profile.api.ts`
 - **Used In:** `js/elevation.js`
 - **Purpose:** Official TypeScript client implementation for the GeoAdmin elevation profile API. Used as reference to implement chunking logic in `fetchElevationForPathGeoAdminAPI()` for handling paths that exceed the API's 5000-point limit:
-  - Splits paths exceeding 3000 points into manageable chunks (using conservative limit)
+  - Splits paths exceeding 3000 points into chunks (the same conservative limit the reference uses)
   - Makes parallel API requests for each chunk using `Promise.all()`
-  - Stitches responses back together with adjusted distance values to maintain continuity
+  - Concatenates the chunk responses in order. We ignore the API's `dist` field and recompute distances from the coordinates, so no per-chunk offset is needed (the reference offsets `dist` instead).
 
 ---
 

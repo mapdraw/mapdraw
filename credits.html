@@ -1,4 +1,4 @@
-<!-- Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details. -->
+<!-- Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details. -->
 <style>
   .credits-container {
     font-size: var(--font-size-14);
@@ -60,7 +60,7 @@
     font-size: var(--font-size-14);
     font-weight: bold;
     color: var(--color-white) !important;
-    background-color: var(--highlight-color);
+    background-color: var(--color-blue);
     border-radius: 8px;
     text-decoration: none !important;
   }
@@ -100,7 +100,7 @@
 <div class="credits-container">
   <img
     src="/img/icon-1024x1024.png"
-    alt="MapDraw Logo"
+    alt="MapDraw Icon"
     style="width: 150px; height: auto; display: block; margin: 0px auto 10px"
   />
   <div class="credits-header">
@@ -113,9 +113,10 @@
         <li>🧭 Routing for driving, biking, and walking</li>
         <li>📈 Elevation profiles for any path</li>
         <li>🔍 Find nearby points of interest</li>
+        <li>📍 Contribute to OpenStreetMap</li>
         <li>🔗 Share maps via URL</li>
         <li>🏃 Strava activity integration</li>
-        <li>🗺️ Import custom WMS map layers</li>
+        <li>🗺️ Import WMS & XYZ tile layers</li>
         <li>📝 Built-in GeoJSON code editor</li>
         <li>⭐ Free and open source</li>
       </ul>
@@ -166,35 +167,16 @@
         >
       </li>
       <li class="attribution-subheader">Base Maps</li>
-      <li>
-        OpenStreetMap: &copy;
-        <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
-      </li>
-      <li>Esri World Imagery: &copy; <a href="https://www.esri.com" target="_blank">Esri</a></li>
-      <li>CyclOSM: &copy; <a href="https://www.cyclosm.org/" target="_blank">CyclOSM</a></li>
-      <li>
-        Tracestrack Topo: &copy;
-        <a href="https://www.tracestrack.com/" target="_blank">Tracestrack</a>
-      </li>
-      <li>
-        TopPlusOpen: &copy;
-        <a href="https://www.govdata.de/dl-de/by-2-0" target="_blank">dl-de/by-2-0</a>
-      </li>
-      <li>
-        Swisstopo: &copy; <a href="https://www.swisstopo.admin.ch/" target="_blank">swisstopo</a>
-      </li>
+      <li id="basemap-credits-placeholder"></li>
       <li class="attribution-subheader">Overlays</li>
-      <li>
-        Waymarked Trails: &copy;
-        <a href="https://waymarkedtrails.org" target="_blank">Waymarked Trails</a>
-      </li>
+      <li id="overlay-credits-placeholder"></li>
       <li class="attribution-subheader">Icons & Fonts</li>
       <li>
-        Icons (Material Symbols) provided by
+        Icons (Material Symbols) by
         <a href="https://fonts.google.com/icons" target="_blank">Google Fonts</a>
       </li>
       <li>
-        Font (Roboto) provided by
+        Font (Roboto) by
         <a href="https://fonts.google.com/specimen/Roboto" target="_blank">Google Fonts</a>
       </li>
     </ul>

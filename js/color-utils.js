@@ -1,17 +1,18 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 /**
  * CSS COLOR UTILITIES
  *
  * Provides color parsing and normalization for import/export.
- * Supports all 140 standard CSS color names and hex values.
+ * Supports all 148 CSS color name keywords and hex values.
  * @see https://developer.mozilla.org/en-US/docs/Web/CSS/named-color
  * @see https://www.w3schools.com/tags/ref_colornames.asp
  */
 
 /**
- * All 140 standard CSS color names mapped to their hex values.
- * Names are lowercase for case-insensitive lookup.
+ * All 148 CSS Color Level 4 named color keywords mapped to their hex values.
+ * Sorted alphabetically. Names are lowercase for case-insensitive lookup.
+ * @see https://drafts.csswg.org/css-color-4/#named-colors
  */
 const CSS_COLOR_NAMES = {
   aliceblue: "#F0F8FF",
@@ -39,8 +40,8 @@ const CSS_COLOR_NAMES = {
   darkcyan: "#008B8B",
   darkgoldenrod: "#B8860B",
   darkgray: "#A9A9A9",
-  darkgrey: "#A9A9A9",
   darkgreen: "#006400",
+  darkgrey: "#A9A9A9",
   darkkhaki: "#BDB76B",
   darkmagenta: "#8B008B",
   darkolivegreen: "#556B2F",
@@ -68,9 +69,9 @@ const CSS_COLOR_NAMES = {
   gold: "#FFD700",
   goldenrod: "#DAA520",
   gray: "#808080",
-  grey: "#808080",
   green: "#008000",
   greenyellow: "#ADFF2F",
+  grey: "#808080",
   honeydew: "#F0FFF0",
   hotpink: "#FF69B4",
   indianred: "#CD5C5C",
@@ -86,8 +87,8 @@ const CSS_COLOR_NAMES = {
   lightcyan: "#E0FFFF",
   lightgoldenrodyellow: "#FAFAD2",
   lightgray: "#D3D3D3",
-  lightgrey: "#D3D3D3",
   lightgreen: "#90EE90",
+  lightgrey: "#D3D3D3",
   lightpink: "#FFB6C1",
   lightsalmon: "#FFA07A",
   lightseagreen: "#20B2AA",
@@ -169,14 +170,14 @@ const CSS_COLOR_NAMES = {
  * Handles various input formats:
  * - #RGB -> #RRGGBB
  * - #RRGGBB -> #RRGGBB
- * - #AARRGGBB -> #RRGGBB (strips alpha prefix, KML/Android style)
+ * - #AARRGGBB -> #RRGGBB (strips alpha prefix, GPX/Android style)
  * - RRGGBB -> #RRGGBB
  *
  * @param {string} raw - Raw color string
  * @returns {string|null} Normalized hex color or null if invalid
  */
 function normalizeHexColor(raw) {
-  if (!raw) return null;
+  if (typeof raw !== "string" || !raw) return null;
   let color = raw.trim().toLowerCase();
 
   // Remove # prefix if present
@@ -223,7 +224,7 @@ function normalizeHexColor(raw) {
  * @returns {string|null} Normalized hex color or null if invalid
  */
 function parseColor(input) {
-  if (!input) return null;
+  if (typeof input !== "string" || !input) return null;
   const str = input.trim().toLowerCase();
 
   // Check if it's a hex color
@@ -234,6 +235,42 @@ function parseColor(input) {
   // Look up CSS color name
   const hex = CSS_COLOR_NAMES[str];
   return hex || null;
+}
+
+/**
+ * Reads a layer's color from its GeoJSON properties.
+ * Color lives under the simplestyle-spec key matching the geometry:
+ * "marker-color" for markers, "stroke" for paths and polygons.
+ *
+ * @param {L.Layer} layer - The Leaflet layer
+ * @returns {string} Hex color, or DEFAULT_COLOR if unset
+ */
+function getLayerColor(layer) {
+  const props = layer.feature?.properties || {};
+  return (layer instanceof L.Marker ? props["marker-color"] : props.stroke) || DEFAULT_COLOR;
+}
+
+/**
+ * Writes a layer's color into its GeoJSON properties under the simplestyle-spec
+ * key matching the geometry. Only touches data - callers still apply the visual
+ * style themselves via setStyle()/setIcon().
+ *
+ * @param {L.Layer} layer - The Leaflet layer
+ * @param {string} hex - Hex color to store
+ */
+function setLayerColor(layer, hex) {
+  layer.feature = layer.feature || {};
+  const props = (layer.feature.properties = layer.feature.properties || {});
+  // The other geometry's key must go: it would be exported as styling that was
+  // never applied, and parseColorFromGeoJsonStyle() would still read it as a
+  // fallback on re-import.
+  if (layer instanceof L.Marker) {
+    delete props.stroke;
+    props["marker-color"] = hex;
+  } else {
+    delete props["marker-color"];
+    props.stroke = hex;
+  }
 }
 
 /**
@@ -263,7 +300,7 @@ function cssToKmlColor(cssColor) {
  * @returns {string|null} CSS color string (e.g., "#FF0000") or null if invalid
  */
 function kmlToCssColor(kmlColor) {
-  if (!kmlColor) return null;
+  if (typeof kmlColor !== "string" || !kmlColor) return null;
   let color = kmlColor.trim().toLowerCase();
 
   // Remove # prefix if present

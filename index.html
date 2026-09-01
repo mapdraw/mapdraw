@@ -1,9 +1,20 @@
 <!doctype html>
-<!-- Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details. -->
+<!-- Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details. -->
 <html lang="en">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "GA_MEASUREMENT_ID");
+    </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>__APP_TITLE__</title>
     <meta name="description" content="__APP_DESCRIPTION__" />
 
@@ -61,8 +72,6 @@
     <link rel="stylesheet" href="/leaflet-routing-machine-3.2.12/leaflet-routing-machine.css" />
     <script src="/leaflet-routing-machine-3.2.12/leaflet-routing-machine.min.js"></script>
 
-    <script src="/lz-string-1.5.0/lz-string.min.js"></script>
-
     <script src="/polyline-encoded-0.0.9/Polyline.encoded.js"></script>
 
     <script src="/proj4-2.20.2/proj4.js"></script>
@@ -71,12 +80,12 @@
 
     <script src="/sortablejs-1.15.6/Sortable.min.js"></script>
 
-    <link rel="stylesheet" href="/sweetalert2-11.26.17/sweetalert2.min.css" />
-    <script src="/sweetalert2-11.26.17/sweetalert2.all.min.js"></script>
+    <link rel="stylesheet" href="/sweetalert2-11.26.25/sweetalert2.min.css" />
+    <script src="/sweetalert2-11.26.25/sweetalert2.min.js"></script>
 
     <script src="/togeojson-0.16.2/togeojson.js"></script>
 
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/style.css?v=__BUILD_TIMESTAMP__" />
   </head>
   <body data-nosnippet>
     <div id="map">
@@ -91,9 +100,11 @@
         </button>
         <button id="poi-finder-btn" class="top-right-btn" title="Find Places">Find Places</button>
         <button id="search-btn" class="top-right-btn" title="Search for addresses and coordinates">
-          <span class="icon-search-online material-symbols">search</span>
-          <span class="icon-search-offline material-symbols">sentiment_dissatisfied</span>
+          <span class="material-symbols">search</span>
         </button>
+        <div id="offline-indicator">
+          <span class="material-symbols">sentiment_dissatisfied</span>OFFLINE
+        </div>
       </div>
 
       <div id="main-right-container">
@@ -105,7 +116,7 @@
           <textarea id="info-panel-name" rows="1"></textarea>
           <p id="info-panel-details"></p>
           <p id="info-panel-edit-hint" style="display: none"></p>
-          <a id="info-panel-strava-link" target="_blank" rel="noopener noreferrer"></a>
+          <a id="info-panel-strava-link" href="" target="_blank" rel="noopener noreferrer"></a>
           <div id="info-panel-style-row">
             <div id="info-panel-color-swatch" title="Change color"></div>
             <span id="info-panel-layer-name"></span>
@@ -120,7 +131,7 @@
             </button>
             <button id="tab-btn-routing" class="tab-button" data-target="routing-panel">
               Routing
-              <span id="routing-info-icon" class="material-symbols" title="Routing Help">info</span>
+              <span id="routing-info-icon" class="material-symbols" title="Routing Help">help</span>
             </button>
             <button id="tab-btn-strava" class="tab-button" data-target="strava-panel">
               Strava
@@ -141,13 +152,14 @@
             >
               <span class="material-symbols material-symbols-fill">settings</span>
             </button>
-            <button id="tab-btn-heart" class="js-show-credits" title="About">
+            <button id="tab-btn-credits" class="js-show-credits" title="About">
               <span class="material-symbols">info</span>
             </button>
           </div>
 
           <div id="tab-content">
             <div id="overview-panel" class="tab-panel active">
+              <div id="overview-panel-controls"></div>
               <div id="overview-panel-list"></div>
             </div>
 
@@ -156,9 +168,7 @@
                 <div class="panel-input-group">
                   <input type="text" id="route-start" placeholder="Start" autocomplete="off" />
                   <button id="select-start-on-map" title="Select start point on map">
-                    <span
-                      class="material-symbols material-symbols-fill routing-panel-icon"
-                      style="color: var(--routing-color-start)"
+                    <span class="material-symbols material-symbols-fill routing-panel-icon"
                       >location_on</span
                     >
                   </button>
@@ -182,9 +192,7 @@
                     autocomplete="off"
                   />
                   <button id="select-via-on-map" title="Select via point on map">
-                    <span
-                      class="material-symbols material-symbols-fill routing-panel-icon"
-                      style="color: var(--routing-color-via)"
+                    <span class="material-symbols material-symbols-fill routing-panel-icon"
                       >location_on</span
                     >
                   </button>
@@ -203,9 +211,7 @@
                 <div class="panel-input-group">
                   <input type="text" id="route-end" placeholder="End" autocomplete="off" />
                   <button id="select-end-on-map" title="Select end point on map">
-                    <span
-                      class="material-symbols material-symbols-fill routing-panel-icon"
-                      style="color: var(--routing-color-end)"
+                    <span class="material-symbols material-symbols-fill routing-panel-icon"
                       >location_on</span
                     >
                   </button>
@@ -257,6 +263,9 @@
                 <div id="directions-panel" class="collapsed">
                   <div id="directions-panel-header">
                     <span class="directions-panel-header-arrow material-symbols"></span>Directions
+                    <span id="directions-copy-btn" class="material-symbols" title="Copy directions"
+                      >content_copy</span
+                    >
                   </div>
                   <div id="directions-list"></div>
                 </div>
@@ -269,9 +278,11 @@
                 </p>
               </div>
             </div>
-            <div id="settings-panel" class="tab-panel"></div>
             <div id="data-editor-panel" class="tab-panel">
-              <div id="data-editor-notice">Excludes Strava activities and unsaved routes.</div>
+              <div id="data-editor-notice">
+                Excludes Strava activities and unsaved routes.<br />
+                Apply moves all features into the Drawn Items layer.
+              </div>
               <textarea
                 id="data-editor-textarea"
                 spellcheck="false"
@@ -288,14 +299,15 @@
                 <button id="data-editor-find" title="Jump to selected feature">
                   Go to Selected
                 </button>
-                <button id="data-editor-copy" title="Copy GeoJSON to clipboard">
-                  <span class="material-symbols">content_copy</span>
+                <button id="data-editor-copy" title="Copy GeoJSON with all properties">
+                  Copy Raw
                 </button>
                 <button id="data-editor-copy-clean" title="Copy GeoJSON without properties">
                   Copy Clean
                 </button>
               </div>
             </div>
+            <div id="settings-panel" class="tab-panel"></div>
           </div>
         </div>
       </div>
@@ -330,23 +342,48 @@
     <script src="/js/secrets.js"></script>
     <script src="/js/config.js"></script>
     <script src="/js/color-utils.js"></script>
+    <script src="/js/mode-manager.js"></script>
     <script src="/js/sweetalert2-config.js"></script>
     <script src="/js/utils.js"></script>
+    <script src="/js/path-simplification.js"></script>
     <script src="/js/elevation-profile.js"></script>
     <script src="/js/elevation.js"></script>
     <script src="/js/map-interactions.js"></script>
+    <script src="/js/rectangle-select.js"></script>
     <script src="/js/ui-handlers.js"></script>
     <script src="/js/file-handlers.js"></script>
+    <script src="/js/share-link.js"></script>
     <script src="/js/autosave.js"></script>
     <script src="/js/routing.js"></script>
     <script src="/js/strava.js"></script>
+    <script src="/js/osm.js"></script>
     <script src="/js/contextmenu.js"></script>
     <script src="/js/leaflet-wms-gutter.js"></script>
+    <script src="/js/custom-layers.js"></script>
     <script src="/js/wms-import.js"></script>
+    <script src="/js/xyz-import.js"></script>
     <script src="/js/search.js"></script>
     <script src="/js/poi-finder.js"></script>
     <script src="/js/dev-panel.js"></script>
     <script src="/js/data-editor.js"></script>
+    <script src="/js/map-layers.js"></script>
+    <script src="/js/attribution.js"></script>
+    <script src="/js/credits-popup.js"></script>
+    <script src="/js/map-view.js"></script>
+    <script src="/js/layer-control-panel.js"></script>
+    <script src="/js/tab-navigation.js"></script>
+    <script src="/js/locate-control.js"></script>
+    <script src="/js/file-controls.js"></script>
+    <script src="/js/distance-labels.js"></script>
+    <script src="/js/draw-tools.js"></script>
+    <script src="/js/path-extend.js"></script>
+    <script src="/js/top-right-buttons.js"></script>
+    <script src="/js/settings-panel.js"></script>
+    <script src="/js/leaflet-core-patches.js"></script>
+    <script src="/js/leaflet-draw-patches.js"></script>
+    <script src="/js/offline-indicator.js"></script>
+    <script src="/js/pwa-install.js"></script>
+    <script src="/js/bottom-sheet.js"></script>
     <script src="/js/main.js"></script>
     <!-- END-BUNDLE -->
   </body>

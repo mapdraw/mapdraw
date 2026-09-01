@@ -1,4 +1,19 @@
-/* Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details. */
+/* Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details. */
+
+/*
+ * Section banners: python3 -m pyfiglet -f ansi_shadow <NAME>
+ * Sub-section banners: python3 -m pyfiglet -f small <NAME>
+ */
+
+/* VARS */
+/*
+ * ██╗   ██╗ █████╗ ██████╗ ███████╗
+ * ██║   ██║██╔══██╗██╔══██╗██╔════╝
+ * ██║   ██║███████║██████╔╝███████╗
+ * ╚██╗ ██╔╝██╔══██║██╔══██╗╚════██║
+ *  ╚████╔╝ ██║  ██║██║  ██║███████║
+ *   ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝
+ */
 
 :root {
   --color-black: #000000;
@@ -37,7 +52,225 @@
   --icon-size-30: 30px;
   --icon-size-50: 50px;
 
-  /* Light Theme Variables */
+  --highlight-color: var(--color-blue);
+  /* SweetAlert links use --highlight-color directly, not --link-color */
+  --link-color: var(--highlight-color);
+  --locate-color: var(--color-blue);
+  --overview-row-height: 32px;
+  --overview-icon-width: 28px;
+  --top-right-btn-height: 32px;
+  --top-right-clearance: calc(var(--top-right-btn-height) + 8px);
+}
+
+/* THEMES: GLASS > LIGHT > DARK */
+/*
+ *  ████████╗██╗  ██╗███████╗███╗   ███╗███████╗███████╗
+ *  ╚══██╔══╝██║  ██║██╔════╝████╗ ████║██╔════╝██╔════╝
+ *     ██║   ███████║█████╗  ██╔████╔██║█████╗  ███████╗
+ *     ██║   ██╔══██║██╔══╝  ██║╚██╔╝██║██╔══╝  ╚════██║
+ *     ██║   ██║  ██║███████╗██║ ╚═╝ ██║███████╗███████║
+ *     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚══════╝╚══════╝
+ */
+
+/* GLASS (default) */
+/*
+ *  ___ _      _   ___ ___
+ * / __| |    /_\ / __/ __|
+ *| (_ | |__ / _ \\__ \__ \
+ * \___|____/_/ \_\___/___/
+ */
+
+body.glass-mode {
+  --icon-color: #f1f5f9;
+  --border-color: rgba(255, 255, 255, 0.3);
+  --link-color: var(--text-color);
+  --divider-color: var(--border-color);
+  --background-color: transparent;
+  --background2-color: rgba(255, 255, 255, 0.06);
+  --text-color: #f1f5f9;
+  color: var(--text-color);
+  --glass-btn-bg: var(--border-color);
+  --glass-header-bg: var(--border-color);
+  --glass-bg: rgba(10, 15, 40, 0.5);
+  --glass-blur: blur(32px) saturate(200%);
+}
+
+/* Glass panels */
+body.glass-mode #info-panel,
+body.glass-mode #custom-layers-panel,
+body.glass-mode .top-right-btn,
+body.glass-mode .leaflet-draw-actions,
+body.glass-mode .download-submenu {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Left toolbar: pill-shaped glass.
+   backdrop-filter lives on ::before so the parent is not a backdrop root —
+   child .leaflet-draw-actions and .download-submenu can then blur the map. */
+body.glass-mode .leaflet-top.leaflet-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ::before already draws the border; cancel the duplicate to avoid a double-border shine */
+body.glass-mode #map > div.leaflet-control-container > div.leaflet-top.leaflet-left {
+  border: none;
+}
+
+/* Elevation panel: top border only */
+body.glass-mode #elevation-div {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--border-color) !important;
+}
+
+/* Context menu popup */
+body.glass-mode .leaflet-popup-content-wrapper {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Name field focus */
+body.glass-mode #info-panel-name:focus {
+  color: var(--color-white) !important;
+}
+
+/* Filled action buttons: glass fill (base fill is in the BASE section below). */
+body.glass-mode #info-panel-edit-hint,
+body.glass-mode #clear-route-btn:not(:disabled),
+body.glass-mode #save-route-btn:not(:disabled),
+body.glass-mode .layer-import-button,
+body.glass-mode button.strava-button-secondary:not(:disabled),
+body.glass-mode #data-editor-restore,
+body.glass-mode #data-editor-apply,
+body.glass-mode #data-editor-copy,
+body.glass-mode #data-editor-copy-clean,
+body.glass-mode #data-editor-find,
+body.glass-mode .leaflet-popup-content-wrapper button,
+body.glass-mode .leaflet-popup-content-wrapper button:hover {
+  background-color: var(--glass-btn-bg) !important;
+  color: var(--color-white) !important;
+}
+
+/* border-color: transparent, not border: none - avoids both the translucent-fill seam and
+   the flex-width shift (see .profile-btn.active in the ROUTING section). */
+body.glass-mode .routing-profile-selector .profile-btn.active {
+  background-color: var(--glass-btn-bg) !important;
+  color: var(--color-white) !important;
+  border-color: transparent !important;
+}
+body.glass-mode .routing-profile-selector .profile-btn.active .material-symbols {
+  color: var(--color-white) !important;
+}
+body.glass-mode #select-start-on-map.active,
+body.glass-mode #select-via-on-map.active,
+body.glass-mode #select-end-on-map.active,
+body.glass-mode #routing-pen-btn.active {
+  background-color: var(--highlight-color) !important;
+  border-color: var(--highlight-color) !important;
+}
+body.glass-mode #select-start-on-map.active .material-symbols,
+body.glass-mode #select-via-on-map.active .material-symbols,
+body.glass-mode #select-end-on-map.active .material-symbols,
+body.glass-mode #routing-pen-btn.active .material-symbols {
+  color: var(--color-white) !important;
+}
+
+/* Disabled toolbar buttons: faded */
+body.glass-mode .leaflet-bar a.leaflet-disabled,
+body.glass-mode .leaflet-draw-toolbar a.leaflet-disabled,
+body.glass-mode .leaflet-control-custom a.leaflet-disabled,
+body.glass-mode .leaflet-control-custom.disabled > a {
+  opacity: 0.25 !important;
+  background-color: transparent !important;
+}
+
+/* Toolbar submenus: transparent inner items so container glass shows through */
+body.glass-mode .leaflet-draw-actions a,
+body.glass-mode .leaflet-draw-actions a:hover,
+body.glass-mode .download-submenu button {
+  background-color: transparent !important;
+}
+body.glass-mode .download-submenu button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Tab container: no outer border, tab-buttons and tab-content provide the frame */
+body.glass-mode #tab-container {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+/* On mobile the tab container reaches the screen edge — no rounded bottom corners */
+@media (max-width: 768px) {
+  body.glass-mode:not(.force-desktop-layout) #tab-container {
+    border-radius: 0;
+  }
+}
+
+/* Credits bar gets glass on real desktop and forced-desktop; skipped on native mobile where the credits link is not shown */
+@media (min-width: 769px) {
+  body.glass-mode #bottom-left-credits {
+    background: var(--glass-bg) !important;
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color) !important;
+  }
+}
+body.glass-mode.force-desktop-layout #bottom-left-credits {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Glass mode: links show underline instead of relying on color to stand out */
+body.glass-mode #strava-panel a,
+body.glass-mode #settings-panel a,
+body.glass-mode #credits-link,
+body.glass-mode .link-button,
+body.glass-mode .leaflet-popup-content a {
+  color: var(--link-color) !important;
+  text-decoration: underline;
+}
+
+body.glass-mode .leaflet-container {
+  background: var(--glass-bg);
+}
+
+/* Only affects the open popup (Windows Chrome), never the closed box. */
+body.glass-mode select option {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* LIGHT */
+/*
+ *  _    ___ ___ _  _ _____
+ * | |  |_ _/ __| || |_   _|
+ * | |__ | | (_ | __ | | |
+ * |____|___\___|_||_| |_|
+ */
+
+body.light-mode {
   --icon-color: var(--color-black);
   --border-color: #757575;
   --divider-color: var(--border-color);
@@ -45,13 +278,19 @@
   --background2-color: #bdbdbd;
   --text-color: var(--color-black);
   color: var(--color-black);
-  --highlight-color: var(--color-blue);
-  --locate-color: var(--color-blue);
-  --overview-header-height: 32px;
 }
 
-body.dark-mode {
-  /* Dark Theme Variables */
+/* DARK */
+/*
+ *  ___   _   ___ _  __
+ * |   \ /_\ | _ \ |/ /
+ * | |) / _ \|   / ' <
+ * |___/_/ \_\_|_\_|\_\
+ */
+
+body.dark-mode,
+body.glass-mode .swal2-container, /* in glass mode, SweetAlert uses the same style as dark mode */
+body.glass-mode select option /* ditto for the open dropdown popup - see the rule above */ {
   --icon-color: var(--color-white);
   --border-color: #bdbdbd;
   --divider-color: var(--border-color);
@@ -61,17 +300,63 @@ body.dark-mode {
   color: var(--color-white);
 }
 
+/* BASE */
+/*
+ * ██████╗  █████╗ ███████╗███████╗
+ * ██╔══██╗██╔══██╗██╔════╝██╔════╝
+ * ██████╔╝███████║███████╗█████╗
+ * ██╔══██╗██╔══██║╚════██║██╔══╝
+ * ██████╔╝██║  ██║███████║███████╗
+ * ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝
+ */
+
 * {
   margin: 0;
   padding: 0;
   font-family: "Roboto", sans-serif !important;
   /* Forcefully remove blue highlight of button on mobile */
   -webkit-tap-highlight-color: transparent !important;
+  /* App, not a document: no text selection by default. Inputs/textareas
+     are exempt regardless; real content opts back in below. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Selectable content: dialogs (credits popup renders inside one), the
+   JSON editor, and route/path details. */
+.swal2-html-container,
+.CodeMirror,
+#info-panel-details,
+#routing-summary-container,
+#directions-list {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+a {
+  color: var(--highlight-color);
 }
 
 /* Also remove the focus outline, which can appear as a blue ring */
 *:focus {
   outline: none !important;
+}
+
+/* Filled action buttons: base fill (glass fill is in the GLASS section above). */
+#info-panel-edit-hint,
+#clear-route-btn:not(:disabled),
+#save-route-btn:not(:disabled),
+.layer-import-button,
+button.strava-button-secondary:not(:disabled),
+#data-editor-restore,
+#data-editor-apply,
+#data-editor-copy,
+#data-editor-copy-clean,
+#data-editor-find {
+  font-weight: bold;
+  background-color: var(--text-color);
+  color: var(--background-color);
+  border: none;
 }
 
 input[type="checkbox"],
@@ -93,40 +378,221 @@ select:focus {
 }
 
 .leaflet-container {
-  background: var(--color-neutral-grey);
+  background: var(--background2-color);
 }
 
 .grayscale-tiles {
   filter: grayscale(100%);
 }
 
-/* Unified icon styling */
+/* Main container for all right-side panels */
+#main-right-container {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
+  right: 10px;
+  width: 340px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: calc(100vw - 61px);
+  max-height: calc(100dvh - env(safe-area-inset-top) - 100px);
+  overflow: hidden;
+  cursor: auto;
+}
 
-/* 1. Center all icons in their button containers using flexbox */
-.leaflet-control-custom a,
-.leaflet-control-locate a,
-.leaflet-control-layers-toggle,
-.leaflet-control-zoom a,
-.leaflet-draw-toolbar a,
-.tab-button /* Also apply to tab buttons */ {
-  display: flex !important;
-  justify-content: center;
+#main-right-container.hidden {
+  display: none;
+}
+
+.leaflet-marker-shadow {
+  display: none !important;
+}
+
+/* Forcefully removes dotted line style ONLY during editing */
+.map-is-editing path.leaflet-interactive {
+  stroke-dasharray: none !important;
+}
+
+/* Vertex handle shown while drawing or editing a path/area. Colored to match the item via
+   --active-item-color (set in draw-tools.js/leaflet-draw-patches.js/path-extend.js), falling
+   back to black if it's ever unset. */
+.leaflet-editing-icon {
+  border-radius: 50%;
+  background-color: var(--active-item-color, var(--color-black));
+  opacity: 1 !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-left: -10px !important;
+  margin-top: -10px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
+  border: none;
+}
+
+/* Mid-segment "add point" handle (tagged by leaflet-draw-patches.js). Same coloring as
+   .leaflet-editing-icon; opacity is forced because leaflet-draw itself sets these to 0.6. */
+.leaflet-editing-middle-icon {
+  border-radius: 50%;
+  background-color: var(--active-item-color, var(--color-black));
+  opacity: 1 !important;
+  width: 10px !important;
+  height: 10px !important;
+  margin-left: -5px !important;
+  margin-top: -5px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
+  border: none;
+}
+
+/* Existing path endpoint shown while drawing a new path (js/path-extend.js), before it's
+   clicked to start extending from it. Same shape/size as .leaflet-editing-icon, always
+   black so it reads as "not yet active". */
+.path-extend-endpoint {
+  border-radius: 50%;
+  background-color: var(--color-black);
+  opacity: 1 !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-left: -10px !important;
+  margin-top: -10px !important;
+  box-shadow: 0 0 0 2px var(--color-white);
+  border: none;
+}
+
+/* Leaflet-draw hardcodes this dash's opacity and color; override both to match the
+   app's own default opacity and the active item's color. */
+.leaflet-draw-guide-dash {
+  background-color: var(--active-item-color, var(--color-black)) !important;
+  opacity: 0.75 !important;
+}
+
+/* Distance/area labels shown on a path or area while drawing, selected, or being edited */
+.distance-label {
+  pointer-events: none;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  text-align: center;
+  font-size: var(--font-size-12);
+  font-weight: bold;
+  color: white;
+  /* Mitigates blur from Leaflet's sub-pixel marker positioning. */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  text-shadow:
+    -1px -1px 0 black,
+    1px -1px 0 black,
+    -1px 1px 0 black,
+    1px 1px 0 black;
+  /* DEBUG: outlines the label's actual rendered box */
+  /* outline: 1px solid red; */
 }
 
-/* 2. Remove default background image from leaflet.draw icons */
-.leaflet-draw-toolbar a {
-  background-image: none !important;
+/* Drag highlight box around a marker in edit mode (overrides leaflet-draw's default pink) */
+.leaflet-edit-marker-selected {
+  background-color: transparent;
+  border-color: var(--highlight-color);
 }
 
-/* Clear style for disabled draw buttons */
-.leaflet-draw-toolbar a.leaflet-disabled {
-  background-color: var(--background2-color) !important;
-  cursor: not-allowed;
+#sheet-handle {
+  /* Hide sheet-handle on desktop */
+  display: none;
 }
-.leaflet-draw-toolbar a.leaflet-disabled .icon {
-  fill: var(--icon-color); /* Use a faded grey for the icon itself */
+
+/* SEARCH */
+/*
+ * ███████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗
+ * ██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝██║  ██║
+ * ███████╗█████╗  ███████║██████╔╝██║     ███████║
+ * ╚════██║██╔══╝  ██╔══██║██╔══██╗██║     ██╔══██║
+ * ███████║███████╗██║  ██║██║  ██║╚██████╗██║  ██║
+ * ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+ */
+
+/* Autocomplete suggestion item styles (used inside search modal) */
+.autocomplete-suggestion-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color);
 }
+
+.autocomplete-suggestion-item:hover,
+.autocomplete-suggestion-item.active {
+  background-color: var(--highlight-color) !important;
+}
+
+/* Search Modal Styles */
+/* Modal container customization */
+.search-modal {
+  font-family: inherit !important;
+}
+
+#search-modal-input:focus {
+  outline: none !important;
+  border-color: var(--border-color) !important;
+  box-shadow: none !important;
+}
+
+/* Suggestions dropdown inside modal */
+.search-modal-suggestions {
+  display: none;
+  position: relative;
+  padding: 0;
+  background-color: var(--background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: var(--border-radius);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Make input connect visually with suggestions when open */
+.search-modal-container:has(.search-modal-suggestions[style*="display: block"])
+  #search-modal-input {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.search-modal-suggestions[style*="display: block"] {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  margin-top: 0 !important;
+  border-top: none !important;
+}
+
+/* Suggestion items inside the search modal */
+.search-modal-suggestions .autocomplete-suggestion-item {
+  padding: 12px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--divider-color);
+  text-align: left;
+}
+
+.search-modal-suggestions .autocomplete-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.search-modal-suggestions .autocomplete-suggestion-item:hover,
+.search-modal-suggestions .autocomplete-suggestion-item.active {
+  background-color: var(--highlight-color) !important;
+}
+
+/* INFO */
+/*
+ * ██╗███╗   ██╗███████╗ ██████╗
+ * ██║████╗  ██║██╔════╝██╔═══██╗
+ * ██║██╔██╗ ██║█████╗  ██║   ██║
+ * ██║██║╚██╗██║██╔══╝  ██║   ██║
+ * ██║██║ ╚████║██║     ╚██████╔╝
+ * ╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝
+ */
 
 /* Info panel for selected items */
 #info-panel {
@@ -135,7 +601,7 @@ select:focus {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   text-align: center;
-  width: 100%; /* Take full width of parent */
+  width: 100%;
   min-height: 90px;
   display: flex;
   flex-direction: column;
@@ -166,7 +632,7 @@ select:focus {
 
 #info-panel-name:focus {
   outline: none;
-  border: none;
+  border: 2px solid var(--highlight-color);
   background-color: var(--highlight-color);
   color: var(--background-color);
 }
@@ -188,9 +654,9 @@ select:focus {
   height: 20px;
   fill: var(--icon-color);
   margin-left: 6px;
-  flex-shrink: 0; /* Prevents the icon from shrinking if space is tight */
-  position: absolute;
-  transform: translateY(-5px);
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
 }
 
 #auth-callback-domain-copy-icon {
@@ -204,10 +670,24 @@ select:focus {
 
 #info-panel-edit-hint {
   font-size: var(--font-size-12);
-  color: var(--text-color);
+  line-height: 1.25;
+  border-radius: var(--border-radius);
+  padding: 4px 6px;
   margin-top: 5px;
+  width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
+  cursor: pointer;
+}
+
+#info-panel-edit-hint .material-symbols {
+  color: currentColor;
+  width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
 }
 
 /* Style Row for Color Swatch and Layer Name */
@@ -224,12 +704,21 @@ select:focus {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: none;
+  border: 2px solid var(--text-color);
+  box-sizing: border-box;
   cursor: pointer;
   transition: transform 0.1s ease-in-out;
   position: absolute;
   left: 5px;
   bottom: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* "Mixed colors" indicator shown when a bulk selection has no common color */
+#info-panel-color-swatch .material-symbols {
+  font-size: var(--icon-size-16) !important;
 }
 
 /* Hide color swatch when picker is open */
@@ -246,14 +735,72 @@ select:focus {
   text-align: center;
 }
 
-a#info-panel-strava-link {
-  color: var(--strava-color) !important;
-  text-decoration: none !important;
+#info-panel-strava-link {
+  display: none; /* Hidden by default */
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background-color: var(--strava-color);
+  color: white;
   font-size: var(--font-size-12);
+  font-weight: bold;
+  line-height: 1.25;
+  margin-top: 5px;
+  padding: 4px 6px;
+  border-radius: var(--border-radius);
+  box-sizing: border-box;
 }
 
-a#info-panel-strava-link:hover {
-  text-decoration: underline !important;
+/* Simplification slider shown in #info-panel-details while editing a path/area -
+   see showSimplificationSlider() in js/path-simplification.js */
+/* Prevents shrink-to-content width, which would resize the slider as the lock message changes. */
+#info-panel.simplify-active #info-panel-details {
+  width: 100%;
+}
+
+.simplify-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.simplify-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.simplify-panel-count {
+  min-width: 20px;
+  text-align: right;
+  font-size: var(--font-size-14);
+}
+
+.simplify-panel-slider {
+  flex: 1;
+  cursor: pointer;
+  accent-color: var(--highlight-color);
+}
+
+.simplify-panel-lock-message:empty {
+  display: none;
+}
+
+/* Matches .poi-cat-msg--info's warning look (yellow bg, black text). */
+.simplify-zoom-hint {
+  padding: 8px 10px;
+  border-radius: var(--border-radius);
+  background: var(--color-yellow);
+  color: var(--color-black);
+  font-size: var(--font-size-14);
+  line-height: 20px;
+  text-align: center;
+}
+
+.simplify-zoom-hint:empty {
+  display: none;
 }
 
 /* Color Picker Styles */
@@ -288,6 +835,150 @@ a#info-panel-strava-link:hover {
   border: 2px solid var(--text-color);
 }
 
+/* Sized like a swatch; position is set in JS */
+#color-picker-close-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* TABS */
+/*
+ * ████████╗ █████╗ ██████╗ ███████╗
+ * ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝
+ *    ██║   ███████║██████╔╝███████╗
+ *    ██║   ██╔══██║██╔══██╗╚════██║
+ *    ██║   ██║  ██║██████╔╝███████║
+ *    ╚═╝   ╚═╝  ╚═╝╚═════╝ ╚══════╝
+ */
+
+/* Tab System Styles */
+#tab-container {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* allow flex to shrink below content size */
+  overflow: hidden;
+}
+
+#tab-buttons {
+  display: flex;
+  width: 100%;
+}
+
+.tab-button {
+  flex: 1 1 auto; /* Size to content first, then share leftover space equally */
+  padding: 8px 3px;
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--background2-color);
+  border-right: none;
+  outline: none;
+  color: var(--text-color);
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 35px;
+}
+
+.tab-button.active {
+  border-bottom-color: var(--background-color);
+  background-color: var(--background-color);
+}
+
+#tab-btn-overview {
+  border-radius: var(--border-radius) 0 0 0;
+  border-right: none;
+}
+
+#tab-btn-routing {
+  border-radius: 0;
+  border-right: none;
+}
+
+#tab-btn-strava {
+  border-radius: 0;
+  border-right: none;
+}
+
+#tab-btn-data {
+  flex: 0 0 34px; /* Don't grow, fixed width */
+  padding: 6px;
+  border-radius: 0;
+}
+
+#tab-btn-settings {
+  flex: 0 0 34px; /* Don't grow, fixed width */
+  padding: 6px;
+  border-radius: 0;
+}
+
+/* Credits icon button: not a .tab-button since it opens a modal instead of switching panels */
+#tab-btn-credits {
+  display: flex;
+  flex: 0 0 34px; /* Don't grow, fixed width */
+  padding: 6px;
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--background2-color);
+  outline: none;
+  color: var(--text-color);
+  min-width: 0;
+  justify-content: center;
+  align-items: center;
+  height: 35px;
+  border-radius: 0 var(--border-radius) 0 0;
+}
+
+#tab-btn-credits .material-symbols {
+  color: var(--text-color);
+}
+
+#tab-content {
+  background-color: transparent;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tab-panel {
+  display: none; /* Hidden by default */
+}
+
+.tab-panel.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* OVERVIEW */
+/*
+ *  ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
+ * ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
+ * ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
+ * ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
+ * ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
+ *  ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
+ */
+
 /* Overview panel styles */
 #overview-panel {
   width: 100%;
@@ -299,10 +990,18 @@ a#info-panel-strava-link:hover {
   padding: 0;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+/* Pins the shared controls row (see createOverviewControlsRow() in ui-handlers.js) above
+   the scrollable item list rather than inside it - sized to its content, never scrolls. */
+#overview-panel-controls {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
   padding-top: 10px;
 }
 
-#overview-panel.is-empty {
+#overview-panel.is-empty #overview-panel-controls {
   padding-top: 0;
 }
 
@@ -314,11 +1013,28 @@ a#info-panel-strava-link:hover {
   flex: 1;
   min-height: 0;
 }
+
+/* Frees up map space for a long list, without losing which category is active - the
+   controls row (icons/pills) stays pinned above it. Desktop only (see the max-width: 768px
+   media query, which also guards against a stale .collapsed left over from a desktop-width
+   collapse). */
+#overview-panel.collapsed #overview-panel-list {
+  display: none;
+}
+
+/* Invisible element sized to represent however many rows are scrolled past above/below
+   the currently-rendered window - normal document flow, exactly like a real row would
+   take up, just with no content. One sits before and one after the rendered rows (see
+   renderOverviewWindow() in ui-handlers.js), so the container's scrollbar behaves as if
+   every row were really present. */
+.overview-list-spacer {
+  pointer-events: none;
+}
 .overview-list-item {
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  min-height: var(--overview-header-height);
+  padding: 0 12px 0 6px;
+  min-height: var(--overview-row-height);
   cursor: pointer;
   border-bottom: 1px solid var(--divider-color);
   font-size: var(--font-size-14);
@@ -327,39 +1043,49 @@ a#info-panel-strava-link:hover {
   text-overflow: ellipsis;
   background-color: var(--background-color);
   color: var(--text-color) !important;
-  scroll-margin-top: var(--overview-header-height);
+  /* Without this, border-bottom makes the actual rendered height 1px taller than
+     --overview-row-height - and ui-handlers.js's virtualized renderer assumes every
+     row is exactly that tall when sizing the spacers that stand in for scrolled-past
+     rows, so a mismatch here would drift the list out of alignment over a long scroll. */
+  box-sizing: border-box;
 }
 .overview-visibility-btn,
 .overview-duplicate-btn,
 .overview-delete-btn,
 .overview-save-btn,
-.overview-header-visibility-btn,
-.overview-header-delete-btn,
-.overview-header-arrow,
-.overview-icon-spacer {
-  width: 32px;
+.overview-controls-visibility-btn,
+.overview-controls-duplicate-btn,
+.overview-controls-delete-btn,
+.overview-controls-collapse-btn {
+  width: var(--overview-icon-width);
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   line-height: 1;
-  user-select: none;
   flex-shrink: 0;
   color: var(--text-color);
-}
-
-.overview-icon-spacer {
-  cursor: default;
 }
 
 .overview-visibility-btn .material-symbols,
 .overview-duplicate-btn .material-symbols,
 .overview-delete-btn .material-symbols,
 .overview-save-btn .material-symbols,
-.overview-header-visibility-btn .material-symbols,
-.overview-header-delete-btn .material-symbols,
-.overview-header-arrow .material-symbols {
+.overview-controls-visibility-btn .material-symbols,
+.overview-controls-duplicate-btn .material-symbols,
+.overview-controls-delete-btn .material-symbols,
+.overview-controls-collapse-btn .material-symbols {
   font-size: var(--icon-size-20) !important;
+}
+
+/* Expanded (default): up arrow, i.e. "click to collapse". */
+#overview-panel:not(.collapsed) .overview-controls-collapse-btn .material-symbols::before {
+  content: "keyboard_arrow_up";
+}
+
+/* Collapsed: down arrow, i.e. "click to expand". */
+#overview-panel.collapsed .overview-controls-collapse-btn .material-symbols::before {
+  content: "keyboard_arrow_down";
 }
 
 .overview-item-text {
@@ -370,119 +1096,174 @@ a#info-panel-strava-link:hover {
   color: var(--text-color);
   padding-left: 4px;
 }
-.overview-list-item:last-child {
+/* DOM order no longer matches display order once rows are virtualized (only the ones
+   scrolled into view exist as DOM children, appended as they're created) - "last row in
+   the whole list" is tracked explicitly via this class instead of :last-child. The
+   empty-state message (updateOverviewList() in ui-handlers.js) is always the sole child of
+   the list container, built outside the virtualized render path entirely - so it never gets
+   .overview-last-in-list, but still needs its border-bottom suppressed the same way a real
+   last row would. */
+.overview-list-item.overview-last-in-list,
+.overview-list-empty-message {
   border-bottom: none !important;
 }
-.overview-list-item.selected {
+.overview-list-empty-message {
+  padding-left: 10px;
+}
+.overview-list-item.selected,
+.overview-list-item.rectangle-selected {
   background-color: var(--highlight-color);
 }
 
-/* Styles for Overview Panel Group Headers */
-.overview-list-header {
-  font-weight: bold;
-  font-size: var(--font-size-12);
-  padding: 0 12px;
-  min-height: var(--overview-header-height);
-  background-color: var(--background2-color);
-  color: var(--text-color);
-  border-bottom: 1px solid var(--divider-color);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
+/* Blocks a row's select/visibility/duplicate/delete, and the shared controls row's own
+   visibility/duplicate/delete, while drawing a path, area, or marker, while Edit
+   mode is active, or while the rectangle-select tool is active - each conflicts with what's
+   on the map right now (an in-progress shape's own vertex handles, an actively edited layer,
+   path-extend.js mid-way through extending a path, or a row's click reaching the normal
+   single-item selectItem() instead of the marquee selection). Edit mode's
+   "map-is-editing" class lives on #map, not <body> like "leaflet-is-drawing" and
+   "rectangle-select-active" do, hence :has(). Excludes .overview-list-empty-message, the
+   "No items on map" placeholder, which has no click listener to actually block. Doesn't
+   touch the controls row's own pill/label or collapse arrow - switching category or
+   collapsing/expanding the list is harmless, neither touches a layer.
+   cursor: not-allowed goes on the list itself, not the (now pointer-events: none) rows -
+   an element excluded from hit-testing can't show its own cursor either, so it has to come
+   from a still-interactive ancestor instead, showing through as the pointer passes to it. */
+body:is(.leaflet-is-drawing, .rectangle-select-active)
+  :is(#overview-panel-controls, #overview-panel-list),
+body:has(#map.map-is-editing) :is(#overview-panel-controls, #overview-panel-list) {
+  cursor: not-allowed;
+}
+
+body:is(.leaflet-is-drawing, .rectangle-select-active)
+  :is(
+    .overview-list-item,
+    .overview-controls-visibility-btn,
+    .overview-controls-duplicate-btn,
+    .overview-controls-delete-btn
+  ):not(.overview-list-empty-message),
+body:has(#map.map-is-editing)
+  :is(
+    .overview-list-item,
+    .overview-controls-visibility-btn,
+    .overview-controls-duplicate-btn,
+    .overview-controls-delete-btn
+  ):not(.overview-list-empty-message) {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Styles for the overview panel's shared controls row and category pills. A single CSS grid,
+   not flex: icons sit in fixed columns 1-3 (eye/duplicate/delete on row 1, the collapse arrow
+   on row 2 under the eye icon - see createOverviewControlsRow() in ui-handlers.js); each
+   non-empty category gets one max-content column holding its pill (row 1) and count (row 2),
+   assigned by renderCategoryPills(), which also rebuilds grid-template-columns to match
+   whichever categories are currently visible. Column width and spacing live here once instead
+   of being duplicated across separate pill/count containers, and a pill/count pair shares its
+   column's width automatically - no JS measurement needed. */
+.overview-controls-row {
+  display: grid;
+  grid-template-rows: auto auto;
+  /* Explicit, not relying on the default (which already behaves the same way) - states
+     outright that the row packs left, since it's easy to break by mistake here (e.g. an
+     auto instead of max-content column absorbs leftover space and undoes this). */
+  justify-content: start;
   align-items: center;
-  cursor: pointer;
-  user-select: none;
+  justify-items: center;
+  padding: 0 12px 0 6px;
+  border-bottom: 1px solid var(--divider-color);
 }
 
-#overview-panel-list .overview-list-header:first-child {
-  border-top: none;
+.overview-controls-visibility-btn {
+  grid-column: 1;
+  grid-row: 1;
 }
 
-.overview-header-text {
-  flex-grow: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-left: 4px;
+.overview-controls-duplicate-btn {
+  grid-column: 2;
+  grid-row: 1;
 }
 
-#overview-panel-list .overview-list-header.collapsed.last-header {
+.overview-controls-delete-btn {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.overview-controls-collapse-btn {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* No list below it to divide from once collapsed - mirrors
+   #directions-panel.collapsed #directions-panel-header. */
+#overview-panel.collapsed .overview-controls-row {
   border-bottom: none;
 }
 
-/* Custom Layers Panel Styles */
-.layer-icon {
-  vertical-align: middle;
-  margin-right: 0;
-  padding: 0 !important;
-}
-
-.material-symbols.layer-icon {
-  font-size: var(--icon-size-16) !important;
-}
-
-#custom-layers-panel {
-  display: none; /* Hidden by default */
-  position: absolute;
-  top: 10px;
-  left: 51px; /* The toolbar width is ~40px, so 51px provides a 10px gap */
-  z-index: 1003; /* Ensure it's above the map but consistent with other panels */
-  background-color: var(--background-color);
+/* Unselected is an outline (panel bg + themed border), like .profile-btn's unselected state
+   - driven by theme variables alone, no override needed. Active is a solid fill (see below,
+   including a glass-mode override). */
+.overview-category-pill {
+  grid-row: 1;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
-  max-height: calc(100dvh - 60px);
-  overflow-y: auto;
-  width: 200px;
-}
-
-/* Style the form content that we will move into the panel */
-#custom-layers-panel .leaflet-control-layers-form {
-  padding: 6px;
-  background-color: transparent;
-  border-radius: var(--border-radius);
-}
-#custom-layers-panel .leaflet-control-layers-separator {
-  height: 1px;
-  background-color: var(--border-color);
-  border-top: none;
-  margin: 3px 0;
-}
-#custom-layers-panel label div {
-  display: flex;
-  align-items: center;
-  height: 20px;
-}
-#custom-layers-panel span {
-  padding-left: 5px;
-}
-.leaflet-control-layers-selector {
-  margin-top: 0;
-  position: relative;
-  top: 0;
-}
-
-/* WMS custom layer truncation */
-#custom-layers-panel .wms-custom-layer .layer-name-text {
-  width: 150px;
+  /* With line-height: 1 and the 1px border, 3px vertical padding makes the button exactly
+     20px tall (12px font-size + 6px padding + 2px border) - matching the icon slots' own
+     20px so align-items: center lines them up with zero gap. */
+  padding: 3px 10px;
+  font: inherit;
+  font-size: var(--font-size-12);
+  font-weight: bold;
+  /* Matches the icon slots' line-height: 1 (see .overview-controls-visibility-btn and friends)
+     - without this, the button falls back to the browser's default line-height, which
+     sizes/centers its text differently from the icons and throws off align-items: center
+     between them. */
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  vertical-align: middle;
-}
-#custom-layers-panel .wms-custom-layer .layer-name-container {
-  display: inline-flex;
-  align-items: center;
+  cursor: pointer;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
-/* Remove default Leaflet control styling from the content inside our panel */
-#custom-layers-panel .leaflet-control-layers {
-  border: none !important;
-  box-shadow: none !important;
-  background-color: transparent !important;
+.overview-category-pill-count {
+  grid-row: 2;
+  text-align: center;
+  font-size: var(--font-size-12);
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+/* Same fill as .profile-btn.active (var(--text-color), not --highlight-color) - border-color
+   matches the fill so it blends in instead of showing as a mismatched ring. */
+.overview-category-pill.active {
+  background-color: var(--text-color);
+  border-color: var(--text-color);
+  color: var(--background-color);
+}
+
+/* glass-btn-bg/white fill (var(--text-color) is too low-contrast in glass). border-color:
+   transparent, not the fill - matching alphas still shows a seam at the rounded corner. */
+body.glass-mode .overview-category-pill.active {
+  background-color: var(--glass-btn-bg);
+  border-color: transparent;
+  color: var(--color-white);
+}
+
+/* ROUTING */
+/*
+ * ██████╗  ██████╗ ██╗   ██╗████████╗██╗███╗   ██╗ ██████╗
+ * ██╔══██╗██╔═══██╗██║   ██║╚══██╔══╝██║████╗  ██║██╔════╝
+ * ██████╔╝██║   ██║██║   ██║   ██║   ██║██╔██╗ ██║██║  ███╗
+ * ██╔══██╗██║   ██║██║   ██║   ██║   ██║██║╚██╗██║██║   ██║
+ * ██║  ██║╚██████╔╝╚██████╔╝   ██║   ██║██║ ╚████║╚██████╔╝
+ * ╚═╝  ╚═╝ ╚═════╝  ╚═════╝    ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝
+ */
+
+/* Hide routing machine's default itinerary */
+.leaflet-routing-container {
+  display: none;
 }
 
 /* Routing Panel Styles */
@@ -542,6 +1323,7 @@ a#info-panel-strava-link:hover {
   box-sizing: border-box;
   background-color: var(--background-color);
   color: var(--text-color);
+  font-size: var(--font-size-14);
 }
 
 .panel-input-group button {
@@ -556,10 +1338,19 @@ a#info-panel-strava-link:hover {
   background-color: var(--background-color);
   font-size: var(--font-size-14);
 }
-.panel-input-group button.active {
-  background-color: var(--text-color);
+#select-start-on-map.active,
+#select-via-on-map.active,
+#select-end-on-map.active,
+#routing-pen-btn.active {
+  background-color: var(--highlight-color);
+  border-color: var(--highlight-color);
   color: var(--color-white);
-  border-color: var(--border-color);
+}
+#select-start-on-map.active .material-symbols,
+#select-via-on-map.active .material-symbols,
+#select-end-on-map.active .material-symbols,
+#routing-pen-btn.active .material-symbols {
+  color: var(--color-white);
 }
 
 /* Routing Profile Button Group Styles */
@@ -599,7 +1390,8 @@ a#info-panel-strava-link:hover {
   border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }
 
-/* Style for the active/selected button */
+/* border-color, not border: none - the latter shifts the flex row's width by 1px when the
+   first/last button (whose border forms the group's outer edge) goes active. */
 .routing-profile-selector .profile-btn.active {
   background-color: var(--text-color);
   border-color: var(--text-color);
@@ -646,10 +1438,6 @@ a#info-panel-strava-link:hover {
   justify-content: center;
 }
 
-#routing-pen-btn.active .material-symbols {
-  color: var(--background-color);
-}
-
 #clear-route-btn,
 #save-route-btn {
   flex: 1;
@@ -671,13 +1459,6 @@ a#info-panel-strava-link:hover {
   cursor: pointer;
 }
 
-#clear-route-btn:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
-}
-
 #clear-route-btn:disabled {
   cursor: not-allowed;
 }
@@ -694,20 +1475,112 @@ a#info-panel-strava-link:hover {
   margin-right: 5px;
 }
 
-#save-route-btn:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
-}
-
 #save-route-btn:disabled {
   cursor: not-allowed;
 }
 
-#routing-info-icon {
-  margin-left: 5px;
+/* Directions Panel Styles */
+#directions-panel {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden; /* To contain the rounded corners */
+  display: none; /* Hidden by default, shown when a route is found */
+  flex-direction: column; /* Applied when JS sets display: flex */
 }
+
+#directions-panel:not(.collapsed) {
+  flex: 1;
+  min-height: 0;
+}
+
+#directions-panel-header {
+  padding: 0 12px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+  background-color: var(--background-color);
+  cursor: pointer;
+  font-size: var(--font-size-12);
+  border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+#directions-panel.collapsed #directions-panel-header {
+  border-bottom: none;
+}
+
+.directions-panel-header-arrow.material-symbols {
+  font-size: var(--icon-size-20) !important;
+  margin-right: 5px;
+}
+
+/* Default state (collapsed): arrow points down */
+#directions-panel.collapsed .directions-panel-header-arrow::before {
+  content: "keyboard_arrow_down";
+}
+
+/* Expanded state: arrow points up */
+#directions-panel:not(.collapsed) .directions-panel-header-arrow::before {
+  content: "keyboard_arrow_up";
+}
+
+#directions-copy-btn {
+  margin-left: auto;
+  font-size: var(--icon-size-20) !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#directions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background-color: var(--background-color);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+#directions-panel.collapsed #directions-list {
+  display: none;
+}
+
+.direction-item {
+  padding: 8px 12px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-12);
+  border-bottom: 1px solid var(--divider-color);
+  box-sizing: border-box;
+}
+
+.direction-item:last-child {
+  border-bottom: none;
+}
+
+.routing-panel-icon {
+  width: 16px;
+  height: 16px;
+  display: flex !important;
+  margin: auto;
+  justify-content: center;
+  align-items: center;
+}
+
+/* STRAVA */
+/*
+ * ███████╗████████╗██████╗  █████╗ ██╗   ██╗ █████╗
+ * ██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║   ██║██╔══██╗
+ * ███████╗   ██║   ██████╔╝███████║██║   ██║███████║
+ * ╚════██║   ██║   ██╔══██╗██╔══██║╚██╗ ██╔╝██╔══██║
+ * ███████║   ██║   ██║  ██║██║  ██║ ╚████╔╝ ██║  ██║
+ * ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝
+ */
 
 /* Strava Panel Style */
 #strava-panel {
@@ -749,299 +1622,61 @@ a#info-panel-strava-link:hover {
   width: auto;
 }
 
-#info-panel-strava-link {
-  display: none; /* Hidden by default */
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  color: var(--strava-color);
-  font-size: var(--font-size-12);
-  font-weight: bold;
-  margin-top: 5px;
-  padding: 4px 8px;
-  border-radius: var(--border-radius);
-  transition: background-color 0.2s ease-in-out;
-}
-
-/* Autocomplete suggestion item styles (used inside search modal) */
-.autocomplete-suggestion-item {
-  padding: 8px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-color);
-}
-
-.autocomplete-suggestion-item:hover,
-.autocomplete-suggestion-item.active {
-  background-color: var(--highlight-color) !important;
-}
-
-/* Search Modal Styles */
-/* Modal container customization */
-.search-modal {
-  font-family: inherit !important;
-}
-
-#search-modal-input:focus {
-  outline: none !important;
-  border-color: var(--border-color) !important;
-  box-shadow: none !important;
-}
-
-#search-modal-input[data-offline="true"] {
-  background-color: var(--color-red) !important;
-  color: white !important;
-  border-color: var(--color-red) !important;
-}
-
-#search-modal-input[data-offline="true"]::placeholder {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-/* Suggestions dropdown inside modal */
-.search-modal-suggestions {
-  display: none;
-  position: relative;
-  padding: 0;
-  background-color: var(--background-color);
-  border: 1px solid var(--divider-color);
-  border-radius: var(--border-radius);
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-/* Make input connect visually with suggestions when open */
-.search-modal-container:has(.search-modal-suggestions[style*="display: block"])
-  #search-modal-input {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-.search-modal-suggestions[style*="display: block"] {
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  margin-top: 0 !important;
-  border-top: none !important;
-}
-
-/* Suggestion items inherit from existing styles */
-.search-modal-suggestions .autocomplete-suggestion-item {
-  padding: 12px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-color);
-  border-bottom: 1px solid var(--divider-color);
-  text-align: left;
-}
-
-.search-modal-suggestions .autocomplete-suggestion-item:last-child {
-  border-bottom: none;
-}
-
-.search-modal-suggestions .autocomplete-suggestion-item:hover,
-.search-modal-suggestions .autocomplete-suggestion-item.active {
-  background-color: var(--highlight-color) !important;
-}
-
-/* Directions Panel Styles */
-#directions-panel {
-  margin-top: 10px;
-  margin-bottom: 10px;
+/* Button styles */
+.strava-button-primary,
+.strava-button-secondary {
   border: 1px solid var(--border-color);
+  padding: 6px 12px;
   border-radius: var(--border-radius);
-  overflow: hidden; /* To contain the rounded corners */
-  display: none; /* Hidden by default, shown when a route is found */
-  flex-direction: column; /* Applied when JS sets display: flex */
-}
-
-#directions-panel:not(.collapsed) {
-  flex: 1;
-  min-height: 0;
-}
-
-#directions-panel-header {
-  padding: 0 12px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  font-weight: normal;
-  background-color: var(--background-color);
   cursor: pointer;
-  user-select: none;
-  font-size: var(--font-size-12);
-  border-bottom: 1px solid var(--border-color);
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
-
-#directions-panel.collapsed #directions-panel-header {
-  border-bottom: none;
-}
-
-.directions-panel-header-arrow.material-symbols {
-  font-size: var(--icon-size-20) !important;
-  margin-right: 5px;
-}
-
-/* Default state (collapsed): arrow points down */
-#directions-panel.collapsed .directions-panel-header-arrow::before {
-  content: "keyboard_arrow_down";
-}
-
-/* Expanded state: arrow points up */
-#directions-panel:not(.collapsed) .directions-panel-header-arrow::before {
-  content: "keyboard_arrow_up";
-}
-
-#directions-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  background-color: var(--background-color);
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
-
-#directions-panel.collapsed #directions-list {
-  display: none;
-}
-
-.direction-item {
-  padding: 8px 12px;
-  min-height: 30px;
-  display: flex;
-  align-items: center;
-  font-size: var(--font-size-12);
-  border-bottom: 1px solid var(--divider-color);
-  box-sizing: border-box;
-}
-
-.direction-item:last-child {
-  border-bottom: none;
-}
-
-/* Tab System Styles */
-#tab-container {
-  width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0; /* allow flex to shrink below content size */
-  overflow: hidden;
-}
-
-#tab-buttons {
-  display: flex;
-  width: 100%;
-}
-
-.tab-button {
-  flex: 1;
-  padding: 8px 5px; /* Reduced padding slightly to help with spacing */
+  transition: all 0.2s ease-in-out;
   font-size: var(--font-size-14);
-  font-weight: bold;
-  cursor: pointer;
-  border: 1px solid var(--border-color);
-  background-color: var(--background2-color);
-  border-right: none;
-  outline: none;
-  color: var(--text-color);
-  min-width: 0;
-  display: flex; /* Use flexbox for alignment */
-  justify-content: center;
+  height: 30px;
+  box-sizing: border-box;
+  display: flex;
   align-items: center;
-  height: 35px;
+  justify-content: center;
 }
 
-.tab-button.active {
-  /* color: var(--text-color); */
-  border-bottom-color: var(--background-color);
-}
-
-#tab-btn-overview {
-  border-radius: var(--border-radius) 0 0 0;
-  border-right: none;
-}
-
-/* Routing button is now in the middle */
-#tab-btn-routing {
-  border-radius: 0;
-  border-right: none;
-}
-
-#tab-btn-strava {
-  flex: 0 0 60px; /* Don't grow, fixed width */
-  border-radius: 0;
-  border-right: none;
-}
-
-#tab-btn-data {
-  flex: 0 0 40px;
-  padding: 8px;
-  border-radius: 0;
-}
-
-/* Settings icon button has fixed size */
-#tab-btn-settings {
-  flex: 0 0 40px; /* Don't grow, fixed width */
-  padding: 8px;
-  border-radius: 0 var(--border-radius) 0 0;
-  border-right: 1px solid var(--border-color);
-}
-
-.tab-button.active {
-  background-color: var(--background-color);
-}
-
-#tab-btn-heart {
-  display: none; /* Hidden by default on desktop */
-}
-
-#tab-content {
-  background-color: transparent;
-  padding: 0;
-  border: 1px solid var(--border-color);
-  border-top: none;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.tab-panel {
-  display: none; /* Hidden by default */
-}
-
-.tab-panel.active {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-/* Overview panel: list is the scroll container, not the panel itself */
-#overview-panel {
-  overflow-y: hidden;
-}
-
-/* Settings Panel Style */
-#settings-panel {
-  padding: 10px;
+/* Primary button style (Strava Orange) */
+.strava-button-primary {
+  background-color: var(--strava-color);
+  color: white;
   border: none;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  background-color: var(--background-color);
-  gap: 10px;
+  font-weight: bold;
 }
+
+/* Secondary button style (Theme-Aware) */
+.strava-button-secondary {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* Disabled state for secondary buttons */
+.strava-button-secondary:disabled {
+  cursor: not-allowed;
+}
+
+#strava-domain-copy .copy-icon {
+  vertical-align: middle;
+}
+
+/* DATA EDITOR */
+/*
+ * ██████╗  █████╗ ████████╗ █████╗
+ * ██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗
+ * ██║  ██║███████║   ██║   ███████║
+ * ██║  ██║██╔══██║   ██║   ██╔══██║
+ * ██████╔╝██║  ██║   ██║   ██║  ██║
+ * ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
+ *
+ * ███████╗██████╗ ██╗████████╗ ██████╗ ██████╗
+ * ██╔════╝██╔══██╗██║╚══██╔══╝██╔═══██╗██╔══██╗
+ * █████╗  ██║  ██║██║   ██║   ██║   ██║██████╔╝
+ * ██╔══╝  ██║  ██║██║   ██║   ██║   ██║██╔══██╗
+ * ███████╗██████╔╝██║   ██║   ╚██████╔╝██║  ██║
+ * ╚══════╝╚═════╝ ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
+ */
 
 /* Data Editor Panel */
 
@@ -1076,7 +1711,6 @@ a#info-panel-strava-link:hover {
 #data-editor-notice {
   font-size: var(--font-size-12);
   color: var(--text-color);
-  opacity: 0.6;
   padding: 0 10px;
 }
 
@@ -1148,35 +1782,11 @@ a#info-panel-strava-link:hover {
 #data-editor-copy,
 #data-editor-copy-clean,
 #data-editor-find {
+  flex: 1;
   font-size: var(--font-size-14);
-  font-weight: bold;
   padding: 6px;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
   border-radius: var(--border-radius);
   cursor: pointer;
-}
-
-#data-editor-restore,
-#data-editor-apply,
-#data-editor-copy-clean {
-  flex: 1;
-}
-
-#data-editor-copy {
-  flex: 0 0 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#data-editor-find {
-  flex: 1;
-}
-
-#data-editor-copy .material-symbols {
-  color: inherit;
 }
 
 @keyframes cm-find-fade {
@@ -1192,20 +1802,335 @@ a#info-panel-strava-link:hover {
   animation: cm-find-fade 3s ease-out forwards;
 }
 
+/* SETTINGS */
+/*
+ * ███████╗███████╗████████╗████████╗██╗███╗   ██╗ ██████╗ ███████╗
+ * ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██║████╗  ██║██╔════╝ ██╔════╝
+ * ███████╗█████╗     ██║      ██║   ██║██╔██╗ ██║██║  ███╗███████╗
+ * ╚════██║██╔══╝     ██║      ██║   ██║██║╚██╗██║██║   ██║╚════██║
+ * ███████║███████╗   ██║      ██║   ██║██║ ╚████║╚██████╔╝███████║
+ * ╚══════╝╚══════╝   ╚═╝      ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+ */
+
+/* Settings Panel Style */
+#settings-panel {
+  padding: 10px;
+  border: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  background-color: var(--background-color);
+  gap: 10px;
+}
+
+#settings-panel .settings-control-item {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-14);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: auto;
+}
+
+/* Make routing and elevation provider select boxes the same width */
+#settings-panel select {
+  width: 130px;
+  /* Styles to match other dropdowns */
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  height: 30px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* Only apply pointer cursor to labels in items that contain a checkbox */
+#settings-panel .settings-control-item:has(input[type="checkbox"]) label {
+  cursor: pointer;
+}
+#settings-panel .settings-control-item input[type="checkbox"] {
+  vertical-align: middle;
+  margin-right: 8px;
+  transform: scale(1.2);
+}
+
+.settings-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-slider {
+  width: 90px;
+  cursor: pointer;
+  accent-color: var(--highlight-color);
+}
+
+.settings-slider-value {
+  min-width: 20px;
+  text-align: right;
+  font-size: var(--font-size-14);
+}
+
+/* Shared styles for all inline info icons (routing tab, settings panel) */
+#routing-info-icon,
+.settings-info-icon {
+  cursor: pointer;
+  margin-left: 2px;
+}
+
+/* Styles for the info icon in the settings panel */
+.settings-info-icon {
+  font-size: var(--icon-size-16);
+  font-weight: bold;
+  color: var(--text-color);
+  line-height: 1;
+}
+
+/* Panel links: one look for anchors and link-styled buttons in the side panels */
+#settings-panel a,
+#strava-panel a,
+.link-button {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+#settings-panel a:hover,
+#strava-panel a:hover,
+.link-button:hover {
+  text-decoration: underline;
+}
+
+/* Settings links are 14px; Strava-panel anchors inherit their context */
+#settings-panel a,
+.link-button {
+  font-size: var(--font-size-14);
+}
+
+/* Buttons shed their browser chrome */
+.link-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+/* OSM Settings */
+#settings-panel .osm-profile-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.osm-profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.osm-user-links {
+  display: flex;
+  gap: 12px;
+}
+
+.osm-username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.osm-separator {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 2px 0 0;
+}
+
+.osm-contribute-search::placeholder {
+  color: var(--text-color);
+  opacity: 1;
+}
+
+.osm-contribute-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.osm-contribute-category-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--background-color);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: var(--font-size-14);
+}
+
+.osm-contribution-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+.osm-contribution-row:last-child {
+  border-bottom: none;
+}
+.osm-contribution-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.osm-contribution-info strong,
+.osm-contribution-info span,
+.osm-contribution-info small {
+  font-size: var(--font-size-14);
+}
+.osm-contribution-info span,
+.osm-contribution-info small {
+  color: var(--text-color);
+}
+.osm-contribution-meta {
+  display: flex;
+  gap: 12px;
+}
+.osm-contribution-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.osm-delete-btn {
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--color-red);
+}
+
+/* ELEVATION */
+/*
+ * ███████╗██╗     ███████╗██╗   ██╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+ * ██╔════╝██║     ██╔════╝██║   ██║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
+ * █████╗  ██║     █████╗  ██║   ██║███████║   ██║   ██║██║   ██║██╔██╗ ██║
+ * ██╔══╝  ██║     ██╔══╝  ╚██╗ ██╔╝██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
+ * ███████╗███████╗███████╗ ╚████╔╝ ██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
+ * ╚══════╝╚══════╝╚══════╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+ */
+
+/* Elevation Profile Styles */
+#elevation-div {
+  bottom: 0px;
+  height: 250px;
+  left: 0px;
+  position: absolute;
+  text-align: center;
+  visibility: hidden;
+  width: 100%;
+  z-index: 1000;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--background-color);
+}
+
+/* Collapse the elevation panel's height when it's hidden via its inline style.
+   This removes the element from the layout flow, which is crucial for preventing
+   it from capturing touch events on mobile when invisible. */
+#elevation-div[style*="visibility: hidden"] {
+  height: 0;
+}
+
+/* Styles for d3 elevation chart */
+.altitude-area {
+  fill: var(--highlight-color);
+  fill-opacity: 0.5;
+  stroke: none;
+}
+
+.altitude-line {
+  fill: none;
+  stroke: var(--highlight-color);
+  stroke-width: 2px;
+}
+
+.axis path,
+.axis line {
+  stroke: var(--text-color);
+  stroke-width: 1px;
+}
+
+.axis text {
+  fill: var(--text-color);
+  font-size: var(--font-size-10);
+}
+
+.elevation-hover-tooltip-path {
+  fill: var(--background-color);
+  stroke: var(--text-color);
+  stroke-width: 1px;
+}
+
+.elevation-hover-tooltip-text {
+  fill: var(--text-color);
+  font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
+  font-size: var(--font-size-10);
+}
+
+.material-symbols.elevation-action-icon {
+  cursor: pointer;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
+}
+
+/* SWEETALERT */
+/*
+ * ███████╗██╗    ██╗███████╗███████╗████████╗ █████╗ ██╗     ███████╗██████╗ ████████╗
+ * ██╔════╝██║    ██║██╔════╝██╔════╝╚══██╔══╝██╔══██╗██║     ██╔════╝██╔══██╗╚══██╔══╝
+ * ███████╗██║ █╗ ██║█████╗  █████╗     ██║   ███████║██║     █████╗  ██████╔╝   ██║
+ * ╚════██║██║███╗██║██╔══╝  ██╔══╝     ██║   ██╔══██║██║     ██╔══╝  ██╔══██╗   ██║
+ * ███████║╚███╔███╔╝███████╗███████╗   ██║   ██║  ██║███████╗███████╗██║  ██║   ██║
+ * ╚══════╝ ╚══╝╚══╝ ╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝
+ */
+
 /* Themed Sweetalert2 Styles */
 /* This block styles all SweetAlert2 popups to respect the selected
    light or dark theme by using the application's CSS variables. */
 
 /* Main popup container */
+.swal2-container {
+  padding-top: calc(var(--swal2-container-padding) + env(safe-area-inset-top)) !important;
+  padding-left: var(--swal2-container-padding) !important;
+  padding-right: var(--swal2-container-padding) !important;
+}
+
 .swal2-popup {
   background-color: var(--background-color) !important;
   color: var(--text-color) !important;
   border-radius: var(--border-radius) !important;
-  max-height: calc(100dvh - calc(var(--swal2-container-padding) * 2)) !important;
+  max-height: calc(
+    100dvh - var(--swal2-container-padding) * 2 - env(safe-area-inset-top)
+  ) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
   padding-bottom: 0 !important;
+}
+
+/* Restores bottom padding whenever a normal (non-toast) popup hides its
+   actions row (no confirm/cancel/deny button - e.g. a timer-only dialog).
+   SweetAlert2 never removes .swal2-actions, it only sets its inline display
+   to "none", so we can detect that directly instead of adding a class to
+   every such call. Toasts are excluded - they carry .swal2-popup too, but
+   are compact by design and shouldn't get this extra padding. */
+.swal2-popup:not(.swal2-toast):has(.swal2-actions[style*="display: none"]) {
+  padding-bottom: 10px !important;
 }
 
 /* Title text */
@@ -1220,15 +2145,34 @@ a#info-panel-strava-link:hover {
   flex: 1 1 auto !important;
 }
 
+.swal2-html-container a {
+  color: var(--highlight-color);
+  text-decoration: none;
+}
+.swal2-html-container a:hover {
+  text-decoration: underline;
+}
+
 .attribution-toast {
   padding-top: 0;
   width: fit-content !important;
-  background-color: var(--highlight-color) !important;
+  background-color: var(--color-blue) !important;
   color: var(--color-white) !important;
 }
 
 .attribution-toast .swal2-html-container {
   color: var(--color-white) !important;
+}
+.attribution-toast .swal2-html-container a {
+  color: var(--color-white);
+  text-decoration: underline;
+}
+
+.attribution-toast-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 /* Center text in toast notifications */
@@ -1263,16 +2207,22 @@ a#info-panel-strava-link:hover {
   color: var(--background-color) !important;
 }
 
-/* Default cancel button style - red background */
+/* Default cancel button style */
 .swal2-cancel {
-  background-color: var(--color-red) !important;
-  color: var(--color-white) !important;
+  background-color: var(--background2-color) !important;
+  color: var(--text-color) !important;
 }
 
 /* Default deny button style */
 .swal2-deny {
   background-color: var(--background2-color) !important;
   color: var(--text-color) !important;
+}
+
+/* Danger confirm button for destructive actions */
+.swal-confirm-danger {
+  background-color: var(--color-red) !important;
+  color: var(--color-white) !important;
 }
 
 /* Disabled state for all buttons */
@@ -1403,9 +2353,26 @@ a#info-panel-strava-link:hover {
   color: var(--highlight-color);
 }
 
-/* Leaflet control overrides */
+/* POPUPS */
+/*
+ * ██████╗  ██████╗ ██████╗ ██╗   ██╗██████╗ ███████╗
+ * ██╔══██╗██╔═══██╗██╔══██╗██║   ██║██╔══██╗██╔════╝
+ * ██████╔╝██║   ██║██████╔╝██║   ██║██████╔╝███████╗
+ * ██╔═══╝ ██║   ██║██╔═══╝ ██║   ██║██╔═══╝ ╚════██║
+ * ██║     ╚██████╔╝██║     ╚██████╔╝██║     ███████║
+ * ╚═╝      ╚═════╝ ╚═╝      ╚═════╝ ╚═╝     ╚══════╝
+ */
+
 .leaflet-popup-content {
   font-size: var(--font-size-12) !important;
+  margin: 10px !important;
+}
+.leaflet-popup-content a {
+  color: var(--highlight-color);
+  text-decoration: none;
+}
+body:not(.glass-mode) .leaflet-popup-content a:hover {
+  text-decoration: underline;
 }
 
 .leaflet-popup-content-wrapper {
@@ -1413,8 +2380,143 @@ a#info-panel-strava-link:hover {
 }
 
 .context-menu-popup .leaflet-popup-content {
-  margin: 5px 10px !important;
+  margin: 5px 1px !important;
 }
+
+/* Search result popup */
+.leaflet-popup-content-wrapper {
+  box-shadow: none;
+  background: none;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color) !important;
+}
+.leaflet-popup-tip-container {
+  display: none;
+}
+.leaflet-container a.leaflet-popup-close-button,
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: var(--text-color);
+}
+/* Overrides the "Save to Map" button's inline style (top-right-buttons.js). */
+.leaflet-popup-content-wrapper button,
+.leaflet-popup-content-wrapper button:hover {
+  border: none !important;
+  font-weight: bold !important;
+  background-color: var(--text-color) !important;
+  color: var(--background-color) !important;
+}
+
+/* LAYERS */
+/*
+ * ██╗      █████╗ ██╗   ██╗███████╗██████╗ ███████╗
+ * ██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗██╔════╝
+ * ██║     ███████║ ╚████╔╝ █████╗  ██████╔╝███████╗
+ * ██║     ██╔══██║  ╚██╔╝  ██╔══╝  ██╔══██╗╚════██║
+ * ███████╗██║  ██║   ██║   ███████╗██║  ██║███████║
+ * ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
+ */
+
+/* Custom Layers Panel Styles */
+.layer-import-button {
+  flex: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: var(--font-size-12);
+  line-height: 1.25;
+  border-radius: var(--border-radius);
+}
+
+.layer-icon {
+  vertical-align: middle;
+  margin-right: 0;
+  padding: 0 !important;
+}
+
+.material-symbols.layer-icon {
+  font-size: var(--icon-size-16) !important;
+}
+
+#custom-layers-panel {
+  display: none; /* Hidden by default */
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: 51px; /* The toolbar width is ~40px, so 51px provides a 10px gap */
+  z-index: 1003; /* Ensure it's above the map but consistent with other panels */
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  max-height: calc(100dvh - 60px);
+  overflow-y: auto;
+  width: 300px;
+  max-width: calc(100vw - 51px - 10px);
+}
+
+/* Form content inside the panel */
+#custom-layers-panel .leaflet-control-layers-form {
+  padding: 6px;
+  background-color: transparent;
+  border-radius: var(--border-radius);
+}
+#custom-layers-panel .leaflet-control-layers-separator {
+  height: 1px;
+  background-color: var(--border-color);
+  border-top: none;
+  margin: 3px 0;
+}
+#custom-layers-panel label div {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+#custom-layers-panel span {
+  padding-left: 5px;
+  font-size: var(--font-size-12);
+}
+.leaflet-control-layers-selector {
+  margin-top: 0;
+  position: relative;
+  top: 0;
+}
+
+/* Layer name truncation — flex-based so it adapts to any panel width */
+#custom-layers-panel label:not(.custom-layer) span:not(.fi):not(.material-symbols) {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#custom-layers-panel .custom-layer .layer-name-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+#custom-layers-panel .custom-layer .layer-name-text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Remove default Leaflet control styling from the content inside our panel */
+#custom-layers-panel .leaflet-control-layers {
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* TOOLBAR */
+/*
+ * ████████╗ ██████╗  ██████╗ ██╗     ██████╗  █████╗ ██████╗
+ * ╚══██╔══╝██╔═══██╗██╔═══██╗██║     ██╔══██╗██╔══██╗██╔══██╗
+ *    ██║   ██║   ██║██║   ██║██║     ██████╔╝███████║██████╔╝
+ *    ██║   ██║   ██║██║   ██║██║     ██╔══██╗██╔══██║██╔══██╗
+ *    ██║   ╚██████╔╝╚██████╔╝███████╗██████╔╝██║  ██║██║  ██║
+ *    ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+ */
 
 .leaflet-touch .leaflet-control-layers-toggle {
   background-position: center center;
@@ -1424,72 +2526,10 @@ a#info-panel-strava-link:hover {
   z-index: 4000;
 }
 
-/* Elevation Profile Styles */
-#elevation-div {
-  bottom: 0px;
-  height: 250px;
-  left: 0px;
-  position: absolute;
-  text-align: center;
-  visibility: hidden;
-  width: 100%;
-  z-index: 1000;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--background-color);
-}
-
-/* Collapse the elevation panel's height when it's hidden via its inline style.
-   This removes the element from the layout flow, which is crucial for preventing
-   it from capturing touch events on mobile when invisible. */
-#elevation-div[style*="visibility: hidden"] {
-  height: 0;
-}
-
-/* Styles for d3 elevation chart */
-.altitude-area {
-  fill: var(--color-red);
-  fill-opacity: 0.5;
-  /* stroke: var(--color-red); */
-  stroke: none;
-  stroke-width: 1.5;
-}
-
-.axis path,
-.axis line {
-  stroke: var(--text-color);
-  stroke-width: 1;
-}
-
-.axis text {
-  fill: var(--text-color);
-  font-size: var(--font-size-10);
-}
-
-.elevation-hover-tooltip-path {
-  fill: var(--background-color);
-  stroke: var(--text-color);
-  stroke-width: 1px;
-}
-
-.elevation-hover-tooltip-text {
-  fill: var(--text-color);
-  font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
-  font-size: var(--font-size-10);
-  /* Prevent text from being selected on drag */
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-.material-symbols.elevation-action-icon {
-  cursor: pointer;
-  vertical-align: middle;
-  position: relative;
-  top: -2px;
-}
-
-/* Style for the download submenu */
+/* Style for the download submenu: one row per format (GPX/GeoJSON/KML/Share
+   Link), each with a label plus a "Selected" and an "All" button. overflow:
+   hidden clips everything inside to the outer border-radius, so individual
+   rows/buttons never need their own corner-rounding rules. */
 .leaflet-control-custom .download-submenu {
   background-color: var(--background-color);
   border: 1px solid var(--border-color);
@@ -1501,28 +2541,47 @@ a#info-panel-strava-link:hover {
   white-space: nowrap;
   z-index: 1000;
   color: var(--text-color) !important;
+  overflow: hidden;
 }
 
-.download-submenu button {
-  border-bottom: 1px solid var(--border-color) !important;
-  height: 30px !important;
+/* Rows share one grid so their label/button column boundaries always line
+   up, even though each row's button text (and thus natural width) differs -
+   the same alignment a <table> would give, without the border-radius
+   clipping issues a real table would bring. Each row is a real box (using
+   subgrid to inherit the parent's column tracks) rather than display:contents,
+   which has inconsistent rendering across browsers. */
+.download-rows {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
 }
 
-.download-submenu button:last-child {
-  border: none !important;
+.download-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.download-row:last-child {
+  border-bottom: none;
+}
+
+.download-row-label {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  font-size: var(--font-size-12);
 }
 
 .leaflet-control-custom .download-submenu button {
   background: none;
   border: none;
+  border-left: 1px solid var(--border-color);
   cursor: pointer;
-  display: block;
   font-size: var(--font-size-12);
   padding: 5px 10px;
-  text-align: left;
-  width: 100%;
   color: var(--text-color);
-  overflow: hidden !important;
+  height: 30px;
 }
 
 .download-submenu button:disabled {
@@ -1531,47 +2590,211 @@ a#info-panel-strava-link:hover {
   cursor: not-allowed;
 }
 
-/* Rounds the top corners of the first button */
-.download-submenu button:first-child {
-  border-top-left-radius: 7px;
-  border-top-right-radius: 7px;
+/* Strava-original row: its one button spans both button columns, since
+   there's no "All" counterpart. */
+#download-strava-row button {
+  grid-column: span 2;
 }
 
-/* Rounds the bottom corners of the last button */
-.download-submenu button:last-child {
-  border-bottom-left-radius: 7px;
-  border-bottom-right-radius: 7px;
+/* Only the button text is tinted with Strava's brand color, same treatment
+   as the Strava panel's own buttons and the info panel's Strava link - the
+   "GPX" label keeps the normal text color, like every other row's label. */
+#download-gpx-strava-original {
+  color: var(--strava-color);
 }
 
 /* Main ui layout */
 .leaflet-left {
   left: 10px;
-  margin-top: 10px;
+  margin-top: calc(env(safe-area-inset-top) + 10px);
 }
 /* Prevent bottom-left controls from overlapping toolbar */
 .leaflet-bottom.leaflet-left {
   z-index: 500;
 }
-.leaflet-right .leaflet-control {
-  border: 1px solid var(--border-color) !important;
-  margin-right: 10px !important;
-  margin-top: 10px !important;
+
+/* Unified icon styling */
+
+/* 1. Center all icons in their button containers using flexbox. Use ">"
+   (not a plain descendant selector) on .leaflet-control-custom so this
+   centers only the control's own icon link - not the nested
+   .leaflet-draw-actions menu items further below, which need left-aligned
+   text instead. */
+.leaflet-control-custom > a,
+.leaflet-control-locate a,
+.leaflet-control-layers-toggle,
+.leaflet-control-zoom a,
+.leaflet-draw-toolbar a,
+.tab-button /* Also apply to tab buttons */ {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
 }
+
+/* 2. Remove default background image from leaflet.draw icons */
+.leaflet-draw-toolbar a {
+  background-image: none !important;
+}
+
+/* Clear style for disabled draw buttons */
+.leaflet-draw-toolbar a.leaflet-disabled {
+  background-color: var(--background2-color) !important;
+  cursor: not-allowed;
+}
+/* Highlight icon in active draw tools and open toolbar panels */
+.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled .material-symbols,
+#layers-button.active .material-symbols,
+#download-button.active .material-symbols,
+#import-button.active .material-symbols {
+  color: var(--highlight-color);
+}
+
+/* Toolbar styles */
+.leaflet-touch .leaflet-bar,
+.leaflet-draw {
+  border: none;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+.leaflet-bar a,
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+  background-color: var(--background-color);
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+/* Style disabled Leaflet zoom controls */
+.leaflet-bar a.leaflet-disabled {
+  color: var(--text-color);
+  background-color: var(--background2-color);
+  cursor: not-allowed;
+}
+/* Control buttons are <a> elements, and dragging one swallows its click.
+   The layers button did not respond in Chrome fullscreen on macOS. */
+.leaflet-control a {
+  -webkit-user-drag: none;
+}
+/* This rule targets the first custom control to round its top corners */
+.leaflet-left > .leaflet-control-custom:first-child a {
+  border-radius: 50px 50px 0 0 !important;
+}
+.leaflet-left > .leaflet-bar:last-child a,
+#map > div.leaflet-control-container > div.leaflet-top.leaflet-left > div:nth-child(7) {
+  border-radius: 0 0 50px 50px !important;
+}
+
+.leaflet-touch .leaflet-draw-actions {
+  left: 40px;
+}
+
+/* Stack action buttons vertically below the tool button, like the download
+   submenu, instead of leaflet-draw's default side-by-side bar. Width stays
+   shrink-to-fit (not fixed) so the menu takes no more horizontal space than
+   its own longest label needs - important on narrow mobile screens. */
+.leaflet-draw-actions {
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+.leaflet-draw-actions li {
+  display: block;
+}
+.leaflet-draw-actions li:first-child a,
+.leaflet-draw-actions li:last-child a {
+  border-radius: 0;
+}
+.leaflet-draw-actions a,
+.leaflet-draw-actions a:hover,
+.leaflet-draw-actions a:focus {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  text-align: left;
+  border-left: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+.leaflet-draw-actions li:last-child a {
+  border-bottom: none !important;
+}
+.leaflet-draw-actions a.leaflet-disabled,
+.leaflet-draw-actions a.leaflet-disabled:hover {
+  color: var(--text-color);
+  background-color: var(--background2-color);
+  cursor: not-allowed;
+}
+
+/* Style for disabled custom buttons */
+.leaflet-control-custom.disabled > a {
+  background-color: var(--background2-color);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.leaflet-control-custom.disabled .icon {
+  fill: var(--icon-color) !important;
+}
+
+/* Rectangle select tool (marquee multi-select) */
+#rectangle-select-button.active .material-symbols {
+  color: var(--highlight-color);
+}
+/* Unlike leaflet-draw's own toolbars (whose actions list is a sibling of
+   .leaflet-bar), this one lives inside a .leaflet-bar control, so it also
+   picks up core Leaflet's ".leaflet-touch .leaflet-bar a" rule (width: 30px),
+   which outranks the general ".leaflet-draw-actions a" width rule above on
+   specificity - restate it here with an ID selector so it wins outright. */
+#rectangle-select-button .leaflet-draw-actions a {
+  width: 100%;
+}
+
+/* Border around the toolbar */
+#map > div.leaflet-control-container > div.leaflet-top.leaflet-left {
+  border: 1px solid var(--border-color);
+  border-radius: 50px 50px 50px 50px !important;
+}
+.leaflet-control-locate a .leaflet-control-locate-location-arrow {
+  display: none;
+}
+.locate-active a {
+  background-color: var(--locate-color) !important;
+}
+.locate-active .icon-locate {
+  fill: var(--color-white) !important;
+}
+.locate-active .material-symbols {
+  color: var(--color-white) !important;
+}
+
+/* TOP RIGHT */
+/*
+ * ████████╗ ██████╗ ██████╗     ██████╗ ██╗ ██████╗ ██╗  ██╗████████╗
+ * ╚══██╔══╝██╔═══██╗██╔══██╗    ██╔══██╗██║██╔════╝ ██║  ██║╚══██╔══╝
+ *    ██║   ██║   ██║██████╔╝    ██████╔╝██║██║  ███╗███████║   ██║
+ *    ██║   ██║   ██║██╔═══╝     ██╔══██╗██║██║   ██║██╔══██║   ██║
+ *    ██║   ╚██████╔╝██║         ██║  ██║██║╚██████╔╝██║  ██║   ██║
+ *    ╚═╝    ╚═════╝ ╚═╝         ╚═╝  ╚═╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝
+ */
 
 /* Top-right button container */
 #top-right-container {
   position: absolute;
-  top: 10px;
+  top: calc(env(safe-area-inset-top) + 10px);
   right: 10px;
   z-index: 1001;
   display: flex;
   flex-direction: row-reverse; /* Right to left: fullscreen, toggle, search */
-  gap: 10px; /* Easily adjustable */
+  gap: 5px;
+  max-width: calc(100vw - 61px);
+  overflow: hidden;
 }
 
 /* Base button styles */
 .top-right-btn {
-  height: 32px;
+  height: var(--top-right-btn-height);
   background: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
@@ -1586,9 +2809,221 @@ a#info-panel-strava-link:hover {
   -webkit-tap-highlight-color: transparent;
 }
 
+.icon-chevron-left,
+.icon-chevron-right {
+  width: 24px;
+  fill: var(--icon-color);
+}
+
 /* Individual button widths */
 #poi-finder-btn {
+  position: relative;
   padding: 0 12px;
+  white-space: nowrap;
+}
+#poi-finder-btn.poi-has-results::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-blue);
+}
+
+/* POI Finder Modal Styles */
+.poi-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.poi-category-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--background-color);
+}
+
+.poi-cat-msg {
+  padding: 8px 10px;
+  border-radius: var(--border-radius);
+  background: var(--color-red);
+  color: var(--color-white);
+  font-size: var(--font-size-14);
+  line-height: 20px;
+  text-align: left;
+}
+
+.poi-cat-msg.poi-cat-msg--info {
+  background: var(--color-yellow);
+  color: var(--color-black);
+}
+
+.poi-cat-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.poi-cat-name {
+  flex: 1;
+  font-size: var(--font-size-14);
+  color: var(--text-color);
+  text-align: left;
+}
+
+.poi-cat-status {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--font-size-14);
+  color: var(--text-color-secondary);
+}
+
+.poi-cat-status:empty {
+  display: none;
+}
+
+.poi-vis-btn {
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.poi-vis-btn:hover {
+  color: var(--text-color);
+}
+
+.poi-vis-btn.poi-vis-hidden {
+  display: none;
+}
+
+.poi-load-btn {
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.poi-load-btn:hover {
+  color: var(--text-color);
+}
+
+.poi-load-btn.poi-load-busy {
+  animation: poi-spin 1s linear infinite;
+  pointer-events: none;
+  color: var(--text-color);
+}
+
+.poi-clear-btn {
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  line-height: 1;
+}
+
+.poi-clear-btn:hover {
+  color: var(--text-color);
+}
+
+@keyframes poi-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.poi-custom-section {
+  margin-bottom: 36px;
+}
+
+.poi-custom-group {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.poi-custom-group .poi-category-row {
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0;
+}
+
+.poi-custom-section .poi-cat-msg {
+  margin-top: 3px;
+}
+
+.poi-custom-input-row {
+  padding: 8px 10px;
+}
+
+.poi-custom-input {
+  display: block;
+  width: 100%;
+  border: none;
+  padding: 0;
+  background: none;
+  color: var(--text-color);
+  font-family: monospace !important;
+  font-size: var(--font-size-14);
+  line-height: 1.4;
+  outline: none;
+  box-sizing: border-box;
+  resize: none;
+  field-sizing: content;
+}
+
+.poi-custom-input::placeholder {
+  color: #696969;
+}
+
+.poi-marker {
+  background: none !important;
+  border: none !important;
+}
+
+.poi-marker-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px var(--color-white);
+}
+
+.poi-marker-icon.selected {
+  box-shadow: 0 0 0 2px var(--color-black);
+}
+
+.poi-marker-icon .material-symbols {
+  font-size: 15px;
+  color: white;
+}
+
+.poi-popup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Metrics match .layer-import-button; colors from the .leaflet-popup-content-wrapper button rule. */
+.poi-popup-btn {
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: var(--font-size-12);
+  line-height: 1.25;
+  border-radius: var(--border-radius);
 }
 
 #search-btn {
@@ -1633,93 +3068,41 @@ a#info-panel-strava-link:hover {
   display: none;
 }
 
-/* Offline state styling */
-#poi-finder-btn.offline {
-  background: red !important;
-  color: white !important;
-  border-color: red !important;
-  cursor: not-allowed !important;
-}
-
-#search-btn.offline {
-  cursor: not-allowed !important;
-}
-
-#search-btn .icon-search-offline {
+/* Offline indicator */
+#offline-indicator {
   display: none;
-}
-
-#search-btn.offline .icon-search-online {
-  display: none;
-}
-
-#search-btn.offline .icon-search-offline {
-  display: inline-block;
-}
-
-/* Search result popup */
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  box-shadow: none;
-  background: none;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color) !important;
-}
-.leaflet-container a.leaflet-popup-close-button,
-.leaflet-container a.leaflet-popup-close-button:hover {
-  color: var(--text-color);
-}
-.leaflet-popup-content-wrapper button,
-.leaflet-popup-content-wrapper button:hover {
-  border: none !important;
-  font-weight: bold !important;
-  background-color: var(--text-color) !important;
-  color: var(--background-color) !important;
-}
-
-/* Toolbar styles */
-.leaflet-touch .leaflet-bar,
-.leaflet-draw {
-  border: none;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  margin: 0 !important;
-}
-.leaflet-bar a,
-.leaflet-bar a:hover,
-.leaflet-bar a:focus {
-  background-color: var(--background-color);
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-/* Style disabled Leaflet zoom controls */
-.leaflet-bar a.leaflet-disabled {
-  color: var(--text-color);
-  background-color: var(--background2-color);
-  cursor: not-allowed;
-}
-/* This rule targets the first custom control to round its top corners */
-.leaflet-left > .leaflet-control-custom:first-child a {
-  border-radius: 50px 50px 0 0 !important;
-}
-.leaflet-left > .leaflet-bar:last-child a,
-#map > div.leaflet-control-container > div.leaflet-top.leaflet-left > div:nth-child(6) {
-  border-radius: 0 0 50px 50px !important;
-}
-
-.leaflet-touch .leaflet-draw-actions {
-  left: 40px;
-  border: 1px solid var(--border-color) !important;
+  background: var(--color-red);
+  color: var(--color-white);
+  font-size: var(--font-size-14);
+  font-weight: bold;
+  padding: 0 10px;
+  width: 105px;
+  height: 32px;
   border-radius: var(--border-radius);
-  overflow: hidden;
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
 }
-.leaflet-draw-actions a,
-.leaflet-draw-actions a:hover {
-  background-color: var(--background-color);
-  color: var(--text-color);
+
+#offline-indicator .material-symbols {
+  color: inherit;
 }
+
+#offline-indicator.visible {
+  display: flex;
+}
+
+/* CREDITS */
+/*
+ *  ██████╗██████╗ ███████╗██████╗ ██╗████████╗███████╗
+ * ██╔════╝██╔══██╗██╔════╝██╔══██╗██║╚══██╔══╝██╔════╝
+ * ██║     ██████╔╝█████╗  ██║  ██║██║   ██║   ███████╗
+ * ██║     ██╔══██╗██╔══╝  ██║  ██║██║   ██║   ╚════██║
+ * ╚██████╗██║  ██║███████╗██████╔╝██║   ██║   ███████║
+ *  ╚═════╝╚═╝  ╚═╝╚══════╝╚═════╝ ╚═╝   ╚═╝   ╚══════╝
+ */
 
 /* Bottom Left Credits Container */
 #bottom-left-credits {
@@ -1738,11 +3121,11 @@ a#info-panel-strava-link:hover {
   gap: 0;
 }
 #bottom-left-credits a {
-  color: var(--highlight-color);
+  color: var(--link-color);
   text-decoration: none;
 }
 #bottom-left-credits a:hover {
-  color: var(--highlight-color);
+  color: var(--link-color);
   text-decoration: underline;
 }
 
@@ -1766,177 +3149,50 @@ a#info-panel-strava-link:hover {
   padding-right: 0;
 }
 
-.leaflet-marker-shadow {
+#map-attribution {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  z-index: 499; /* Below #bottom-left-credits (500) */
+  font-size: 10px;
+  padding: 2.5px 5px;
+  background: none;
+  color: var(--color-black);
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  column-gap: 5px;
+  max-width: calc(100vw - 200px);
+  line-height: 1.6;
+  pointer-events: auto;
+  text-shadow:
+    -1px -1px 0 var(--color-white),
+    1px -1px 0 var(--color-white),
+    -1px 1px 0 var(--color-white),
+    1px 1px 0 var(--color-white);
+}
+
+#map-attribution a {
+  color: var(--color-black);
+  text-decoration: none;
+}
+
+/* Hide bottom credits, attribution, and the scale control when the elevation chart is visible */
+body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits,
+body:has(#elevation-div[style*="visibility: visible"]) #map-attribution,
+body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale {
   display: none !important;
 }
 
-/* Style for disabled custom buttons */
-.leaflet-control-custom.disabled > a {
-  background-color: var(--background2-color);
-  cursor: not-allowed;
-  opacity: 1;
-}
-
-.leaflet-control-custom.disabled .icon {
-  fill: var(--icon-color) !important;
-}
-
-/* Border around the toolbar */
-#map > div.leaflet-control-container > div.leaflet-top.leaflet-left {
-  border: 1px solid var(--border-color);
-  border-radius: 50px 50px 50px 50px !important;
-}
-.leaflet-control-locate a .leaflet-control-locate-location-arrow {
-  display: none;
-}
-.locate-active a {
-  background-color: var(--locate-color) !important;
-}
-.locate-active .icon-locate {
-  fill: var(--color-white) !important;
-}
-
-/* Hide routing machine's default itinerary */
-.leaflet-routing-container {
-  display: none;
-}
-
-/* Settings Control Item Styles are now inside the settings panel */
-#settings-panel .settings-control-item {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-14);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: auto;
-}
-
-/* Make routing and elevation provider select boxes the same width */
-#settings-panel select {
-  width: 130px;
-  /* Styles to match other dropdowns */
-  background-color: var(--background-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  height: 30px;
-  padding: 6px;
-  box-sizing: border-box;
-}
-
-/* Only apply pointer cursor to labels in items that contain a checkbox */
-#settings-panel .settings-control-item:has(input[type="checkbox"]) label {
-  cursor: pointer;
-  user-select: none; /* Prevent text selection on click */
-}
-#settings-panel .settings-control-item input[type="checkbox"] {
-  vertical-align: middle;
-  margin-right: 8px;
-  transform: scale(1.2);
-}
-
-.settings-slider-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.settings-slider {
-  width: 90px;
-  cursor: pointer;
-}
-
-.settings-slider-value {
-  min-width: 20px;
-  text-align: right;
-  font-size: var(--font-size-14);
-}
-
-/* Shared styles for all panel info icons */
-#strava-info-icon,
-.settings-info-icon {
-  cursor: pointer;
-  margin-left: 5px;
-}
-
-/* Styles for the info icon in the settings panel */
-.settings-info-icon {
-  font-size: var(--icon-size-16);
-  font-weight: bold;
-  color: var(--text-color);
-  line-height: 1;
-}
-
-/* Hide the default browser cursor and use our custom one during selection mode */
-body.route-point-select-mode,
-body.route-point-select-mode * {
-  cursor: none !important;
-}
-
-/* Custom Cursor Styles */
-.custom-cursor {
-  position: absolute;
-  display: none;
-  pointer-events: none; /* Make it unclickable */
-  z-index: 2000; /* Ensure it's on top */
-  width: 50px; /* Match the icon's font-size */
-  height: 50px; /* Match the icon's font-size */
-  /* Anchor the cursor so the bottom-center of the icon is at the mouse pointer */
-  /* Uses 0.9 multiplier to match marker iconAnchor positioning */
-  transform: translate(-25px, calc(-50px * 0.9));
-}
-#custom-cursor-start .material-symbols {
-  color: var(--routing-color-start);
-}
-#custom-cursor-end .material-symbols {
-  color: var(--routing-color-end);
-}
-#custom-cursor-via .material-symbols {
-  color: var(--routing-color-via);
-}
-/* Crosshair cursor during pen draw mode */
-body.pen-draw-mode .leaflet-container,
-body.pen-draw-mode .leaflet-container * {
-  cursor: crosshair !important;
-}
-
-/* Change cursor to 'all-scroll' when hovering over draggable markers */
-.leaflet-marker-draggable {
-  cursor: all-scroll !important;
-}
-
-/* Forcefully removes dotted line style ONLY during editing */
-.map-is-editing path.leaflet-interactive {
-  stroke-dasharray: none !important;
-}
-
-/* Main container for all right-side panels (MODIFIED) */
-#main-right-container {
-  position: absolute;
-  top: 50px;
-  right: 10px;
-  width: 340px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: calc(100vw - 61px);
-  max-height: calc(100dvh - 60px);
-  overflow: hidden;
-  cursor: auto;
-}
-
-.icon-chevron-left,
-.icon-chevron-right {
-  width: 24px;
-  fill: var(--icon-color);
-}
-
-#main-right-container.hidden {
-  display: none;
-}
+/* SCALE */
+/*
+ * ███████╗ ██████╗ █████╗ ██╗     ███████╗
+ * ██╔════╝██╔════╝██╔══██╗██║     ██╔════╝
+ * ███████╗██║     ███████║██║     █████╗
+ * ╚════██║██║     ██╔══██║██║     ██╔══╝
+ * ███████║╚██████╗██║  ██║███████╗███████╗
+ * ╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝
+ */
 
 .leaflet-control-scale {
   margin-left: 0 !important;
@@ -1970,103 +3226,106 @@ body.pen-draw-mode .leaflet-container * {
   border-bottom: 1px solid var(--border-color);
 } */
 
-.leaflet-editing-icon,
-.leaflet-middle-icon {
-  border-radius: 50%;
+/* CURSORS */
+/*
+ *  ██████╗██╗   ██╗██████╗ ███████╗ ██████╗ ██████╗ ███████╗
+ * ██╔════╝██║   ██║██╔══██╗██╔════╝██╔═══██╗██╔══██╗██╔════╝
+ * ██║     ██║   ██║██████╔╝███████╗██║   ██║██████╔╝███████╗
+ * ██║     ██║   ██║██╔══██╗╚════██║██║   ██║██╔══██╗╚════██║
+ * ╚██████╗╚██████╔╝██║  ██║███████║╚██████╔╝██║  ██║███████║
+ *  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
+ */
+
+/* Custom Cursor Styles */
+.custom-cursor {
+  position: absolute;
+  display: none;
+  pointer-events: none; /* Make it unclickable */
+  z-index: 2000; /* Ensure it's on top */
+  width: 50px; /* Match the icon's font-size */
+  height: 50px; /* Match the icon's font-size */
+  /* Anchor the cursor so the bottom-center of the icon is at the mouse pointer */
+  /* Uses 0.9 multiplier to match marker iconAnchor positioning */
+  transform: translate(-25px, calc(-50px * 0.9));
+}
+#custom-cursor-start .material-symbols {
+  color: var(--routing-color-start);
+}
+#custom-cursor-end .material-symbols {
+  color: var(--routing-color-end);
+}
+#custom-cursor-via .material-symbols {
+  color: var(--routing-color-via);
+}
+/* Crosshair cursor during pen draw mode */
+body.pen-draw-mode .leaflet-container,
+body.pen-draw-mode .leaflet-container * {
+  cursor: crosshair !important;
 }
 
-/* Hide the scale control and bottom credits when the elevation chart is visible */
-body:has(#elevation-div[style*="visibility: visible"]) .leaflet-control-scale,
-body:has(#elevation-div[style*="visibility: visible"]) #bottom-left-credits {
+/* Change cursor to 'all-scroll' when hovering over draggable markers */
+.leaflet-marker-draggable {
+  cursor: all-scroll !important;
+}
+
+/* Hide the default browser cursor and use our custom one during selection mode */
+body.route-point-select-mode,
+body.route-point-select-mode * {
+  cursor: none !important;
+}
+
+/* Forcefully sets the cursor to a crosshair for the marker icon
+   whenever any drawing tool is active (class added via main.js L.Draw.Event.DRAWSTART) */
+body.leaflet-is-drawing .leaflet-marker-icon {
+  cursor: crosshair !important;
+}
+
+/* Styles for touch input */
+body.using-touch {
+  /* This line resets the cursor, overriding 'cursor: none'. */
+  cursor: auto !important;
+
+  /* Hide the routing marker cursors on touch devices without mouse */
+  .custom-cursor {
+    display: none !important;
+  }
+
+  /* Hide the leaflet draw tooltips on touch devices without mouse */
+  .leaflet-draw-tooltip {
+    display: none !important;
+  }
+}
+
+/* Hide the leaflet draw tooltips while hovering topleft buttons or their
+   submenus (e.g. the download menu's rows/buttons aren't <a> tags, so this
+   has to match any hovered descendant, not just a:hover). */
+body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
   display: none !important;
 }
 
-/* Strava Panel Button Styles */
-/* Base styles to match routing panel controls */
-.strava-button-primary,
-.strava-button-secondary {
-  border: 1px solid var(--border-color);
-  padding: 6px 12px;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  font-size: var(--font-size-14);
-  height: 30px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* FONTS */
+/*
+ * ███████╗ ██████╗ ███╗   ██╗████████╗███████╗
+ * ██╔════╝██╔═══██╗████╗  ██║╚══██╔══╝██╔════╝
+ * █████╗  ██║   ██║██╔██╗ ██║   ██║   ███████╗
+ * ██╔══╝  ██║   ██║██║╚██╗██║   ██║   ╚════██║
+ * ██║     ╚██████╔╝██║ ╚████║   ██║   ███████║
+ * ╚═╝      ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝
+ */
 
-/* Primary button style (Strava Orange) */
-.strava-button-primary {
-  background-color: var(--strava-color);
-  color: white;
-  border: none;
-  font-weight: bold;
-}
-
-/* Secondary button style (Theme-Aware) */
-.strava-button-secondary {
-  background-color: var(--background-color);
-  color: var(--text-color);
-}
-
-/* Disabled state for secondary buttons */
-.strava-button-secondary:disabled {
-  cursor: not-allowed;
-}
-
-/* Active state for secondary buttons to match routing buttons */
-button.strava-button-secondary:not(:disabled) {
-  font-weight: bold;
-  background-color: var(--text-color);
-  color: var(--background-color);
-  border: none;
-}
-
-/* Fix for Privacy Policy Link Style */
-/* This ensures links in these specific panels have no default underline */
-#strava-panel a,
-#strava-api-link,
-#settings-panel a {
-  text-decoration: none;
-}
-
-/* This adds the underline only when the user hovers over them */
-#strava-panel a:hover,
-#strava-api-link:hover,
-#settings-panel a:hover {
-  text-decoration: underline;
-}
-
-/* Style for credits link in settings panel */
-.credits-link {
-  font-size: var(--font-size-14);
-  color: var(--highlight-color) !important;
-  text-decoration: none;
-}
-
-.credits-link:hover {
-  text-decoration: underline;
-}
-
-/* Roboto Font Styles Start */
 @font-face {
   font-family: "Roboto";
   font-style: normal;
   font-weight: 100 900;
   src: url(/fonts/Roboto-VariableFont_wdth,wght.woff2) format("woff2");
 }
-/* Roboto Font Styles End */
 
-/* Material Symbols Styles Start */
 /* Instructions for self hosting: https://developers.google.com/fonts/docs/material_symbols#self-hosting_the_font */
 /* Downloaded font here: https://github.com/google/material-design-icons/tree/master/variablefont */
 /*
   Current icon subset — update this list when adding new icons, then regenerate the font.
   Paste it as-is into the URL below (replacing ICONS):
-  add,add_circle,cabin,camping,cancel,chair,commute,content_copy,data_object,delete,diagonal_line,directions_bike,directions_car,directions_run,directions_walk,download,drag_indicator,draw,edit,elevation,favorite,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,hexagon,info,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_gas_station,local_parking,location_on,my_location,outdoor_grill,park,remove,restaurant,save,search,sentiment_dissatisfied,settings,shopping_cart,visibility,visibility_off,water_drop,wc
+  add,add_circle,add_to_photos,autorenew,cabin,camping,cancel,category,chair,close,content_copy,data_object,deck,delete,diagonal_line,directions_bike,directions_bus,directions_car,directions_run,directions_walk,download,drag_indicator,drag_pan,draw,edit,elevation,favorite,fitness_center,folder_open,fullscreen,fullscreen_exit,globe,heart_smile,help,hexagon,info,ink_selection,keyboard_arrow_down,keyboard_arrow_left,keyboard_arrow_right,keyboard_arrow_up,landscape,layers,local_cafe,local_fire_department,local_gas_station,local_parking,location_on,mountain_flag,my_location,outdoor_grill,park,pedal_bike,playground,question_mark,recycling,remove,restaurant,roofing,save,search,sentiment_dissatisfied,settings,shopping_cart,storefront,train,tram,visibility,visibility_off,water,water_drop,wc
 
   To verify the list is complete, run in DevTools console (copies to clipboard):
   copy(Array.from(document.querySelectorAll('.material-symbols')).map(e=>e.textContent.trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).sort().join(','))
@@ -2106,6 +3365,9 @@ button.strava-button-secondary:not(:disabled) {
     "wght" 400,
     "GRAD" 0,
     "opsz" 24 !important;
+  /* Fixes blurry icons on macOS (Safari and Chrome). */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .material-symbols-fill {
@@ -2134,103 +3396,24 @@ button.strava-button-secondary:not(:disabled) {
     "opsz" 24 !important;
 }
 
-/* Forcefully sets the cursor to a crosshair for the marker icon
-   whenever any drawing tool is active (class added via main.js L.Draw.Event.DRAWSTART) */
-body.leaflet-is-drawing .leaflet-marker-icon {
-  cursor: crosshair !important;
-}
-
-/* Distance labels shown while drawing polylines */
-.distance-label {
-  pointer-events: none;
-  font-size: var(--font-size-12);
-  font-weight: bold;
-  color: white;
-  text-shadow:
-    -1px -1px 0 black,
-    1px -1px 0 black,
-    -1px 1px 0 black,
-    1px 1px 0 black;
-}
-
-.locate-active .material-symbols {
-  color: var(--color-white) !important;
-}
-
-.routing-panel-icon {
-  width: 16px;
-  height: 16px;
-  display: block;
-  margin: auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-/* Material Symbols Styles End */
-
-#sheet-handle {
-  /* Hide sheet-handle on desktop */
-  display: none;
-}
-
-/* Styles for mouse input */
-/* body:not(.using-touch) {
-} */
-
-/* Styles for touch input */
-body.using-touch {
-  /* This line resets the cursor, overriding 'cursor: none'. */
-  cursor: auto !important;
-
-  /* Hide the routing marker cursors on touch devices without mouse */
-  .custom-cursor {
-    display: none !important;
-  }
-
-  /* Hide the leaflet draw tooltips on touch devices without mouse */
-  .leaflet-draw-tooltip {
-    display: none !important;
-  }
-}
-
-/* POI Finder Modal Styles */
-.poi-category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.poi-category-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  background: var(--background-color);
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: var(--font-size-14);
-}
-
-/* Mobile Specific Styles Start */
-
-/* Applies styles for devices with a coarse pointer (e.g., a finger on a touchscreen). */
-@media (pointer: coarse) {
-  /* Fix the behavior where a long-press incorrectly selects UI text on touch devices */
-  * {
-    -webkit-user-select: none; /* Safari on iOS/iPadOS */
-    -moz-user-select: none; /* Firefox */
-    -ms-user-select: none; /* Internet Explorer/Edge */
-    user-select: none; /* Standard */
-  }
-}
+/* MOBILE */
+/*
+ * ███╗   ███╗ ██████╗ ██████╗ ██╗██╗     ███████╗
+ * ████╗ ████║██╔═══██╗██╔══██╗██║██║     ██╔════╝
+ * ██╔████╔██║██║   ██║██████╔╝██║██║     █████╗
+ * ██║╚██╔╝██║██║   ██║██╔══██╗██║██║     ██╔══╝
+ * ██║ ╚═╝ ██║╚██████╔╝██████╔╝██║███████╗███████╗
+ * ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚══════╝╚══════╝
+ */
 
 @media (max-width: 768px) {
   :root {
     --sheet-handle-height: 40px; /* sheet-handle haight plus its vertical margin */
     --swal2-html-container-padding: 16px 13px 5px;
-    --mobile-main-right-container-visible-height: 260px;
+    --mobile-main-right-container-visible-height: min(
+      260px,
+      calc(100dvh - env(safe-area-inset-top) - 370px)
+    );
     --mobile-main-right-container-top: calc(
       100vh - var(--mobile-main-right-container-visible-height)
     ); /* Fallback */
@@ -2261,6 +3444,14 @@ body.using-touch {
 
   /* Ignore following styles if desktop layout is forced */
   body:not(.force-desktop-layout) {
+    #offline-indicator {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 10px + var(--top-right-clearance));
+      right: 10px;
+      width: 190px;
+      max-width: calc(100vw - 81px);
+    }
+
     /* Move the scale up on mobile */
     .leaflet-bottom .leaflet-control-scale {
       position: absolute;
@@ -2290,6 +3481,10 @@ body.using-touch {
       padding-left: 0;
     }
 
+    #map-attribution {
+      display: none;
+    }
+
     #elevation-div {
       z-index: 500; /* Make sure elevation div is behind main right container on mobiles */
       bottom: calc(var(--mobile-elevation-summary-padding-bottom) - var(--sheet-handle-height));
@@ -2299,6 +3494,11 @@ body.using-touch {
     /* Hide the Via input group on mobile */
     #routing-via-group {
       display: none;
+    }
+
+    #custom-layers-panel {
+      right: 10px;
+      width: auto;
     }
 
     /* Mobile Bottom Sheet Styles Start */
@@ -2331,8 +3531,8 @@ body.using-touch {
       cursor: pointer;
       width: 100px;
       height: 30px;
-      margin: 5px auto 5px auto;
-      background-color: var(--highlight-color);
+      margin: 0px auto 10px auto;
+      background-color: var(--color-blue);
       /* border: 1px solid var(--border-color); */
       border-radius: 15px;
       -webkit-tap-highlight-color: transparent;
@@ -2365,7 +3565,7 @@ body.using-touch {
 
     #info-panel {
       position: absolute;
-      bottom: 100%; /* Position its bottom edge at the top of its parent */
+      bottom: calc(100% + 5px);
       left: 50px;
       right: 50px;
       width: auto; /* Allow left/right properties to set the width */
@@ -2377,7 +3577,7 @@ body.using-touch {
     }
 
     /* Hide the info panel when no item is selected */
-    #info-panel:has(#info-panel-name[style*="display: none"]) {
+    #info-panel.no-selection {
       display: none;
     }
 
@@ -2406,6 +3606,23 @@ body.using-touch {
 
     #overview-panel-list {
       padding-bottom: 20px;
+    }
+
+    /* Desktop only - no button to un-collapse on mobile, so never actually hide the list
+       here even if .collapsed carried over from a desktop-width collapse (e.g. the browser
+       window was resized across the breakpoint). */
+    .overview-controls-collapse-btn {
+      display: none !important;
+    }
+
+    #overview-panel.collapsed #overview-panel-list {
+      display: block;
+    }
+
+    /* The list reappearing above means there's something to divide from again - restore
+       the border the desktop .collapsed rule drops. */
+    #overview-panel.collapsed .overview-controls-row {
+      border-bottom: 1px solid var(--divider-color);
     }
 
     #routing-panel {
@@ -2441,12 +3658,20 @@ body.using-touch {
       border-right: none;
     }
 
-    #tab-btn-settings {
+    /* Wider tap targets on mobile than the compact desktop size */
+    #tab-btn-settings,
+    #tab-btn-credits {
       border-right: none;
+      flex: 0 0 40px;
+      padding: 8px;
     }
 
     #tab-btn-data {
       display: none !important;
+    }
+
+    #settings-dev-panel {
+      display: none;
     }
 
     #tab-content,
@@ -2462,7 +3687,7 @@ body.using-touch {
 
     #sidebar-toggle-btn::before {
       font-family: "Material Symbols Outlined" !important;
-      font-size: var(--icon-size-24) !important;
+      font-size: var(--icon-size-20) !important;
       line-height: 1;
       color: var(--icon-color);
       font-variation-settings:
@@ -2477,26 +3702,6 @@ body.using-touch {
       content: "keyboard_arrow_up";
     }
 
-    #tab-btn-heart {
-      display: flex;
-      flex: 0 0 40px;
-      padding: 8px;
-      font-size: var(--font-size-14);
-      font-weight: bold;
-      cursor: pointer;
-      border: 1px solid var(--border-color);
-      background-color: var(--background2-color);
-      border-right: none;
-      outline: none;
-      min-width: 0;
-      justify-content: center;
-      align-items: center;
-      height: 35px;
-    }
-    #tab-btn-heart .material-symbols {
-      color: var(--text-color);
-    }
     /* Mobile Bottom Sheet Styles End */
   }
 }
-/* Mobile Specific Styles End */

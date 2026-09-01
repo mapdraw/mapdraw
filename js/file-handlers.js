@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Aron Sommer. See LICENSE file for full license details.
+// Copyright (C) 2026 Aron Sommer. See LICENSE file for full license details.
 
 /**
  * FILE HANDLING
@@ -17,37 +17,68 @@
 // --------------------------------------------------------------------
 
 /**
- * Overwrites a GeoJSON geometry's coordinates with full precision values
- * read directly from the Leaflet layer (avoids toGeoJSON precision loss).
- * @param {L.Layer} layer - The Leaflet layer
- * @param {object} geojson - The GeoJSON object whose geometry.coordinates will be updated
+ * Checks whether a closed ring of [lng, lat, ele?] coordinates winds
+ * clockwise, using the shoelace formula. Longitudes are unwrapped as the
+ * ring is walked - a >180 degree jump between consecutive vertices is
+ * treated as an antimeridian crossing rather than an actual half-world
+ * step - so the result stays correct for rings that cross +/-180 degrees.
+ * @param {Array} ring - Closed ring coordinates (first and last equal)
+ * @returns {boolean} True if the ring winds clockwise
  */
-function applyFullPrecisionCoordinates(layer, geojson) {
-  if (layer instanceof L.Marker) {
-    const ll = layer.getLatLng();
-    const coords = [ll.lng, ll.lat];
-    if (typeof ll.alt === "number") coords.push(ll.alt);
-    geojson.geometry.coordinates = coords;
-  } else if (layer instanceof L.Polygon) {
-    const latlngs = layer.getLatLngs()[0];
-    const coords = latlngs.map((ll) => {
-      const coord = [ll.lng, ll.lat];
-      if (typeof ll.alt === "number") coord.push(ll.alt);
-      return coord;
-    });
-    coords.push(coords[0]); // Close the polygon
-    geojson.geometry.coordinates = [coords];
-  } else if (layer instanceof L.Polyline) {
-    let latlngs = layer.getLatLngs();
-    while (Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-      latlngs = latlngs[0];
-    }
-    geojson.geometry.coordinates = latlngs.map((ll) => {
-      const coord = [ll.lng, ll.lat];
-      if (typeof ll.alt === "number") coord.push(ll.alt);
-      return coord;
-    });
+function isRingClockwise(ring) {
+  let sum = 0;
+  let x1 = ring[0][0];
+  for (let i = 0; i < ring.length - 1; i++) {
+    const y1 = ring[i][1];
+    const y2 = ring[i + 1][1];
+    let x2 = ring[i + 1][0];
+    if (x2 - x1 > 180) x2 -= 360;
+    else if (x2 - x1 < -180) x2 += 360;
+    sum += (x2 - x1) * (y2 + y1);
+    x1 = x2;
   }
+  return sum > 0;
+}
+
+/**
+ * Converts a layer into the portable GeoJSON feature that represents it everywhere its data
+ * leaves the map: the GeoJSON Editor tab, a GeoJSON export, and autosave (which adds its
+ * internal state in a sibling key afterwards). Exactly type/properties/geometry - an imported
+ * layer's feature can carry extra top-level keys from its source file, and layer.internal is
+ * deliberately not part of layer.feature at all. See the LAYER DATA MODEL note in config.js.
+ * Builds the geometry straight from the layer's latlngs at full precision - layer.toGeoJSON()
+ * would round every coordinate to 6 decimal places and materialize the whole array a second time.
+ * @param {L.Layer} layer - The layer to convert
+ * @returns {object|null} A GeoJSON Feature, or null if the layer has no usable geometry
+ */
+function layerToPortableFeature(layer) {
+  const toCoord = (ll) => {
+    const coord = [ll.lng, ll.lat];
+    if (typeof ll.alt === "number") coord.push(ll.alt);
+    return coord;
+  };
+
+  let geometry;
+  if (layer instanceof L.Marker) {
+    geometry = { type: "Point", coordinates: toCoord(layer.getLatLng()) };
+  } else if (layer instanceof L.Polygon) {
+    const coords = layer.getLatLngs()[0].map(toCoord);
+    coords.push(coords[0]); // Close the polygon
+    // RFC 7946 section 3.1.6: exterior rings MUST wind counterclockwise.
+    if (isRingClockwise(coords)) coords.reverse();
+    geometry = { type: "Polygon", coordinates: [coords] };
+  } else if (layer instanceof L.Polyline) {
+    geometry = {
+      type: "LineString",
+      coordinates: flattenRingPoints(layer.getLatLngs()).map(toCoord),
+    };
+  } else {
+    return null; // No usable geometry (e.g. an L.FeatureGroup from a pasted GeometryCollection)
+  }
+
+  // Shallow property copy - callers can add or drop top-level properties without touching the
+  // live layer; nested values stay shared.
+  return { type: "Feature", properties: { ...layer.feature?.properties }, geometry };
 }
 
 /**
@@ -78,38 +109,82 @@ function getAllExportableLayers() {
  */
 function escapeXml(unsafe) {
   if (!unsafe) return "";
-  return unsafe.toString().replace(/[<>&'"]/g, (c) => {
-    switch (c) {
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case "&":
-        return "&amp;";
-      case "'":
-        return "&apos;";
-      case '"':
-        return "&quot;";
-    }
-  });
+  return (
+    unsafe
+      .toString()
+      // XML 1.0 forbids these characters even as character references, so drop them.
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]/g, "")
+      .replace(/[<>&'"]/g, (c) => {
+        switch (c) {
+          case "<":
+            return "&lt;";
+          case ">":
+            return "&gt;";
+          case "&":
+            return "&amp;";
+          case "'":
+            return "&apos;";
+          case '"':
+            return "&quot;";
+        }
+      })
+  );
+}
+
+/**
+ * A lone selected item - a "selection" of exactly one - is named after
+ * itself with no timestamp, same across GeoJSON/GPX/KML; anything else
+ * (a real bulk export) gets a generic prefix plus a timestamp instead.
+ * @param {Array|null} layers - The selection passed to the export function
+ * @returns {string|null} The item's name, or null if not a single-item selection
+ */
+function getSingleNamedItem(layers) {
+  return layers?.length === 1 ? layers[0].feature?.properties?.name : null;
+}
+
+/**
+ * Default filename prefix for an export: the single named item itself,
+ * or a generic "Selected"/"Map" prefix for anything else (bulk exports,
+ * which also get a timestamp appended by the caller).
+ * @param {string|null} singleNamedItem - Result of getSingleNamedItem()
+ * @param {boolean} hasSelection - Whether the export is scoped to a selection
+ * @returns {string} The resolved filename prefix
+ */
+function resolveExportFilePrefix(singleNamedItem, hasSelection) {
+  return singleNamedItem || (hasSelection ? "Selected_Export" : "Map_Export");
 }
 
 /**
  * Supported geometry types for import.
- * Multi-geometry types (MultiLineString, MultiPolygon, etc.) and GeometryCollections
- * are automatically exploded into separate simple features for editing compatibility.
+ * Multi-geometry types (MultiLineString, MultiPolygon, etc.), GeometryCollections, and
+ * polygons with holes are automatically exploded into separate simple features for
+ * editing compatibility.
  */
 const SUPPORTED_IMPORT_GEOM_TYPES = ["Point", "LineString", "Polygon"];
 
 /**
+ * True when coordinates nest down to [lng, lat(, alt)] positions with finite numbers.
+ * Leaflet's LatLng constructor throws on non-numeric values, which would abort an
+ * entire import over one bad feature - such features are dropped instead.
+ */
+function hasFiniteCoords(coords) {
+  if (!Array.isArray(coords)) return false;
+  return Array.isArray(coords[0])
+    ? coords.every(hasFiniteCoords)
+    : coords.length >= 2 && Number.isFinite(coords[0]) && Number.isFinite(coords[1]);
+}
+
+/**
  * Explodes multi-geometries and GeometryCollections into separate features.
  * Converts MultiLineString, MultiPolygon, MultiPoint, and GeometryCollection
- * into arrays of simple features that can be edited individually.
+ * into arrays of simple features that can be edited individually; a Polygon
+ * with holes is split into one area per ring. Malformed features (non-finite
+ * or missing coordinates) are dropped so one bad record can't abort an import.
  * @param {object} feature - GeoJSON feature that may contain multi-geometry
- * @returns {Array} Array of features with simple geometries only
+ * @returns {Array} Array of features with simple single-ring geometries only
  */
 function explodeMultiGeometries(feature) {
-  if (!feature.geometry) return [];
+  if (!feature?.geometry || typeof feature.geometry.type !== "string") return [];
 
   const geomType = feature.geometry.type;
 
@@ -122,15 +197,18 @@ function explodeMultiGeometries(feature) {
 
   // Handle GeometryCollection (from KML MultiGeometry)
   if (geomType === "GeometryCollection") {
+    if (!Array.isArray(feature.geometry.geometries)) return [];
     // Count occurrences of each geometry type to handle duplicates
     const typeCounts = {};
-    return feature.geometry.geometries.map((geom) => {
+    return feature.geometry.geometries.flatMap((geom) => {
       const type = geom.type;
       typeCounts[type] = (typeCounts[type] || 0) + 1;
       const suffix = typeCounts[type] > 1 ? ` ${typeCounts[type]}` : "";
       const typeLabel = labelMap[type] || type;
 
-      return {
+      // Recurse so a nested Multi*/GeometryCollection member is exploded too instead of
+      // passing through as one un-editable multi-geometry; simple members return as-is.
+      return explodeMultiGeometries({
         type: "Feature",
         geometry: geom,
         properties: {
@@ -139,19 +217,23 @@ function explodeMultiGeometries(feature) {
             ? `${feature.properties.name} (${typeLabel}${suffix})`
             : undefined,
         },
-      };
+      });
     });
   }
+
+  // Every remaining branch reads coordinates; a feature without an array there is malformed.
+  if (!Array.isArray(feature.geometry.coordinates)) return [];
 
   // Handle Multi-geometries (MultiLineString, MultiPolygon, MultiPoint)
   if (geomType.startsWith("Multi")) {
     const singleType = geomType.replace("Multi", ""); // MultiLineString -> LineString
-    return feature.geometry.coordinates.map((coords, index) => {
-      const count = feature.geometry.coordinates.length;
+    const count = feature.geometry.coordinates.length;
+    return feature.geometry.coordinates.flatMap((coords, index) => {
       const suffix = count > 1 && index > 0 ? ` ${index + 1}` : "";
       const typeLabel = labelMap[singleType] || singleType;
 
-      return {
+      // Recurse so a MultiPolygon part with holes is split like any standalone polygon.
+      return explodeMultiGeometries({
         type: "Feature",
         geometry: { type: singleType, coordinates: coords },
         properties: {
@@ -160,13 +242,32 @@ function explodeMultiGeometries(feature) {
             ? `${feature.properties.name} (${typeLabel}${suffix})`
             : undefined,
         },
-      };
+      });
     });
   }
 
-  // Simple geometry - return as-is if supported
+  // A polygon's rings beyond the first are holes (RFC 7946). The app has no hole support,
+  // so each ring becomes its own area - keeping the geometry at the cost of the "excluded
+  // region" meaning, which is invisible here anyway: areas render without fill.
+  if (geomType === "Polygon" && feature.geometry.coordinates.length > 1) {
+    // Recurse so each single-ring polygon passes the coordinate validation below.
+    return feature.geometry.coordinates.flatMap((ring, index) =>
+      explodeMultiGeometries({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [ring] },
+        properties: {
+          ...feature.properties,
+          name: feature.properties?.name
+            ? `${feature.properties.name} (${labelMap.Polygon}${index > 0 ? ` ${index + 1}` : ""})`
+            : undefined,
+        },
+      }),
+    );
+  }
+
+  // Simple geometry - return as-is if supported and its coordinates can't crash Leaflet
   if (SUPPORTED_IMPORT_GEOM_TYPES.includes(geomType)) {
-    return [feature];
+    return hasFiniteCoords(feature.geometry.coordinates) ? [feature] : [];
   }
 
   return []; // Unsupported type
@@ -179,51 +280,68 @@ function explodeMultiGeometries(feature) {
 
 /**
  * Parses color from standard GeoJSON stroke/marker-color properties.
- * Supports hex values and CSS color names.
+ * Prefers the simplestyle key matching the geometry ("marker-color" for points,
+ * "stroke" for everything else); the other key is kept as a fallback so a color
+ * stored under the wrong key still survives. Supports hex values and CSS color names.
  * @param {object} properties - The GeoJSON feature properties
+ * @param {boolean} isPoint - Whether the feature's geometry is a Point
  * @returns {string|null} Normalized hex color or null
  */
-function parseColorFromGeoJsonStyle(properties) {
-  const raw = properties?.stroke || properties?.["marker-color"];
+function parseColorFromGeoJsonStyle(properties, isPoint) {
+  const raw = isPoint
+    ? properties?.["marker-color"] || properties?.stroke
+    : properties?.stroke || properties?.["marker-color"];
   return parseColor(raw);
 }
 
 /**
  * Parses a color from KML style properties (after toGeoJSON conversion).
  *
- * Standard KML: LineStyle colors are parsed by toGeoJSON into properties.stroke
- * Our exports: Inline IconStyle colors are handled separately by applyKmlIconColors()
+ * Paths: LineStyle colors are parsed by toGeoJSON into properties.stroke.
+ * Points: Google Earth encodes marker color as an icon URL parameter; it wins
+ * over stroke, which is just a default line style there. IconStyle colors
+ * are handled separately by applyKmlIconColors().
  *
  * @param {object} properties - The feature properties from toGeoJSON
+ * @param {boolean} isPoint - Whether the feature's geometry is a Point
  * @returns {string} Hex color or DEFAULT_COLOR
  */
-function parseColorFromKmlStyle(properties) {
-  // Standard KML: LineStyle colors parsed by toGeoJSON
-  if (properties.stroke) {
-    const parsed = parseColor(properties.stroke);
-    if (parsed) return parsed;
+function parseColorFromKmlStyle(properties, isPoint) {
+  if (isPoint) {
+    const match = properties.icon?.match(/[?&]color=([0-9a-f]{6})(?:[&#]|$)/i);
+    const iconColor = match && parseColor(match[1]);
+    if (iconColor) return iconColor;
   }
-
-  // --- Organic Maps specific ---
-  // Organic Maps uses styleUrl like #placemark-red or icon URLs like placemark-red.png
-  if (properties.styleUrl) {
-    const match = properties.styleUrl.match(/#placemark-(\w+)/i);
-    if (match) {
-      const parsed = parseColor(match[1]);
-      if (parsed) return parsed;
-    }
-  }
-  if (properties.icon) {
-    const match = properties.icon.match(/placemark-(\w+)\.png/i);
-    if (match) {
-      const parsed = parseColor(match[1]);
-      if (parsed) return parsed;
-    }
-  }
-  // --- End Organic Maps specific ---
-
-  return DEFAULT_COLOR;
+  return parseColor(properties.stroke) || DEFAULT_COLOR;
 }
+
+/**
+ * Style properties stripped from every imported feature.
+ *
+ * The app renders everything with its own STYLE_CONFIG (line weight, opacity, and no fill for
+ * areas) and owns a single color, stored under stroke/marker-color by setLayerColor(). Keeping a
+ * source's own style keys would mean exporting styling the app never applied - and would leave
+ * `fill`/`fill-color` behind as a second, stale color as soon as the user recolors the item.
+ *
+ * "color" is the non-standard key resolveColor() reads (set by applyGpxProperties(),
+ * applyKmlIconColors(), share-link decoding, or the source file itself); it goes once resolved,
+ * so it can't linger next to the simplestyle key that now holds the same color.
+ *
+ * styleHash/styleMapHash are bookkeeping toGeoJSON derives from shared KML styles (a hash of
+ * the referenced style's XML; a StyleMap's key/styleUrl pairs) - meaningless without the KML
+ * document they index into. styleUrl and icon stay - they are real KML content, and
+ * parseColorFromKmlStyle() reads icon for Google Earth marker colors.
+ */
+const DISCARDED_STYLE_PROPERTIES = [
+  "color",
+  "stroke-width",
+  "stroke-opacity",
+  "fill",
+  "fill-color",
+  "fill-opacity",
+  "styleHash",
+  "styleMapHash",
+];
 
 /**
  * Imports GeoJSON data to the map, applying appropriate styles.
@@ -239,30 +357,40 @@ function importGeoJsonToMap(geoJsonData, fileType) {
    * Internal helper to resolve the color for a feature.
    * Color resolution: try color property, then format-specific parsing, then default.
    */
-  const resolveColor = (properties) => {
+  const resolveColor = (feature) => {
+    const properties = feature.properties;
     if (!properties) return DEFAULT_COLOR;
+    const isPoint = feature.geometry?.type === "Point";
     return (
       parseColor(properties.color) || // Normalize color if present
       (isKmlBased
-        ? parseColorFromKmlStyle(properties) // KML/KMZ parsing
-        : parseColorFromGeoJsonStyle(properties)) || // GeoJSON stroke/marker-color
+        ? parseColorFromKmlStyle(properties, isPoint) // KML/KMZ parsing
+        : parseColorFromGeoJsonStyle(properties, isPoint)) || // GeoJSON stroke/marker-color
       DEFAULT_COLOR
     );
   };
 
   const layerGroup = L.geoJSON(geoJsonData, {
     style: (feature) => {
-      const color = resolveColor(feature.properties);
+      const color = resolveColor(feature);
       return { ...STYLE_CONFIG.path.default, color: color };
     },
     onEachFeature: (feature, layer) => {
-      const color = resolveColor(feature.properties);
+      const color = resolveColor(feature);
 
-      // Store the resolved color
-      layer.feature.properties.color = color;
+      // Store the resolved color under its simplestyle-spec key, then drop the style
+      // properties the app renders on its own terms (see DISCARDED_STYLE_PROPERTIES).
+      setLayerColor(layer, color);
+      DISCARDED_STYLE_PROPERTIES.forEach((key) => delete layer.feature.properties[key]);
 
-      // All imported items use fileType as pathType
-      layer.pathType = fileType;
+      // Default a missing/empty name so it's never treated as blank downstream
+      // (display, export).
+      if (!layer.feature.properties.name) {
+        layer.feature.properties.name = getDefaultLayerName(layer);
+      }
+
+      // All imported items use fileType as pathType - a file's own pathType is never trusted.
+      layer.internal = { pathType: fileType };
 
       layer.on("click", (e) => {
         L.DomEvent.stopPropagation(e);
@@ -270,9 +398,9 @@ function importGeoJsonToMap(geoJsonData, fileType) {
       });
     },
     pointToLayer: (feature, latlng) => {
-      const color = resolveColor(feature.properties);
+      const color = resolveColor(feature);
 
-      const marker = L.marker(latlng, {
+      const marker = L.marker(wrapLatLngIfNeeded(latlng), {
         icon: createMarkerIcon(color, STYLE_CONFIG.marker.default.opacity),
       });
       marker.feature = feature;
@@ -330,7 +458,7 @@ function importGeoJsonFile(file) {
       if (explodedFeatures.length === 0) {
         return Swal.fire({
           title: "No Supported Geometries",
-          text: "The GeoJSON file contains no Point, LineString, or Polygon features.",
+          text: "The GeoJSON file contains no Point, LineString, or Polygon features with valid coordinates.",
         });
       }
 
@@ -359,68 +487,44 @@ function importGeoJsonFile(file) {
 // Specification: https://www.topografix.com/gpx/1/1/
 
 /**
- * Parses colors from GPX DOM and attaches them to GeoJSON features.
- * Must be called BEFORE explosion to ensure all segments inherit the color.
+ * Attaches colors and Strava IDs from the GPX DOM to GeoJSON features.
+ * Must be called BEFORE explosion so all exploded segments inherit them.
+ *
+ * toGeoJSON emits features in DOM order (tracks, routes, waypoints) but skips
+ * tracks without a >=2-point segment and routes with <2 points, so the DOM
+ * lists are filtered to the nodes that actually produce a feature before the
+ * positional walk - otherwise one dropped track shifts every later match.
  * @param {Document} dom - The parsed GPX XML document
  * @param {object} geojsonData - The GeoJSON data from toGeoJSON.gpx()
  */
-function applyGpxColors(dom, geojsonData) {
-  const tracksInDom = dom.querySelectorAll("trk");
-  const routesInDom = dom.querySelectorAll("rte");
-  const waypointsInDom = dom.querySelectorAll("wpt");
-
-  // Extract colors from tracks (returns hex or null)
-  const trackColors = Array.from(tracksInDom).map((node) => {
-    const colorNode = node.querySelector("gpx_style\\:color, color");
-    return colorNode ? parseColor(colorNode.textContent) : null;
-  });
-
-  // Extract colors from routes (returns hex or null)
-  const routeColors = Array.from(routesInDom).map((node) => {
-    const colorNode = node.querySelector("gpx_style\\:color, color");
-    return colorNode ? parseColor(colorNode.textContent) : null;
-  });
-
-  // Extract colors from waypoints (returns hex or null)
-  const waypointColors = Array.from(waypointsInDom).map((node) => {
-    const colorNode = node.querySelector("gpx_style\\:color, color");
-    return colorNode ? parseColor(colorNode.textContent) : null;
-  });
-
-  // Apply colors to features (toGeoJSON outputs: trk, then rte, then wpt)
-  const trackCount = tracksInDom.length;
-  const routeCount = routesInDom.length;
-  let trackIndex = 0;
-  let routeIndex = 0;
-  let waypointIndex = 0;
+function applyGpxProperties(dom, geojsonData) {
+  const tracks = [...dom.querySelectorAll("trk")].filter((trk) =>
+    [...trk.querySelectorAll("trkseg")].some((seg) => seg.querySelectorAll("trkpt").length >= 2),
+  );
+  const routes = [...dom.querySelectorAll("rte")].filter(
+    (rte) => rte.querySelectorAll("rtept").length >= 2,
+  );
+  const lineNodes = [...tracks, ...routes];
+  const pointNodes = [...dom.querySelectorAll("wpt")];
+  let lineIndex = 0;
+  let pointIndex = 0;
 
   geojsonData.features.forEach((feature) => {
     const type = feature.geometry?.type;
+    const node =
+      type === "LineString" || type === "MultiLineString"
+        ? lineNodes[lineIndex++]
+        : type === "Point"
+          ? pointNodes[pointIndex++]
+          : null;
+    if (!node) return;
 
-    if (type === "LineString" || type === "MultiLineString") {
-      // Tracks come first in toGeoJSON output
-      if (trackIndex < trackCount) {
-        if (trackColors[trackIndex]) {
-          feature.properties = feature.properties || {};
-          feature.properties.color = trackColors[trackIndex];
-        }
-        trackIndex++;
-      }
-      // Routes come after tracks
-      else if (routeIndex < routeCount) {
-        if (routeColors[routeIndex]) {
-          feature.properties = feature.properties || {};
-          feature.properties.color = routeColors[routeIndex];
-        }
-        routeIndex++;
-      }
-    } else if (type === "Point") {
-      // Waypoints come last
-      if (waypointIndex < waypointColors.length && waypointColors[waypointIndex]) {
-        feature.properties = feature.properties || {};
-        feature.properties.color = waypointColors[waypointIndex];
-      }
-      waypointIndex++;
+    const color = parseColor(node.querySelector("gpx_style\\:color, color")?.textContent);
+    const stravaId = node.querySelector("stravaId")?.textContent.trim();
+    if (color || stravaId) {
+      feature.properties = feature.properties || {};
+      if (color) feature.properties.color = color;
+      if (stravaId) feature.properties.stravaId = stravaId;
     }
   });
 }
@@ -438,40 +542,18 @@ function importGpxFile(file) {
       const dom = new DOMParser().parseFromString(readEvent.target.result, "text/xml");
       const geojsonData = toGeoJSON.gpx(dom);
 
-      // Extract colors from GPX DOM and attach to features BEFORE explosion
-      applyGpxColors(dom, geojsonData);
-
-      // Extract stravaId from tracks
-      const tracksInDom = dom.querySelectorAll("trk");
-      let trackIndex = 0;
-      geojsonData.features.forEach((feature) => {
-        if (
-          feature.geometry?.type === "LineString" ||
-          feature.geometry?.type === "MultiLineString"
-        ) {
-          if (trackIndex < tracksInDom.length) {
-            const stravaIdNode = tracksInDom[trackIndex].querySelector("stravaId");
-            if (stravaIdNode) {
-              feature.properties = feature.properties || {};
-              feature.properties.stravaId = stravaIdNode.textContent.trim();
-            }
-          }
-          trackIndex++;
+      // toGeoJSON maps GPX's <desc> to a `desc` property, while KML imports and both the
+      // GPX and KML exporters use `description`. Normalized here so one key means one thing
+      // everywhere - otherwise a GPX description survives the import but no export writes it.
+      geojsonData.features.forEach(({ properties }) => {
+        if (properties?.desc) {
+          properties.description = properties.desc;
+          delete properties.desc;
         }
       });
 
-      // Extract stravaId from waypoints
-      const waypointsInDom = dom.querySelectorAll("wpt");
-      const pointFeatures = geojsonData.features.filter((f) => f.geometry?.type === "Point");
-      if (pointFeatures.length === waypointsInDom.length) {
-        pointFeatures.forEach((feature, index) => {
-          const stravaIdNode = waypointsInDom[index].querySelector("stravaId");
-          if (stravaIdNode) {
-            feature.properties = feature.properties || {};
-            feature.properties.stravaId = stravaIdNode.textContent.trim();
-          }
-        });
-      }
+      // Extract colors and Strava IDs from GPX DOM and attach to features BEFORE explosion
+      applyGpxProperties(dom, geojsonData);
 
       // Explode multi-geometries and filter for supported geometry types
       geojsonData.features = geojsonData.features.flatMap((f) => explodeMultiGeometries(f));
@@ -495,12 +577,24 @@ function importGpxFile(file) {
 // Specification: https://developers.google.com/kml/documentation/kmlreference
 
 /**
- * Extracts inline IconStyle colors from KML DOM and attaches them to GeoJSON features.
+ * KML geometry elements toGeoJSON turns into a feature (its `geotypes` list). They are
+ * matched at any depth, so the ones nested in a MultiGeometry or gx:MultiTrack count too.
+ */
+const KML_GEOMETRY_SELECTOR = "Point, LineString, Polygon, Track, gx\\:Track";
+
+/**
+ * Extracts KML IconStyle colors and attaches them to point-only GeoJSON features.
  *
  * Why this is needed:
  * - toGeoJSON parses LineStyle/PolyStyle colors but ignores IconStyle colors
- * - This handles KML files with inline <Style><IconStyle><color> elements
- * - Primary use case: Re-importing our own KML/KMZ exports which use inline styles
+ * - Inline <Style><IconStyle><color>: our own KML/KMZ exports
+ * - Shared <Style id> referenced by styleUrl, possibly via a StyleMap:
+ *   Organic Maps and Google Earth exports
+ *
+ * Features are matched to placemarks by position, and toGeoJSON emits no feature for a
+ * placemark without geometry - a description-only note - so those are filtered out first;
+ * otherwise a single one shifts every later match. The length check is the backstop: on any
+ * remaining mismatch no color is applied rather than the wrong one.
  *
  * Must be called AFTER toGeoJSON conversion but BEFORE explosion.
  *
@@ -508,24 +602,54 @@ function importGpxFile(file) {
  * @param {object} geojsonData - The GeoJSON data from toGeoJSON.kml()
  */
 function applyKmlIconColors(dom, geojsonData) {
-  const placemarks = dom.querySelectorAll("Placemark");
-
-  // Require 1:1 mapping between DOM placemarks and GeoJSON features
-  if (!geojsonData?.features || placemarks.length !== geojsonData.features.length) {
+  const features = geojsonData?.features;
+  const placemarks = [...dom.querySelectorAll("Placemark")].filter((placemark) =>
+    placemark.querySelector(KML_GEOMETRY_SELECTOR),
+  );
+  if (!features || placemarks.length !== features.length) {
     return;
   }
 
-  geojsonData.features.forEach((feature, index) => {
-    if (feature.geometry?.type !== "Point") {
+  // Shared styles are referenced by many placemarks - resolve each id only once
+  const sharedIconColors = new Map();
+
+  features.forEach((feature, index) => {
+    const placemark = placemarks[index];
+
+    // Only placemarks made purely of points take an icon color: in a mixed
+    // MultiGeometry the line parts must keep their LineStyle stroke.
+    const geometries =
+      feature.geometry?.type === "GeometryCollection"
+        ? feature.geometry.geometries
+        : [feature.geometry];
+    if (!geometries.every((geometry) => geometry?.type === "Point")) {
       return;
     }
 
-    const placemark = placemarks[index];
-    const iconStyleColor = placemark.querySelector("Style IconStyle color");
+    let iconStyleColor = placemark.querySelector("Style IconStyle color");
+
+    // Shared style (Organic Maps, Google Earth): resolve the styleUrl to a
+    // document-level Style, following a StyleMap's normal pair if needed
+    if (!iconStyleColor) {
+      const id = placemark.querySelector("styleUrl")?.textContent.trim().replace(/^#/, "");
+      if (id) {
+        if (!sharedIconColors.has(id)) {
+          const normalUrl = [...dom.querySelectorAll(`StyleMap[id="${CSS.escape(id)}"] Pair`)]
+            .find((pair) => pair.querySelector("key")?.textContent.trim() === "normal")
+            ?.querySelector("styleUrl")
+            ?.textContent.trim();
+          const styleId = normalUrl ? normalUrl.replace(/^#/, "") : id;
+          sharedIconColors.set(
+            id,
+            dom.querySelector(`Style[id="${CSS.escape(styleId)}"] IconStyle color`),
+          );
+        }
+        iconStyleColor = sharedIconColors.get(id);
+      }
+    }
 
     if (iconStyleColor) {
-      const kmlColor = iconStyleColor.textContent.trim();
-      const cssColor = kmlToCssColor(kmlColor);
+      const cssColor = kmlToCssColor(iconStyleColor.textContent.trim());
       if (cssColor) {
         feature.properties = feature.properties || {};
         feature.properties.color = cssColor;
@@ -535,28 +659,31 @@ function applyKmlIconColors(dom, geojsonData) {
 }
 
 /**
- * Parses KML text content to GeoJSON with stravaId extraction.
+ * Parses KML text content to GeoJSON, recovering the icon colors toGeoJSON drops.
  * @param {string} kmlText - The KML file content as text
- * @returns {object} GeoJSON data with extracted stravaId properties
+ * @returns {object} GeoJSON data with extracted color and stravaId properties
  */
 function parseKmlContent(kmlText) {
   const dom = new DOMParser().parseFromString(kmlText, "text/xml");
-  const geojsonData = toGeoJSON.kml(dom, { styles: true });
 
-  // Extract stravaId from ExtendedData for all placemarks
-  const placemarks = dom.querySelectorAll("Placemark");
-  if (geojsonData?.features?.length > 0 && placemarks.length === geojsonData.features.length) {
-    geojsonData.features.forEach((feature, index) => {
-      const placemark = placemarks[index];
-      const stravaIdData = placemark.querySelector('Data[name="stravaId"] value');
-      if (stravaIdData) {
-        feature.properties = feature.properties || {};
-        feature.properties.stravaId = stravaIdData.textContent.trim();
-      }
-    });
-  }
+  // Google Earth wraps shared styles in <gx:CascadingStyle kml:id="...">, which
+  // toGeoJSON can't index (it reads plain id attributes on Style elements).
+  // Mirror the wrapper's id onto the inner Style so StyleMap references resolve.
+  dom.querySelectorAll("CascadingStyle, gx\\:CascadingStyle").forEach((wrapper) => {
+    const style = wrapper.querySelector("Style");
+    const id = wrapper.getAttribute("kml:id") || wrapper.getAttribute("id");
+    if (style && id && !style.hasAttribute("id")) style.setAttribute("id", id);
+  });
 
-  // Extract inline IconStyle colors (for re-importing our own KML/KMZ exports)
+  const geojsonData = toGeoJSON.kml(dom);
+
+  // toGeoJSON already copies every <Data name="..."><value> into properties, stravaId
+  // included - it just doesn't trim, and the value goes straight into a download URL.
+  geojsonData?.features?.forEach(({ properties }) => {
+    if (properties?.stravaId) properties.stravaId = properties.stravaId.trim();
+  });
+
+  // Extract IconStyle colors (inline and shared) for point features
   // Must be called BEFORE explosion so colors propagate to all exploded features
   applyKmlIconColors(dom, geojsonData);
 
@@ -658,18 +785,28 @@ async function importKmzFile(file) {
 // --------------------------------------------------------------------
 
 /**
- * Properties to exclude from GeoJSON export.
- * These are internal/style properties that shouldn't be included in exported files.
+ * Shows the dialog shared by GeoJSON/GPX/KML export when a selection-based
+ * export is invoked with nothing selected.
  */
-const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
-  "color",
-  "totalDistance",
-  "stroke-width",
-  "stroke-opacity",
-  "fill",
-  "fill-color",
-  "fill-opacity",
-];
+function alertNothingSelected() {
+  return Swal.fire({
+    title: "Nothing Selected",
+    text: "Please select at least one item to export.",
+  });
+}
+
+/**
+ * Shows a timed "Export Successful" toast, or does nothing when `shouldNotify`
+ * is false - e.g. an obviously-intentional single-item download needs no
+ * confirmation beyond the browser's own download indicator.
+ * @param {boolean} shouldNotify
+ * @param {string} title
+ * @param {string} text
+ */
+function notifyExportSuccess(shouldNotify, title, text) {
+  if (!shouldNotify) return;
+  Swal.fire({ title, text, timer: 2000, showConfirmButton: false });
+}
 
 // GeoJSON
 // Specification: https://tools.ietf.org/html/rfc7946
@@ -677,33 +814,18 @@ const GEOJSON_EXPORT_EXCLUDED_PROPERTIES = [
 /**
  * Exports map items to a GeoJSON file with color preservation.
  * @param {Object} options - Export options
- * @param {string} options.mode - Export mode: "all" (default), "single", or "strava"
- * @param {L.Layer} options.layer - Single layer to export (required when mode is "single")
- * @param {string} options.filePrefix - Prefix for the filename (defaults based on mode)
- * @param {string} options.successTitle - Success dialog title (defaults based on mode)
- * @param {string} options.successText - Success dialog text (defaults based on mode)
+ * @param {string} options.mode - Export mode: "all" (default), "selection", or "strava"
  */
-function exportGeoJson(options = {}) {
-  const {
-    mode = "all",
-    layer = null,
-    filePrefix = null,
-    successTitle = "Export Successful!",
-    successText = null,
-  } = options;
-
+function exportGeoJson({ mode = "all", layers = null } = {}) {
   const features = [];
   let allLayers = [];
 
   // Collect layers based on mode
-  if (mode === "single") {
-    if (!layer) {
-      return Swal.fire({
-        title: "No Item Selected",
-        text: "Please select an item to export.",
-      });
+  if (mode === "selection") {
+    if (!layers || layers.length === 0) {
+      return alertNothingSelected();
     }
-    allLayers = [layer];
+    allLayers = layers;
   } else if (mode === "strava") {
     stravaActivitiesLayer.eachLayer((l) => {
       allLayers.push(l);
@@ -726,49 +848,17 @@ function exportGeoJson(options = {}) {
     }
   }
 
-  // Convert each layer to GeoJSON
+  // Convert each layer to GeoJSON. Nothing to filter or add: layerToPortableFeature() already
+  // yields exactly the portable content (including stroke/marker-color), so this writes the
+  // same features the GeoJSON Editor tab shows.
   allLayers.forEach((layer) => {
     try {
-      const geojson = layer.toGeoJSON();
-
-      // Skip if toGeoJSON didn't produce valid geometry
-      if (!geojson || !geojson.geometry || !geojson.geometry.type) {
+      const feature = layerToPortableFeature(layer);
+      if (!feature) {
         console.warn("Skipping layer with invalid geometry:", layer);
         return;
       }
-
-      // Extract full precision coordinates directly from layer
-      applyFullPrecisionCoordinates(layer, geojson);
-
-      // Get color (stored hex or default)
-      const color = layer.feature?.properties?.color || DEFAULT_COLOR;
-
-      // Filter out excluded properties
-      const filteredProperties = Object.keys(geojson.properties || {}).reduce((acc, key) => {
-        if (!GEOJSON_EXPORT_EXCLUDED_PROPERTIES.includes(key)) {
-          acc[key] = geojson.properties[key];
-        }
-        return acc;
-      }, {});
-
-      // Set filtered properties
-      geojson.properties = {
-        ...filteredProperties,
-      };
-
-      // Add standard GeoJSON styling for other tools
-      if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-        geojson.properties.stroke = color;
-      }
-
-      if (layer instanceof L.Marker) {
-        geojson.properties["marker-color"] = color;
-      }
-
-      // Ensure type: "Feature" is present
-      geojson.type = "Feature";
-
-      features.push(geojson);
+      features.push(feature);
     } catch (error) {
       console.error("Error converting layer to GeoJSON:", error, layer);
       // Skip this layer and continue with others
@@ -789,110 +879,73 @@ function exportGeoJson(options = {}) {
     features: features,
   };
 
-  // Determine filename prefix
-  let finalFilePrefix = filePrefix;
-  if (!finalFilePrefix) {
-    if (mode === "single") {
-      finalFilePrefix = layer.feature?.properties?.name || "Map_Export";
-    } else if (mode === "strava") {
-      finalFilePrefix = "Strava_Export";
-    } else {
-      finalFilePrefix = "Map_Export";
-    }
-  }
+  const singleNamedItem = mode === "selection" ? getSingleNamedItem(allLayers) : null;
 
-  // Generate filename with timestamp (except for single items with custom names)
-  const fileName =
-    mode === "single" && layer.feature?.properties?.name
-      ? `${finalFilePrefix}.geojson`
-      : generateTimestampedFilename(finalFilePrefix, "geojson");
+  const filePrefix =
+    mode === "strava"
+      ? "Strava_Export"
+      : resolveExportFilePrefix(singleNamedItem, mode === "selection");
+
+  const fileName = singleNamedItem
+    ? `${filePrefix}.geojson`
+    : generateTimestampedFilename(filePrefix, "geojson");
 
   // Download file
   downloadFile(fileName, JSON.stringify(geojsonDoc, null, 2));
 
-  // Show success message (only for strava mode, single mode is silent, all mode shows message)
-  if (mode === "all") {
-    Swal.fire({
-      title: successTitle,
-      text: successText || "All items have been exported to GeoJSON.",
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  } else if (mode === "strava") {
-    // Strava mode was silent in the original, so we keep it silent
-  }
-  // Single mode is silent (follows GPX pattern)
+  notifyExportSuccess(
+    mode === "all" || (mode === "selection" && allLayers.length > 1),
+    "Export Successful!",
+    mode === "all"
+      ? "All items have been exported to GeoJSON."
+      : `${allLayers.length} selected items have been exported to GeoJSON.`,
+  );
 }
 
 // GPX
 // Specification: https://www.topografix.com/gpx/1/1/
 
+// The app namespace holds data with no standard GPX home (waypoint color, Strava ID);
+// the GPX 1.1 schema requires <extensions> children to be in a non-GPX namespace.
+const GPX_HEADER = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="${APP_NAME}" xmlns="http://www.topografix.com/GPX/1/1"
+    xmlns:gpx_style="http://www.topografix.com/GPX/gpx_style/0/2"
+    xmlns:app="https://${APP_DOMAIN}">`;
+const GPX_FOOTER = "\n</gpx>";
+
 /**
- * Converts a Leaflet layer to a GPX string, supporting markers and paths with colors.
+ * Converts a single layer to a <trk> or <wpt> XML snippet, with no
+ * header/footer, so multiple snippets can be concatenated into one GPX
+ * document (see buildGpxContent).
  * Note: GPX has no polygon support; areas export as closed tracks and import as paths.
  * @param {L.Layer} layer - The layer to convert
- * @returns {string} The GPX file content as a string
+ * @returns {string} The GPX track/waypoint snippet, or "" if unsupported
  */
-function convertLayerToGpx(layer) {
+function convertLayerToGpxSnippet(layer) {
   const name = layer.feature?.properties?.name || "Exported Feature";
   const description = layer.feature?.properties?.description || "";
-  const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+  const color = getLayerColor(layer);
   // Remove # prefix for GPX format
   const gpxColorHex = color.substring(1).toUpperCase();
-  const stravaId = layer.feature?.properties?.stravaId;
-
   const safeName = escapeXml(name);
   const safeDescription = escapeXml(description);
+  // stravaId is read verbatim from imported files, so it needs escaping like any text.
+  const stravaId = escapeXml(layer.feature?.properties?.stravaId);
 
-  const header = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"
-    xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"
-    xmlns:gpx_style="http://www.topografix.com/GPX/gpx_style/0/2"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.topografix.com/GPX/1/1 https://www.topografix.com/GPX/1/1/gpx.xsd http://www.topografix.com/GPX/gpx_style/0/2 https://www.topografix.com/GPX/gpx_style/0/2/gpx_style.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 https://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd">`;
-
-  let content = "";
-
-  if (layer instanceof L.Polygon) {
-    let latlngs = layer.getLatLngs()[0];
-
-    // Close the polygon by adding the first point at the end
-    const closedLatLngs = [...latlngs, latlngs[0]];
-
-    const pathPoints = closedLatLngs
-      .map((p) => {
-        let pt = `<trkpt lat="${p.lat}" lon="${p.lng}">`;
-        if (typeof p.alt !== "undefined" && p.alt !== null) {
-          pt += `<ele>${p.alt}</ele>`;
-        }
-        pt += `</trkpt>`;
-        return pt;
-      })
-      .join("\n      ");
-
-    content = `
-  <trk>
-    <name>${safeName}</name>
-    <extensions>
-      <gpx_style:line>
-        <gpx_style:color>${gpxColorHex}</gpx_style:color>
-      </gpx_style:line>
-      <color>#FF${gpxColorHex}</color>${stravaId ? `\n      <stravaId>${stravaId}</stravaId>` : ""}
-    </extensions>
-    <trkseg>
-      ${pathPoints}
-    </trkseg>
-  </trk>`;
-  } else if (layer instanceof L.Polyline) {
-    let latlngs = layer.getLatLngs();
-    while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-      latlngs = latlngs[0];
+  if (layer instanceof L.Polyline) {
+    // L.Polygon extends L.Polyline, so areas land here too - they only differ in closing the ring.
+    let latlngs;
+    if (layer instanceof L.Polygon) {
+      const ring = layer.getLatLngs()[0];
+      latlngs = [...ring, ring[0]];
+    } else {
+      latlngs = flattenRingPoints(layer.getLatLngs());
     }
 
     const pathPoints = latlngs
       .map((p) => {
         let pt = `<trkpt lat="${p.lat}" lon="${p.lng}">`;
-        if (typeof p.alt !== "undefined" && p.alt !== null) {
+        if (typeof p.alt === "number") {
           pt += `<ele>${p.alt}</ele>`;
         }
         pt += `</trkpt>`;
@@ -900,14 +953,14 @@ function convertLayerToGpx(layer) {
       })
       .join("\n      ");
 
-    content = `
+    // GPX 1.1's trkType is an ordered sequence: name, then desc, then extensions.
+    return `
   <trk>
-    <name>${safeName}</name>
+    <name>${safeName}</name>${safeDescription ? `\n    <desc>${safeDescription}</desc>` : ""}
     <extensions>
       <gpx_style:line>
         <gpx_style:color>${gpxColorHex}</gpx_style:color>
-      </gpx_style:line>
-      <color>#FF${gpxColorHex}</color>${stravaId ? `\n      <stravaId>${stravaId}</stravaId>` : ""}
+      </gpx_style:line>${stravaId ? `\n      <app:stravaId>${stravaId}</app:stravaId>` : ""}
     </extensions>
     <trkseg>
       ${pathPoints}
@@ -915,18 +968,69 @@ function convertLayerToGpx(layer) {
   </trk>`;
   } else if (layer instanceof L.Marker) {
     const latlng = layer.getLatLng();
+    const hasElevation = typeof latlng.alt === "number";
     const wptExtensions =
-      `\n    <extensions>\n      <color>#FF${gpxColorHex}</color>` +
-      (stravaId ? `\n      <stravaId>${stravaId}</stravaId>` : "") +
+      `\n    <extensions>\n      <app:color>#FF${gpxColorHex}</app:color>` +
+      (stravaId ? `\n      <app:stravaId>${stravaId}</app:stravaId>` : "") +
       `\n    </extensions>`;
-    content = `
-  <wpt lat="${latlng.lat}" lon="${latlng.lng}">
+    return `
+  <wpt lat="${latlng.lat}" lon="${latlng.lng}">${hasElevation ? `\n    <ele>${latlng.alt}</ele>` : ""}
     <name>${safeName}</name>${safeDescription ? `\n    <desc>${safeDescription}</desc>` : ""}${wptExtensions}
   </wpt>`;
   }
+  return "";
+}
 
-  const footer = "\n</gpx>";
-  return header + content + footer;
+/**
+ * Builds a single GPX document containing one <trk> or <wpt> element per
+ * layer - the same "one file, several entries" approach GeoJSON/KML export
+ * already use, so no zip/multi-file bundling is needed.
+ * The GPX 1.1 schema requires all <wpt> elements before any <trk>, so markers
+ * are grouped first while preserving each group's relative order.
+ * @param {Array} layers - The layers to convert
+ * @returns {string} The GPX file content as a string
+ */
+function buildGpxContent(layers) {
+  const markers = layers.filter((layer) => layer instanceof L.Marker);
+  const paths = layers.filter((layer) => !(layer instanceof L.Marker));
+  const orderedLayers = [...markers, ...paths];
+  return GPX_HEADER + orderedLayers.map(convertLayerToGpxSnippet).join("") + GPX_FOOTER;
+}
+
+/**
+ * Handles the export and download of the GPX file.
+ * @param {{layers?: Array}} [options] - Pass layers to export only a specific
+ *   subset (e.g. the current selection) instead of everything on the map.
+ */
+function exportGpx({ layers = null } = {}) {
+  if (layers && layers.length === 0) {
+    return alertNothingSelected();
+  }
+
+  const allLayers = layers || getAllExportableLayers();
+
+  if (allLayers.length === 0) {
+    return Swal.fire({
+      title: "No Data to Export",
+      text: "There are no items on the map to export.",
+    });
+  }
+
+  const singleNamedItem = getSingleNamedItem(layers);
+  const filePrefix = resolveExportFilePrefix(singleNamedItem, !!layers);
+  const fileName = singleNamedItem
+    ? `${filePrefix}.gpx`
+    : generateTimestampedFilename(filePrefix, "gpx");
+
+  downloadFile(fileName, buildGpxContent(allLayers));
+
+  notifyExportSuccess(
+    !layers || layers.length > 1,
+    "Export Successful!",
+    layers
+      ? `${layers.length} selected items have been exported to GPX.`
+      : "All items have been exported to GPX.",
+  );
 }
 
 // KML / KMZ
@@ -947,42 +1051,38 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
     description = layer.feature.properties.description || description;
   }
 
-  const color = layer.feature?.properties?.color || DEFAULT_COLOR;
+  const color = getLayerColor(layer);
   const kmlColor = cssToKmlColor(color);
 
   const safeName = escapeXml(name);
   const safeDescription = description ? escapeXml(description) : "";
-  const stravaId = layer.feature?.properties?.stravaId;
+  // stravaId is read verbatim from imported files, so it needs escaping like any text.
+  const stravaId = escapeXml(layer.feature?.properties?.stravaId);
 
   const placemarkStart =
     `  <Placemark>\n` +
     `    <name>${safeName}</name>\n` +
-    (safeDescription ? `    <description>${safeDescription}</description>\n` : "") +
-    (stravaId
-      ? `    <ExtendedData>\n      <Data name="stravaId">\n        <value>${stravaId}</value>\n      </Data>\n    </ExtendedData>\n`
-      : "");
+    (safeDescription ? `    <description>${safeDescription}</description>\n` : "");
+
+  // KML 2.2's AbstractFeatureType schema requires Style before ExtendedData.
+  const extendedDataTag = stravaId
+    ? `    <ExtendedData>\n      <Data name="stravaId">\n        <value>${stravaId}</value>\n      </Data>\n    </ExtendedData>\n`
+    : "";
 
   const placemarkEnd = `  </Placemark>`;
 
-  if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
+  if (layer instanceof L.Polyline) {
+    // L.Polygon extends L.Polyline, so areas land here too - they only differ in closing the ring.
     let latlngs;
-    let coords;
     if (layer instanceof L.Polygon) {
-      // Polygon: close the ring by adding the first point at the end
-      latlngs = layer.getLatLngs()[0];
-      const closedLatLngs = [...latlngs, latlngs[0]];
-      coords = closedLatLngs
-        .map((p) => `${p.lng},${p.lat},${typeof p.alt === "number" ? p.alt : 0}`)
-        .join(" ");
-    } else if (layer instanceof L.Polyline) {
-      latlngs = layer.getLatLngs();
-      while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-        latlngs = latlngs[0];
-      }
-      coords = latlngs
-        .map((p) => `${p.lng},${p.lat},${typeof p.alt === "number" ? p.alt : 0}`)
-        .join(" ");
+      const ring = layer.getLatLngs()[0];
+      latlngs = [...ring, ring[0]];
+    } else {
+      latlngs = flattenRingPoints(layer.getLatLngs());
     }
+    const coords = latlngs
+      .map((p) => `${p.lng},${p.lat},${typeof p.alt === "number" ? p.alt : 0}`)
+      .join(" ");
 
     const geometryType = layer instanceof L.Polygon ? "Polygon" : "LineString";
     const geometryTag =
@@ -998,7 +1098,7 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
       `      </LineStyle>\n` +
       `    </Style>\n`;
 
-    return placemarkStart + styleTag + geometryTag + placemarkEnd;
+    return placemarkStart + styleTag + extendedDataTag + geometryTag + placemarkEnd;
   }
 
   if (layer instanceof L.Marker) {
@@ -1016,30 +1116,10 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
       `      </IconStyle>\n` +
       `    </Style>\n`;
 
-    return placemarkStart + styleTag + pointTag + placemarkEnd;
+    return placemarkStart + styleTag + extendedDataTag + pointTag + placemarkEnd;
   }
 
   return null;
-}
-
-/**
- * Builds a complete, pretty-printed KML document string from a name and an array of placemarks.
- * @param {string} name - The name for the <Document>
- * @param {Array<string>} placemarks - An array of pre-formatted KML <Placemark> strings
- * @returns {string} The full KML document as a string
- */
-function buildKmlDocument(name, placemarks) {
-  const safeName = escapeXml(name);
-
-  return (
-    `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<kml xmlns="http://www.opengis.net/kml/2.2">\n` +
-    `<Document>\n` +
-    `  <name>${safeName}</name>\n` +
-    `${placemarks.join("\n")}\n` +
-    `</Document>\n` +
-    `</kml>`
-  );
 }
 
 /**
@@ -1053,19 +1133,23 @@ function buildKmlFolder(name, placemarks) {
   return (
     `  <Folder>\n` +
     `    <name>${safeName}</name>\n` +
-    placemarks.map((p) => p.replace(/^/gm, "  ")).join("\n") +
+    // Indent tag lines only: text content never starts with "<" (escapeXml() writes "&lt;"),
+    // so continuation lines of a multi-line name or description keep their exact characters.
+    placemarks.map((p) => p.replace(/^(?=\s*<)/gm, "  ")).join("\n") +
     `\n  </Folder>`
   );
 }
 
 /**
- * Builds a KML string containing all map data for export.
+ * Builds a KML string containing map data for export.
  * Uses Folder elements for maximum compatibility with Google Earth Web,
  * Google MyMaps, map.geo.admin.ch, and other KML viewers.
  * @param {string} docName - The name for the KML document
+ * @param {Array} [layers] - Specific layers to export; defaults to everything
+ *   on the map when omitted.
  * @returns {string|null} The KML content as a string, or null if no data
  */
-function buildKmlContent(docName) {
+function buildKmlContent(docName, layers = null) {
   const folders = [];
   let featureCounter = 0;
 
@@ -1073,7 +1157,14 @@ function buildKmlContent(docName) {
   const importedFeatures = [];
   const stravaActivities = [];
 
-  const allLayers = getAllExportableLayers();
+  const allLayers = layers || getAllExportableLayers();
+  // Reuses ui-handlers.js's getGroupTitle() so a snippet always lands in the same
+  // folder its layer would be grouped under in the overview list.
+  const featuresByGroup = {
+    DrawnItems: drawnFeatures,
+    ImportedFiles: importedFeatures,
+    StravaActivities: stravaActivities,
+  };
 
   allLayers.forEach(function (layer) {
     const defaultName =
@@ -1081,21 +1172,8 @@ function buildKmlContent(docName) {
     const kmlSnippet = convertLayerToKmlPlacemark(layer, defaultName);
     if (!kmlSnippet) return;
 
-    switch (layer.pathType) {
-      case "drawn":
-      case "route":
-        drawnFeatures.push(kmlSnippet);
-        break;
-      case "gpx":
-      case "kml":
-      case "geojson":
-      case "kmz":
-        importedFeatures.push(kmlSnippet);
-        break;
-      case "strava":
-        stravaActivities.push(kmlSnippet);
-        break;
-    }
+    const groupKey = getGroupTitle(layer.internal?.pathType);
+    featuresByGroup[groupKey].push(kmlSnippet);
   });
 
   if (drawnFeatures.length > 0) {
@@ -1128,13 +1206,24 @@ function buildKmlContent(docName) {
 
 /**
  * Handles the export and download of the KML file.
+ * @param {{layers?: Array}} [options] - Pass layers to export only a specific
+ *   subset (e.g. the current selection) instead of everything on the map.
  */
-function exportKml() {
-  const timestamp = generateTimestamp();
-  const fileName = `Map_Export_${timestamp}.kml`;
-  const docName = `Map Export ${timestamp}`;
+function exportKml({ layers = null } = {}) {
+  if (layers && layers.length === 0) {
+    return alertNothingSelected();
+  }
 
-  const kmlContent = buildKmlContent(docName);
+  const singleNamedItem = getSingleNamedItem(layers);
+
+  const timestamp = generateTimestamp();
+  const filePrefix = resolveExportFilePrefix(singleNamedItem, !!layers);
+  const fileName = singleNamedItem ? `${filePrefix}.kml` : `${filePrefix}_${timestamp}.kml`;
+  const docName = singleNamedItem
+    ? filePrefix
+    : `${layers ? "Selected" : "Map"} Export ${timestamp}`;
+
+  const kmlContent = buildKmlContent(docName, layers);
 
   if (!kmlContent) {
     return Swal.fire({
@@ -1143,252 +1232,13 @@ function exportKml() {
     });
   }
 
-  const blob = new Blob([kmlContent], { type: "application/vnd.google-earth.kml+xml" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
+  downloadFile(fileName, kmlContent);
 
-  Swal.fire({
-    title: "Export Successful!",
-    text: "All items have been exported to KML.",
-    timer: 2000,
-    showConfirmButton: false,
-  });
-}
-
-// 4. SHARING (URL-BASED)
-// --------------------------------------------------------------------
-
-/**
- * Encodes the current map state to a compressed, URL-safe string.
- *
- * Uncompressed structure: { v: 1, f: [...features] }
- * Each feature: { t, c, n?, s?, e?, sid? }
- * t: "m"=marker, "p"=polyline, "a"=polygon (area)
- * c: [lng,lat] for markers (5 decimals), polyline-encoded string for paths (precision 5)
- * n: name (omitted if empty)
- * s: style/color hex without # (omitted if DEFAULT_COLOR)
- * e: elevation - integer for markers, array for paths (omitted if absent or all zeros)
- * sid: Strava activity ID (omitted if not a Strava import)
- *
- * Compression strategy:
- * 1. Polyline encoding for coordinate sequences (precision 5 = ~1.1m accuracy, sufficient for GPS tracks)
- * 2. Short property names (t, c, n, s, e, sid)
- * 3. Omit default values (color if DEFAULT_COLOR, name if empty, elevation if not present)
- * 4. Elevation stored as rounded integers only when all points have elevation data
- * 5. Skip elevation if all values are 0 (placeholder data with no variation)
- * 6. LZ-String compression with URI encoding (compresses the JSON structure)
- *
- * The combination of polyline encoding + LZ-String significantly reduces URL length
- * compared to raw coordinates alone. Elevation is only included when present and meaningful.
- *
- * URL Length: "In general, the web platform does not have limits on the length of URLs
- * (although 2^31 is a common limit). Chrome limits URLs to a maximum length of 2MB for
- * practical reasons and to avoid causing denial-of-service problems in inter-process communication."
- * See: https://chromium.googlesource.com/chromium/src/+/HEAD/docs/security/url_display_guidelines/url_display_guidelines.md#URL-Length
- *
- * @returns {string|null} Compressed map state, or null if no data to share
- */
-function encodeMapStateToUrl() {
-  const allLayers = getAllExportableLayers();
-
-  if (allLayers.length === 0) {
-    return null;
-  }
-
-  const features = [];
-
-  allLayers.forEach((layer) => {
-    try {
-      const feature = {
-        t: "", // type: m=marker, p=polyline, a=polygon (area)
-        c: null, // coordinates (encoded for paths, array for markers)
-      };
-
-      // Add name, color, and stravaId only if present
-      const name = layer.feature?.properties?.name;
-      const color = layer.feature?.properties?.color;
-      const stravaId = layer.feature?.properties?.stravaId;
-      if (name) feature.n = name;
-      // Strip # prefix from hex color for URL efficiency (auto-restored by normalizeHexColor on import)
-      if (color && color !== DEFAULT_COLOR) {
-        feature.s = color.startsWith("#") ? color.slice(1) : color;
-      }
-      if (stravaId) feature.sid = stravaId;
-
-      if (layer instanceof L.Marker) {
-        const ll = layer.getLatLng();
-        if (ll) {
-          feature.t = "m";
-          feature.c = [+ll.lng.toFixed(5), +ll.lat.toFixed(5)];
-          if (typeof ll.alt === "number" && ll.alt !== 0) {
-            feature.e = Math.round(ll.alt);
-          }
-        }
-      } else if (layer instanceof L.Polygon) {
-        const latlngs = layer.getLatLngs()[0];
-        if (latlngs && latlngs.length > 0) {
-          feature.t = "a";
-          feature.c = L.PolylineUtil.encode(latlngs, 5);
-          // Add elevation if all points have it and there's variation (not all zeros)
-          const elevations = latlngs.map((ll) => ll.alt).filter((e) => typeof e === "number");
-          const hasVariation = elevations.some((e) => e !== 0);
-          if (elevations.length === latlngs.length && hasVariation) {
-            feature.e = elevations.map((e) => Math.round(e));
-          }
-        }
-      } else if (layer instanceof L.Polyline) {
-        let latlngs = layer.getLatLngs();
-        while (Array.isArray(latlngs[0]) && !(latlngs[0] instanceof L.LatLng)) {
-          latlngs = latlngs[0];
-        }
-        if (latlngs && latlngs.length > 0) {
-          feature.t = "p";
-          feature.c = L.PolylineUtil.encode(latlngs, 5);
-          // Add elevation if all points have it and there's variation (not all zeros)
-          const elevations = latlngs.map((ll) => ll.alt).filter((e) => typeof e === "number");
-          const hasVariation = elevations.some((e) => e !== 0);
-          if (elevations.length === latlngs.length && hasVariation) {
-            feature.e = elevations.map((e) => Math.round(e));
-          }
-        }
-      }
-
-      // Only include features with valid type and coordinates
-      if (feature.t && feature.c) {
-        features.push(feature);
-      }
-    } catch (error) {
-      console.error("Error converting layer for URL sharing:", error, layer);
-    }
-  });
-
-  if (features.length === 0) {
-    return null;
-  }
-
-  const compact = { v: 1, f: features };
-  const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(compact));
-
-  return compressed;
-}
-
-/**
- * Builds a shareable URL containing the current map view and all features.
- * Combines the map position (#map=zoom/lat/lng) with compressed feature data (&data=...).
- * The data parameter contains all markers, polylines, and polygons compressed using
- * Polyline encoding and LZ-String compression.
- *
- * @returns {string|null} Full shareable URL with hash parameters, or null if no features exist
- */
-function buildShareableUrl() {
-  const mapState = encodeMapStateToUrl();
-  if (!mapState) {
-    return null;
-  }
-
-  const center = map.getCenter();
-  const zoom = map.getZoom();
-
-  // Build URL with map view and data
-  const baseUrl = window.location.origin + window.location.pathname;
-  const hashParams = `#map=${zoom}/${center.lat.toFixed(5)}/${center.lng.toFixed(5)}&data=${mapState}`;
-
-  return baseUrl + hashParams;
-}
-
-/**
- * Imports and decompresses map state from a shareable URL parameter.
- * Decompresses the LZ-String encoded data, decodes Polyline-encoded coordinates,
- * converts to GeoJSON format, and adds all features to the map.
- *
- * Process:
- * 1. Decompresses the LZ-String encoded URI component
- * 2. Parses the JSON structure (v=version, f=features array)
- * 3. For each feature, decodes based on type:
- * - "m" (marker): Uses coordinates as-is [lng, lat] or [lng, lat, elevation]
- * - "p" (polyline): Decodes Polyline-encoded path using precision 5, adds elevation if present
- * - "a" (polygon/area): Decodes Polyline-encoded path using precision 5, adds elevation if present
- * 4. Reconstructs full GeoJSON Feature objects with properties and elevation
- * 5. Adds the FeatureCollection to the map
- *
- * @param {string} compressed - LZ-String compressed and URI-encoded map state
- * @returns {boolean} True if import was successful, false if decompression/parsing failed
- */
-function importMapStateFromUrl(compressed) {
-  try {
-    const jsonString = LZString.decompressFromEncodedURIComponent(compressed);
-    if (!jsonString) throw new Error("Failed to decompress data");
-
-    const data = JSON.parse(jsonString);
-    if (!data.v) throw new Error("Invalid data format: missing version");
-    if (data.v !== 1) throw new Error(`Unsupported data version: ${data.v}`);
-    if (!data.f || !Array.isArray(data.f)) {
-      throw new Error("Invalid data format");
-    }
-
-    const features = [];
-
-    data.f.forEach((item) => {
-      try {
-        const feature = {
-          type: "Feature",
-          properties: {
-            name: item.n || "",
-            color: item.s || DEFAULT_COLOR,
-          },
-          geometry: null,
-        };
-
-        // Add stravaId if present
-        if (item.sid) {
-          feature.properties.stravaId = item.sid;
-        }
-
-        if (item.t === "m") {
-          const coords = [...item.c];
-          if (typeof item.e === "number") coords.push(item.e);
-          feature.geometry = { type: "Point", coordinates: coords };
-        } else if (item.t === "p") {
-          const decoded = L.PolylineUtil.decode(item.c, 5);
-          feature.geometry = {
-            type: "LineString",
-            coordinates: decoded.map(([lat, lng], idx) => {
-              const coord = [lng, lat];
-              if (item.e && typeof item.e[idx] === "number") coord.push(item.e[idx]);
-              return coord;
-            }),
-          };
-        } else if (item.t === "a") {
-          const decoded = L.PolylineUtil.decode(item.c, 5);
-          feature.geometry = {
-            type: "Polygon",
-            coordinates: [
-              decoded.map(([lat, lng], idx) => {
-                const coord = [lng, lat];
-                if (item.e && typeof item.e[idx] === "number") coord.push(item.e[idx]);
-                return coord;
-              }),
-            ],
-          };
-        }
-
-        if (feature.geometry) features.push(feature);
-      } catch (e) {
-        console.warn("Could not decode feature:", e);
-      }
-    });
-
-    if (features.length === 0) throw new Error("No valid features");
-
-    importGeoJsonToMap({ type: "FeatureCollection", features }, "geojson");
-    return true;
-  } catch (error) {
-    console.error("Error importing map state from URL:", error);
-    return false;
-  }
+  notifyExportSuccess(
+    !layers || layers.length > 1,
+    "Export Successful!",
+    layers
+      ? `${layers.length} selected items have been exported to KML.`
+      : "All items have been exported to KML.",
+  );
 }
