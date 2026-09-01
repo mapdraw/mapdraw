@@ -1,6 +1,23 @@
 // Extra patches for Leaflet 2 not covered by leaflet-v1-polyfill.js.
 // Loaded after leaflet-global.js, leaflet-v1-polyfill.js, and applyAllPolyfills(), but before plugins.
 
+// --- Fractional map-pane offsets ---
+// Leaflet 2 drives Draggable from pointer events; v1 used mouse events for mouse
+// input. Chrome reports fractional clientX/clientY on PointerEvent but integral
+// values on MouseEvent, so a mouse drag now leaves the map pane on a fractional
+// CSS pixel, and every tile edge with it, which Chromium paints as hairline
+// seams. Draggable is the only path that leaves the pane fractional once
+// movement stops, so round here. Rounding runs after `predrag` because Map.Drag
+// rewrites _newPos in that handler. Mirrors _updatePosition as of
+// 2.0.0-alpha.1 - recheck the upstream body when upgrading Leaflet.
+L.Draggable.prototype._updatePosition = function () {
+  var e = { originalEvent: this._lastEvent };
+  this.fire("predrag", e);
+  this._newPos = this._newPos.round();
+  L.DomUtil.setPosition(this._element, this._newPos);
+  this.fire("drag", e);
+};
+
 // --- L.Mixin.Events ---
 // The official polyfill binds each method to Evented.prototype, so when plugins
 // copy them via `includes: L.Mixin.Events` and Object.assign, `this` inside the
@@ -23,7 +40,9 @@ L.Events = _eventedMethods;
 // Consequence: every shape runs all three edit-mode init hooks and the last one
 // (Edit.Rectangle) wins, so polylines and polygons get the wrong editor, wrong
 // vertex handles, and setBounds errors. Fix by always creating an own _initHooks
-// array on the target class before pushing.
+// array on the target class before pushing. Mirrors addInitHook as of
+// 2.0.0-alpha.1 apart from that guard - recheck the upstream body when
+// upgrading Leaflet.
 L.Class.addInitHook = function (fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   var init =
