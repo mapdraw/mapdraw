@@ -198,7 +198,6 @@ function downloadFile(filename, text) {
     gpx: "application/gpx+xml",
     json: "application/json",
     kml: "application/vnd.google-earth.kml+xml",
-    kmz: "application/vnd.google-earth.kmz",
   };
   const mimeType = mimeTypes[extension] || "text/plain";
 
@@ -233,8 +232,8 @@ function generateTimestamp() {
 /**
  * Generates a timestamped filename.
  * @param {string} baseName - Base name for the file (e.g., "Map_Export", "Strava_Export")
- * @param {string} extension - File extension without dot (e.g., "kmz", "geojson", "kml", "json")
- * @returns {string} Filename with timestamp (e.g., "Map_Export_20251210143025.kmz")
+ * @param {string} extension - File extension without dot (e.g., "geojson", "gpx", "json")
+ * @returns {string} Filename with timestamp (e.g., "Map_Export_20251210143025.geojson")
  */
 function generateTimestampedFilename(baseName, extension) {
   return `${baseName}_${generateTimestamp()}.${extension}`;

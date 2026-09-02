@@ -139,16 +139,16 @@
 
       <h2>4. Strava Integration</h2>
       <p>
-        To use the Strava integration, you provide your own personal Strava API credentials (Client
-        ID and Client Secret) from an API application you create in your own Strava account. These
-        keys are kept in memory only and are never saved or transmitted to our servers. When you
-        authorize access, the application fetches your basic profile details and activity history
-        (name, type, distance, time, routes) directly from Strava to your browser. MapDraw's servers
-        never receive or have access to this data. The authentication token is stored temporarily in
-        your browser's <code>sessionStorage</code> and is deleted when you close the browser tab.
-        When you use your own Strava API application with MapDraw, you are subject to Strava's API
-        Agreement and their privacy policy. Strava may monitor and collect usage data related to API
-        calls made through your application.
+        To use the Strava integration, you provide your own Strava API credentials (Client ID and
+        Client Secret) from an API application you create in your own Strava account. These keys are
+        kept in memory only, are never saved, and are sent only to Strava. MapDraw then fetches your
+        activity list directly from Strava into your browser and draws it on the map. MapDraw's
+        servers never receive or have access to this data. The access token is stored in your
+        browser's <code>sessionStorage</code> and is deleted when you close the browser tab; the
+        activities themselves stay on your map, saved locally in your browser, until you delete
+        them. When you use your own Strava API application with MapDraw, you are subject to Strava's
+        API Agreement and their privacy policy. Strava may monitor and collect usage data related to
+        API calls made through your application.
       </p>
 
       <h2>5. OpenStreetMap Integration</h2>
@@ -171,8 +171,10 @@
       </p>
       <ul>
         <li>
-          <strong>Strava:</strong> All session data is cleared when you close the browser tab. You
-          can delete your Strava API application at any time in your Strava account settings.
+          <strong>Strava:</strong> Click Disconnect in the app, or close the browser tab, to clear
+          your API keys and access token. Activities stay on your map, saved locally, until you
+          delete them. You can delete your Strava API application at any time in your Strava account
+          settings.
         </li>
         <li>
           <strong>OpenStreetMap:</strong> Sign out within the app to clear your token, or revoke

@@ -3,7 +3,7 @@
 /**
  * FILE HANDLING
  *
- * Handles import/export for GeoJSON, GPX, KML, KMZ formats.
+ * Imports GeoJSON, GPX, KML, KMZ. Exports GeoJSON, GPX, KML.
  * All formats preserve full precision coordinates, name, description, color, stravaId.
  *
  * Color handling:
@@ -587,7 +587,7 @@ const KML_GEOMETRY_SELECTOR = "Point, LineString, Polygon, Track, gx\\:Track";
  *
  * Why this is needed:
  * - toGeoJSON parses LineStyle/PolyStyle colors but ignores IconStyle colors
- * - Inline <Style><IconStyle><color>: our own KML/KMZ exports
+ * - Inline <Style><IconStyle><color>: our own KML exports
  * - Shared <Style id> referenced by styleUrl, possibly via a StyleMap:
  *   Organic Maps and Google Earth exports
  *

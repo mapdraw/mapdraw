@@ -7,7 +7,7 @@
 
 </div>
 
-MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, file import/export (GeoJSON, GPX, KML, KMZ), routing, elevation profiles, custom styling, Strava activity integration, and OpenStreetMap contributions.
+MapDraw is a simple, powerful web-based editor for creating, viewing, and managing geographic data like paths, areas, and markers. Built with Leaflet.js, it supports interactive drawing, GeoJSON, GPX, KML and KMZ files, routing, elevation profiles, custom styling, Strava activity integration, and OpenStreetMap contributions.
 
 ---
 
