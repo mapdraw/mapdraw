@@ -381,6 +381,10 @@ function showApiKeysModal() {
         // Return false to keep modal open
         return false;
       },
+      willClose: () => {
+        // Stop waiting for the auth callback once the modal is gone
+        window.removeEventListener("storage", handleStravaAuthReturnForUserKeys);
+      },
     };
   }
 
@@ -488,7 +492,7 @@ async function handleStravaAuthReturn(event) {
 
     await getAccessToken(authCode, stravaClientId, stravaClientSecret);
     renderStravaPanel();
-  } else if (event.key === "stravaAuthError") {
+  } else if (event.key === "stravaAuthError" && event.newValue) {
     console.error("Strava authentication error:", event.newValue);
     localStorage.removeItem("stravaAuthError");
     window.removeEventListener("storage", handleStravaAuthReturn);
@@ -509,7 +513,7 @@ async function handleStravaAuthReturnForUserKeys(event) {
 
     await getAccessToken(authCode, tempUserClientId, tempUserClientSecret);
     renderStravaPanel();
-  } else if (event.key === "stravaAuthError") {
+  } else if (event.key === "stravaAuthError" && event.newValue) {
     console.error("Strava authentication error:", event.newValue);
     localStorage.removeItem("stravaAuthError");
     window.removeEventListener("storage", handleStravaAuthReturnForUserKeys);
@@ -615,6 +619,9 @@ function downloadOriginalStravaGpx(activityId, activityName) {
  */
 function initStrava() {
   stravaPanelContent = document.getElementById("strava-panel-content");
+  // Discard callback leftovers from a run where no tab was listening
+  localStorage.removeItem("stravaAuthCode");
+  localStorage.removeItem("stravaAuthError");
   // The token lives in sessionStorage (cleared on tab close, per privacy.html),
   // so a reload keeps the connected state.
   renderStravaPanel();
