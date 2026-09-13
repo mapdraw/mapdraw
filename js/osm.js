@@ -562,6 +562,8 @@ function initOSM(settingsPanel) {
 }
 
 const OSM_CONTRIBUTIONS_CHANGESETS = 30;
+// "Maximum of 2 download threads." — https://operations.osmfoundation.org/policies/api/
+const OSM_MAX_PARALLEL_DOWNLOADS = 2;
 
 async function osmShowContributions(user) {
   const token = localStorage.getItem("osmAccessToken");
@@ -590,7 +592,7 @@ async function osmShowContributions(user) {
     const csXml = new DOMParser().parseFromString(await csRes.text(), "text/xml");
     const changesets = [...csXml.querySelectorAll("changeset")];
 
-    // Download changesets in batches of 10 and collect created nodes
+    // Download changesets and collect created nodes
     const fetchChangeset = async (cs) => {
       const csId = cs.getAttribute("id");
       const comment = cs.querySelector('tag[k="comment"]')?.getAttribute("v") ?? "";
@@ -613,8 +615,10 @@ async function osmShowContributions(user) {
         }));
     };
     const nodes = [];
-    for (let i = 0; i < changesets.length; i += 10) {
-      const batch = await Promise.all(changesets.slice(i, i + 10).map(fetchChangeset));
+    for (let i = 0; i < changesets.length; i += OSM_MAX_PARALLEL_DOWNLOADS) {
+      const batch = await Promise.all(
+        changesets.slice(i, i + OSM_MAX_PARALLEL_DOWNLOADS).map(fetchChangeset),
+      );
       nodes.push(...batch.flat());
     }
 
