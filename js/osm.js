@@ -669,7 +669,7 @@ async function osmShowContributions(user) {
     const show = (items, scrollTop = 0) => {
       Swal.fire({
         title: "My OSM Contributions",
-        html: `<p style="margin:0 0 8px">Points from your last ${OSM_CONTRIBUTIONS_CHANGESETS} changesets</p><div id="osm-contributions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
+        html: `<p style="margin:0 0 8px">${items.length} ${items.length === 1 ? "point" : "points"} from your last ${OSM_CONTRIBUTIONS_CHANGESETS} changesets</p><div id="osm-contributions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
         confirmButtonText: "Close",
         didOpen: () => {
           const scroller = document.getElementById("osm-contributions-scroll");
