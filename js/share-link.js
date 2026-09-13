@@ -138,7 +138,11 @@ function buildCompactObject(layers = null) {
         const latlngs = layer.getLatLngs()[0];
         if (latlngs && latlngs.length > 0) {
           feature.t = "a";
-          feature.c = L.PolylineUtil.encode(latlngs, 5);
+          // Plain arrays: the encoder's `point.lat || point[0]` is undefined for L.LatLng at lat/lng 0
+          feature.c = L.PolylineUtil.encode(
+            latlngs.map((ll) => [ll.lat, ll.lng]),
+            5,
+          );
           // Add elevation if all points have it and there's variation (not all zeros)
           const elevations = latlngs.map((ll) => ll.alt).filter((e) => typeof e === "number");
           const hasVariation = elevations.some((e) => e !== 0);
@@ -150,7 +154,11 @@ function buildCompactObject(layers = null) {
         const latlngs = flattenRingPoints(layer.getLatLngs());
         if (latlngs && latlngs.length > 0) {
           feature.t = "p";
-          feature.c = L.PolylineUtil.encode(latlngs, 5);
+          // Plain arrays: the encoder's `point.lat || point[0]` is undefined for L.LatLng at lat/lng 0
+          feature.c = L.PolylineUtil.encode(
+            latlngs.map((ll) => [ll.lat, ll.lng]),
+            5,
+          );
           // Add elevation if all points have it and there's variation (not all zeros)
           const elevations = latlngs.map((ll) => ll.alt).filter((e) => typeof e === "number");
           const hasVariation = elevations.some((e) => e !== 0);
