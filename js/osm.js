@@ -613,21 +613,16 @@ async function osmShowContributions(user) {
       nodes.push(...batch.flat());
     }
 
-    // Verify each node is still live in batches of 10 (410 = deleted)
-    const liveFlags = [];
-    for (let i = 0; i < nodes.length; i += 10) {
-      const batch = nodes.slice(i, i + 10);
-      const flags = await Promise.all(
-        batch.map((n) =>
-          get(`/node/${n.id}`)
-            .then((r) => r.ok || (r.status !== 410 && r.status !== 404 && r.status !== 401))
-            .catch(() => true),
-        ),
-      );
-      liveFlags.push(...flags);
+    // Drop deleted nodes (multi fetch returns them with visible="false"), 500 ids per URL
+    const live = new Set();
+    for (let i = 0; i < nodes.length; i += 500) {
+      const ids = nodes.slice(i, i + 500).map((n) => n.id);
+      const res = await get(`/nodes?nodes=${ids.join(",")}`);
+      if (!res.ok) throw new Error(`Nodes fetch failed: ${res.status}`);
+      const xml = new DOMParser().parseFromString(await res.text(), "text/xml");
+      xml.querySelectorAll('node[visible="true"]').forEach((n) => live.add(n.getAttribute("id")));
     }
-    const liveNodes = nodes.filter((_, i) => liveFlags[i]);
-    controller.signal.throwIfAborted();
+    const liveNodes = nodes.filter((n) => live.has(n.id));
 
     if (liveNodes.length === 0) {
       Swal.fire({
