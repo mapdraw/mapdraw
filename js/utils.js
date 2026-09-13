@@ -510,14 +510,36 @@ function resamplePath(latlngs, maxPoints) {
  * @param {function(L.LatLng, string): void} callback - Callback when location is selected
  */
 async function setupAutocomplete(inputEl, suggestionsEl, callback) {
-  const geocoder = new GeoSearch.OpenStreetMapProvider({
-    // https://nominatim.org/release-docs/develop/api/Search/#parameters
-    params: {
-      // email: "your-email@example.com",
-      // countrycodes: "ch",
-      limit: 5,
-    },
-  });
+  // https://github.com/komoot/photon/blob/master/docs/api-v1.md (language follows the Accept-Language header)
+  async function geocode(query) {
+    const params = new URLSearchParams({ q: query, limit: 5 });
+    let features;
+    try {
+      const response = await fetch(`https://photon.komoot.io/api/?${params}`);
+      ({ features } = await response.json());
+    } catch {
+      // photon.komoot.io's nginx rejects some queries (e.g. containing "https") with a 403 lacking CORS headers
+      return [];
+    }
+    return (features ?? []).map(({ properties: p, geometry }) => ({
+      // Same field order as Nominatim's display_name
+      label: [
+        p.name,
+        p.housenumber,
+        p.street,
+        p.locality,
+        p.district,
+        p.city,
+        p.county,
+        p.state,
+        p.postcode,
+        p.country,
+      ]
+        .filter(Boolean)
+        .join(", "),
+      latLng: L.latLng(geometry.coordinates[1], geometry.coordinates[0]),
+    }));
+  }
 
   let debounceTimeout;
   let activeSuggestionIndex = -1;
@@ -566,13 +588,13 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
       return;
     }
     debounceTimeout = setTimeout(async () => {
-      const results = await geocoder.search({ query });
+      const results = await geocode(query);
       // Drop the response if the input no longer holds the query it was requested for
       if (inputEl.value.trim() !== query) return;
       suggestionsEl.innerHTML = "";
-      if (results && results.length > 0) {
+      if (results.length > 0) {
         suggestionsEl.style.display = "block";
-        results.forEach((result) => addSuggestion(result.label, L.latLng(result.y, result.x)));
+        results.forEach((result) => addSuggestion(result.label, result.latLng));
       } else {
         suggestionsEl.style.display = "none";
       }

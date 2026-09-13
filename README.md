@@ -41,7 +41,7 @@ The application sends data to external services only for specific features, and 
 - **Initial Map Centering:** Your approximate location is determined using the Google Geolocation API to center the map on your region on first load.
 - **Routing:** When you request a route, the coordinates of your start, end, and via points are sent to the selected routing provider.
 - **Elevation Profiles:** When elevation data is already present in your file, it is used directly. Otherwise, path coordinates are sent to your chosen elevation provider (Google Maps Elevation API or GeoAdmin API for paths in Switzerland).
-- **Search:** Text queries are sent to OpenStreetMap's Nominatim geocoding service to find and display locations on the map.
+- **Search:** Text queries are sent to Komoot's Photon geocoding service (based on OpenStreetMap data) to find and display locations on the map.
 - **POI Finder:** Search queries and map bounds are sent to OpenStreetMap's Overpass API to find points of interest in the current map view.
 - **Strava Integration:** Communicates directly with the Strava API after user authorization.
 - **OpenStreetMap Contributions:** Communicates directly with the OpenStreetMap API after user authorization to submit notes and map contributions.
@@ -147,8 +147,6 @@ This project utilizes several open-source libraries, which are included in the r
   - Download URL: <https://github.com/Leaflet/Leaflet/releases/download/v1.9.4/leaflet.zip>
 - **leaflet-draw-1.0.4**
   - Download URL: <https://registry.npmjs.org/leaflet-draw/-/leaflet-draw-1.0.4.tgz>
-- **leaflet-geosearch-4.2.2**
-  - Download URL: <https://registry.npmjs.org/leaflet-geosearch/-/leaflet-geosearch-4.2.2.tgz>
 - **leaflet-locatecontrol-0.85.1**
   - Download URL: <https://registry.npmjs.org/leaflet.locatecontrol/-/leaflet.locatecontrol-0.85.1.tgz>
 - **leaflet-markercluster-1.5.3**
