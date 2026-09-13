@@ -5,7 +5,7 @@
  *
  * Provides a consistent search interface for all search inputs in the application.
  * Opens a SweetAlert2 modal containing the search input and results.
- * Reuses the existing setupAutocomplete() function for all search logic.
+ * Reuses the existing setupLocationSearch() function for all search logic.
  */
 
 /**
@@ -16,6 +16,7 @@
  * @returns {Promise<void>}
  */
 async function showSearchModal(title, currentValue, callback) {
+  let submitSearch;
   await Swal.fire({
     html: `
       <div>
@@ -29,18 +30,36 @@ async function showSearchModal(title, currentValue, callback) {
           placeholder="${title}"
           value="${escHtml(currentValue || "")}"
           autocomplete="off"
+          enterkeyhint="search"
         />
         <div id="search-modal-suggestions" class="search-modal-suggestions"></div>
       </div>
     `,
-    confirmButtonText: "Close",
+    confirmButtonText: "Search",
+    showCancelButton: true,
+    cancelButtonText: "Cancel",
+    // Search without closing the modal; returning false keeps it open
+    preConfirm: () => {
+      // Swal.close() while preConfirm is pending never resolves Swal.fire(), so submit after it
+      setTimeout(() => submitSearch());
+      return false;
+    },
     customClass: {
       popup: "search-modal",
       htmlContainer: "search-modal-container",
+      confirmButton: "swal-confirm-button",
     },
     didOpen: () => {
       const inputEl = document.getElementById("search-modal-input");
       const suggestionsEl = document.getElementById("search-modal-suggestions");
+
+      // Enable the search button only when there is something to search
+      const confirmButton = Swal.getConfirmButton();
+      const updateSearchButton = () => {
+        confirmButton.disabled = !inputEl.value.trim();
+      };
+      updateSearchButton();
+      inputEl.addEventListener("input", updateSearchButton);
 
       // Auto-focus and select existing text
       inputEl.focus();
@@ -48,33 +67,19 @@ async function showSearchModal(title, currentValue, callback) {
         inputEl.select();
       }
 
-      // Set up autocomplete with a wrapper callback that closes the modal
-      setupAutocomplete(inputEl, suggestionsEl, (latLng, label) => {
+      // Set up location search with a wrapper callback that closes the modal
+      submitSearch = setupLocationSearch(inputEl, suggestionsEl, (latLng, label) => {
         // Close modal and trigger the original callback
         Swal.close();
         callback(latLng, label);
       });
 
-      // Handle Enter key on empty results (close modal)
+      // Close the modal on Enter with an empty input
       inputEl.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          const hasSuggestions =
-            suggestionsEl.style.display === "block" &&
-            suggestionsEl.querySelectorAll(".autocomplete-suggestion-item").length > 0;
-          if (!hasSuggestions && inputEl.value.trim() === "") {
-            Swal.close();
-          }
-        }
+        if (e.key === "Enter" && !inputEl.value.trim()) Swal.close();
       });
     },
-    willClose: () => {
-      // Clean up any event listeners if needed
-      // setupAutocomplete already handles its own cleanup via blur event
-    },
   });
-
-  // If user clicks Cancel or clicks outside, result.isDismissed will be true
-  // We don't need to do anything in that case
 }
 
 /**

@@ -504,12 +504,14 @@ function resamplePath(latlngs, maxPoints) {
 }
 
 /**
- * Sets up autocomplete functionality for a text input field using geocoding.
- * @param {HTMLInputElement} inputEl - Input element for autocomplete
+ * Sets up location search for a text input field: coordinates are suggested while typing,
+ * places are geocoded on Enter or via the returned submit function.
+ * @param {HTMLInputElement} inputEl - Input element for the search query
  * @param {HTMLElement} suggestionsEl - Container element for suggestions
  * @param {function(L.LatLng, string): void} callback - Callback when location is selected
+ * @returns {function(): void} Submits the search, as Enter does
  */
-async function setupAutocomplete(inputEl, suggestionsEl, callback) {
+function setupLocationSearch(inputEl, suggestionsEl, callback) {
   const geocoder = new GeoSearch.OpenStreetMapProvider({
     // https://nominatim.org/release-docs/develop/api/Search/#parameters
     params: {
@@ -519,8 +521,9 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
     },
   });
 
-  let debounceTimeout;
+  let lastSearchedQuery = "";
   let activeSuggestionIndex = -1;
+  let blurTimeout;
 
   function updateActiveSuggestion() {
     const items = suggestionsEl.querySelectorAll(".autocomplete-suggestion-item");
@@ -530,9 +533,15 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
   }
 
   function addSuggestion(label, latLng) {
+    const index = suggestionsEl.children.length;
     const item = document.createElement("div");
     item.className = "autocomplete-suggestion-item";
     item.textContent = label;
+    // Hovering moves the highlight, so Search and Enter pick the hovered row
+    item.addEventListener("mouseenter", () => {
+      activeSuggestionIndex = index;
+      updateActiveSuggestion();
+    });
     item.addEventListener("click", (e) => {
       L.DomEvent.stop(e);
       inputEl.value = label;
@@ -543,47 +552,83 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
     suggestionsEl.appendChild(item);
   }
 
-  inputEl.addEventListener("input", () => {
-    const query = inputEl.value.trim();
-    clearTimeout(debounceTimeout);
+  // Places are only searched on submit. Nominatim Usage Policy, Unacceptable Use,
+  // "Auto-complete search": "This is not yet supported by Nominatim and you must not implement
+  // such a service on the client side using the API."
+  // https://operations.osmfoundation.org/policies/nominatim/#unacceptable-use
+  async function searchPlaces(query) {
+    lastSearchedQuery = query;
+    let results;
+    try {
+      results = await geocoder.search({ query });
+    } catch (error) {
+      console.error("Location search error:", error);
+      // Let a new submit retry the failed search
+      if (lastSearchedQuery === query) lastSearchedQuery = "";
+      return;
+    }
+    // Drop the response if the input no longer holds the query it was requested for
+    if (inputEl.value.trim() !== query) return;
+    suggestionsEl.innerHTML = "";
     activeSuggestionIndex = -1;
+    if (results && results.length > 0) {
+      suggestionsEl.style.display = "block";
+      results.forEach((result) => addSuggestion(result.label, L.latLng(result.y, result.x)));
+      activeSuggestionIndex = 0;
+      updateActiveSuggestion();
+    } else {
+      suggestionsEl.style.display = "none";
+    }
+  }
+
+  function onInput() {
+    const query = inputEl.value.trim();
+    lastSearchedQuery = "";
+    activeSuggestionIndex = -1;
+    suggestionsEl.innerHTML = "";
+    suggestionsEl.style.display = "none";
 
     // Offer a parsed coordinate as a preselected row instead of selecting it outright:
     // "47.5, 7" already parses while the user is still typing "47.5, 7.58".
     const latLng = parseCoordinateString(query);
     if (latLng) {
-      suggestionsEl.innerHTML = "";
       suggestionsEl.style.display = "block";
       addSuggestion(`${latLng.lat.toFixed(6)}, ${latLng.lng.toFixed(6)}`, latLng);
       activeSuggestionIndex = 0;
       updateActiveSuggestion();
-      return;
     }
+  }
 
-    if (query.length < 3) {
-      suggestionsEl.innerHTML = "";
-      suggestionsEl.style.display = "none";
-      return;
+  inputEl.addEventListener("input", onInput);
+  // A prefilled coordinate gets its preselected row too
+  onInput();
+
+  function submit() {
+    // Clicking the search button can blur the input first; keep its results visible
+    clearTimeout(blurTimeout);
+    const items = suggestionsEl.querySelectorAll(".autocomplete-suggestion-item");
+    const query = inputEl.value.trim();
+    const activeItem = items[activeSuggestionIndex];
+    if (activeItem) {
+      activeItem.click();
+      activeSuggestionIndex = -1;
+    } else if (query && query !== lastSearchedQuery) {
+      // Resubmitting the last searched query sends no new request
+      searchPlaces(query);
     }
-    debounceTimeout = setTimeout(async () => {
-      const results = await geocoder.search({ query });
-      // Drop the response if the input no longer holds the query it was requested for
-      if (inputEl.value.trim() !== query) return;
-      suggestionsEl.innerHTML = "";
-      if (results && results.length > 0) {
-        suggestionsEl.style.display = "block";
-        results.forEach((result) => addSuggestion(result.label, L.latLng(result.y, result.x)));
-      } else {
-        suggestionsEl.style.display = "none";
-      }
-    }, 300);
-  });
+  }
 
   inputEl.addEventListener("keydown", (e) => {
     const items = suggestionsEl.querySelectorAll(".autocomplete-suggestion-item");
-    if (items.length === 0) return;
 
-    if (e.key === "ArrowDown") {
+    if (e.key === "Enter") {
+      // Enter that confirms an IME composition is not a search
+      if (e.isComposing || e.keyCode === 229) return;
+      e.preventDefault();
+      submit();
+    } else if (items.length === 0) {
+      return;
+    } else if (e.key === "ArrowDown") {
       e.preventDefault();
       activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
       updateActiveSuggestion();
@@ -591,12 +636,6 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
       e.preventDefault();
       activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
       updateActiveSuggestion();
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (activeSuggestionIndex > -1) {
-        items[activeSuggestionIndex].click();
-        activeSuggestionIndex = -1;
-      }
     } else if (e.key === "Escape") {
       suggestionsEl.style.display = "none";
       activeSuggestionIndex = -1;
@@ -604,10 +643,12 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
   });
 
   inputEl.addEventListener("blur", () => {
-    setTimeout(() => {
+    blurTimeout = setTimeout(() => {
       suggestionsEl.style.display = "none";
     }, 150);
   });
+
+  return submit;
 }
 
 /**
