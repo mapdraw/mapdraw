@@ -561,6 +561,8 @@ function initOSM(settingsPanel) {
   osmUpdateSettingsUI();
 }
 
+const OSM_CONTRIBUTIONS_CHANGESETS = 30;
+
 async function osmShowContributions(user) {
   const token = localStorage.getItem("osmAccessToken");
   if (!token || !user) return;
@@ -583,7 +585,7 @@ async function osmShowContributions(user) {
 
   try {
     // Fetch recent changesets
-    const csRes = await get(`/changesets?user=${user.id}&limit=30`);
+    const csRes = await get(`/changesets?user=${user.id}&limit=${OSM_CONTRIBUTIONS_CHANGESETS}`);
     if (!csRes.ok) throw new Error(`Changesets fetch failed: ${csRes.status}`);
     const csXml = new DOMParser().parseFromString(await csRes.text(), "text/xml");
     const changesets = [...csXml.querySelectorAll("changeset")];
@@ -596,9 +598,12 @@ async function osmShowContributions(user) {
       const dlRes = await get(`/changeset/${csId}/download`);
       if (!dlRes.ok) throw new Error(`Changeset download failed: ${dlRes.status}`);
       const dlXml = new DOMParser().parseFromString(await dlRes.text(), "text/xml");
-      // Skip untagged nodes such as way vertices; POIs always have tags
+      // Keep only standalone tagged nodes; ways using a node appear in the same changeset
+      const vertices = new Set(
+        [...dlXml.querySelectorAll("nd")].map((nd) => nd.getAttribute("ref")),
+      );
       return [...dlXml.querySelectorAll("create > node")]
-        .filter((n) => n.querySelector("tag"))
+        .filter((n) => n.querySelector("tag") && !vertices.has(n.getAttribute("id")))
         .map((n) => ({
           id: n.getAttribute("id"),
           lat: n.getAttribute("lat"),
@@ -627,7 +632,7 @@ async function osmShowContributions(user) {
     if (liveNodes.length === 0) {
       Swal.fire({
         title: "No contributions found",
-        html: "No contributed points found in your recent changesets.<br><br>To add points via this app, right-click (desktop) or long press (mobile) the map.",
+        html: `No points found in your last ${OSM_CONTRIBUTIONS_CHANGESETS} changesets.<br><br>To add points via this app, right-click (desktop) or long press (mobile) the map.`,
         confirmButtonText: "OK",
       });
       return;
@@ -664,7 +669,7 @@ async function osmShowContributions(user) {
     const show = (items, scrollTop = 0) => {
       Swal.fire({
         title: "My OSM Contributions",
-        html: `<div id="osm-contributions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
+        html: `<p style="margin:0 0 8px">Points from your last ${OSM_CONTRIBUTIONS_CHANGESETS} changesets</p><div id="osm-contributions-scroll" style="max-height:300px;overflow-y:auto;">${renderList(items)}</div>`,
         confirmButtonText: "Close",
         didOpen: () => {
           const scroller = document.getElementById("osm-contributions-scroll");
