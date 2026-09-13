@@ -565,19 +565,25 @@ async function osmShowContributions(user) {
   const token = localStorage.getItem("osmAccessToken");
   if (!token || !user) return;
 
+  // Cancelling the dialog aborts pending requests
+  const controller = new AbortController();
+  const get = (path) =>
+    fetch(`${OSM_API_URL}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+
   Swal.fire({
     title: "Loading contributions…",
-    allowOutsideClick: false,
-    allowEscapeKey: false,
+    html: '<div class="swal2-loader" style="display:flex;margin:0 auto"></div>',
     showConfirmButton: false,
-    didOpen: () => Swal.showLoading(),
+    showCancelButton: true,
+    willClose: () => controller.abort(),
   });
 
   try {
     // Fetch recent changesets
-    const csRes = await fetch(`${OSM_API_URL}/changesets?user=${user.id}&limit=30`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const csRes = await get(`/changesets?user=${user.id}&limit=30`);
     if (!csRes.ok) throw new Error(`Changesets fetch failed: ${csRes.status}`);
     const csXml = new DOMParser().parseFromString(await csRes.text(), "text/xml");
     const changesets = [...csXml.querySelectorAll("changeset")];
@@ -587,23 +593,19 @@ async function osmShowContributions(user) {
       const csId = cs.getAttribute("id");
       const comment = cs.querySelector('tag[k="comment"]')?.getAttribute("v") ?? "";
       const createdAt = cs.getAttribute("created_at") ?? "";
-      let dlRes;
-      try {
-        dlRes = await fetch(`${OSM_API_URL}/changeset/${csId}/download`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch {
-        return [];
-      }
-      if (!dlRes.ok) return [];
+      const dlRes = await get(`/changeset/${csId}/download`);
+      if (!dlRes.ok) throw new Error(`Changeset download failed: ${dlRes.status}`);
       const dlXml = new DOMParser().parseFromString(await dlRes.text(), "text/xml");
-      return [...dlXml.querySelectorAll("create > node")].map((n) => ({
-        id: n.getAttribute("id"),
-        lat: n.getAttribute("lat"),
-        lon: n.getAttribute("lon"),
-        comment,
-        createdAt,
-      }));
+      // Skip untagged nodes such as way vertices; POIs always have tags
+      return [...dlXml.querySelectorAll("create > node")]
+        .filter((n) => n.querySelector("tag"))
+        .map((n) => ({
+          id: n.getAttribute("id"),
+          lat: n.getAttribute("lat"),
+          lon: n.getAttribute("lon"),
+          comment,
+          createdAt,
+        }));
     };
     const nodes = [];
     for (let i = 0; i < changesets.length; i += 10) {
@@ -617,7 +619,7 @@ async function osmShowContributions(user) {
       const batch = nodes.slice(i, i + 10);
       const flags = await Promise.all(
         batch.map((n) =>
-          fetch(`${OSM_API_URL}/node/${n.id}`, { headers: { Authorization: `Bearer ${token}` } })
+          get(`/node/${n.id}`)
             .then((r) => r.ok || (r.status !== 410 && r.status !== 404 && r.status !== 401))
             .catch(() => true),
         ),
@@ -625,6 +627,7 @@ async function osmShowContributions(user) {
       liveFlags.push(...flags);
     }
     const liveNodes = nodes.filter((_, i) => liveFlags[i]);
+    controller.signal.throwIfAborted();
 
     if (liveNodes.length === 0) {
       Swal.fire({
@@ -749,6 +752,8 @@ async function osmShowContributions(user) {
 
     show(liveNodes);
   } catch (err) {
+    if (controller.signal.aborted) return;
+    controller.abort(); // Stop the rest of a failed batch
     Swal.fire({ icon: "error", title: "Failed to load contributions", text: err.message });
   }
 }
