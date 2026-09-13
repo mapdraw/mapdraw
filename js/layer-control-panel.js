@@ -360,14 +360,16 @@ function initLayerControlPanel(baseMaps) {
     saveActiveOverlays();
   }
 
-  // Canonical un-hide for "Drawn Items": syncs the panel checkbox and goes through
-  // activateOverlay() so z-index, attribution, and persistence stay consistent. Used by
-  // every path that creates a drawn item into a hidden category (addAsDrawnItem() in
-  // utils.js) and by the forced-visible behavior below.
-  window.app.ensureDrawnItemsVisible = () => {
-    if (map.hasLayer(drawnItems)) return;
-    if (drawnItemsCheckbox) drawnItemsCheckbox.checked = true;
-    activateOverlay("DrawnItems", drawnItems);
+  // Canonical un-hide for a user-content group: syncs the panel checkbox and goes through
+  // activateOverlay() so per-item isManuallyHidden, z-index, attribution, and persistence
+  // stay consistent. Used when content is added to a possibly hidden group (drawn items,
+  // importGeoJsonToMap()) and by the forced-visible behavior below.
+  window.app.ensureOverlayVisible = (name) => {
+    const layer = allOverlayMaps[name];
+    if (map.hasLayer(layer)) return;
+    const checkbox = customPanel.querySelector(`input[data-layer-name="${name}"]`);
+    if (checkbox) checkbox.checked = true;
+    activateOverlay(name, layer);
   };
 
   // Locked for the duration of any draw or Edit session (draw-tools.js) - path-extend.js's
@@ -378,7 +380,7 @@ function initLayerControlPanel(baseMaps) {
   // hidden would leave the very thing being drawn/edited invisible.
   window.app.setDrawnItemsCheckboxLocked = (locked) => {
     if (locked && !map.hasLayer(drawnItems)) {
-      window.app.ensureDrawnItemsVisible();
+      window.app.ensureOverlayVisible("DrawnItems");
       if (typeof updateOverviewList === "function") updateOverviewList();
     }
     if (drawnItemsCheckbox) drawnItemsCheckbox.disabled = locked;

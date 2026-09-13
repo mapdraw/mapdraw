@@ -443,7 +443,7 @@ function initRouting() {
             currentRoutePath = newRoutePath;
           }
 
-          window.app.ensureDrawnItemsVisible();
+          window.app.ensureOverlayVisible("DrawnItems");
           updateOverviewList();
           updateDrawControlStates();
 

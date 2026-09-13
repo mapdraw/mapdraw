@@ -414,9 +414,10 @@ function importGeoJsonToMap(geoJsonData, fileType) {
 
   updateElevationToggleIconColor();
   updateDrawControlStates();
-  if (!map.hasLayer(targetGroup)) {
-    map.addLayer(targetGroup);
-  }
+  // Show the group again if hidden, keeping individually hidden items hidden. Not yet
+  // defined during the startup share-link import (map-view.js runs before
+  // initLayerControlPanel), where the group is still on the map anyway.
+  window.app.ensureOverlayVisible?.("ImportedFiles");
   updateOverviewList();
   return layerGroup;
 }

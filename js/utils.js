@@ -658,7 +658,7 @@ function formatDistance(meters, includeSecondary = false) {
 function addAsDrawnItem(layer) {
   drawnItems.addLayer(layer);
   editableLayers.addLayer(layer);
-  window.app.ensureDrawnItemsVisible();
+  window.app.ensureOverlayVisible("DrawnItems");
 }
 
 /**
