@@ -849,14 +849,9 @@ function createPOIMarker(element, cat) {
 /**
  * Query Overpass API
  */
-const OVERPASS_ENDPOINTS = [
-  "https://lz4.overpass-api.de/api/interpreter",
-  "https://overpass-api.de/api/interpreter",
-  "https://z.overpass-api.de/api/interpreter",
-];
-
-// How long to wait for a single endpoint before giving up and trying the next one.
-const ENDPOINT_TIMEOUT_MS = 10000;
+// Single endpoint without failover or retries, per the overpass-api.de usage rules:
+// https://github.com/drolbr/Overpass-API/issues/791#issuecomment-4286624567
+const OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
 // Server-side Overpass timeout sent in the query directive.
 const OVERPASS_TIMEOUT_S = 25;
 
@@ -887,60 +882,37 @@ async function queryOverpass(osmQuery, bounds, signal, limit = POI_RESULT_LIMIT)
     out ${limit};
   `;
 
-  let lastError;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-    try {
-      // Combine the user's cancel signal with a per-endpoint timeout.
-      // If the endpoint doesn't respond in time we move on to the next one,
-      // but if the user cancels we stop immediately regardless.
-      const timeoutController = new AbortController();
-      const timeoutId = setTimeout(() => timeoutController.abort(), ENDPOINT_TIMEOUT_MS);
-      const onAbort = () => timeoutController.abort();
-      signal.addEventListener("abort", onAbort, { once: true });
-      const endpointSignal = timeoutController.signal;
-
-      try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          body: query,
-          signal: endpointSignal,
-        });
-        if (response.status === 400) {
-          throw new Error("400 Bad Request. Invalid query syntax. Please report this bug.");
-        }
-        if (response.status === 504) {
-          throw new Error("504 Gateway Timeout. Try zooming in closer or selecting another area.");
-        }
-        if (response.status === 429) {
-          lastError = new Error("Too Many Requests. Please wait a moment and try again.");
-          continue;
-        }
-        if (!response.ok) {
-          lastError = new Error(`HTTP ${response.status}`);
-          continue;
-        }
-        const data = await response.json();
-        return data.elements || [];
-      } finally {
-        clearTimeout(timeoutId);
-        signal.removeEventListener("abort", onAbort);
-      }
-    } catch (err) {
-      // User cancelled — stop immediately
-      if (err.name === "AbortError" && signal.aborted) throw err;
-      // Hard query errors — retrying won't help
-      if (err.message.startsWith("400") || err.message.startsWith("504")) throw err;
-      // Endpoint timed out or failed — try the next one
-      lastError =
-        err.name === "AbortError"
-          ? new Error("Endpoint timed out.")
-          : new Error("Could not connect to Overpass API. Please try again later.");
-    }
+  let response;
+  try {
+    response = await fetch(OVERPASS_ENDPOINT, { method: "POST", body: query, signal });
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    throw new Error("Could not connect to Overpass API. Please try again later.");
   }
-  throw new Error(
-    lastError?.message || "Could not connect to Overpass API. Please try again later.",
-  );
+  if (response.status === 400) throw new Error("Invalid query. Please report this bug.");
+  if (response.status === 429) throw new Error("Too many requests. Please wait and try again.");
+  if (response.status === 504) {
+    throw new Error("Overpass API is busy or unavailable. Please try again later.");
+  }
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  // Other runtime errors come with status 200: as an HTML page if they occur
+  // before output starts, otherwise as a "remark" after the elements output so far.
+  const body = await response.text();
+  let data;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    data = { remark: body };
+  }
+  if (data.remark) {
+    throw new Error(
+      /timed out|out of memory/.test(data.remark)
+        ? "Query exceeded the server's time or memory limit. Try zooming in closer."
+        : "Overpass API returned an error. Please try again later.",
+    );
+  }
+  return data.elements || [];
 }
 
 // Make functions globally available
