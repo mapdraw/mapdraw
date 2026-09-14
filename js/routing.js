@@ -23,8 +23,8 @@ function initRouting() {
   let shouldFitBounds = true;
   // Last route name this module wrote; lets recalculation detect a user rename
   let lastGeneratedRouteName = null;
-  let isUnitRefreshInProgress = false;
-  let wasRouteSelectedOnUnitRefresh = false;
+  // Last routed result and its provider, re-rendered when units change
+  let lastRouteDetails = null;
 
   const mapboxRouter = L.Routing.mapbox(mapboxAccessToken);
   const osrmRouter = L.Routing.osrmv1({
@@ -250,7 +250,7 @@ function initRouting() {
   /**
    * Fills the summary box (distance, time, source) and the turn-by-turn list for a route.
    */
-  const renderRouteDetails = (route) => {
+  const renderRouteDetails = ({ route, providerDisplayName }) => {
     const summaryContainer = document.getElementById("routing-summary-container");
     if (route.summary && summaryContainer) {
       const distanceDisplay = formatDistance(route.summary.totalDistance);
@@ -264,9 +264,6 @@ function initRouting() {
         return parts.join(" ");
       }
       const formattedTime = formatDuration(route.summary.totalTime);
-
-      const currentProvider = getCurrentRoutingProvider();
-      const providerDisplayName = PROVIDER_CONFIG[currentProvider]?.displayName || currentProvider;
 
       summaryContainer.innerHTML =
         `<span class="routing-summary-item">Distance: ${distanceDisplay}</span>` +
@@ -376,7 +373,12 @@ function initRouting() {
           const endName = endInput.value.trim() || "End";
           const newRouteName = `Route: ${startName} to ${endName}`;
 
-          renderRouteDetails(route);
+          const currentProvider = getCurrentRoutingProvider();
+          lastRouteDetails = {
+            route,
+            providerDisplayName: PROVIDER_CONFIG[currentProvider]?.displayName || currentProvider,
+          };
+          renderRouteDetails(lastRouteDetails);
 
           if (shouldFitBounds) {
             map.fitBounds(L.latLngBounds(processedCoordinates), { padding: [50, 50] });
@@ -447,21 +449,13 @@ function initRouting() {
           updateOverviewList();
           updateDrawControlStates();
 
-          if (wasRouteSelectedOnUnitRefresh || !isUnitRefreshInProgress) {
-            selectItem(currentRoutePath);
-          }
+          selectItem(currentRoutePath);
 
           saveRouteBtn.disabled = false;
         }
-        // Reset unconditionally so an empty result can't leave the flags stale
-        isUnitRefreshInProgress = false;
-        wasRouteSelectedOnUnitRefresh = false;
       },
 
       _handleRoutingError: function (error) {
-        // Reset so a failed unit refresh can't suppress selecting the next route
-        isUnitRefreshInProgress = false;
-        wasRouteSelectedOnUnitRefresh = false;
         console.error("Routing error:", error);
         if (error && error.target && error.target.responseText) {
           try {
@@ -1008,20 +1002,11 @@ function initRouting() {
   saveRouteBtn.addEventListener("click", saveRoute);
 
   /**
-   * Recalculates and redisplays the current route when unit settings change.
-   * Called from main.js when the user toggles between metric and imperial units.
+   * Re-renders the current route's details in the current units, without re-fetching.
+   * Called from settings-panel.js when the user toggles between metric and imperial units.
    */
   const redisplayCurrentRoute = () => {
-    if (currentRoutePath && routingControl) {
-      wasRouteSelectedOnUnitRefresh = globallySelectedItem === currentRoutePath;
-      const waypoints = routingControl.getWaypoints();
-      const validWaypoints = waypoints.filter((wp) => wp.latLng);
-      if (validWaypoints.length > 1) {
-        shouldFitBounds = false;
-        isUnitRefreshInProgress = true;
-        routingControl.setWaypoints(validWaypoints);
-      }
-    }
+    if (currentRoutePath) renderRouteDetails(lastRouteDetails);
   };
 
   /**
