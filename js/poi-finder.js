@@ -527,13 +527,14 @@ async function loadCategory(cat) {
   if (cat.isCustom) {
     const input = document.getElementById("poi-custom-query-input");
     const rawInput = (input ? input.value : customQueryValue).trim();
+    // OSM keys are lowercase by convention; values are case-sensitive.
     const queries = rawInput
       .split(",")
       .map((q) =>
         q
           .trim()
-          .toLowerCase()
-          .replace(/\s*=\s*/g, "="),
+          .replace(/\s*=\s*/g, "=")
+          .replace(/^[^=]*/, (key) => key.toLowerCase()),
       )
       .filter(Boolean);
     if (queries.length === 0) {
