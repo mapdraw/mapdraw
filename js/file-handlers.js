@@ -175,6 +175,20 @@ function hasFiniteCoords(coords) {
 }
 
 /**
+ * toGeoJSON can nest coordTimes/heartRates as one array per part of a multi-part track.
+ * Keeps only the given part's array, or drops it when the counts differ, since parts then
+ * can't be matched by index. Modifies and returns properties.
+ */
+function slicePerPartArrays(properties, index, count) {
+  for (const key of ["coordTimes", "heartRates"]) {
+    if (!Array.isArray(properties[key]?.[0])) continue;
+    if (properties[key].length === count) properties[key] = properties[key][index];
+    else delete properties[key];
+  }
+  return properties;
+}
+
+/**
  * Explodes multi-geometries and GeometryCollections into separate features.
  * Converts MultiLineString, MultiPolygon, MultiPoint, and GeometryCollection
  * into arrays of simple features that can be edited individually; a Polygon
@@ -200,7 +214,8 @@ function explodeMultiGeometries(feature) {
     if (!Array.isArray(feature.geometry.geometries)) return [];
     // Count occurrences of each geometry type to handle duplicates
     const typeCounts = {};
-    return feature.geometry.geometries.flatMap((geom) => {
+    const count = feature.geometry.geometries.length;
+    return feature.geometry.geometries.flatMap((geom, index) => {
       const type = geom.type;
       typeCounts[type] = (typeCounts[type] || 0) + 1;
       const suffix = typeCounts[type] > 1 ? ` ${typeCounts[type]}` : "";
@@ -211,12 +226,16 @@ function explodeMultiGeometries(feature) {
       return explodeMultiGeometries({
         type: "Feature",
         geometry: geom,
-        properties: {
-          ...feature.properties,
-          name: feature.properties?.name
-            ? `${feature.properties.name} (${typeLabel}${suffix})`
-            : undefined,
-        },
+        properties: slicePerPartArrays(
+          {
+            ...feature.properties,
+            name: feature.properties?.name
+              ? `${feature.properties.name} (${typeLabel}${suffix})`
+              : undefined,
+          },
+          index,
+          count,
+        ),
       });
     });
   }
@@ -236,12 +255,16 @@ function explodeMultiGeometries(feature) {
       return explodeMultiGeometries({
         type: "Feature",
         geometry: { type: singleType, coordinates: coords },
-        properties: {
-          ...feature.properties,
-          name: feature.properties?.name
-            ? `${feature.properties.name} (${typeLabel}${suffix})`
-            : undefined,
-        },
+        properties: slicePerPartArrays(
+          {
+            ...feature.properties,
+            name: feature.properties?.name
+              ? `${feature.properties.name} (${typeLabel}${suffix})`
+              : undefined,
+          },
+          index,
+          count,
+        ),
       });
     });
   }
