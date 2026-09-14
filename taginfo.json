@@ -1,0 +1,209 @@
+{
+  "data_format": 1,
+  "data_url": "https://raw.githubusercontent.com/mapdraw/mapdraw/main/taginfo.json",
+  "project": {
+    "name": "MapDraw",
+    "description": "Free online GeoJSON, GPX, KML and KMZ viewer and editor. Finds and adds OpenStreetMap points of interest.",
+    "project_url": "https://www.mapdraw.net/",
+    "icon_url": "https://raw.githubusercontent.com/mapdraw/mapdraw/main/img/favicon.ico",
+    "contact_name": "MapDraw",
+    "contact_email": "mapdrawdev@gmail.com"
+  },
+  "tags": [
+    {
+      "key": "amenity",
+      "value": "bbq",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "bench",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "bicycle_parking",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "cafe",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "drinking_water",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "fountain",
+      "object_types": ["node"],
+      "description": "Created as a node via Add to OSM"
+    },
+    {
+      "key": "amenity",
+      "value": "fuel",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "parking",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "recycling",
+      "object_types": ["node"],
+      "description": "Created as a node via Add to OSM"
+    },
+    {
+      "key": "amenity",
+      "value": "restaurant",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "shelter",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "toilets",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "amenity",
+      "value": "waste_basket",
+      "object_types": ["node"],
+      "description": "Created as a node via Add to OSM"
+    },
+    {
+      "key": "cuisine",
+      "description": "Shown in the Find Places popup"
+    },
+    {
+      "key": "description",
+      "description": "Shown in the Find Places popup"
+    },
+    {
+      "key": "email",
+      "description": "Shown in the Find Places popup"
+    },
+    {
+      "key": "fee",
+      "description": "Shown in the Find Places popup"
+    },
+    {
+      "key": "highway",
+      "value": "bus_stop",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "leisure",
+      "value": "firepit",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "leisure",
+      "value": "fitness_station",
+      "object_types": ["node"],
+      "description": "Created as a node via Add to OSM"
+    },
+    {
+      "key": "leisure",
+      "value": "park",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "leisure",
+      "value": "picnic_table",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "leisure",
+      "value": "playground",
+      "object_types": ["node"],
+      "description": "Created as a node via Add to OSM"
+    },
+    {
+      "key": "name",
+      "description": "Find Places popup title and saved marker name"
+    },
+    {
+      "key": "natural",
+      "value": "peak",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "opening_hours",
+      "description": "Shown in the Find Places popup"
+    },
+    {
+      "key": "operator",
+      "description": "Shown in the Find Places popup"
+    },
+    {
+      "key": "phone",
+      "description": "Shown in the Find Places popup"
+    },
+    {
+      "key": "railway",
+      "value": "station",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "railway",
+      "value": "tram_stop",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "shop",
+      "value": "bicycle",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "shop",
+      "value": "convenience",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "shop",
+      "value": "supermarket",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "tourism",
+      "value": "alpine_hut",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "tourism",
+      "value": "camp_site",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "tourism",
+      "value": "picnic_site",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "tourism",
+      "value": "viewpoint",
+      "description": "Created as a node via Add to OSM; searched via Find Places"
+    },
+    {
+      "key": "tourism",
+      "value": "wilderness_hut",
+      "description": "Searched via Find Places"
+    },
+    {
+      "key": "website",
+      "description": "Shown in the Find Places popup"
+    },
+    {
+      "key": "wheelchair",
+      "description": "Shown in the Find Places popup"
+    }
+  ]
+}
