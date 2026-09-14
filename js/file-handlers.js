@@ -914,6 +914,13 @@ const GPX_HEADER = `<?xml version="1.0" encoding="UTF-8"?>
     xmlns:app="https://${APP_DOMAIN}">`;
 const GPX_FOOTER = "\n</gpx>";
 
+// GPX lat/lon/ele are xsd:decimal, which has no exponent form; String() uses one for 0 < |n| < 1e-6.
+function toXsdDecimal(n) {
+  const s = String(n);
+  const m = s.match(/^(-?)(\d)(?:\.(\d+))?e-(\d+)$/);
+  return m ? `${m[1]}0.${"0".repeat(m[4] - 1)}${m[2]}${m[3] ?? ""}` : s;
+}
+
 /**
  * Converts a single layer to a <trk> or <wpt> XML snippet, with no
  * header/footer, so multiple snippets can be concatenated into one GPX
@@ -945,9 +952,9 @@ function convertLayerToGpxSnippet(layer) {
 
     const pathPoints = latlngs
       .map((p) => {
-        let pt = `<trkpt lat="${p.lat}" lon="${p.lng}">`;
+        let pt = `<trkpt lat="${toXsdDecimal(p.lat)}" lon="${toXsdDecimal(p.lng)}">`;
         if (typeof p.alt === "number") {
-          pt += `<ele>${p.alt}</ele>`;
+          pt += `<ele>${toXsdDecimal(p.alt)}</ele>`;
         }
         pt += `</trkpt>`;
         return pt;
@@ -975,7 +982,7 @@ function convertLayerToGpxSnippet(layer) {
       (stravaId ? `\n      <app:stravaId>${stravaId}</app:stravaId>` : "") +
       `\n    </extensions>`;
     return `
-  <wpt lat="${latlng.lat}" lon="${latlng.lng}">${hasElevation ? `\n    <ele>${latlng.alt}</ele>` : ""}
+  <wpt lat="${toXsdDecimal(latlng.lat)}" lon="${toXsdDecimal(latlng.lng)}">${hasElevation ? `\n    <ele>${toXsdDecimal(latlng.alt)}</ele>` : ""}
     <name>${safeName}</name>${safeDescription ? `\n    <desc>${safeDescription}</desc>` : ""}${wptExtensions}
   </wpt>`;
   }
