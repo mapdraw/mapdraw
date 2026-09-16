@@ -288,37 +288,3 @@ function cssToKmlColor(cssColor) {
   const bb = normalized.substring(5, 7);
   return `FF${bb}${gg}${rr}`;
 }
-
-/**
- * Converts a KML color (AABBGGRR format) to CSS hex color (#RRGGBB).
- * KML uses reverse byte order: Alpha, Blue, Green, Red.
- *
- * Used for importing KML files with inline IconStyle colors (e.g., our own exports).
- * This is the inverse of cssToKmlColor().
- *
- * @param {string} kmlColor - KML color string (e.g., "FF0000FF" for red)
- * @returns {string|null} CSS color string (e.g., "#FF0000") or null if invalid
- */
-function kmlToCssColor(kmlColor) {
-  if (typeof kmlColor !== "string" || !kmlColor) return null;
-  let color = kmlColor.trim().toLowerCase();
-
-  // Remove # prefix if present
-  if (color.startsWith("#")) {
-    color = color.substring(1);
-  }
-
-  // KML colors must be 8 characters: AABBGGRR
-  if (color.length !== 8 || !/^[0-9a-f]{8}$/.test(color)) {
-    return null;
-  }
-
-  // Extract components: AABBGGRR
-  const aa = color.substring(0, 2); // Alpha (ignored)
-  const bb = color.substring(2, 4); // Blue
-  const gg = color.substring(4, 6); // Green
-  const rr = color.substring(6, 8); // Red
-
-  // Return in CSS format: #RRGGBB
-  return `#${rr}${gg}${bb}`.toUpperCase();
-}

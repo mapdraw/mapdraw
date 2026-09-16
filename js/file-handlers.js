@@ -175,16 +175,22 @@ function hasFiniteCoords(coords) {
 }
 
 /**
- * toGeoJSON can nest coordTimes/heartRates as one array per part of a multi-part track.
- * Keeps only the given part's array, or drops it when the counts differ, since parts then
- * can't be matched by index. Modifies and returns properties.
+ * toGeoJSON nests each coordinateProperties entry of a multi-part track as one array per part
+ * (times: per part that has them). Keeps only the given part's array, or drops the entry when
+ * the counts differ, since parts then can't be matched by index. Builds a new object, as the
+ * spread copy in explodeMultiGeometries() shares the nested one between parts.
+ * Modifies and returns properties.
  */
 function slicePerPartArrays(properties, index, count) {
-  for (const key of ["coordTimes", "heartRates"]) {
-    if (!Array.isArray(properties[key]?.[0])) continue;
-    if (properties[key].length === count) properties[key] = properties[key][index];
-    else delete properties[key];
+  const perPoint = properties.coordinateProperties;
+  if (!perPoint) return properties;
+  const sliced = {};
+  for (const [key, value] of Object.entries(perPoint)) {
+    if (!Array.isArray(value?.[0])) sliced[key] = value;
+    else if (value.length === count) sliced[key] = value[index];
   }
+  if (Object.keys(sliced).length) properties.coordinateProperties = sliced;
+  else delete properties.coordinateProperties;
   return properties;
 }
 
@@ -321,9 +327,9 @@ function parseColorFromGeoJsonStyle(properties, isPoint) {
  * Parses a color from KML style properties (after toGeoJSON conversion).
  *
  * Paths: LineStyle colors are parsed by toGeoJSON into properties.stroke.
- * Points: Google Earth encodes marker color as an icon URL parameter; it wins
- * over stroke, which is just a default line style there. IconStyle colors
- * are handled separately by applyKmlIconColors().
+ * Points: an IconStyle color (inline or via styleUrl/StyleMap) is parsed into
+ * properties["icon-color"]. Google Earth instead encodes marker color as an icon
+ * URL parameter. Both win over stroke, which is just a default line style there.
  *
  * @param {object} properties - The feature properties from toGeoJSON
  * @param {boolean} isPoint - Whether the feature's geometry is a Point
@@ -332,7 +338,7 @@ function parseColorFromGeoJsonStyle(properties, isPoint) {
 function parseColorFromKmlStyle(properties, isPoint) {
   if (isPoint) {
     const match = properties.icon?.match(/[?&]color=([0-9a-f]{6})(?:[&#]|$)/i);
-    const iconColor = match && parseColor(match[1]);
+    const iconColor = parseColor(properties["icon-color"]) || (match && parseColor(match[1]));
     if (iconColor) return iconColor;
   }
   return parseColor(properties.stroke) || DEFAULT_COLOR;
@@ -347,12 +353,10 @@ function parseColorFromKmlStyle(properties, isPoint) {
  * `fill`/`fill-color` behind as a second, stale color as soon as the user recolors the item.
  *
  * "color" is the non-standard key resolveColor() reads (set by applyGpxProperties(),
- * applyKmlIconColors(), share-link decoding, or the source file itself); it goes once resolved,
- * so it can't linger next to the simplestyle key that now holds the same color.
- *
- * styleHash/styleMapHash are bookkeeping toGeoJSON derives from shared KML styles (a hash of
- * the referenced style's XML; a StyleMap's key/styleUrl pairs) - meaningless without the KML
- * document they index into. styleUrl and icon stay - they are real KML content, and
+ * share-link decoding, or the source file itself); it goes once resolved, so it can't linger
+ * next to the simplestyle key that now holds the same color. Same for "icon-color", the KML
+ * IconStyle color parsed by toGeoJSON, and the other icon and label keys it derives from
+ * IconStyle/LabelStyle. styleUrl and icon stay - they are real KML content, and
  * parseColorFromKmlStyle() reads icon for Google Earth marker colors.
  */
 const DISCARDED_STYLE_PROPERTIES = [
@@ -362,8 +366,15 @@ const DISCARDED_STYLE_PROPERTIES = [
   "fill",
   "fill-color",
   "fill-opacity",
-  "styleHash",
-  "styleMapHash",
+  "icon-color",
+  "icon-opacity",
+  "icon-scale",
+  "icon-heading",
+  "icon-offset",
+  "icon-offset-units",
+  "label-color",
+  "label-opacity",
+  "label-scale",
 ];
 
 /**
@@ -515,21 +526,24 @@ function importGeoJsonFile(file) {
  * Must be called BEFORE explosion so all exploded segments inherit them.
  *
  * toGeoJSON emits features in DOM order (tracks, routes, waypoints) but skips
- * tracks without a >=2-point segment and routes with <2 points, so the DOM
- * lists are filtered to the nodes that actually produce a feature before the
- * positional walk - otherwise one dropped track shifts every later match.
+ * points without a numeric lat/lon, tracks without a segment of >=2 such points
+ * and routes with <2 of them, so the DOM lists are filtered to the nodes that
+ * actually produce a feature before the positional walk - otherwise one dropped
+ * node shifts every later match.
  * @param {Document} dom - The parsed GPX XML document
  * @param {object} geojsonData - The GeoJSON data from toGeoJSON.gpx()
  */
 function applyGpxProperties(dom, geojsonData) {
+  // toGeoJSON's own test: parseFloat, so a numeric prefix counts.
+  const hasLatLon = (pt) =>
+    !isNaN(parseFloat(pt.getAttribute("lat"))) && !isNaN(parseFloat(pt.getAttribute("lon")));
+  const countPoints = (node, tag) => [...node.querySelectorAll(tag)].filter(hasLatLon).length;
   const tracks = [...dom.querySelectorAll("trk")].filter((trk) =>
-    [...trk.querySelectorAll("trkseg")].some((seg) => seg.querySelectorAll("trkpt").length >= 2),
+    [...trk.querySelectorAll("trkseg")].some((seg) => countPoints(seg, "trkpt") >= 2),
   );
-  const routes = [...dom.querySelectorAll("rte")].filter(
-    (rte) => rte.querySelectorAll("rtept").length >= 2,
-  );
+  const routes = [...dom.querySelectorAll("rte")].filter((rte) => countPoints(rte, "rtept") >= 2);
   const lineNodes = [...tracks, ...routes];
-  const pointNodes = [...dom.querySelectorAll("wpt")];
+  const pointNodes = [...dom.querySelectorAll("wpt")].filter(hasLatLon);
   let lineIndex = 0;
   let pointIndex = 0;
 
@@ -545,11 +559,8 @@ function applyGpxProperties(dom, geojsonData) {
 
     const color = parseColor(node.querySelector("gpx_style\\:color, color")?.textContent);
     const stravaId = node.querySelector("stravaId")?.textContent.trim();
-    if (color || stravaId) {
-      feature.properties = feature.properties || {};
-      if (color) feature.properties.color = color;
-      if (stravaId) feature.properties.stravaId = stravaId;
-    }
+    if (color) feature.properties.color = color;
+    if (stravaId) feature.properties.stravaId = stravaId;
   });
 }
 
@@ -566,14 +577,25 @@ function importGpxFile(file) {
       const dom = new DOMParser().parseFromString(readEvent.target.result, "text/xml");
       const geojsonData = toGeoJSON.gpx(dom);
 
-      // toGeoJSON maps GPX's <desc> to a `desc` property, while KML imports and both the
-      // GPX and KML exporters use `description`. Normalized here so one key means one thing
-      // everywhere - otherwise a GPX description survives the import but no export writes it.
       geojsonData.features.forEach(({ properties }) => {
-        if (properties?.desc) {
+        // GPX's <desc> becomes `desc`, while KML imports and both the GPX and KML exporters
+        // use `description`. Normalized so one key means one thing everywhere - otherwise a
+        // GPX description survives the import but no export writes it.
+        if (properties.desc) {
           properties.description = properties.desc;
           delete properties.desc;
         }
+        // Every track without per-point data gets an empty coordinateProperties.
+        if (!Object.keys(properties.coordinateProperties ?? {}).length) {
+          delete properties.coordinateProperties;
+        }
+        // toGeoJSON copies namespaced extension elements as "prefix_name" (our own
+        // gpx_style/app ones, and per-point Garmin values holding just the last point's
+        // reading) and tags trk/rte as _gpxType, which the app doesn't distinguish. No other
+        // key it emits for GPX contains an underscore.
+        Object.keys(properties)
+          .filter((key) => key.includes("_"))
+          .forEach((key) => delete properties[key]);
       });
 
       // Extract colors and Strava IDs from GPX DOM and attach to features BEFORE explosion
@@ -601,121 +623,37 @@ function importGpxFile(file) {
 // Specification: https://developers.google.com/kml/documentation/kmlreference
 
 /**
- * KML geometry elements toGeoJSON turns into a feature (its `geotypes` list). They are
- * matched at any depth, so the ones nested in a MultiGeometry or gx:MultiTrack count too.
- */
-const KML_GEOMETRY_SELECTOR = "Point, LineString, Polygon, Track, gx\\:Track";
-
-/**
- * Extracts KML IconStyle colors and attaches them to point-only GeoJSON features.
- *
- * Why this is needed:
- * - toGeoJSON parses LineStyle/PolyStyle colors but ignores IconStyle colors
- * - Inline <Style><IconStyle><color>: our own KML exports
- * - Shared <Style id> referenced by styleUrl, possibly via a StyleMap:
- *   Organic Maps and Google Earth exports
- *
- * Features are matched to placemarks by position, and toGeoJSON emits no feature for a
- * placemark without geometry - a description-only note - so those are filtered out first;
- * otherwise a single one shifts every later match. The length check is the backstop: on any
- * remaining mismatch no color is applied rather than the wrong one.
- *
- * Must be called AFTER toGeoJSON conversion but BEFORE explosion.
- *
- * @param {Document} dom - The parsed KML XML document
- * @param {object} geojsonData - The GeoJSON data from toGeoJSON.kml()
- */
-function applyKmlIconColors(dom, geojsonData) {
-  const features = geojsonData?.features;
-  const placemarks = [...dom.querySelectorAll("Placemark")].filter((placemark) =>
-    placemark.querySelector(KML_GEOMETRY_SELECTOR),
-  );
-  if (!features || placemarks.length !== features.length) {
-    return;
-  }
-
-  // Shared styles are referenced by many placemarks - resolve each id only once
-  const sharedIconColors = new Map();
-
-  features.forEach((feature, index) => {
-    const placemark = placemarks[index];
-
-    // Only placemarks made purely of points take an icon color: in a mixed
-    // MultiGeometry the line parts must keep their LineStyle stroke.
-    const geometries =
-      feature.geometry?.type === "GeometryCollection"
-        ? feature.geometry.geometries
-        : [feature.geometry];
-    if (!geometries.every((geometry) => geometry?.type === "Point")) {
-      return;
-    }
-
-    let iconStyleColor = placemark.querySelector("Style IconStyle color");
-
-    // Shared style (Organic Maps, Google Earth): resolve the styleUrl to a
-    // document-level Style, following a StyleMap's normal pair if needed
-    if (!iconStyleColor) {
-      const id = placemark.querySelector("styleUrl")?.textContent.trim().replace(/^#/, "");
-      if (id) {
-        if (!sharedIconColors.has(id)) {
-          const normalUrl = [...dom.querySelectorAll(`StyleMap[id="${CSS.escape(id)}"] Pair`)]
-            .find((pair) => pair.querySelector("key")?.textContent.trim() === "normal")
-            ?.querySelector("styleUrl")
-            ?.textContent.trim();
-          const styleId = normalUrl ? normalUrl.replace(/^#/, "") : id;
-          sharedIconColors.set(
-            id,
-            dom.querySelector(`Style[id="${CSS.escape(styleId)}"] IconStyle color`),
-          );
-        }
-        iconStyleColor = sharedIconColors.get(id);
-      }
-    }
-
-    if (iconStyleColor) {
-      const cssColor = kmlToCssColor(iconStyleColor.textContent.trim());
-      if (cssColor) {
-        feature.properties = feature.properties || {};
-        feature.properties.color = cssColor;
-      }
-    }
-  });
-}
-
-/**
- * Parses KML text content to GeoJSON, recovering the icon colors toGeoJSON drops.
+ * Parses KML text content to GeoJSON: placemarks only, with multi-geometries exploded.
  * @param {string} kmlText - The KML file content as text
- * @returns {object} GeoJSON data with extracted color and stravaId properties
+ * @returns {object} GeoJSON FeatureCollection
  */
 function parseKmlContent(kmlText) {
   const dom = new DOMParser().parseFromString(kmlText, "text/xml");
+  // Without the option a placemark without geometry (a description-only note) becomes a
+  // feature with a null geometry.
+  const geojsonData = toGeoJSON.kml(dom, { skipNullGeometry: true });
 
-  // Google Earth wraps shared styles in <gx:CascadingStyle kml:id="...">, which
-  // toGeoJSON can't index (it reads plain id attributes on Style elements).
-  // Mirror the wrapper's id onto the inner Style so StyleMap references resolve.
-  dom.querySelectorAll("CascadingStyle, gx\\:CascadingStyle").forEach((wrapper) => {
-    const style = wrapper.querySelector("Style");
-    const id = wrapper.getAttribute("kml:id") || wrapper.getAttribute("id");
-    if (style && id && !style.hasAttribute("id")) style.setAttribute("id", id);
+  // GroundOverlay (an image) and NetworkLink (a reference) elements also come out as
+  // features - polygons of their extent, tagged with "@geometry-type".
+  geojsonData.features = geojsonData.features.filter((f) => !f.properties["@geometry-type"]);
+
+  geojsonData.features.forEach(({ geometry, properties }) => {
+    // A CDATA <description> is parsed as { "@type": "html", value }; the exporters
+    // expect the text.
+    if (typeof properties.description === "object") {
+      properties.description = properties.description.value;
+    }
+    // toGeoJSON already copies every <Data name="..."><value> into properties, stravaId
+    // included - it just doesn't trim, and the value goes straight into a download URL.
+    if (properties.stravaId) properties.stravaId = properties.stravaId.trim();
+    // In a mixed MultiGeometry the point parts must not take the IconStyle color but fall
+    // back to the stroke like the line parts (see parseColorFromKmlStyle); dropped before
+    // explosion so no part sees it.
+    if (geometry.geometries?.some((g) => g.type !== "Point")) delete properties["icon-color"];
   });
-
-  const geojsonData = toGeoJSON.kml(dom);
-
-  // toGeoJSON already copies every <Data name="..."><value> into properties, stravaId
-  // included - it just doesn't trim, and the value goes straight into a download URL.
-  geojsonData?.features?.forEach(({ properties }) => {
-    if (properties?.stravaId) properties.stravaId = properties.stravaId.trim();
-  });
-
-  // Extract IconStyle colors (inline and shared) for point features
-  // Must be called BEFORE explosion so colors propagate to all exploded features
-  applyKmlIconColors(dom, geojsonData);
 
   // Explode multi-geometries and filter for supported geometry types
-  if (geojsonData?.features) {
-    geojsonData.features = geojsonData.features.flatMap((f) => explodeMultiGeometries(f));
-  }
-
+  geojsonData.features = geojsonData.features.flatMap((f) => explodeMultiGeometries(f));
   return geojsonData;
 }
 
@@ -776,7 +714,7 @@ async function importKmzFile(file) {
         const geojsonData = parseKmlContent(content);
 
         // Import features if present
-        if (geojsonData?.features?.length > 0) {
+        if (geojsonData.features.length) {
           const newLayer = importGeoJsonToMap(geojsonData, "kmz");
           if (newLayer) {
             justImportedLayers.addLayer(newLayer);
