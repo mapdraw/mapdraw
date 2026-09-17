@@ -313,7 +313,7 @@ body.glass-mode select option /* ditto for the open dropdown popup - see the rul
 * {
   margin: 0;
   padding: 0;
-  font-family: "Roboto", sans-serif !important;
+  font-family: "Inter", sans-serif !important;
   /* Forcefully remove blue highlight of button on mobile */
   -webkit-tap-highlight-color: transparent !important;
   /* App, not a document: no text selection by default. Inputs/textareas
@@ -2109,7 +2109,7 @@ body.glass-mode .overview-category-pill.active {
 
 .elevation-hover-tooltip-text {
   fill: var(--text-color);
-  font-family: "Roboto", sans-serif !important; /* Override D3 defaults */
+  font-family: "Inter", sans-serif !important; /* Override D3 defaults */
   font-size: var(--font-size-10);
 }
 
@@ -3345,10 +3345,10 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
  */
 
 @font-face {
-  font-family: "Roboto";
+  font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
-  src: url(/fonts/Roboto-VariableFont_wdth,wght.woff2) format("woff2");
+  src: url(/fonts/Inter-VariableFont_opsz,wght.woff2) format("woff2");
 }
 
 /* Instructions for self hosting: https://developers.google.com/fonts/docs/material_symbols#self-hosting_the_font */
