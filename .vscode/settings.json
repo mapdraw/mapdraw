@@ -20,6 +20,7 @@
   "git.openRepositoryInParentFolders": "never",
   "html.format.wrapLineLength": 0,
   "liveServer.settings.donotShowInfoMsg": true,
+  "liveServer.settings.port": 5500,
   "prettier.printWidth": 100,
   "workbench.editor.enablePreview": false,
   "workbench.startupEditor": "none"
