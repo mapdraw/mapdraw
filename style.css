@@ -316,21 +316,9 @@ body.glass-mode select option /* ditto for the open dropdown popup - see the rul
   font-family: "Inter", sans-serif !important;
   /* Forcefully remove blue highlight of button on mobile */
   -webkit-tap-highlight-color: transparent !important;
-  /* App, not a document: no text selection by default. Inputs/textareas
-     are exempt regardless; real content opts back in below. */
+  /* App, not a document: no text selection. Inputs and the JSON editor stay editable. */
   -webkit-user-select: none;
   user-select: none;
-}
-
-/* Selectable content: dialogs (credits popup renders inside one), the
-   JSON editor, and route/path details. */
-.swal2-html-container,
-.CodeMirror,
-#info-panel-details,
-#routing-summary-container,
-#directions-list {
-  -webkit-user-select: text;
-  user-select: text;
 }
 
 a {
