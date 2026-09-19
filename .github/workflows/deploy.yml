@@ -53,6 +53,7 @@ jobs:
           APP_NAME_PWA_VALUE=$(grep 'const APP_NAME_PWA' js/config.js | cut -d '"' -f 2)
           APP_TITLE_VALUE=$(grep 'const APP_TITLE' js/config.js | cut -d '"' -f 2)
           APP_DESC_VALUE=$(grep 'const APP_DESCRIPTION' js/config.js | cut -d '"' -f 2)
+          APP_DOMAIN_VALUE=$(grep 'const APP_DOMAIN' js/config.js | cut -d '"' -f 2)
 
           # Escape special characters (& and \) for sed
           APP_NAME_PWA_VALUE_ESCAPED=$(echo "$APP_NAME_PWA_VALUE" | sed 's/[&\]/\\&/g')
@@ -62,6 +63,7 @@ jobs:
           # Replace in HTML and manifest
           sed -i "s|__APP_TITLE__|${APP_TITLE_VALUE_ESCAPED}|g" index.html
           sed -i "s|__APP_DESCRIPTION__|${APP_DESC_VALUE_ESCAPED}|g" index.html
+          sed -i "s|__APP_DOMAIN__|${APP_DOMAIN_VALUE}|g" index.html
           sed -i "s|__APP_NAME_PWA__|${APP_NAME_PWA_VALUE_ESCAPED}|g" manifest.json
           sed -i "s|__APP_DESCRIPTION__|${APP_DESC_VALUE_ESCAPED}|g" manifest.json
 
