@@ -172,4 +172,4 @@ This project utilizes several open-source libraries, which are included in the r
 
 Copyright (C) 2026 Aron Sommer.
 
-This project is licensed under the GNU Affero General Public License v3.0. See the [LICENSE](LICENSE) file for full details.
+This project is licensed under the GNU Affero General Public License v3.0 or later. See the [LICENSE](LICENSE) file for full details.
