@@ -222,7 +222,8 @@ function explodeMultiGeometries(feature) {
     const typeCounts = {};
     const count = feature.geometry.geometries.length;
     return feature.geometry.geometries.flatMap((geom, index) => {
-      const type = geom.type;
+      const type = geom?.type;
+      if (typeof type !== "string") return [];
       typeCounts[type] = (typeCounts[type] || 0) + 1;
       const suffix = typeCounts[type] > 1 ? ` ${typeCounts[type]}` : "";
       const typeLabel = labelMap[type] || type;
