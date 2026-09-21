@@ -3362,6 +3362,7 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
 @font-face {
   font-family: "Material Symbols Outlined";
   font-style: normal;
+  font-display: block;
   /* Original full font: src: url(/fonts/MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].woff2) format("woff2"); */
   src: url(/fonts/MaterialSymbolsOutlined-subset.woff2) format("woff2");
 }
