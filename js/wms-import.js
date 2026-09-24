@@ -41,9 +41,9 @@ const WmsImport = (function () {
           />
           <p style="margin-top: 12px;">Examples:</p>
           <ul style="margin: 4px 0; padding-left: 20px; text-align: left;">
-            <li class="wms-example-url" data-url="https://wms.geo.admin.ch/" style="cursor: pointer;">https://wms.geo.admin.ch/</li>
             <li class="wms-example-url" data-url="https://ows.terrestris.de/osm/service?" style="cursor: pointer;">https://ows.terrestris.de/osm/service?</li>
             <li class="wms-example-url" data-url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?" style="cursor: pointer;">https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?</li>
+            <li class="wms-example-url" data-url="https://wms.geo.admin.ch/" style="cursor: pointer;">https://wms.geo.admin.ch/</li>
           </ul>
         </div>
       `,
@@ -105,7 +105,7 @@ const WmsImport = (function () {
       if (!layers || layers.length === 0) {
         Swal.fire({
           title: "No Layers Found",
-          text: "The WMS service did not return any queryable layers.",
+          text: "The WMS service did not return any named layers.",
         });
         return;
       }
@@ -186,29 +186,19 @@ const WmsImport = (function () {
    */
   function parseWmsLayers(xmlDoc) {
     const layers = [];
+    const seen = new Set();
 
-    // Try different namespace variations
-    let layerElements = xmlDoc.querySelectorAll("Layer[queryable='1']");
-
-    // If no queryable layers, get all named layers
-    if (layerElements.length === 0) {
-      layerElements = xmlDoc.querySelectorAll("Layer > Name");
-      layerElements = Array.from(layerElements).map((name) => name.parentElement);
+    // Only direct children are the layer's own metadata; a Layer without its own Name is a group
+    for (const layerEl of xmlDoc.querySelectorAll("Layer")) {
+      const name = layerEl.querySelector(":scope > Name")?.textContent.trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      layers.push({
+        name,
+        title: layerEl.querySelector(":scope > Title")?.textContent.trim() || name,
+        abstract: layerEl.querySelector(":scope > Abstract")?.textContent.trim() || "",
+      });
     }
-
-    layerElements.forEach((layerEl) => {
-      const nameEl = layerEl.querySelector("Name");
-      const titleEl = layerEl.querySelector("Title");
-      const abstractEl = layerEl.querySelector("Abstract");
-
-      if (nameEl && nameEl.textContent.trim()) {
-        layers.push({
-          name: nameEl.textContent.trim(),
-          title: titleEl ? titleEl.textContent.trim() : nameEl.textContent.trim(),
-          abstract: abstractEl ? abstractEl.textContent.trim() : "",
-        });
-      }
-    });
 
     return layers;
   }
