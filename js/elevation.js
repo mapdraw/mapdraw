@@ -443,6 +443,10 @@ function initElevationToggle() {
   updateElevationToggleIconColor();
 }
 
+function hasElevation(latlng) {
+  return typeof latlng.alt === "number" && isFinite(latlng.alt);
+}
+
 /**
  * Checks if a path already has elevation data.
  * @param {L.LatLng[]} latlngs - Path coordinates
@@ -451,9 +455,7 @@ function initElevationToggle() {
 function hasExistingElevationData(latlngs) {
   if (!latlngs || latlngs.length === 0) return false;
 
-  const elevationValues = latlngs
-    .filter((p) => typeof p.alt === "number" && isFinite(p.alt))
-    .map((p) => p.alt);
+  const elevationValues = latlngs.filter(hasElevation).map((p) => p.alt);
 
   // Require at least 80% of points to have elevation data
   // This allows for some missing values while ensuring sufficient coverage
@@ -467,6 +469,41 @@ function hasExistingElevationData(latlngs) {
   if (allZero) return false;
 
   return true;
+}
+
+/**
+ * Returns a copy of the path in which every point without an elevation gets one
+ * interpolated along the path distance between its nearest neighbours that have
+ * one, or the nearest known elevation at either end. The layer's points are untouched.
+ * @param {L.LatLng[]} latlngs - Path coordinates, at least one with an elevation
+ * @returns {L.LatLng[]} Copied coordinates, all with an elevation
+ */
+function fillMissingElevations(latlngs) {
+  const filled = latlngs.map((p) => L.latLng(p.lat, p.lng, p.alt));
+  const dist = [0];
+  for (let i = 1; i < filled.length; i++) {
+    dist.push(dist[i - 1] + filled[i - 1].distanceTo(filled[i]));
+  }
+  const setAlt = (from, to, altAt) => {
+    for (let i = from; i < to; i++) filled[i].alt = altAt(i);
+  };
+
+  let prev = -1; // index of the last point that has an elevation
+  filled.forEach((p, i) => {
+    if (!hasElevation(p)) return;
+    if (prev === -1) {
+      setAlt(0, i, () => p.alt);
+    } else {
+      const prevAlt = filled[prev].alt;
+      const span = dist[i] - dist[prev];
+      setAlt(prev + 1, i, (j) =>
+        span > 0 ? prevAlt + ((dist[j] - dist[prev]) / span) * (p.alt - prevAlt) : prevAlt,
+      );
+    }
+    prev = i;
+  });
+  if (prev !== -1) setAlt(prev + 1, filled.length, () => filled[prev].alt);
+  return filled;
 }
 
 /**
@@ -490,7 +527,7 @@ async function addElevationProfileForLayer(layer) {
     // Check if elevation data already exists in the file
     if (hasExistingElevationData(latlngs) && preferFileElevation) {
       console.log("Using existing elevation data from file (no API call needed).");
-      pointsWithElev = latlngs;
+      pointsWithElev = fillMissingElevations(latlngs);
       source = "File";
     } else {
       if (hasExistingElevationData(latlngs) && !preferFileElevation) {
