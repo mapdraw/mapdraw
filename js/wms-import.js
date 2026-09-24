@@ -100,6 +100,15 @@ const WmsImport = (function () {
     });
 
     try {
+      // Drop request-specific params and a bare "?" so the same server always stores as one URL
+      const url = new URL(wmsUrl);
+      for (const key of [...url.searchParams.keys()]) {
+        if (["service", "request", "version"].includes(key.toLowerCase())) {
+          url.searchParams.delete(key);
+        }
+      }
+      wmsUrl = url.toString().replace(/\?$/, "");
+
       const layers = await fetchWmsCapabilities(wmsUrl);
 
       if (!layers || layers.length === 0) {
