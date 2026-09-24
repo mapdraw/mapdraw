@@ -134,13 +134,17 @@ function initDrawTools() {
   // with, so every draw/edit tool can be toggled off the same way
   // rectangle-select already can. Always "click", never "touchstart" -
   // the _detectIOS patch above forces that regardless of device.
+  // Edit's own disable() keeps the moved geometry but fires neither draw:edited
+  // (Save) nor a revert (Cancel), so a second click on Edit ends through Save.
   [L.DrawToolbar.TYPE, L.EditToolbar.TYPE].forEach((toolbarType) => {
-    Object.values(drawControl._toolbars[toolbarType]._modes).forEach(({ handler, button }) => {
+    const toolbar = drawControl._toolbars[toolbarType];
+    const stop = toolbarType === L.EditToolbar.TYPE ? () => toolbar._save() : null;
+    Object.values(toolbar._modes).forEach(({ handler, button }) => {
       L.DomEvent.off(button, "click", handler.enable, handler);
       L.DomEvent.on(
         button,
         "click",
-        () => (handler.enabled() ? handler.disable() : handler.enable()),
+        () => (handler.enabled() ? (stop ? stop() : handler.disable()) : handler.enable()),
         handler,
       );
     });
