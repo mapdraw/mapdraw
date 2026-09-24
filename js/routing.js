@@ -751,15 +751,19 @@ function initRouting() {
     if (isLocateActive) {
       locateControl.stop();
     }
-    map
-      .locate()
-      .once("locationfound", (e) => onLocationAquired(e.latlng))
-      .once("locationerror", (e) => {
-        Swal.fire({
-          title: "Location Error",
-          text: e.message,
-        });
+    // Each handler removes the other so no stale listener reacts to the locate control's events
+    const onFound = (e) => {
+      map.off("locationerror", onError);
+      onLocationAquired(e.latlng);
+    };
+    const onError = (e) => {
+      map.off("locationfound", onFound);
+      Swal.fire({
+        title: "Location Error",
+        text: e.message,
       });
+    };
+    map.once("locationfound", onFound).once("locationerror", onError).locate();
   };
 
   ["start", "via", "end"].forEach((type) => {
