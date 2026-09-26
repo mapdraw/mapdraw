@@ -372,6 +372,14 @@ function initLayerControlPanel(baseMaps) {
     activateOverlay(name, layer);
   };
 
+  // Canonical programmatic basemap switch: clicks the panel radio so the layer swap,
+  // attribution, saved key, and overlay z-index follow the same path as a user click.
+  // Used by osmRequireContributingOnOsm() (osm.js).
+  window.app.setBasemap = (name) => {
+    const radio = customPanel.querySelector(`input[data-layer-name="${name}"]`);
+    if (radio && !radio.checked) radio.click();
+  };
+
   // Locked for the duration of any draw or Edit session (draw-tools.js) - path-extend.js's
   // endpoint dots and leaflet-draw's own vertex handles are added straight to the map/layer,
   // independent of this checkbox, so toggling "Drawn Items" off and back on mid-session would

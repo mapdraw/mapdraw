@@ -332,24 +332,35 @@ function osmAttachCategoryHandlers(grid, latlng) {
 
 const OSM_MIN_ZOOM = 19;
 
-async function osmRequireZoom(latlng, text) {
-  if (map.getZoom() >= OSM_MIN_ZOOM) return true;
+// Contributions edit OpenStreetMap, so they must be made while looking at it: these
+// basemaps render OSM data and reach zoom 19, showing what's already mapped.
+const OSM_BASEMAP_KEYS = ["OpenStreetMap", "OsmGrayscale", "CyclOSM"];
+
+// Requires contributing on OSM: an OSM basemap, at zoom 19 for accurate placement.
+// Otherwise offers the one-click fix (switch basemap and/or zoom in) and returns false.
+async function osmRequireContributingOnOsm(latlng, zoomText) {
+  const wrongBasemap = !OSM_BASEMAP_KEYS.includes(currentBasemapKey);
+  if (!wrongBasemap && map.getZoom() >= OSM_MIN_ZOOM) return true;
   const result = await Swal.fire({
     icon: "warning",
-    title: "Zoom In Required",
-    text,
+    title: wrongBasemap ? "OpenStreetMap Basemap Required" : "Zoom In Required",
+    text: wrongBasemap
+      ? "Contributions need an OpenStreetMap basemap, so you can see what's already mapped and avoid duplicates."
+      : zoomText,
     showCancelButton: true,
-    confirmButtonText: "Zoom In",
+    confirmButtonText: wrongBasemap ? "Switch to OpenStreetMap" : "Zoom In",
     cancelButtonText: "Cancel",
   });
   if (result.isConfirmed) {
+    // Switch first: it lifts the map's max zoom to 19, so the setView isn't clamped
+    if (wrongBasemap) window.app.setBasemap("OpenStreetMap");
     map.setView(latlng, OSM_MIN_ZOOM);
   }
   return false;
 }
 
 async function osmShowContributePicker(latlng) {
-  const ok = await osmRequireZoom(
+  const ok = await osmRequireContributingOnOsm(
     latlng,
     "Please zoom in closer before adding a point for better accuracy and to avoid duplicates.",
   );
@@ -409,7 +420,7 @@ async function osmSubmitNote(latlng, text) {
 }
 
 async function osmShowNotePicker(latlng) {
-  const ok = await osmRequireZoom(
+  const ok = await osmRequireContributingOnOsm(
     latlng,
     "Please zoom in closer before leaving a note to place it accurately.",
   );
