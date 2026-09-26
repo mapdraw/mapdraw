@@ -172,6 +172,22 @@ const LV95_BOUNDS = {
   maxNorthing: 1299941.79,
 };
 
+const GEOADMIN_COVERAGE_ERROR =
+  "GeoAdmin does not cover this entire track. Only tracks fully inside its coverage (Switzerland and nearby) are supported — use Google instead.";
+
+/**
+ * Total length in meters of a planar [easting, northing] coordinate array.
+ * @param {Array<[number, number]>} coords
+ * @returns {number}
+ */
+function planarLength(coords) {
+  let length = 0;
+  for (let i = 1; i < coords.length; i++) {
+    length += Math.hypot(coords[i][0] - coords[i - 1][0], coords[i][1] - coords[i - 1][1]);
+  }
+  return length;
+}
+
 /**
  * Checks if all LV95 coordinates are outside Switzerland bounds.
  * @param {Array<[number, number]>} lv95Coords - Array of [easting, northing] coordinates
@@ -202,11 +218,9 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
     // Step 1: Convert our WGS 84 path to LV95
     const lv95Coordinates = await convertPath(latlngs, "4326", "2056");
 
-    // Step 1.5: Check if all coordinates are outside Switzerland bounds
+    // Step 1.5: Reject paths completely outside Switzerland bounds without any API requests
     if (areAllCoordinatesOutsideSwitzerlandBounds(lv95Coordinates)) {
-      throw new Error(
-        "Path is completely outside Switzerland. The GeoAdmin elevation service only covers Switzerland.",
-      );
+      throw new Error(GEOADMIN_COVERAGE_ERROR);
     }
 
     // Step 2: Split coordinates into chunks if needed (to handle 5000 point limit)
@@ -219,6 +233,10 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
       );
       for (let i = 0; i < lv95Coordinates.length; i += MAX_GEOADMIN_REQUEST_POINT_LENGTH) {
         coordinateChunks.push(lv95Coordinates.slice(i, i + MAX_GEOADMIN_REQUEST_POINT_LENGTH));
+      }
+      // A 1-point chunk is not a valid LineString; merge it into the previous chunk
+      if (coordinateChunks[coordinateChunks.length - 1].length === 1) {
+        coordinateChunks[coordinateChunks.length - 2].push(...coordinateChunks.pop());
       }
     }
 
@@ -248,25 +266,29 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
     // Step 4: Process responses and collect their points, chunk order preserved
     const swissProfilePoints = [];
 
-    for (const profileResponse of allResponses) {
+    for (const [chunkIndex, profileResponse] of allResponses.entries()) {
       if (!profileResponse.ok) {
         throw new Error(
           `Profile API failed (${profileResponse.status}): ${await profileResponse.text()}`,
         );
       }
 
-      const chunkPoints = await profileResponse.json();
+      const chunkPoints = (await profileResponse.json()) ?? [];
 
-      if (!chunkPoints || chunkPoints.length === 0) {
-        throw new Error("Profile API returned no data for a chunk.");
+      // Only fully covered tracks are supported. The API silently omits points
+      // outside its coverage and measures dist along the requested line, so any
+      // large gap between chunk start (0) and end (planar length) is uncovered.
+      const chunkLength = planarLength(coordinateChunks[chunkIndex]);
+      const dists = [0, ...chunkPoints.map((p) => p.dist), chunkLength];
+      for (let i = 1; i < dists.length; i++) {
+        if (dists[i] - dists[i - 1] > 0.02 * chunkLength) {
+          throw new Error(GEOADMIN_COVERAGE_ERROR);
+        }
       }
 
       for (const point of chunkPoints) {
         swissProfilePoints.push(point);
       }
-    }
-    if (swissProfilePoints.length === 0) {
-      throw new Error("Profile API returned no data.");
     }
 
     // Filter out any points without valid, finite numeric coordinates
@@ -275,19 +297,16 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
     );
 
     if (validSwissPoints.length === 0) {
-      // This can happen if the *entire* line is outside Switzerland
-      throw new Error(
-        "Profile API returned data, but no valid coordinates (line may be outside data area).",
-      );
+      throw new Error(GEOADMIN_COVERAGE_ERROR);
     }
 
-    // Step 3: Convert the points back to WGS 84 for map display
+    // Step 5: Convert the points back to WGS 84 for map display
     // NOTE: We store LV95 easting in lng, northing in lat
     const profileLv95LatLngs = validSwissPoints.map((p) => L.latLng(p.northing, p.easting));
 
     const profileWgs84Coords = await convertPath(profileLv95LatLngs, "2056", "4326");
 
-    // Step 4: Merge the data into L.LatLng objects with altitude
+    // Step 6: Merge the data into L.LatLng objects with altitude
     const pointsWithElev = [];
     const debugDataForTable = [];
 
