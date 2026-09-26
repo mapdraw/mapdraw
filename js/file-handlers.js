@@ -1066,6 +1066,10 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
       `        <color>${kmlColor}</color>\n` +
       `        <width>5</width>\n` +
       `      </LineStyle>\n` +
+      // KML fills polygons opaque white by default; the app draws areas unfilled
+      (geometryType === "Polygon"
+        ? `      <PolyStyle>\n        <fill>0</fill>\n      </PolyStyle>\n`
+        : "") +
       `    </Style>\n`;
 
     return placemarkStart + styleTag + extendedDataTag + geometryTag + placemarkEnd;
