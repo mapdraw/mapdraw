@@ -506,6 +506,9 @@ function fillMissingElevations(latlngs) {
   return filled;
 }
 
+// Monotonic id of the latest addElevationProfileForLayer() call that owns the profile
+let elevationProfileRequestId = 0;
+
 /**
  * Adds elevation profile for a selected layer.
  * @param {L.Layer} layer - The layer to create an elevation profile for
@@ -517,6 +520,7 @@ async function addElevationProfileForLayer(layer) {
 
   const latlngs = layer.getLatLngs();
   if (latlngs?.length > 0) {
+    const requestId = ++elevationProfileRequestId;
     const realDistance = calculatePathDistance(layer);
     let pointsWithElev;
     let source;
@@ -537,8 +541,8 @@ async function addElevationProfileForLayer(layer) {
       }
       const provider = localStorage.getItem("elevationProvider") || "google";
       pointsWithElev = await fetchElevationForPath(latlngs);
-      // Drop stale response if the selection changed during the fetch
-      if (selectedElevationPath !== layer) return;
+      // Drop stale response if the selection changed or a newer call started during the fetch
+      if (selectedElevationPath !== layer || requestId !== elevationProfileRequestId) return;
       source = provider === "geoadmin" ? "GeoAdmin" : "Google";
     }
 
