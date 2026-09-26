@@ -261,6 +261,9 @@ function initLayerControlPanel(baseMaps) {
         }
       }
     });
+
+    // Re-raise the selected path and its outline, which the group restacking just buried
+    attachSelectionOutlines();
   }
 
   // Function to ensure POI layer is visible in layer control
@@ -321,13 +324,10 @@ function initLayerControlPanel(baseMaps) {
       itemIsInGroup = true;
     }
 
-    if (itemIsInGroup) {
-      if (isAdding) {
-        if (!globallySelectedItem.internal?.isManuallyHidden) attachSelectionOutlines();
-      } else {
-        if (selectedPathOutline) map.removeLayer(selectedPathOutline);
-        if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);
-      }
+    // On add, callers run reapplyOverlayZIndex() afterwards, which re-attaches the outlines
+    if (itemIsInGroup && !isAdding) {
+      if (selectedPathOutline) map.removeLayer(selectedPathOutline);
+      if (selectedMarkerOutline) map.removeLayer(selectedMarkerOutline);
     }
 
     window.app.refreshRectangleSelectionGroupMembers(e.layer);
