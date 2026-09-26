@@ -1,4 +1,5 @@
 .DS_Store
 Thumbs.db
 js/secrets.js
-.claude/
+.claude/settings.local.json
+.claude/worktrees/

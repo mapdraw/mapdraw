@@ -1,0 +1,11 @@
+#!/bin/sh
+# Block Claude Code (CLAUDECODE=1) from changing or deleting the main branch.
+[ -n "$CLAUDECODE" ] && [ "$1" = prepared ] || exit 0
+zero=0000000000000000000000000000000000000000
+while read -r old new ref; do
+  [ "$ref" = refs/heads/main ] || continue
+  # No-op rewrites (e.g. git stash) keep main as is; deletes arrive as zero -> zero.
+  [ "$old" = "$new" ] && [ "$new" != "$zero" ] && continue
+  echo "Blocked: Claude may not change main." >&2
+  exit 1
+done

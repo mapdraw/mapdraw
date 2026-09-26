@@ -1,0 +1,6 @@
+#!/bin/sh
+# Block Claude Code (CLAUDECODE=1) from pushing.
+if [ -n "$CLAUDECODE" ]; then
+  echo "Blocked: Claude may not push." >&2
+  exit 1
+fi
