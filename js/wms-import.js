@@ -101,9 +101,24 @@ const WmsImport = (function () {
 
     try {
       // Drop request-specific params and a bare "?" so the same server always stores as one URL
+      // and a pasted GetMap URL doesn't duplicate Leaflet's own tile params
+      const requestParams = [
+        "service",
+        "request",
+        "version",
+        "layers",
+        "styles",
+        "bbox",
+        "width",
+        "height",
+        "format",
+        "crs",
+        "srs",
+        "transparent",
+      ];
       const url = new URL(wmsUrl);
       for (const key of [...url.searchParams.keys()]) {
-        if (["service", "request", "version"].includes(key.toLowerCase())) {
+        if (requestParams.includes(key.toLowerCase())) {
           url.searchParams.delete(key);
         }
       }
