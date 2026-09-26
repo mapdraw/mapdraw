@@ -555,6 +555,8 @@ async function setupAutocomplete(inputEl, suggestionsEl, callback) {
     const item = document.createElement("div");
     item.className = "autocomplete-suggestion-item";
     item.textContent = label;
+    // Keep focus in the input so its blur timeout can't hide the list mid-click
+    item.addEventListener("mousedown", (e) => e.preventDefault());
     item.addEventListener("click", (e) => {
       L.DomEvent.stop(e);
       inputEl.value = label;
