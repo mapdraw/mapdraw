@@ -1007,6 +1007,16 @@ function exportGpx({ layers = null } = {}) {
 // Specification: https://developers.google.com/kml/documentation/kmlreference
 
 /**
+ * Formats a latlng as a KML coordinate tuple, omitting the altitude
+ * when there is none so re-import doesn't read it as a real 0 m.
+ * @param {L.LatLng} p - The point to format
+ * @returns {string} "lng,lat,alt" or "lng,lat"
+ */
+function toKmlCoord(p) {
+  return typeof p.alt === "number" ? `${p.lng},${p.lat},${p.alt}` : `${p.lng},${p.lat}`;
+}
+
+/**
  * Converts a Leaflet layer to a KML placemark string.
  * @param {L.Layer} layer - The layer to convert
  * @param {string} defaultName - A fallback name
@@ -1050,9 +1060,7 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
     } else {
       latlngs = flattenRingPoints(layer.getLatLngs());
     }
-    const coords = latlngs
-      .map((p) => `${p.lng},${p.lat},${typeof p.alt === "number" ? p.alt : 0}`)
-      .join(" ");
+    const coords = latlngs.map(toKmlCoord).join(" ");
 
     const geometryType = layer instanceof L.Polygon ? "Polygon" : "LineString";
     const geometryTag =
@@ -1077,8 +1085,7 @@ function convertLayerToKmlPlacemark(layer, defaultName, defaultDescription = "")
 
   if (layer instanceof L.Marker) {
     const latlng = layer.getLatLng();
-    const alt = typeof latlng.alt === "number" ? latlng.alt : 0;
-    const pointTag = `    <Point><coordinates>${latlng.lng},${latlng.lat},${alt}</coordinates></Point>\n`;
+    const pointTag = `    <Point><coordinates>${toKmlCoord(latlng)}</coordinates></Point>\n`;
 
     const styleTag =
       `    <Style>\n` +
