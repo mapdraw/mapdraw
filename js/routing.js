@@ -954,7 +954,9 @@ function initRouting() {
         recalculateRoute();
         shouldFitBounds = false;
       } else {
-        createIntermediateViaMarker(endMarker.getLatLng());
+        // The converted end is always the newest via, so sort it after the others
+        // instead of measuring it on the route polyline, which may not yet include it.
+        createIntermediateViaMarker(endMarker.getLatLng()).routePosition = Infinity;
         endInput.value = locStr;
         endInput.style.color = "var(--color-black)";
         endMarker.setLatLng(latlng);
