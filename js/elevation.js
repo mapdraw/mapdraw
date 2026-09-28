@@ -85,7 +85,7 @@ const MAX_ELEVATION_SAMPLES = 5000; // Caps API cost and request size
 
 /**
  * Returns the path with points inserted so that no segment is longer than spacing.
- * Original points are kept.
+ * Original points are kept; inserted ones get an interpolated elevation where possible.
  * @param {L.LatLng[]} latlngs - Path coordinates
  * @param {number} spacing - Maximum segment length in meters
  * @returns {L.LatLng[]} Densified coordinates
@@ -97,8 +97,7 @@ function densifyPath(latlngs, spacing) {
     const b = latlngs[i];
     const parts = Math.ceil(a.distanceTo(b) / spacing);
     for (let j = 1; j < parts; j++) {
-      const t = j / parts;
-      out.push(L.latLng(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t));
+      out.push(interpolateLatLng(a, b, j / parts));
     }
     out.push(b);
   }
@@ -106,12 +105,13 @@ function densifyPath(latlngs, spacing) {
 }
 
 /**
- * Prepares a path for an elevation API request. A path denser than the sample
- * spacing (a GPS recording) is resampled to evenly spaced points, which drops the
- * jittery vertices. A sparser path (drawn or routed) keeps its vertices, since they
- * sit on the terrain features, and only gets long segments filled in.
+ * Prepares a path for the elevation profile, whether its heights come from the
+ * file or an API. A path denser than the sample spacing (a GPS recording) is
+ * resampled to evenly spaced points, which drops the jittery vertices. A sparser
+ * path (drawn or routed) keeps its vertices, since they sit on the terrain
+ * features, and only gets long segments filled in.
  * @param {L.LatLng[]} latlngs - Path coordinates
- * @returns {L.LatLng[]} Coordinates to request
+ * @returns {L.LatLng[]} Profile coordinates
  */
 function samplePathForElevation(latlngs) {
   if (latlngs.length < 2) return latlngs;
@@ -513,7 +513,7 @@ async function addElevationProfileForLayer(layer) {
     // Check if elevation data already exists in the file
     if (hasExistingElevationData(latlngs) && preferFileElevation) {
       console.log("Using existing elevation data from file (no API call needed).");
-      pointsWithElev = fillMissingElevations(latlngs);
+      pointsWithElev = samplePathForElevation(fillMissingElevations(latlngs));
       source = "File";
     } else {
       if (hasExistingElevationData(latlngs) && !preferFileElevation) {
@@ -568,13 +568,14 @@ async function removeElevationFromPath() {
 
 /**
  * Adds API elevation data to the selected path's coordinates.
- * Uses distance-based interpolation to map API elevations to original path points.
+ * Locates each API point on the path and interpolates between them, so the
+ * profile drawn from the file afterwards equals the API profile.
  */
 async function addElevationToPath() {
   if (!selectedElevationPath) return;
 
   const latlngs = selectedElevationPath.getLatLngs();
-  if (!latlngs || latlngs.length === 0) return;
+  if (!latlngs || latlngs.length < 2) return;
 
   // Get cached API data
   const cacheKey = elevationCacheKey(latlngs);
@@ -584,43 +585,46 @@ async function addElevationToPath() {
     return;
   }
 
-  // Build distance→elevation pairs from API data
-  const apiDistElev = [{ distance: 0, elevation: apiData[0].alt || 0 }];
-  let cumDist = 0;
-  for (let i = 1; i < apiData.length; i++) {
-    cumDist += apiData[i - 1].distanceTo(apiData[i]);
-    apiDistElev.push({ distance: cumDist, elevation: apiData[i].alt || 0 });
-  }
-  const apiTotal = apiDistElev[apiDistElev.length - 1].distance;
-
-  // Build cumulative distances for original path
   const origDistances = [0];
   for (let i = 1; i < latlngs.length; i++) {
     origDistances.push(origDistances[i - 1] + latlngs[i - 1].distanceTo(latlngs[i]));
   }
-  const origTotal = origDistances[origDistances.length - 1];
 
-  // Interpolate elevation for each original point
+  // Path distance of each API point: they were sampled from this path in order,
+  // so walking forward to the first segment the point lies on finds each one.
+  const cosLat = Math.cos((latlngs[0].lat * Math.PI) / 180);
+  const METERS_PER_DEGREE = 111320;
+  const apiDistances = [];
+  let seg = 0;
+  for (const p of apiData) {
+    let t;
+    for (;;) {
+      const a = latlngs[seg];
+      const b = latlngs[seg + 1];
+      const dx = (b.lng - a.lng) * cosLat;
+      const dy = b.lat - a.lat;
+      const px = (p.lng - a.lng) * cosLat;
+      const py = p.lat - a.lat;
+      const len2 = dx * dx + dy * dy;
+      t = len2 > 0 ? Math.min(Math.max((px * dx + py * dy) / len2, 0), 1) : 0;
+      const offset = Math.hypot(px - t * dx, py - t * dy) * METERS_PER_DEGREE;
+      if (offset < 0.5 || seg >= latlngs.length - 2) break;
+      seg++;
+    }
+    apiDistances.push(origDistances[seg] + t * (origDistances[seg + 1] - origDistances[seg]));
+  }
+
+  // Interpolate elevation for each original point between its neighbouring API points
+  let k = 0;
   for (let i = 0; i < latlngs.length; i++) {
-    const targetDist =
-      apiTotal > 0 && origTotal > 0 ? (origDistances[i] / origTotal) * apiTotal : origDistances[i];
-
-    // Find surrounding API points for interpolation
-    let j = 0;
-    while (j < apiDistElev.length - 1 && apiDistElev[j + 1].distance < targetDist) {
-      j++;
-    }
-
-    if (j >= apiDistElev.length - 1) {
-      latlngs[i].alt = apiDistElev[apiDistElev.length - 1].elevation;
-    } else {
-      const d1 = apiDistElev[j].distance;
-      const d2 = apiDistElev[j + 1].distance;
-      const e1 = apiDistElev[j].elevation;
-      const e2 = apiDistElev[j + 1].elevation;
-      const t = d2 - d1 > 0 ? (targetDist - d1) / (d2 - d1) : 0;
-      latlngs[i].alt = e1 + t * (e2 - e1);
-    }
+    const d = origDistances[i];
+    while (k < apiDistances.length - 2 && apiDistances[k + 1] < d) k++;
+    const next = Math.min(k + 1, apiData.length - 1);
+    const span = apiDistances[next] - apiDistances[k];
+    const t = span > 0 ? Math.min(Math.max((d - apiDistances[k]) / span, 0), 1) : 0;
+    const e1 = apiData[k].alt || 0;
+    const e2 = apiData[next].alt || 0;
+    latlngs[i].alt = e1 + t * (e2 - e1);
   }
   scheduleDataEditorRefresh();
 

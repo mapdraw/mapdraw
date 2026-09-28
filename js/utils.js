@@ -438,7 +438,8 @@ function formatArea(sqMeters, includeSecondary = false) {
 
 /**
  * Resamples a path to have exactly the specified number of evenly-spaced points
- * by interpolating along the original path geometry.
+ * by interpolating along the original path geometry. Elevation is interpolated
+ * where both neighbouring points have one.
  * @param {Array<L.LatLng>} latlngs - Original array of points
  * @param {number} maxPoints - Target number of points for the resampled path
  * @returns {Array<L.LatLng>} Resampled array of points
@@ -459,7 +460,7 @@ function resamplePath(latlngs, maxPoints) {
     const firstPoint = latlngs[0];
     const newPoints = [];
     for (let i = 0; i < maxPoints; i++) {
-      newPoints.push(L.latLng(firstPoint.lat, firstPoint.lng));
+      newPoints.push(L.latLng(firstPoint.lat, firstPoint.lng, firstPoint.alt));
     }
     return newPoints;
   }
@@ -474,7 +475,7 @@ function resamplePath(latlngs, maxPoints) {
 
     if (i === maxPoints - 1) {
       const lastOriginalPoint = latlngs[latlngs.length - 1];
-      newPoints.push(L.latLng(lastOriginalPoint.lat, lastOriginalPoint.lng));
+      newPoints.push(L.latLng(lastOriginalPoint.lat, lastOriginalPoint.lng, lastOriginalPoint.alt));
       continue;
     }
 
@@ -494,13 +495,23 @@ function resamplePath(latlngs, maxPoints) {
 
     const fraction = distanceOfSegment === 0 ? 0 : distanceFromPrevVertex / distanceOfSegment;
 
-    const newLat = prevVertex.lat + (nextVertex.lat - prevVertex.lat) * fraction;
-    const newLng = prevVertex.lng + (nextVertex.lng - prevVertex.lng) * fraction;
-
-    newPoints.push(L.latLng(newLat, newLng));
+    newPoints.push(interpolateLatLng(prevVertex, nextVertex, fraction));
   }
 
   return newPoints;
+}
+
+/**
+ * Point at fraction t between a and b, with elevation if both have one.
+ * @param {L.LatLng} a
+ * @param {L.LatLng} b
+ * @param {number} t - 0..1
+ * @returns {L.LatLng}
+ */
+function interpolateLatLng(a, b, t) {
+  const alt =
+    Number.isFinite(a.alt) && Number.isFinite(b.alt) ? a.alt + (b.alt - a.alt) * t : undefined;
+  return L.latLng(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t, alt);
 }
 
 /**
