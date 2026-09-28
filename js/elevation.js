@@ -75,9 +75,31 @@ function convertPath(latlngs, inSr, outSr) {
   });
 }
 
+// Spacing of the points sent to elevation APIs. Sampling a dense GPS track at every
+// point reads the terrain beside the path wherever GPS drifts, inflating ascent,
+// descent and hiking time. map.geo.admin.ch sends every point; passing the unsampled
+// latlngs to fetchElevationForPathGeoAdminAPI reproduces its numbers.
+const ELEVATION_SAMPLE_SPACING = 25; // meters
+const MIN_ELEVATION_SAMPLES = 200;
+const MAX_ELEVATION_SAMPLES = 5000; // Caps API cost and request size
+
+/**
+ * Resamples a path to evenly spaced points for an elevation API request.
+ * @param {L.LatLng[]} latlngs - Path coordinates
+ * @returns {L.LatLng[]} Resampled coordinates
+ */
+function samplePathForElevation(latlngs) {
+  let length = 0;
+  for (let i = 1; i < latlngs.length; i++) length += latlngs[i - 1].distanceTo(latlngs[i]);
+  const count = Math.ceil(length / ELEVATION_SAMPLE_SPACING) + 1;
+  return resamplePath(
+    latlngs,
+    Math.min(Math.max(count, MIN_ELEVATION_SAMPLES), MAX_ELEVATION_SAMPLES),
+  );
+}
+
 /**
  * Fetches elevation data from Google Maps Elevation API.
- * Implements adaptive point sampling based on path complexity.
  * @param {L.LatLng[]} latlngs - Path coordinates
  * @returns {Promise<L.LatLng[]|null>} Array of coordinates with elevation or null on error
  */
@@ -100,34 +122,8 @@ async function fetchElevationForPathGoogle(latlngs) {
   const BATCH_SIZE = 512;
   let allResults = [];
 
-  // Define thresholds for adaptive path sampling
-  const SIMPLE_PATH_THRESHOLD = 200; // Simple paths (≤200 points) will be upsampled to 200
-  const MAX_POINTS_TO_REQUEST = 5000; // Absolute maximum to prevent errors and high costs
-
-  const actualPoints = latlngs.length;
-  let pointsToSend;
-
-  if (actualPoints > MAX_POINTS_TO_REQUEST) {
-    // CASE 1: Path is TOO complex - downsample to absolute cap
-    console.log(
-      `[Elevation] Path is too complex (${actualPoints} points). Downsampling to ${MAX_POINTS_TO_REQUEST} points.`,
-    );
-    pointsToSend = resamplePath(latlngs, MAX_POINTS_TO_REQUEST);
-  } else if (actualPoints > SIMPLE_PATH_THRESHOLD) {
-    // CASE 2: Path is "complex" - use exact points
-    console.log(
-      `[Elevation] Path is "complex" (${actualPoints} points). Sending all original points.`,
-    );
-    pointsToSend = latlngs;
-  } else {
-    // CASE 3: Path is "simple" - upsample to 200 points
-    console.log(
-      `[Elevation] Path is "simple" (${actualPoints} points). Upsampling to ${SIMPLE_PATH_THRESHOLD} points.`,
-    );
-    pointsToSend = resamplePath(latlngs, SIMPLE_PATH_THRESHOLD);
-  }
-  for (let i = 0; i < pointsToSend.length; i += BATCH_SIZE) {
-    const batch = pointsToSend.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < latlngs.length; i += BATCH_SIZE) {
+    const batch = latlngs.slice(i, i + BATCH_SIZE);
     try {
       const response = await elevator.getElevationForLocations({ locations: batch });
       if (response && response.results) {
@@ -378,11 +374,12 @@ async function fetchElevationForPath(latlngs) {
   // Get the selected elevation provider from localStorage (default to "google")
   const elevationProvider = localStorage.getItem("elevationProvider") || "google";
 
+  const samples = samplePathForElevation(latlngs);
   let pointsWithElev;
   if (elevationProvider === "geoadmin") {
-    pointsWithElev = await fetchElevationForPathGeoAdminAPI(latlngs);
+    pointsWithElev = await fetchElevationForPathGeoAdminAPI(samples);
   } else {
-    pointsWithElev = await fetchElevationForPathGoogle(latlngs);
+    pointsWithElev = await fetchElevationForPathGoogle(samples);
   }
 
   if (pointsWithElev) {
