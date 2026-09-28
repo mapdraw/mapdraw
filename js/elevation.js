@@ -232,19 +232,16 @@ function areAllCoordinatesOutsideSwitzerlandBounds(lv95Coords) {
 }
 
 /**
- * Fetches elevation data from the official GeoAdmin API.
- * This mimics the logic from 'profile_helpers.py'.
+ * Fetches elevation data from the official GeoAdmin API, chunking requests like map.geo.admin.ch does.
  *
  * @see https://api3.geo.admin.ch/services/sdiservices.html#profile
  */
 async function fetchElevationForPathGeoAdminAPI(latlngs) {
-  const ENABLE_GEOADMIN_DEBUG = false; // Set to true for debug output in console
-
   console.log("Fetching elevation data from: GeoAdmin (geo.admin.ch)");
 
   try {
     // Step 1: Convert our WGS 84 path to LV95
-    const lv95Coordinates = await convertPath(latlngs, "4326", "2056");
+    const lv95Coordinates = convertPath(latlngs, "4326", "2056");
 
     // Step 1.5: Reject paths completely outside Switzerland bounds without any API requests
     if (areAllCoordinatesOutsideSwitzerlandBounds(lv95Coordinates)) {
@@ -332,53 +329,15 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
     // NOTE: We store LV95 easting in lng, northing in lat
     const profileLv95LatLngs = validSwissPoints.map((p) => L.latLng(p.northing, p.easting));
 
-    const profileWgs84Coords = await convertPath(profileLv95LatLngs, "2056", "4326");
+    const profileWgs84Coords = convertPath(profileLv95LatLngs, "2056", "4326");
 
     // Step 6: Merge the data into L.LatLng objects with altitude
-    const pointsWithElev = [];
-    const debugDataForTable = [];
-
-    for (let i = 0; i < validSwissPoints.length; i++) {
-      const swissPoint = validSwissPoints[i];
-      const wgs84Coord = profileWgs84Coords[i]; // [lng, lat]
-
+    return validSwissPoints.map((swissPoint, i) => {
+      const [lng, lat] = profileWgs84Coords[i];
       // Get altitude, default to 0 if 'COMB' (combined) model isn't present
       const altitude = swissPoint.alts && isFinite(swissPoint.alts.COMB) ? swissPoint.alts.COMB : 0;
-
-      pointsWithElev.push(L.latLng(wgs84Coord[1], wgs84Coord[0], altitude));
-
-      if (ENABLE_GEOADMIN_DEBUG) {
-        debugDataForTable.push({
-          Altitude: altitude,
-          Easting: swissPoint.easting,
-          Northing: swissPoint.northing,
-          Longitude: wgs84Coord[0],
-          Latitude: wgs84Coord[1],
-        });
-      }
-    }
-
-    if (ENABLE_GEOADMIN_DEBUG) {
-      console.log("--- GeoAdmin Debug Data (View Only) ---");
-      console.table(debugDataForTable);
-
-      let csvContent = "Altitude;Easting;Northing;Longitude;Latitude\n";
-      debugDataForTable.forEach((row) => {
-        csvContent += `${row.Altitude};${row.Easting};${row.Northing};${row.Longitude};${row.Latitude}\n`;
-      });
-
-      window.copyGeoAdminCSV = () => {
-        copy(csvContent);
-        console.log("CSV data copied to clipboard!");
-      };
-
-      console.log(
-        "%cTo copy data as CSV, type copyGeoAdminCSV() in the console and press Enter.",
-        "font-size: var(--font-size-14);",
-      );
-    }
-
-    return pointsWithElev;
+      return L.latLng(lat, lng, altitude);
+    });
   } catch (error) {
     console.error("Error fetching elevation from GeoAdmin API:", error);
     Swal.fire({
@@ -400,7 +359,7 @@ async function fetchElevationForPath(latlngs) {
 
   if (elevationCache.has(cacheKey)) {
     console.log("Returning cached elevation data.");
-    return Promise.resolve(elevationCache.get(cacheKey));
+    return elevationCache.get(cacheKey);
   }
 
   // Get the selected elevation provider from localStorage (default to "google")
