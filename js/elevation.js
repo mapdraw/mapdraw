@@ -80,22 +80,54 @@ function convertPath(latlngs, inSr, outSr) {
 // descent and hiking time. map.geo.admin.ch sends every point; passing the unsampled
 // latlngs to fetchElevationForPathGeoAdminAPI reproduces its numbers.
 const ELEVATION_SAMPLE_SPACING = 25; // meters
-const MIN_ELEVATION_SAMPLES = 200;
+const MIN_ELEVATION_SAMPLES = 200; // Short paths get about this many points
 const MAX_ELEVATION_SAMPLES = 5000; // Caps API cost and request size
 
 /**
- * Resamples a path to evenly spaced points for an elevation API request.
+ * Returns the path with points inserted so that no segment is longer than spacing.
+ * Original points are kept.
  * @param {L.LatLng[]} latlngs - Path coordinates
- * @returns {L.LatLng[]} Resampled coordinates
+ * @param {number} spacing - Maximum segment length in meters
+ * @returns {L.LatLng[]} Densified coordinates
+ */
+function densifyPath(latlngs, spacing) {
+  const out = [latlngs[0]];
+  for (let i = 1; i < latlngs.length; i++) {
+    const a = latlngs[i - 1];
+    const b = latlngs[i];
+    const parts = Math.ceil(a.distanceTo(b) / spacing);
+    for (let j = 1; j < parts; j++) {
+      const t = j / parts;
+      out.push(L.latLng(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t));
+    }
+    out.push(b);
+  }
+  return out;
+}
+
+/**
+ * Prepares a path for an elevation API request. A path denser than the sample
+ * spacing (a GPS recording) is resampled to evenly spaced points, which drops the
+ * jittery vertices. A sparser path (drawn or routed) keeps its vertices, since they
+ * sit on the terrain features, and only gets long segments filled in.
+ * @param {L.LatLng[]} latlngs - Path coordinates
+ * @returns {L.LatLng[]} Coordinates to request
  */
 function samplePathForElevation(latlngs) {
+  if (latlngs.length < 2) return latlngs;
   let length = 0;
   for (let i = 1; i < latlngs.length; i++) length += latlngs[i - 1].distanceTo(latlngs[i]);
-  const count = Math.ceil(length / ELEVATION_SAMPLE_SPACING) + 1;
-  return resamplePath(
-    latlngs,
-    Math.min(Math.max(count, MIN_ELEVATION_SAMPLES), MAX_ELEVATION_SAMPLES),
+  const wanted = Math.ceil(length / ELEVATION_SAMPLE_SPACING) + 1;
+  if (latlngs.length > wanted) {
+    return resamplePath(latlngs, Math.min(wanted, MAX_ELEVATION_SAMPLES));
+  }
+  const room = MAX_ELEVATION_SAMPLES - latlngs.length;
+  if (room <= 0) return latlngs;
+  const spacing = Math.max(
+    Math.min(ELEVATION_SAMPLE_SPACING, length / (MIN_ELEVATION_SAMPLES - 1)),
+    length / room,
   );
+  return densifyPath(latlngs, spacing);
 }
 
 /**
