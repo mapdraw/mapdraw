@@ -77,6 +77,7 @@ const BASEMAP_CONFIG = [
     key: "Empty",
     label: "No Base Map",
     icon: '<span class="material-symbols layer-icon">cancel</span>',
+    tileOptions: { maxZoom: 19 },
     attribution: null,
   },
 ];

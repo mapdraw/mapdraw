@@ -47,7 +47,7 @@ function showAttributionToast() {
 async function initMapView() {
   const baseMaps = Object.fromEntries(
     BASEMAP_CONFIG.map((b) => {
-      if (!b.url) return [b.key, L.layerGroup()];
+      if (!b.url) return [b.key, L.layerGroup([], b.tileOptions)];
       const tileOptions = { ...b.tileOptions, noWrap: true, bounds: WORLD_BOUNDS };
       if (b.wms) return [b.key, L.tileLayer.wms(b.url, tileOptions)];
       return [b.key, L.tileLayer(b.url, tileOptions)];
@@ -156,7 +156,10 @@ async function initMapView() {
 
   window.addEventListener("hashchange", handleHashChange, false);
 
-  baseMaps[getSavedBasemapKey()].addTo(map);
+  // The basemap alone sets the max zoom, so overlays with a higher one can't zoom
+  // the map past its tiles (and marker clusters need a finite one)
+  const basemap = baseMaps[getSavedBasemapKey()].addTo(map);
+  map.setMaxZoom(basemap.options.maxZoom);
 
   drawnItems = new L.FeatureGroup().addTo(map);
   importedItems = new L.FeatureGroup().addTo(map);

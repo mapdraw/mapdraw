@@ -406,6 +406,7 @@ function initLayerControlPanel(baseMaps) {
         for (const name in baseMaps) {
           if (L.Util.stamp(baseMaps[name]) === selectedLayerId) {
             map.addLayer(baseMaps[name]);
+            map.setMaxZoom(baseMaps[name].options.maxZoom);
             setBasemapAttribution(name);
             localStorage.setItem(BASEMAP_STORAGE_KEY, name);
           }
