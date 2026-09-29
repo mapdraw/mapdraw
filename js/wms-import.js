@@ -16,6 +16,7 @@ const WmsImport = (function () {
         layers: layerData.wmsLayerName,
         format: "image/png",
         transparent: true,
+        maxZoom: 19, // Leaflet defaults to 18, which hides the layer at zoom 19
         pane: "customLayersPane",
         tileSize: 512,
         gutter: 64, // Add 64px overlap on each side to prevent icon cutoff
