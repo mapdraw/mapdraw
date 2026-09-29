@@ -77,8 +77,8 @@ function convertPath(latlngs, inSr, outSr) {
 
 // Spacing of the points sent to elevation APIs. Sampling a dense GPS track at every
 // point reads the terrain beside the path wherever GPS drifts, inflating ascent,
-// descent and hiking time. map.geo.admin.ch sends every point; passing the unsampled
-// latlngs to fetchElevationForPathGeoAdminAPI reproduces its numbers.
+// descent and hiking time. map.geo.admin.ch sends every point; for tracks of 200+ points,
+// passing the unsampled latlngs to fetchElevationForPathGeoAdminAPI reproduces its numbers.
 const ELEVATION_SAMPLE_SPACING = 25; // meters
 const MIN_ELEVATION_SAMPLES = 200; // Short paths get about this many points
 const MAX_ELEVATION_SAMPLES = 5000; // Caps API cost and request size
@@ -276,6 +276,9 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
       const profileParams = new URLSearchParams();
       profileParams.append("geom", lv95GeoJson);
       profileParams.append("sr", "2056"); // We are providing LV95 coordinates
+      // Below 200 points the API otherwise adds its own between ours, off the path's
+      // curves, which addElevationToPath() can't locate on the path
+      profileParams.append("only_requested_points", "true");
 
       return fetch(profileApiUrl, {
         method: "POST",
@@ -303,11 +306,14 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
       // Only fully covered tracks are supported. The API silently omits points
       // outside its coverage and measures dist along the requested line, so any
       // large gap between chunk start (0) and end (planar length) is uncovered.
-      const chunkLength = planarLength(coordinateChunks[chunkIndex]);
-      const dists = [0, ...chunkPoints.map((p) => p.dist), chunkLength];
-      for (let i = 1; i < dists.length; i++) {
-        if (dists[i] - dists[i - 1] > 0.02 * chunkLength) {
-          throw new Error(GEOADMIN_COVERAGE_ERROR);
+      // With nothing omitted, a large gap is just a long segment of the request.
+      if (chunkPoints.length < coordinateChunks[chunkIndex].length) {
+        const chunkLength = planarLength(coordinateChunks[chunkIndex]);
+        const dists = [0, ...chunkPoints.map((p) => p.dist), chunkLength];
+        for (let i = 1; i < dists.length; i++) {
+          if (dists[i] - dists[i - 1] > 0.02 * chunkLength) {
+            throw new Error(GEOADMIN_COVERAGE_ERROR);
+          }
         }
       }
 
