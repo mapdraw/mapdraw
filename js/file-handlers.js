@@ -155,22 +155,21 @@ function resolveExportFilePrefix(singleNamedItem, hasSelection) {
 }
 
 /**
- * Supported geometry types for import.
- * Multi-geometry types (MultiLineString, MultiPolygon, etc.), GeometryCollections, and
- * polygons with holes are automatically exploded into separate simple features for
- * editing compatibility.
+ * Geometry types supported for import, with how deep their coordinates nest above a
+ * [lng, lat(, alt)] position. Multi-geometry types (MultiLineString, MultiPolygon, etc.),
+ * GeometryCollections, and polygons with holes are exploded into these simple features.
  */
-const SUPPORTED_IMPORT_GEOM_TYPES = ["Point", "LineString", "Polygon"];
+const IMPORT_GEOM_COORD_DEPTH = { Point: 0, LineString: 1, Polygon: 2 };
 
 /**
- * True when coordinates nest down to [lng, lat(, alt)] positions with finite numbers.
- * Leaflet's LatLng constructor throws on non-numeric values, which would abort an
- * entire import over one bad feature - such features are dropped instead.
+ * True when coordinates nest exactly `depth` levels down to positions with finite numbers.
+ * Leaflet's LatLng constructor throws on non-numeric values and on a wrong nesting depth,
+ * which would abort an entire import over one bad feature - such features are dropped instead.
  */
-function hasFiniteCoords(coords) {
+function hasFiniteCoords(coords, depth) {
   if (!Array.isArray(coords)) return false;
-  return Array.isArray(coords[0])
-    ? coords.every(hasFiniteCoords)
+  return depth
+    ? coords.length > 0 && coords.every((c) => hasFiniteCoords(c, depth - 1))
     : coords.length >= 2 && Number.isFinite(coords[0]) && Number.isFinite(coords[1]);
 }
 
@@ -198,8 +197,8 @@ function slicePerPartArrays(properties, index, count) {
  * Explodes multi-geometries and GeometryCollections into separate features.
  * Converts MultiLineString, MultiPolygon, MultiPoint, and GeometryCollection
  * into arrays of simple features that can be edited individually; a Polygon
- * with holes is split into one area per ring. Malformed features (non-finite
- * or missing coordinates) are dropped so one bad record can't abort an import.
+ * with holes is split into one area per ring. Malformed features (non-finite,
+ * missing or wrongly nested coordinates) are dropped so one bad record can't abort an import.
  * @param {object} feature - GeoJSON feature that may contain multi-geometry
  * @returns {Array} Array of features with simple single-ring geometries only
  */
@@ -295,12 +294,12 @@ function explodeMultiGeometries(feature) {
     );
   }
 
-  // Simple geometry - return as-is if supported and its coordinates can't crash Leaflet
-  if (SUPPORTED_IMPORT_GEOM_TYPES.includes(geomType)) {
-    return hasFiniteCoords(feature.geometry.coordinates) ? [feature] : [];
-  }
-
-  return []; // Unsupported type
+  // Simple geometry - return as-is if supported and its coordinates can't crash Leaflet.
+  // The number check also rejects types named like inherited properties ("toString").
+  const depth = IMPORT_GEOM_COORD_DEPTH[geomType];
+  return typeof depth === "number" && hasFiniteCoords(feature.geometry.coordinates, depth)
+    ? [feature]
+    : [];
 }
 
 // 2. IMPORT (FILE-BASED)
