@@ -101,22 +101,31 @@ const XyzImport = (function () {
         const url = document.getElementById("xyz-url-input").value.trim();
         if (!name || !url) return false;
 
+        const showError = (message) => {
+          const errorEl = document.getElementById("xyz-error-msg");
+          errorEl.textContent = `Error: ${message}`;
+          errorEl.style.display = "block";
+          return false;
+        };
+
         const hasZ = url.includes("{z}");
         const hasX = url.includes("{x}");
         const hasY = url.includes("{y}") || url.includes("{-y}");
 
         if (!hasZ || !hasX || !hasY) {
-          const errorEl = document.getElementById("xyz-error-msg");
-          errorEl.textContent = "Error: URL must contain {z}, {x}, and {y} (or {-y}) placeholders.";
-          errorEl.style.display = "block";
-          return false;
+          return showError("URL must contain {z}, {x}, and {y} (or {-y}) placeholders.");
+        }
+
+        // Leaflet throws on every tile request for a placeholder it can't fill
+        const unsupported = url
+          .match(/\{[^}]*\}/g)
+          .find((p) => !["{z}", "{x}", "{y}", "{-y}", "{s}", "{r}"].includes(p));
+        if (unsupported) {
+          return showError(`Unsupported placeholder ${unsupported}.`);
         }
 
         if (Object.values(store.layers).some((l) => l.url === url)) {
-          const errorEl = document.getElementById("xyz-error-msg");
-          errorEl.textContent = "Error: This tile URL is already added.";
-          errorEl.style.display = "block";
-          return false;
+          return showError("This tile URL is already added.");
         }
         return { name, url };
       },
