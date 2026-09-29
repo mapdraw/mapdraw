@@ -3,12 +3,13 @@
 const elevationCache = new Map();
 
 /**
- * Builds the elevation cache key for a set of path coordinates.
+ * Builds the elevation cache key for a set of path coordinates and the selected provider.
  * @param {L.LatLng[]} latlngs - Path coordinates
  * @returns {string} Cache key
  */
 function elevationCacheKey(latlngs) {
-  return JSON.stringify(latlngs.map((p) => [p.lat.toFixed(6), p.lng.toFixed(6)]));
+  const provider = localStorage.getItem("elevationProvider") || "google";
+  return provider + JSON.stringify(latlngs.map((p) => [p.lat.toFixed(6), p.lng.toFixed(6)]));
 }
 
 // Define our coordinate system names
