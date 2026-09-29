@@ -980,7 +980,7 @@ function initRouting() {
 
     const newPath = L.polyline(currentRoutePath.getLatLngs(), {
       ...STYLE_CONFIG.path.default,
-      color: currentRoutePath.options.color,
+      color: getLayerColor(currentRoutePath),
     });
     newPath.feature = JSON.parse(JSON.stringify(currentRoutePath.feature));
     // Built fresh rather than copied from the route: the saved path is added to the map
