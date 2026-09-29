@@ -519,6 +519,18 @@ function importGeoJsonFile(file) {
   reader.readAsText(file);
 }
 
+/**
+ * Parses GPX or KML text, throwing on malformed XML, for which DOMParser returns a
+ * document with a <parsererror> element instead.
+ * @param {string} text - The file content
+ * @returns {Document} The parsed document
+ */
+function parseXml(text) {
+  const dom = new DOMParser().parseFromString(text, "text/xml");
+  if (dom.querySelector("parsererror")) throw new Error("The file is not valid XML.");
+  return dom;
+}
+
 // GPX
 // Specification: https://www.topografix.com/gpx/1/1/
 
@@ -575,7 +587,7 @@ function importGpxFile(file) {
   const reader = new FileReader();
   reader.onload = (readEvent) => {
     try {
-      const dom = new DOMParser().parseFromString(readEvent.target.result, "text/xml");
+      const dom = parseXml(readEvent.target.result);
       const geojsonData = toGeoJSON.gpx(dom);
 
       geojsonData.features.forEach(({ properties }) => {
@@ -629,7 +641,7 @@ function importGpxFile(file) {
  * @returns {object} GeoJSON FeatureCollection
  */
 function parseKmlContent(kmlText) {
-  const dom = new DOMParser().parseFromString(kmlText, "text/xml");
+  const dom = parseXml(kmlText);
   // Without the option a placemark without geometry (a description-only note) becomes a
   // feature with a null geometry.
   const geojsonData = toGeoJSON.kml(dom, { skipNullGeometry: true });
