@@ -406,7 +406,9 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
         `<span style="${itemStyle}">Highest point: ${formatElevation(maxElev)}</span>` +
         `<span style="${itemStyle}">Lowest point: ${formatElevation(minElev)}</span>` +
         `<span style="${itemStyle}">Hiking time: ${hikingTimeFormatted}</span>` +
-        (source ? `<span style="${itemStyle}">Source: ${source}</span>` : "") +
+        (source
+          ? `<span style="${itemStyle}">Source: ${source} <span onclick="downloadElevationProfileCsv()" title="Download elevation profile as CSV" class="material-symbols material-symbols-fill elevation-action-icon">download</span></span>`
+          : "") +
         // The path's elevation state with its add/remove button. Hidden for active
         // (unsaved) routes, which may change anytime.
         (source && selectedElevationPath && selectedElevationPath.internal?.pathType !== "route"
@@ -419,6 +421,21 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
 
   updateChartLayout();
   redrawChartData();
+}
+
+/**
+ * Downloads the elevation profile as shown, one row per point of its current source, as a CSV.
+ */
+function downloadElevationProfileCsv() {
+  if (currentRawData.length === 0) return;
+  const rows = currentRawData.map(
+    (d) => `${d.distance.toFixed(1)},${d.elevation},${d.latlng.lat},${d.latlng.lng}`,
+  );
+  const name = selectedElevationPath?.feature?.properties?.name;
+  downloadFile(
+    `${name ? `${name}_` : ""}Elevation_Profile_${currentSource}.csv`,
+    ["Distance (m),Elevation (m),Latitude,Longitude", ...rows].join("\n") + "\n",
+  );
 }
 
 /**

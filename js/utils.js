@@ -204,6 +204,7 @@ function downloadFile(filename, text) {
   // Determine MIME type based on file extension
   const extension = filename.split(".").pop().toLowerCase();
   const mimeTypes = {
+    csv: "text/csv",
     geojson: "application/geo+json",
     gpx: "application/gpx+xml",
     json: "application/json",
