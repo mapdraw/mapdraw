@@ -439,7 +439,8 @@ function formatArea(sqMeters, includeSecondary = false) {
 /**
  * Resamples a path to have exactly the specified number of evenly-spaced points
  * by interpolating along the original path geometry. Elevation is interpolated
- * where both neighbouring points have one.
+ * where both neighbouring points have one. Each point carries its distance
+ * along the path in meters as `dist`.
  * @param {Array<L.LatLng>} latlngs - Original array of points
  * @param {number} maxPoints - Target number of points for the resampled path
  * @returns {Array<L.LatLng>} Resampled array of points
@@ -456,11 +457,13 @@ function resamplePath(latlngs, maxPoints) {
     cumulativeDistances.push(totalDistance);
   }
 
+  const withDist = (point, dist) => Object.assign(point, { dist });
+
   if (totalDistance === 0) {
     const firstPoint = latlngs[0];
     const newPoints = [];
     for (let i = 0; i < maxPoints; i++) {
-      newPoints.push(L.latLng(firstPoint.lat, firstPoint.lng, firstPoint.alt));
+      newPoints.push(withDist(L.latLng(firstPoint.lat, firstPoint.lng, firstPoint.alt), 0));
     }
     return newPoints;
   }
@@ -474,8 +477,8 @@ function resamplePath(latlngs, maxPoints) {
     const targetDistance = intervalDistance * i;
 
     if (i === maxPoints - 1) {
-      const lastOriginalPoint = latlngs[latlngs.length - 1];
-      newPoints.push(L.latLng(lastOriginalPoint.lat, lastOriginalPoint.lng, lastOriginalPoint.alt));
+      const last = latlngs[latlngs.length - 1];
+      newPoints.push(withDist(L.latLng(last.lat, last.lng, last.alt), totalDistance));
       continue;
     }
 
@@ -495,7 +498,7 @@ function resamplePath(latlngs, maxPoints) {
 
     const fraction = distanceOfSegment === 0 ? 0 : distanceFromPrevVertex / distanceOfSegment;
 
-    newPoints.push(interpolateLatLng(prevVertex, nextVertex, fraction));
+    newPoints.push(withDist(interpolateLatLng(prevVertex, nextVertex, fraction), targetDistance));
   }
 
   return newPoints;

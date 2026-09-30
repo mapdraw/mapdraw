@@ -86,21 +86,28 @@ const MAX_ELEVATION_SAMPLES = 5000; // Caps API cost and request size
 
 /**
  * Returns the path with points inserted so that no segment is longer than spacing.
- * Original points are kept; inserted ones get an interpolated elevation where possible.
+ * Original points are kept (as copies); inserted ones get an interpolated elevation
+ * where possible. Each point carries its distance along the path in meters as `dist`.
  * @param {L.LatLng[]} latlngs - Path coordinates
  * @param {number} spacing - Maximum segment length in meters
  * @returns {L.LatLng[]} Densified coordinates
  */
 function densifyPath(latlngs, spacing) {
-  const out = [latlngs[0]];
+  const copy = (p, dist) => Object.assign(L.latLng(p.lat, p.lng, p.alt), { dist });
+  const out = [copy(latlngs[0], 0)];
+  let dist = 0;
   for (let i = 1; i < latlngs.length; i++) {
     const a = latlngs[i - 1];
     const b = latlngs[i];
-    const parts = Math.ceil(a.distanceTo(b) / spacing);
+    const length = a.distanceTo(b);
+    const parts = Math.ceil(length / spacing);
     for (let j = 1; j < parts; j++) {
-      out.push(interpolateLatLng(a, b, j / parts));
+      out.push(
+        Object.assign(interpolateLatLng(a, b, j / parts), { dist: dist + (length * j) / parts }),
+      );
     }
-    out.push(b);
+    dist += length;
+    out.push(copy(b, dist));
   }
   return out;
 }
@@ -110,7 +117,8 @@ function densifyPath(latlngs, spacing) {
  * file or an API. A path denser than the sample spacing (a GPS recording) is
  * resampled to evenly spaced points, which drops the jittery vertices. A sparser
  * path (drawn or routed) keeps its vertices, since they sit on the terrain
- * features, and only gets long segments filled in.
+ * features, and only gets long segments filled in. Each sample carries its
+ * distance along the path in meters as `dist`.
  * @param {L.LatLng[]} latlngs - Path coordinates
  * @returns {L.LatLng[]} Profile coordinates
  */
@@ -518,10 +526,10 @@ async function removeElevationFromPath() {
   }
   scheduleDataEditorRefresh();
 
-  // Keep the cache entry — the cache key is coordinate-based, so the
-  // cached API data is still valid for these same coordinates.  This
-  // avoids redundant API calls when the user repeatedly removes and
-  // re-adds elevation data without changing the path geometry.
+  // Keep the cache entry: its key is the provider and the coordinates, so the
+  // cached API data is still valid for these same coordinates. This avoids
+  // redundant API calls when the user repeatedly removes and re-adds
+  // elevation data without changing the path geometry.
   await addElevationProfileForLayer(selectedElevationPath);
   Swal.fire({
     toast: true,
@@ -534,7 +542,7 @@ async function removeElevationFromPath() {
 
 /**
  * Adds API elevation data to the selected path's coordinates.
- * Locates each API point on the path and interpolates between them, so the
+ * Interpolates between the API points at their path distances, so the
  * profile drawn from the file afterwards equals the API profile.
  */
 async function addElevationToPath() {
@@ -556,29 +564,13 @@ async function addElevationToPath() {
     origDistances.push(origDistances[i - 1] + latlngs[i - 1].distanceTo(latlngs[i]));
   }
 
-  // Path distance of each API point: they were sampled from this path in order,
-  // so walking forward to the first segment the point lies on finds each one.
-  const cosLat = Math.cos((latlngs[0].lat * Math.PI) / 180);
-  const METERS_PER_DEGREE = 111320;
-  const apiDistances = [];
-  let seg = 0;
-  for (const p of apiData) {
-    let t;
-    for (;;) {
-      const a = latlngs[seg];
-      const b = latlngs[seg + 1];
-      const dx = (b.lng - a.lng) * cosLat;
-      const dy = b.lat - a.lat;
-      const px = (p.lng - a.lng) * cosLat;
-      const py = p.lat - a.lat;
-      const len2 = dx * dx + dy * dy;
-      t = len2 > 0 ? Math.min(Math.max((px * dx + py * dy) / len2, 0), 1) : 0;
-      const offset = Math.hypot(px - t * dx, py - t * dy) * METERS_PER_DEGREE;
-      if (offset < 0.5 || seg >= latlngs.length - 2) break;
-      seg++;
-    }
-    apiDistances.push(origDistances[seg] + t * (origDistances[seg + 1] - origDistances[seg]));
+  // The API points are this path's samples in order, so re-sampling yields their path distances.
+  const samples = samplePathForElevation(latlngs);
+  if (samples.length !== apiData.length) {
+    console.warn("Cached API elevation data does not match the path's samples.");
+    return;
   }
+  const apiDistances = samples.map((s) => s.dist);
 
   // Interpolate elevation for each original point between its neighbouring API points
   let k = 0;
