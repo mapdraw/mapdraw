@@ -406,17 +406,14 @@ function drawElevationProfile(pointsWithElev, realDistance, source) {
         `<span style="${itemStyle}">Highest point: ${formatElevation(maxElev)}</span>` +
         `<span style="${itemStyle}">Lowest point: ${formatElevation(minElev)}</span>` +
         `<span style="${itemStyle}">Hiking time: ${hikingTimeFormatted}</span>` +
-        // The add/remove button acts on the path's elevation, so it follows the path, not the
-        // profile's source. Hidden for active (unsaved) routes, which may change anytime.
+        (source ? `<span style="${itemStyle}">Source: ${source}</span>` : "") +
+        // The path's elevation state with its add/remove button. Hidden for active
+        // (unsaved) routes, which may change anytime.
         (source && selectedElevationPath && selectedElevationPath.internal?.pathType !== "route"
-          ? `<span style="${itemStyle}">Source: ${source}` +
-            (hasExistingElevationData(selectedElevationPath.getLatLngs())
-              ? ` <span onclick="removeElevationFromPath()" title="Remove elevation data from path" class="material-symbols material-symbols-fill elevation-action-icon">cancel</span>`
-              : ` <span onclick="addElevationToPath()" title="Add elevation data to path" class="material-symbols material-symbols-fill elevation-action-icon">add_circle</span>`) +
-            `</span>`
-          : source
-            ? `<span style="${itemStyle}">Source: ${source}</span>`
-            : ""),
+          ? hasExistingElevationData(selectedElevationPath.getLatLngs())
+            ? `<span style="${itemStyle}">Path: has elevation <span onclick="removeElevationFromPath()" title="Remove elevation data from path" class="material-symbols material-symbols-fill elevation-action-icon">cancel</span></span>`
+            : `<span style="${itemStyle}">Path: no elevation <span onclick="addElevationToPath()" title="Add elevation data to path" class="material-symbols material-symbols-fill elevation-action-icon">add_circle</span></span>`
+          : ""),
     );
   }
 
