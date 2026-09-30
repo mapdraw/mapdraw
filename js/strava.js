@@ -602,13 +602,12 @@ function stravaGpxExportUrl(activityId) {
 
 /**
  * Triggers a browser download of the original GPX file from Strava's website.
+ * The filename comes from Strava's response header; a cross-origin link cannot set it.
  * @param {string} activityId - The ID of the Strava activity
- * @param {string} activityName - The name of the activity, used for the filename
  */
-function downloadOriginalStravaGpx(activityId, activityName) {
+function downloadOriginalStravaGpx(activityId) {
   const link = document.createElement("a");
   link.href = stravaGpxExportUrl(activityId);
-  link.download = `${activityName.replace(/[^a-z0-9]/gi, "_")}.gpx`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

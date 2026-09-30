@@ -95,8 +95,7 @@ function initFileControls() {
         if (layers.length === 0) return;
 
         if (layers.length === 1) {
-          const { stravaId, name } = layers[0].feature.properties;
-          downloadOriginalStravaGpx(stravaId, name);
+          downloadOriginalStravaGpx(layers[0].feature.properties.stravaId);
           return;
         }
 
