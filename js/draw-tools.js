@@ -162,10 +162,7 @@ function initDrawTools() {
     setLayerColor(layer, DEFAULT_COLOR);
     layer.feature.properties.name = getDefaultLayerName(layer);
     addAsDrawnItem(layer);
-    layer.on("click", (ev) => {
-      L.DomEvent.stopPropagation(ev);
-      selectItem(layer);
-    });
+    selectOnClick(layer);
     selectItem(layer);
     updateOverviewList();
   });

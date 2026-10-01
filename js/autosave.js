@@ -219,11 +219,7 @@ async function restoreAutosave() {
         // Ensures exactly one simplestyle color key even if the saved record had none.
         setLayerColor(layer, color);
 
-        // Click handler
-        layer.on("click", (e) => {
-          L.DomEvent.stopPropagation(e);
-          selectItem(layer);
-        });
+        selectOnClick(layer);
 
         // Route to the correct layer group - shares ui-handlers.js's getGroupTitle() so
         // grouping logic can't drift between restore and the overview list.

@@ -489,6 +489,20 @@ function selectItem(layer) {
 }
 
 /**
+ * Makes a click on the layer select it. A click the active mode doesn't select with
+ * (e.g. while placing route points) goes to the map instead - forwarded by hand,
+ * since markers never bubble their clicks.
+ * @param {L.Layer} layer - The Leaflet layer to bind
+ */
+function selectOnClick(layer) {
+  layer.on("click", (e) => {
+    L.DomEvent.stopPropagation(e);
+    if (window.app.canSelectLayer(layer)) selectItem(layer);
+    else map.fire("click", e);
+  });
+}
+
+/**
  * Enables or disables a custom toolbar button (by element id), updating its
  * "disabled" class and tooltip to match.
  * @param {string} elementId - The id of the button's container element.

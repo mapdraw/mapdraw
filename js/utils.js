@@ -741,11 +741,7 @@ function createAndSaveMarker(lat, lon, name) {
   newMarker.feature.properties.name = markerName || getDefaultLayerName(newMarker);
 
   addAsDrawnItem(newMarker);
-
-  newMarker.on("click", (ev) => {
-    L.DomEvent.stopPropagation(ev);
-    selectItem(newMarker);
-  });
+  selectOnClick(newMarker);
 
   selectItem(newMarker);
   updateOverviewList();

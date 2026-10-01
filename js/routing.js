@@ -987,10 +987,7 @@ function initRouting() {
     // visible, so it must not inherit a hidden route's isManuallyHidden.
     newPath.internal = { pathType: "drawn" };
     newPath.feature.properties.name = newPath.feature.properties.name || "Saved Route";
-    newPath.on("click", (ev) => {
-      L.DomEvent.stopPropagation(ev);
-      selectItem(newPath);
-    });
+    selectOnClick(newPath);
     addAsDrawnItem(newPath);
     clearRouting();
     updateOverviewList();

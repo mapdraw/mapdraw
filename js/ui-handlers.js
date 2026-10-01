@@ -150,10 +150,7 @@ function duplicateLayer(layerToDuplicate, { skipUiUpdate = false } = {}) {
     newLayer.feature = { properties: { name: newName } };
     newLayer.internal = { pathType: "drawn" };
     setLayerColor(newLayer, color);
-    newLayer.on("click", (ev) => {
-      L.DomEvent.stopPropagation(ev);
-      selectItem(newLayer);
-    });
+    selectOnClick(newLayer);
     addAsDrawnItem(newLayer);
     if (!skipUiUpdate) {
       updateOverviewList();

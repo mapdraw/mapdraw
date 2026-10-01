@@ -554,10 +554,7 @@ function displayActivitiesOnMap(activities) {
         if (!polyline.feature.properties.name) {
           polyline.feature.properties.name = getDefaultLayerName(polyline);
         }
-        polyline.on("click", (e) => {
-          L.DomEvent.stopPropagation(e);
-          selectItem(polyline);
-        });
+        selectOnClick(polyline);
         stravaActivitiesLayer.addLayer(polyline);
       } catch (e) {
         console.warn("Could not decode polyline for activity:", activity.id, e);

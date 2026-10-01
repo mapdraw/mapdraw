@@ -426,10 +426,7 @@ function importGeoJsonToMap(geoJsonData, fileType) {
       // All imported items use fileType as pathType - a file's own pathType is never trusted.
       layer.internal = { pathType: fileType };
 
-      layer.on("click", (e) => {
-        L.DomEvent.stopPropagation(e);
-        selectItem(layer);
-      });
+      selectOnClick(layer);
     },
     pointToLayer: (feature, latlng) => {
       const color = resolveColor(feature);
