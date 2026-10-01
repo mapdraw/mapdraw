@@ -117,8 +117,9 @@ function densifyPath(latlngs, spacing) {
  * file or an API. A path denser than the sample spacing (a GPS recording) is
  * resampled to evenly spaced points, which drops the jittery vertices. A sparser
  * path (drawn or routed) keeps its vertices, since they sit on the terrain
- * features, and only gets long segments filled in. Each sample carries its
- * distance along the path in meters as `dist`.
+ * features, and only gets long segments filled in - unless it has
+ * MAX_ELEVATION_SAMPLES vertices or more, when it is resampled too. Each sample
+ * carries its distance along the path in meters as `dist`.
  * @param {L.LatLng[]} latlngs - Path coordinates
  * @returns {L.LatLng[]} Profile coordinates
  */
@@ -127,11 +128,10 @@ function samplePathForElevation(latlngs) {
   let length = 0;
   for (let i = 1; i < latlngs.length; i++) length += latlngs[i - 1].distanceTo(latlngs[i]);
   const wanted = Math.ceil(length / ELEVATION_SAMPLE_SPACING) + 1;
-  if (latlngs.length > wanted) {
+  if (latlngs.length > wanted || latlngs.length >= MAX_ELEVATION_SAMPLES) {
     return resamplePath(latlngs, Math.min(wanted, MAX_ELEVATION_SAMPLES));
   }
   const room = MAX_ELEVATION_SAMPLES - latlngs.length;
-  if (room <= 0) return latlngs;
   const spacing = Math.max(
     Math.min(ELEVATION_SAMPLE_SPACING, length / (MIN_ELEVATION_SAMPLES - 1)),
     length / room,
