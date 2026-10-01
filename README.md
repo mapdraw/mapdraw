@@ -135,8 +135,8 @@ This project utilizes several open-source libraries, which are included in the r
 
 - **check-geojson-0.1.14**
   - Download URL: <https://registry.npmjs.org/@placemarkio/check-geojson/-/check-geojson-0.1.14.tgz>
-- **codemirror-6.65.7**
-  - Download URL: <https://registry.npmjs.org/codemirror/-/codemirror-6.65.7.tgz>
+- **codemirror-5.65.21**
+  - Download URL: <https://registry.npmjs.org/codemirror/-/codemirror-5.65.21.tgz>
 - **d3-7.9.0**
   - Download URL: <https://d3js.org/d3.v7.min.js>
 - **flag-icons-7.5.0**
