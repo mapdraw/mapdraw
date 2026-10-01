@@ -133,6 +133,8 @@ To enable features that rely on external services, you must provide your own API
 
 This project utilizes several open-source libraries, which are included in the repository.
 
+- **check-geojson-0.1.14**
+  - Download URL: <https://registry.npmjs.org/@placemarkio/check-geojson/-/check-geojson-0.1.14.tgz>
 - **codemirror-6.65.7**
   - Download URL: <https://registry.npmjs.org/codemirror/-/codemirror-6.65.7.tgz>
 - **d3-7.9.0**

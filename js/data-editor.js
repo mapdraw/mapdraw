@@ -177,6 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
       lint: {
         getAnnotations: (text) => {
           if (!text.trim()) return [];
+          const doc = cmEditor.getDoc();
           try {
             JSON.parse(text);
           } catch (e) {
@@ -184,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const posMatch = e.message.match(/at position (\d+)/);
             const lineColMatch = e.message.match(/at line (\d+) column (\d+)/);
             if (posMatch) {
-              from = cmEditor.getDoc().posFromIndex(parseInt(posMatch[1]));
+              from = doc.posFromIndex(parseInt(posMatch[1]));
             } else if (lineColMatch) {
               from = CodeMirror.Pos(parseInt(lineColMatch[1]) - 1, parseInt(lineColMatch[2]) - 1);
             }
@@ -197,7 +198,13 @@ document.addEventListener("DOMContentLoaded", () => {
               },
             ];
           }
-          return [];
+          // Valid JSON: mark GeoJSON structure errors (e.g. a quoted coordinate) at the value.
+          return checkGeojson.getIssues(text).map((issue) => ({
+            from: doc.posFromIndex(issue.from),
+            to: doc.posFromIndex(issue.to),
+            message: issue.message,
+            severity: "error",
+          }));
         },
       },
       extraKeys: {
