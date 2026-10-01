@@ -98,14 +98,18 @@ function applyDataEditor() {
       // - neither survives layerToPortableFeature(): the first is cut down to a plain
       // LineString/Polygon keeping at most its first part, the second has no usable geometry and
       // is dropped from this editor and every export while still sitting on the map. Runs before
-      // the check below so that validates what actually gets imported, and inside the try so a
-      // malformed feature reports an error instead of throwing past the map-clearing step.
-      parsed.features = parsed.features.flatMap((f) => explodeMultiGeometries(f));
-      if (L.geoJSON(parsed).getLayers().length === 0) {
-        error.textContent = "No valid features found — check geometry types and coordinates.";
+      // the L.geoJSON() probe below so that tries what actually gets imported, and inside the try
+      // so anything it throws on is reported instead of thrown past the map-clearing step.
+      const exploded = parsed.features.map((f) => explodeMultiGeometries(f));
+      // Apply replaces the map, so a feature dropped here would be deleted without notice.
+      const dropped = exploded.findIndex((parts) => parts.length === 0);
+      if (dropped !== -1) {
+        error.textContent = `Feature ${dropped + 1} has no valid geometry — check its type and coordinates.`;
         error.style.display = "block";
         return;
       }
+      parsed.features = exploded.flat();
+      L.geoJSON(parsed);
     } catch (e) {
       error.textContent = "Invalid geometry: " + e.message;
       error.style.display = "block";
