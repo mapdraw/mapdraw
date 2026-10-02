@@ -81,6 +81,10 @@ osmGeneratePKCES256()
     _osmPKCEPair = osmGeneratePKCEPlain();
   });
 
+// Poll and expiry timer of the latest sign-in attempt
+let _osmSignInPoll = null;
+let _osmSignInExpiry = null;
+
 function osmSignIn() {
   if (typeof osmClientId === "undefined" || !osmClientId) {
     Swal.fire({
@@ -100,6 +104,10 @@ function osmSignIn() {
     .catch(() => {
       _osmPKCEPair = osmGeneratePKCEPlain();
     });
+
+  // Stop an earlier attempt: its expiry timer would remove this attempt's verifier and state
+  clearInterval(_osmSignInPoll);
+  clearTimeout(_osmSignInExpiry);
 
   localStorage.removeItem("osmAuthCode");
   localStorage.removeItem("osmAuthState");
@@ -131,10 +139,10 @@ function osmSignIn() {
     return;
   }
 
-  const poll = setInterval(async () => {
+  _osmSignInPoll = setInterval(async () => {
     const error = localStorage.getItem("osmAuthError");
     if (error) {
-      clearInterval(poll);
+      clearInterval(_osmSignInPoll);
       localStorage.removeItem("osmAuthError");
       sessionStorage.removeItem("osmCodeVerifier");
       sessionStorage.removeItem("osmAuthState");
@@ -148,7 +156,7 @@ function osmSignIn() {
 
     const code = localStorage.getItem("osmAuthCode");
     if (code) {
-      clearInterval(poll);
+      clearInterval(_osmSignInPoll);
       localStorage.removeItem("osmAuthCode");
 
       const returnedState = localStorage.getItem("osmAuthState");
@@ -169,9 +177,9 @@ function osmSignIn() {
     }
   }, 500);
 
-  setTimeout(
+  _osmSignInExpiry = setTimeout(
     () => {
-      clearInterval(poll);
+      clearInterval(_osmSignInPoll);
       sessionStorage.removeItem("osmCodeVerifier");
       sessionStorage.removeItem("osmAuthState");
     },
