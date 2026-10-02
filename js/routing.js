@@ -415,12 +415,15 @@ function initRouting() {
               }
               wasLongPress = false;
               pressTimer = setTimeout(() => {
+                // A press that panned the map is not a long-press
+                if (map.dragging.moved()) return;
                 wasLongPress = true;
                 addIntermediateViaPoint(e.latlng);
               }, 800);
             });
 
-            newRoutePath.on("mouseup", () => {
+            // mouseout: nor is a press dragged off the line, e.g. into a selection rectangle
+            newRoutePath.on("mouseup mouseout", () => {
               clearTimeout(pressTimer);
             });
 
