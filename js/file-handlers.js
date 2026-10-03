@@ -618,6 +618,13 @@ function importGpxFile(file) {
       // Explode multi-geometries and filter for supported geometry types
       geojsonData.features = geojsonData.features.flatMap((f) => explodeMultiGeometries(f));
 
+      if (geojsonData.features.length === 0) {
+        return Swal.fire({
+          title: "No Supported Geometries",
+          text: "The GPX file contains no waypoints, routes, or tracks with valid coordinates.",
+        });
+      }
+
       const newLayer = importGeoJsonToMap(geojsonData, "gpx");
       if (newLayer && newLayer.getBounds().isValid()) {
         map.fitBounds(newLayer.getBounds());
@@ -682,6 +689,13 @@ function importKmlFile(file) {
   reader.onload = (readEvent) => {
     try {
       const geojsonData = parseKmlContent(readEvent.target.result);
+
+      if (geojsonData.features.length === 0) {
+        return Swal.fire({
+          title: "No Supported Geometries",
+          text: "The KML file contains no placemarks with a valid point, line, or polygon.",
+        });
+      }
 
       const newLayer = importGeoJsonToMap(geojsonData, "kml");
       if (newLayer && newLayer.getBounds().isValid()) {
