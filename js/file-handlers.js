@@ -742,7 +742,8 @@ async function importKmzFile(file) {
     // Process all KML files concurrently
     await Promise.all(
       kmlFiles.map(async (kmlFile) => {
-        const content = await kmlFile.async("text");
+        // JSZip keeps a UTF-8 BOM, which Safari's XML parser rejects
+        const content = (await kmlFile.async("text")).replace(/^\uFEFF/, "");
         const geojsonData = parseKmlContent(content);
 
         // Import features if present
