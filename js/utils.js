@@ -410,31 +410,31 @@ function isSelfIntersectingRing(latlngs) {
 /**
  * Formats an area in square meters into a human-readable string respecting the global unit setting.
  * @param {number} sqMeters - Area in square meters
- * @param {boolean} [includeSecondary=false] - If true, includes other unit system in parentheses
- * @returns {string} Formatted area string (e.g., "41.29 km²" or "15.94 mi²")
+ * @returns {string} Formatted area string (e.g., "600 m²", "5.00 ha", "41.29 km²" or "6458 ft²", "12.36 ac", "15.94 mi²")
  */
-function formatArea(sqMeters, includeSecondary = false) {
+function formatArea(sqMeters) {
   if (typeof sqMeters !== "number" || isNaN(sqMeters)) {
     return "";
   }
 
-  const SQ_METERS_TO_SQ_KM = 0.000001;
-  const SQ_METERS_TO_SQ_MILES = 0.0000003861;
+  // [square meters per unit, label, decimals], largest first
+  const units = useImperialUnits
+    ? [
+        [2589988.110336, "mi²", 2],
+        [4046.8564224, "ac", 2],
+        [0.09290304, "ft²", 0],
+      ]
+    : [
+        [1000000, "km²", 2],
+        [10000, "ha", 2],
+        [1, "m²", 0],
+      ];
+  const texts = units.map(
+    ([size, label, decimals]) => `${(sqMeters / size).toFixed(decimals)} ${label}`,
+  );
 
-  const sqKm = sqMeters * SQ_METERS_TO_SQ_KM;
-  const sqMiles = sqMeters * SQ_METERS_TO_SQ_MILES;
-
-  let primaryDisplay, secondaryDisplay;
-
-  if (useImperialUnits) {
-    primaryDisplay = sqMeters === 0 ? "0 mi²" : `${sqMiles.toFixed(2)} mi²`;
-    secondaryDisplay = `${sqKm.toFixed(2)} km²`;
-  } else {
-    primaryDisplay = sqMeters === 0 ? "0 km²" : `${sqKm.toFixed(2)} km²`;
-    secondaryDisplay = `${sqMiles.toFixed(2)} mi²`;
-  }
-
-  return includeSecondary ? `${primaryDisplay} (${secondaryDisplay})` : primaryDisplay;
+  // Largest unit whose displayed value is at least 1, else the smallest unit
+  return texts.find((text) => parseFloat(text) >= 1) ?? texts.at(-1);
 }
 
 /**
