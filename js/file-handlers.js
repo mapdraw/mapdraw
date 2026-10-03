@@ -710,8 +710,12 @@ async function importKmzFile(file) {
 
   try {
     const loadedZip = await zip.loadAsync(file);
+    // macOS archives carry a binary "._name.kml" metadata entry next to each real file
     const kmlFiles = loadedZip.filter(
-      (relativePath, file) => !file.dir && relativePath.toLowerCase().endsWith(".kml"),
+      (relativePath, file) =>
+        !file.dir &&
+        relativePath.toLowerCase().endsWith(".kml") &&
+        !relativePath.split("/").pop().startsWith("._"),
     );
 
     if (kmlFiles.length === 0) {
