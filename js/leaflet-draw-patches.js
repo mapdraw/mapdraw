@@ -283,6 +283,14 @@ if (L.Edit && L.Edit.PolyVerticesEdit) {
 
     if (wasAttached) polyMap.addLayer(this._markerGroup);
   };
+
+  // Stock _updateIndexes renumbers only the markers in _markerGroup, which LOD keeps off-screen
+  // vertices out of - with a stale _index, the next click on one edits its neighbor instead.
+  L.Edit.PolyVerticesEdit.prototype._updateIndexes = function (index, delta) {
+    for (const marker of this._markers) {
+      if (marker._index > index) marker._index += delta;
+    }
+  };
 }
 
 // Dragging a vertex/marker handle can move it past the world edge, unlike drawing a new point
