@@ -39,11 +39,11 @@ L.Control.Scale.prototype._update = function () {
   this._updateScales(maxMeters);
 };
 
-// Installed PWA on iOS (seen on 26.2): after a touch hold, Leaflet's TapHold
-// simulates a contextmenu and cancels the touchend so that no click follows,
-// but the click comes anyway and closes the context menu the hold just
-// opened. Swallow that click. The next press disarms this, because Safari
-// sends no such click.
+// Installed PWA on iOS (seen on 26.2): after a long press, Leaflet's TapHold
+// tries to prevent the click that follows. On an element with
+// "user-select: none", the default in style.css, the click arrives anyway and
+// closes the context menu; why is not known. Swallow that click. The next
+// press switches this off again, in case no click came.
 document.addEventListener(
   "contextmenu",
   (e) => {
