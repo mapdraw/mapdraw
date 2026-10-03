@@ -213,19 +213,6 @@ const GEOADMIN_COVERAGE_ERROR =
   "GeoAdmin does not cover this entire track. Only tracks fully inside its coverage (Switzerland and nearby) are supported — use Google instead.";
 
 /**
- * Total length in meters of a planar [easting, northing] coordinate array.
- * @param {Array<[number, number]>} coords
- * @returns {number}
- */
-function planarLength(coords) {
-  let length = 0;
-  for (let i = 1; i < coords.length; i++) {
-    length += Math.hypot(coords[i][0] - coords[i - 1][0], coords[i][1] - coords[i - 1][1]);
-  }
-  return length;
-}
-
-/**
  * Checks if all LV95 coordinates are outside Switzerland bounds.
  * @param {Array<[number, number]>} lv95Coords - Array of [easting, northing] coordinates
  * @returns {boolean} True if ALL coordinates are outside bounds (path completely outside Switzerland)
@@ -313,17 +300,9 @@ async function fetchElevationForPathGeoAdminAPI(latlngs) {
       const chunkPoints = (await profileResponse.json()) ?? [];
 
       // Only fully covered tracks are supported. The API silently omits points
-      // outside its coverage and measures dist along the requested line, so any
-      // large gap between chunk start (0) and end (planar length) is uncovered.
-      // With nothing omitted, a large gap is just a long segment of the request.
-      if (chunkPoints.length < coordinateChunks[chunkIndex].length) {
-        const chunkLength = planarLength(coordinateChunks[chunkIndex]);
-        const dists = [0, ...chunkPoints.map((p) => p.dist), chunkLength];
-        for (let i = 1; i < dists.length; i++) {
-          if (dists[i] - dists[i - 1] > 0.02 * chunkLength) {
-            throw new Error(GEOADMIN_COVERAGE_ERROR);
-          }
-        }
+      // outside its coverage, and addElevationToPath() needs one point per sample.
+      if (chunkPoints.length !== coordinateChunks[chunkIndex].length) {
+        throw new Error(GEOADMIN_COVERAGE_ERROR);
       }
 
       for (const point of chunkPoints) {
