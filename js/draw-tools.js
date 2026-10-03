@@ -190,9 +190,6 @@ function initDrawTools() {
 
   function onDrawVertex(evt) {
     const newPoints = evt.layers.getLayers().map((l) => l.getLatLng());
-    // path-extend.js's own listener (bound after this one) seeds the label for
-    // the first vertex once pathExtendTarget is set; nothing to show before that.
-    if (newPoints.length < 2) return;
     // Extending an existing path: prepend its points so its labels stay visible.
     // newPoints[0] is the marker path-extend.js snapped onto that same path's
     // endpoint - already the lead-in's own last point - so drop it to avoid a
@@ -201,7 +198,9 @@ function initDrawTools() {
     const points = pathExtendTarget
       ? [...pathExtendLeadInPoints(pathExtendTarget), ...newPoints.slice(1)]
       : newPoints;
-    showDistanceLabelsFor(points);
+    // A lone first vertex (new, or left by "Delete last point") has no segment to label.
+    if (points.length < 2) hideDistanceLabels();
+    else showDistanceLabelsFor(points);
   }
 
   map.on(L.Draw.Event.DRAWSTART, function (e) {
