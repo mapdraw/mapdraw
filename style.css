@@ -60,6 +60,26 @@
   --overview-icon-width: 28px;
   --top-right-btn-height: 32px;
   --top-right-clearance: calc(var(--top-right-btn-height) + 8px);
+  --viewport-height: 100vh; /* Fallback for browsers without dvh */
+}
+
+/* 100dvh is the visible height, also while a mobile browser shows its toolbars. */
+@supports (height: 100dvh) {
+  :root {
+    --viewport-height: 100dvh;
+  }
+}
+
+/* Installed PWA on iOS only (-webkit-touch-callout exists only on iOS). With
+   the status bar laid over the page, dvh leaves a white bar at the bottom, so
+   add the top inset; lvh, the full screen, is the cap. With the status bar
+   above the page the inset is 0 and this is plain dvh. */
+@supports (-webkit-touch-callout: none) and (height: 100lvh) {
+  @media (display-mode: standalone) {
+    :root {
+      --viewport-height: min(100lvh, 100dvh + env(safe-area-inset-top));
+    }
+  }
 }
 
 /* THEMES: GLASS > LIGHT > DARK */
@@ -359,8 +379,7 @@ select:focus {
 }
 
 #map {
-  height: 100vh; /* Fallback for older browsers */
-  height: 100dvh; /* Fix content hidden under Android nav bar */
+  height: var(--viewport-height);
   width: 100%;
   position: relative; /* Needed for absolute positioning of children */
 }
@@ -384,7 +403,7 @@ select:focus {
   flex-direction: column;
   gap: 10px;
   max-width: calc(100vw - 61px);
-  max-height: calc(100dvh - env(safe-area-inset-top) - 100px);
+  max-height: calc(var(--viewport-height) - env(safe-area-inset-top) - 100px);
   overflow: hidden;
   cursor: auto;
 }
@@ -2134,7 +2153,7 @@ body.glass-mode .overview-category-pill.active {
   color: var(--text-color) !important;
   border-radius: var(--border-radius) !important;
   max-height: calc(
-    100dvh - var(--swal2-container-padding) * 2 - env(safe-area-inset-top)
+    var(--viewport-height) - var(--swal2-container-padding) * 2 - env(safe-area-inset-top)
   ) !important;
   display: flex !important;
   flex-direction: column !important;
@@ -2465,7 +2484,7 @@ body:not(.glass-mode) .leaflet-popup-content a:hover {
   background-color: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
-  max-height: calc(100dvh - 60px);
+  max-height: calc(var(--viewport-height) - 60px);
   overflow-y: auto;
   width: 300px;
   max-width: calc(100vw - 51px - 10px);
@@ -3432,22 +3451,18 @@ body:has(.leaflet-top.leaflet-left :hover) .leaflet-draw-tooltip {
     --swal2-html-container-padding: 16px 13px 5px;
     --mobile-main-right-container-visible-height: min(
       260px,
-      calc(100dvh - env(safe-area-inset-top) - 370px)
+      calc(var(--viewport-height) - env(safe-area-inset-top) - 370px)
     );
     --mobile-main-right-container-top: calc(
-      100vh - var(--mobile-main-right-container-visible-height)
-    ); /* Fallback */
-    --mobile-main-right-container-top: calc(
-      100dvh - var(--mobile-main-right-container-visible-height)
-    ); /* Correct unit */
+      var(--viewport-height) - var(--mobile-main-right-container-visible-height)
+    );
     --mobile-scale-bottom: calc(var(--mobile-main-right-container-visible-height) - 30px);
     --mobile-elevation-summary-padding-bottom: calc(var(--mobile-scale-bottom) + 30px);
   }
 
   /* When the sheet is hidden, change the variable's value */
   body:not(.force-desktop-layout):has(#main-right-container.hidden) {
-    --mobile-main-right-container-top: calc(100vh - var(--sheet-handle-height)); /* Fallback */
-    --mobile-main-right-container-top: calc(100dvh - var(--sheet-handle-height)); /* Correct unit */
+    --mobile-main-right-container-top: calc(var(--viewport-height) - var(--sheet-handle-height));
     --mobile-scale-bottom: calc(var(--sheet-handle-height) - 30px);
     --mobile-elevation-summary-padding-bottom: calc(var(--mobile-scale-bottom) + 30px);
   }
