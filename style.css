@@ -70,18 +70,6 @@
   }
 }
 
-/* Installed PWA on iOS only (-webkit-touch-callout exists only on iOS). With
-   the status bar laid over the page, dvh leaves a white bar at the bottom, so
-   add the top inset; lvh, the full screen, is the cap. With the status bar
-   above the page the inset is 0 and this is plain dvh. */
-@supports (-webkit-touch-callout: none) and (height: 100lvh) {
-  @media (display-mode: standalone) {
-    :root {
-      --viewport-height: min(100lvh, 100dvh + env(safe-area-inset-top));
-    }
-  }
-}
-
 /* THEMES: GLASS > LIGHT > DARK */
 /*
  *  ████████╗██╗  ██╗███████╗███╗   ███╗███████╗███████╗
