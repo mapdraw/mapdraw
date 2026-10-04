@@ -3,7 +3,7 @@
 // Leaflet core patches
 // Small, targeted fixes for core Leaflet (not leaflet-draw - see
 // leaflet-draw-patches.js for those). Applied once at load time since they
-// patch shared prototypes or the document, not any particular map instance.
+// patch shared prototypes, not any particular map instance.
 
 // unproject's latitude formula (atan) asymptotes at +-90 deg for any input -
 // no clamp needed. Its longitude formula is a plain linear scale with no
@@ -38,24 +38,3 @@ L.Control.Scale.prototype._update = function () {
   );
   this._updateScales(maxMeters);
 };
-
-// Installed PWA on iOS (seen on 26.2): after a long press, Leaflet's TapHold
-// tries to prevent the click that follows. On an element with
-// "user-select: none", the default in style.css, the click arrives anyway and
-// closes the context menu; why is not known, see
-// https://bugs.webkit.org/show_bug.cgi?id=326218. Swallow that click. The next
-// press switches this off again, in case no click came.
-document.addEventListener(
-  "contextmenu",
-  (e) => {
-    if (e.isTrusted) return; // Only TapHold's simulated event
-    const swallowClick = (ev) => L.DomEvent.stop(ev);
-    document.addEventListener("click", swallowClick, { capture: true, once: true });
-    document.addEventListener(
-      "pointerdown",
-      () => document.removeEventListener("click", swallowClick, true),
-      { capture: true, once: true },
-    );
-  },
-  { capture: true },
-);
