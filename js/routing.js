@@ -27,9 +27,10 @@ function initRouting() {
   let lastRouteDetails = null;
 
   const mapboxRouter = L.Routing.mapbox(mapboxAccessToken);
+  // routing.openstreetmap.de serves each profile at its own path, so the path goes into the profile option
   const osrmRouter = L.Routing.osrmv1({
-    serviceUrl: "https://router.project-osrm.org/route/v1",
-    profile: "driving",
+    serviceUrl: "https://routing.openstreetmap.de",
+    profile: "routed-car/route/v1/driving",
   });
 
   const PROVIDER_CONFIG = {
@@ -47,11 +48,11 @@ function initRouting() {
       router: osrmRouter,
       displayName: "OSRM",
       profiles: {
-        driving: "driving",
+        driving: "car",
         bike: "bike",
         foot: "foot",
       },
-      profileFormatter: (profile) => profile,
+      profileFormatter: (profile) => `routed-${profile}/route/v1/driving`,
     },
   };
 

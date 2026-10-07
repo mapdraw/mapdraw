@@ -182,7 +182,7 @@ function initSettingsPanel() {
   routingProviderLabel.innerText = "Routing Provider";
   const routingProviderSelect = L.DomUtil.create("select", "", routingProviderContainer);
   routingProviderSelect.id = "routing-provider-select";
-  routingProviderSelect.innerHTML = `<option value="mapbox">Mapbox</option><option value="osrm">OSRM (Demo)</option>`;
+  routingProviderSelect.innerHTML = `<option value="mapbox">Mapbox</option><option value="osrm">OSRM</option>`;
   routingProviderSelect.value = localStorage.getItem("routingProvider") || "mapbox";
   L.DomEvent.on(routingProviderSelect, "change", (e) => {
     const newProvider = e.target.value;
