@@ -43,6 +43,7 @@ function initRouting() {
         foot: "walking",
       },
       profileFormatter: (profile) => `mapbox/${profile}`,
+      maxWaypoints: 25, // Directions API limit per request
     },
     osrm: {
       router: osrmRouter,
@@ -57,6 +58,24 @@ function initRouting() {
   };
 
   const getCurrentRoutingProvider = () => localStorage.getItem("routingProvider") || "mapbox";
+
+  /**
+   * True, after telling the user, when the provider's waypoint limit leaves no room for
+   * another via.
+   */
+  const isViaLimitReached = () => {
+    const { maxWaypoints, displayName } = PROVIDER_CONFIG[getCurrentRoutingProvider()] ?? {};
+    const waypointCount = 2 + intermediateViaMarkers.length + (viaMarker ? 1 : 0);
+    if (!maxWaypoints || waypointCount < maxWaypoints) return false;
+    Swal.fire({
+      toast: true,
+      icon: "info",
+      title: `${displayName} routes through at most ${maxWaypoints} points`,
+      showConfirmButton: false,
+      timer: 3000,
+    });
+    return true;
+  };
 
   const clearRouteLine = (preserveViaMarkers = false) => {
     if (currentRoutePath) {
@@ -244,6 +263,7 @@ function initRouting() {
    * Adds an intermediate via point marker to the route at the specified location.
    */
   const addIntermediateViaPoint = (latlng) => {
+    if (isViaLimitReached()) return;
     createIntermediateViaMarker(latlng);
     recalculateRoute();
   };
@@ -717,6 +737,10 @@ function initRouting() {
   const updateRoutingPoint = (latlng, type, label) => {
     if (penModeActive) exitPenMode();
     const isVia = type === "via";
+    if (isVia && !viaMarker && isViaLimitReached()) {
+      exitRoutePointSelectionMode();
+      return;
+    }
     const input = type === "start" ? startInput : isVia ? viaInput : endInput;
 
     input.value = label || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
@@ -958,6 +982,7 @@ function initRouting() {
         recalculateRoute();
         shouldFitBounds = false;
       } else {
+        if (isViaLimitReached()) return;
         // The converted end is always the newest via, so sort it after the others
         // instead of measuring it on the route polyline, which may not yet include it.
         createIntermediateViaMarker(endMarker.getLatLng()).routePosition = Infinity;
