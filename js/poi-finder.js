@@ -289,25 +289,22 @@ function _elementLatLon(element) {
 }
 
 /**
- * Pure diff function — no Leaflet or browser APIs, safe to unit-test.
- *
- * All stored elements inside the queried bounds are removed and replaced with
- * the fresh Overpass results. This ensures updates to existing OSM elements
- * (tag changes, renames, etc.) are always reflected after a search.
- *
- * Elements outside the queried bounds are left untouched: we have no fresh data
- * for those areas so we cannot tell whether they still exist. For the same
- * reason callers must not use this with a truncated response.
+ * Keys of stored elements to remove before adding a fresh, uncapped Overpass
+ * result for `bounds`. Elements inside the bounds are removed so the result
+ * re-adds them with current tags, or not at all if they are gone. A way or
+ * relation is only removed when the result contains it, because Overpass
+ * doesn't return an area that encloses the whole bounds although its center
+ * lies inside them. Elements outside the bounds are kept, since the result
+ * says nothing about them.
  */
-function _computePoiDiff(rawElements, newResults, bounds) {
-  const toRemove = [];
+function _stalePoiKeys(rawElements, results, bounds) {
+  const fresh = new Set(results.map((e) => `${e.type}/${e.id}`));
+  const stale = [];
   for (const [key, element] of rawElements) {
-    const ll = _elementLatLon(element);
-    if (!ll) continue;
-    if (bounds.contains(ll)) toRemove.push(key);
+    if (!bounds.contains(_elementLatLon(element))) continue;
+    if (element.type === "node" || fresh.has(key)) stale.push(key);
   }
-
-  return { toRemove, toAdd: newResults };
+  return stale;
 }
 
 async function _savePoiDb() {
@@ -626,9 +623,7 @@ async function loadCategory(cat) {
     const truncated =
       results.filter((e) => e.type !== "node").length >= POI_RESULT_LIMIT ||
       results.filter((e) => e.type === "node").length >= POI_RESULT_LIMIT;
-    const { toRemove, toAdd } = truncated
-      ? { toRemove: [], toAdd: results }
-      : _computePoiDiff(state.rawElements, results, bounds);
+    const toRemove = truncated ? [] : _stalePoiKeys(state.rawElements, results, bounds);
 
     toRemove.forEach((key) => {
       const marker = state.markers.get(key);
@@ -637,7 +632,7 @@ async function loadCategory(cat) {
       state.rawElements.delete(key);
     });
 
-    toAdd.forEach((element) => {
+    results.forEach((element) => {
       const key = `${element.type}/${element.id}`;
       if (state.markers.has(key)) return;
       const marker = createPOIMarker(element, cat);
