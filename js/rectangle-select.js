@@ -432,6 +432,8 @@
     L.DomEvent.on(document, "mouseup", onMouseUp)
       .on(document, "touchend", onMouseUp)
       .on(document, "touchcancel", cancelDrag);
+    // A touch press leaves the name field focused, so commit a typed name first.
+    infoPanelName.blur();
     L.DomEvent.preventDefault(e.originalEvent);
   }
 
