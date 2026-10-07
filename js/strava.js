@@ -600,11 +600,14 @@ function stravaGpxExportUrl(activityId) {
 /**
  * Triggers a browser download of the original GPX file from Strava's website.
  * The filename comes from Strava's response header; a cross-origin link cannot set it.
+ * Opens in a new tab, as Strava answers with its login page when signed out.
  * @param {string} activityId - The ID of the Strava activity
  */
 function downloadOriginalStravaGpx(activityId) {
   const link = document.createElement("a");
   link.href = stravaGpxExportUrl(activityId);
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
