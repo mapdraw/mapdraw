@@ -30,6 +30,17 @@ let hasFetchedActivities = false;
 // Core Authentication and Data Fetching
 
 /**
+ * Formats a Strava error body ({ message, errors: [{ resource, field, code }] }) as one line.
+ * @param {Object} fault - The parsed error body
+ * @returns {string} e.g. "Forbidden: Application Status Inactive"
+ */
+function stravaFaultMessage({ message, errors = [] }) {
+  return [message, ...errors.map((e) => [e.resource, e.field, e.code].filter(Boolean).join(" "))]
+    .filter(Boolean)
+    .join(": ");
+}
+
+/**
  * Exchanges an authorization code for an access token using the provided credentials.
  * @param {string} code - The authorization code from Strava
  * @param {string} clientId - The Strava Client ID
@@ -52,11 +63,7 @@ async function getAccessToken(code, clientId, clientSecret) {
     const data = await response.json();
 
     if (!response.ok || data.errors) {
-      let errorMessage = data.message || "An unknown authentication error occurred.";
-      if (String(errorMessage).toLowerCase().includes("invalid client")) {
-        errorMessage = "Authentication failed: Invalid Client ID or Secret provided.";
-      }
-      throw new Error(errorMessage);
+      throw new Error(stravaFaultMessage(data));
     }
 
     if (data.access_token) {
@@ -69,7 +76,7 @@ async function getAccessToken(code, clientId, clientSecret) {
     console.error("Error getting Strava access token:", error);
     Swal.fire({
       title: "Authentication Failed",
-      html: `Please check your API keys and try again.<br>Error: ${error.message}`,
+      text: `Please check your API keys and try again. Error: ${error.message}`,
     });
     return false;
   }
@@ -133,61 +140,31 @@ async function fetchAllActivities() {
     progressText.innerText = "Starting activity fetch...";
   }
 
-  let activitiesBuffer = [];
-  let page = 1;
+  const activitiesBuffer = [];
   const perPage = 100;
-  let keepFetching = true;
-  let fetchFailed = false;
-  let tokenInvalid = false;
 
-  while (keepFetching) {
-    try {
+  try {
+    for (let page = 1; ; page++) {
       let url = `${activitiesURL}?per_page=${perPage}&page=${page}`;
-      if (afterTimestamp) {
-        url += `&after=${afterTimestamp}`;
-      }
+      if (afterTimestamp) url += `&after=${afterTimestamp}`;
       const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!response.ok) {
-        // Strava sends 401 for any invalidated token (expired after 6h, or access revoked)
-        if (response.status === 401) tokenInvalid = true;
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Strava sends 401 for any invalidated token (expired after 6h, or access revoked);
+        // clear it so renderStravaPanel() offers reconnecting.
+        if (response.status === 401) sessionStorage.removeItem("strava_access_token");
+        const fault = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
+        throw new Error(stravaFaultMessage(fault));
       }
       const activities = await response.json();
-      if (activities.length > 0) {
-        activitiesBuffer.push(...activities);
-        if (progressText)
-          progressText.innerText = `Fetched ${activitiesBuffer.length} activities...`;
-        page++;
-      } else {
-        keepFetching = false;
-      }
-    } catch (error) {
-      console.error("Error fetching Strava activities:", error);
-      fetchFailed = true;
-      keepFetching = false;
+      if (activities.length === 0) break;
+      activitiesBuffer.push(...activities);
+      if (progressText) progressText.innerText = `Fetched ${activitiesBuffer.length} activities...`;
     }
-  }
-
-  if (tokenInvalid) {
-    // Clear the invalidated token so renderStravaPanel() offers reconnecting.
-    sessionStorage.removeItem("strava_access_token");
-    renderStravaPanel();
-    Swal.fire({
-      icon: "info",
-      title: "Strava Session Expired",
-      text: "Your Strava session has expired or been revoked. Please reconnect.",
-    });
-    return;
-  }
-
-  if (fetchFailed) {
+  } catch (error) {
+    console.error("Error fetching Strava activities:", error);
     // All-or-nothing: keep previously loaded activities and allFetchedActivities untouched.
     renderStravaPanel();
-    Swal.fire({
-      icon: "error",
-      title: "Fetch Failed",
-      text: "Could not load activities from Strava. Previously loaded activities were kept.",
-    });
+    Swal.fire({ icon: "error", title: "Strava Error", text: error.message });
     return;
   }
 
