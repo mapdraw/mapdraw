@@ -826,7 +826,7 @@ function initRouting() {
         endMarker = null;
         endInput.value = "";
         clearRouteLine(penModeActive);
-        if (penModeActive) penModeClickCount = 1;
+        if (penModeActive && startMarker) penModeClickCount = 1;
         break;
       case "via":
         if (viaMarker) map.removeLayer(viaMarker);
